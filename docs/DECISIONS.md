@@ -31,3 +31,10 @@ This document summarizes choices already made by the project owner and is intend
 - Timing of any publication and final asset licensing.
 
 Resolve these incrementally while preserving backward-compatible migration paths when practical.
+
+## Platform decisions
+
+- Primary platforms from first working slice: **Void Linux glibc x86-64** and **Windows 10/11 x86-64**.
+- Support both **Wayland and X11** on Linux where Bevy/wgpu allow it.
+- Void Linux musl, older GPU hardware and additional CPU architectures are experimental; do not promise them without testing.
+- Keep the simulation OS-agnostic and rely on the graphics library's supported native backends. See `docs/PLATFORMS.md`.
