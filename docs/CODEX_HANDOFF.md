@@ -38,3 +38,7 @@ A minimal fixed world is acceptable in the first slice. More complex terrain gen
 ## Practical setup
 
 For **Codex Cloud**, select the GitHub repository `ArturTrumpfheller/rustcraft` in its environment. For **Codex CLI**, run it from a local clone of that repository. Repository files are available in either environment once connected; prior ChatGPT conversation text is not assumed available.
+
+## Additional cross-platform acceptance requirements
+
+Review `docs/PLATFORMS.md`. The first slice targets Void Linux **glibc** (x86-64) and Windows 10/11 (x86-64). Use a Bevy/wgpu setup that supports X11/Wayland on Linux and a supported native Windows rendering backend. Avoid platform-dependent path assumptions. CI must compile/check/test the workspace on both Linux and Windows. Document the required Void Linux packages and Windows setup, and distinguish cross-platform compilation from real graphical runtime tests. Void musl and older GPUs are best effort and not required for slice 1.
