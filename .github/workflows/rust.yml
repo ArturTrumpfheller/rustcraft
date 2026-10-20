@@ -1,0 +1,39 @@
+name: Rust checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Detect Rust workspace
+        id: workspace
+        shell: bash
+        run: |
+          if [[ -f Cargo.toml ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No Cargo.toml yet; Rust checks will be enabled with the first code milestone."
+          fi
+      - name: Install Rust
+        if: steps.workspace.outputs.present == 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Cargo format
+        if: steps.workspace.outputs.present == 'true'
+        run: cargo fmt --all -- --check
+      - name: Cargo Clippy
+        if: steps.workspace.outputs.present == 'true'
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Cargo test
+        if: steps.workspace.outputs.present == 'true'
+        run: cargo test --workspace
