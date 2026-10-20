@@ -45,3 +45,12 @@ The repository files are the persistent source of project context. Do not assume
 ## Working with this project's owner
 
 Communicate results and important questions in German. Technical identifiers and repository documentation may be in English. When details are unspecified, make well-reasoned reversible defaults; avoid interrupting progress for minor choices. Be explicit about assumptions and about runtime tests that were not possible.
+
+## Cross-platform baseline (mandatory)
+
+- Treat **Void Linux glibc x86-64 and Windows 10/11 x86-64** as first-class targets from the beginning. Read `docs/PLATFORMS.md` before picking renderer features or native crates.
+- Bevy/wgpu must use supported platform-appropriate graphics backends; do not hardcode Vulkan as the only usable backend, or require a Windows-specific graphics API on Linux.
+- Support X11 and Wayland on Linux; test mouse capture/unlock, keyboard and window behavior on both when possible.
+- Keep paths, assets and save locations OS-neutral; explicitly document per-platform build/run requirements.
+- CI should run Cargo checks on both Ubuntu and Windows. Headless CI never substitutes for actual GUI testing on Void and Windows.
+- Void musl and the owner's older GPU are experimental targets, **not** a v0.1 compatibility requirement.
