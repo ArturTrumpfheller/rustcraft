@@ -1,0 +1,175 @@
+use crate::{BlockPos, CHUNK_SIZE, ChunkPos, LocalPos, World};
+
+/// Engine-neutral mesh buffers. Vertices are local to the chunk origin.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ChunkMesh {
+    pub positions: Vec<[f32; 3]>,
+    pub normals: Vec<[f32; 3]>,
+    pub colors: Vec<[f32; 4]>,
+    pub indices: Vec<u32>,
+}
+
+struct Face {
+    normal: [i32; 3],
+    corners: [[u8; 3]; 4],
+}
+
+// Counter-clockwise when viewed from outside the solid block.
+const FACES: [Face; 6] = [
+    Face {
+        normal: [1, 0, 0],
+        corners: [[1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1]],
+    },
+    Face {
+        normal: [-1, 0, 0],
+        corners: [[0, 0, 1], [0, 1, 1], [0, 1, 0], [0, 0, 0]],
+    },
+    Face {
+        normal: [0, 1, 0],
+        corners: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]],
+    },
+    Face {
+        normal: [0, -1, 0],
+        corners: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]],
+    },
+    Face {
+        normal: [0, 0, 1],
+        corners: [[1, 0, 1], [1, 1, 1], [0, 1, 1], [0, 0, 1]],
+    },
+    Face {
+        normal: [0, 0, -1],
+        corners: [[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0]],
+    },
+];
+
+/// Emits only faces adjacent to air, consulting neighboring chunks too.
+/// Missing chunks and coordinates beyond i32 space are treated as air.
+pub fn mesh_chunk(world: &World, position: ChunkPos) -> ChunkMesh {
+    let mut mesh = ChunkMesh::default();
+    let Some(chunk) = world.chunk(position) else {
+        return mesh;
+    };
+    for y in 0..CHUNK_SIZE {
+        for z in 0..CHUNK_SIZE {
+            for x in 0..CHUNK_SIZE {
+                let local = LocalPos::new([x, y, z]).unwrap();
+                let block = chunk.get(local);
+                if !block.is_solid() {
+                    continue;
+                }
+                let Some(block_position) = position.block_position(local) else {
+                    continue;
+                };
+                for face in &FACES {
+                    if block_position
+                        .offset(face.normal)
+                        .is_some_and(|neighbor: BlockPos| world.block(neighbor).is_solid())
+                    {
+                        continue;
+                    }
+                    let start = mesh.positions.len() as u32;
+                    for corner in face.corners {
+                        mesh.positions.push([
+                            x as f32 + f32::from(corner[0]),
+                            y as f32 + f32::from(corner[1]),
+                            z as f32 + f32::from(corner[2]),
+                        ]);
+                        mesh.normals.push(face.normal.map(|value| value as f32));
+                        mesh.colors.push(block.color());
+                    }
+                    mesh.indices
+                        .extend([start, start + 1, start + 2, start, start + 2, start + 3]);
+                }
+            }
+        }
+    }
+    mesh
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Block, Chunk};
+
+    fn world_with_blocks(positions: &[[i32; 3]]) -> World {
+        let mut chunks = std::collections::BTreeMap::<ChunkPos, Chunk>::new();
+        for &position in positions {
+            let (chunk, local) = BlockPos(position).split();
+            chunks.entry(chunk).or_default().set(local, Block::Grass);
+        }
+        let mut world = World::default();
+        for (position, chunk) in chunks {
+            world.insert_chunk(position, chunk);
+        }
+        world
+    }
+
+    fn face_count(world: &World) -> usize {
+        world
+            .chunks()
+            .map(|(position, _)| mesh_chunk(world, position).indices.len() / 6)
+            .sum()
+    }
+
+    #[test]
+    fn empty_world_and_air_chunk_have_no_geometry() {
+        let mut world = World::default();
+        assert_eq!(mesh_chunk(&world, ChunkPos([0; 3])), ChunkMesh::default());
+        world.insert_chunk(ChunkPos([0; 3]), Chunk::default());
+        assert_eq!(face_count(&world), 0);
+    }
+
+    #[test]
+    fn adjacent_blocks_hide_the_shared_face() {
+        assert_eq!(face_count(&world_with_blocks(&[[0, 0, 0]])), 6);
+        assert_eq!(face_count(&world_with_blocks(&[[0, 0, 0], [1, 0, 0]])), 10);
+    }
+
+    #[test]
+    fn adjacency_across_chunk_boundaries_hides_faces_in_every_axis() {
+        for axis in 0..3 {
+            for boundary in [0, 16, -16] {
+                let mut a = [0; 3];
+                let mut b = [0; 3];
+                a[axis] = boundary - 1;
+                b[axis] = boundary;
+                assert_eq!(face_count(&world_with_blocks(&[a, b])), 10);
+            }
+        }
+    }
+
+    #[test]
+    fn full_chunk_only_emits_surface_and_cavity_faces() {
+        let blocks: Vec<_> = (0..16)
+            .flat_map(|x| (0..16).flat_map(move |y| (0..16).map(move |z| [x, y, z])))
+            .collect();
+        let mut world = world_with_blocks(&blocks);
+        assert_eq!(face_count(&world), 6 * 16 * 16);
+        let mut chunk = world.chunk(ChunkPos([0; 3])).unwrap().clone();
+        chunk.set(LocalPos::new([8; 3]).unwrap(), Block::Air);
+        world.insert_chunk(ChunkPos([0; 3]), chunk);
+        assert_eq!(face_count(&world), 6 * 16 * 16 + 6);
+    }
+
+    #[test]
+    fn triangles_have_outward_winding_and_consistent_vertex_attributes() {
+        let world = world_with_blocks(&[[0, 0, 0]]);
+        let mesh = mesh_chunk(&world, ChunkPos([0; 3]));
+        assert_eq!(mesh.positions.len(), 24);
+        assert_eq!(mesh.normals.len(), 24);
+        assert_eq!(mesh.colors, vec![Block::Grass.color(); 24]);
+        for triangle in mesh.indices.as_chunks::<3>().0 {
+            let a = mesh.positions[triangle[0] as usize];
+            let b = mesh.positions[triangle[1] as usize];
+            let c = mesh.positions[triangle[2] as usize];
+            let ab: [f32; 3] = std::array::from_fn(|axis| b[axis] - a[axis]);
+            let ac: [f32; 3] = std::array::from_fn(|axis| c[axis] - a[axis]);
+            let cross = [
+                ab[1] * ac[2] - ab[2] * ac[1],
+                ab[2] * ac[0] - ab[0] * ac[2],
+                ab[0] * ac[1] - ab[1] * ac[0],
+            ];
+            assert_eq!(cross, mesh.normals[triangle[0] as usize]);
+        }
+    }
+}

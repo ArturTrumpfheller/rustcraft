@@ -1,6 +1,6 @@
 # RustCraft platform support and development setup
 
-Status: **platform requirements**, not a claim that the game already runs. The first Rust implementation must document which configurations were actually built and play-tested.
+Status: **slice 1 platform requirements and acceptance procedure**. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
 
 ## Supported platforms and targets
 
@@ -68,3 +68,17 @@ The Rust workflow checks both **ubuntu-latest** and **windows-latest** for suppo
 - [ ] Document required drivers and save/config locations
 - [ ] Package separate executable builds and include compatible assets/licenses
 - [ ] Verify all supported GPU driver/API assumptions against real hardware
+
+## Slice 1 manual test
+
+On a real graphical desktop, run `cargo run --locked -p rustcraft` from the repository root:
+
+1. Confirm a sky background, a continuous terraced grass/dirt/stone island and a stone landmark. Inspect from above and below; shared chunk boundaries should not expose internal faces.
+2. Click inside the window. Move the mouse and use WASD; verify diagonal speed, pitch limits, Space/left Ctrl elevation and left Shift acceleration. R restores the overview.
+3. Press Escape. Confirm a visible free cursor and that keyboard/mouse no longer move the camera. Click again to recapture.
+4. Switch to another window. Confirm capture releases, and returning requires another click. Test resizing and closing the window.
+5. Repeat in an X11 session and a Wayland session on Void glibc, then on Windows 10/11 with the native MSVC toolchain. Record GPU/driver and backend in the test report.
+
+No collision, block editing or saves are expected in this slice. Passing headless ECS tests is not evidence that native pointer capture, presentation or graphics drivers work. Windows compilation is covered by the CI matrix when it runs; it is not a Linux cross-compilation claim.
+
+The minimal Bevy feature selection does not enable audio or gamepads yet, so ALSA and udev development libraries are not required by this slice. The earlier broader dependency list remains useful for future engine features. No custom Vulkan-only setting is imposed by the client.
