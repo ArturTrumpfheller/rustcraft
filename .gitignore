@@ -1,0 +1,27 @@
+# Rust / Cargo
+/target/
+**/target/
+*.rs.bk
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Local config, secrets and logs
+.env
+.env.*
+!.env.example
+*.log
+
+# Generated runtime worlds / caches (adjust as save layout develops)
+/saves/
+/worlds/
+/cache/
+/screenshots/
+
+# Keep Cargo.lock under version control for the game application.
