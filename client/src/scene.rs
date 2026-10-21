@@ -9,6 +9,11 @@ pub struct VoxelScenePlugin;
 
 #[derive(Resource)]
 pub(crate) struct VoxelWorld(pub World);
+impl Default for VoxelWorld {
+    fn default() -> Self {
+        Self(demo_world())
+    }
+}
 
 #[derive(Resource, Default)]
 pub(crate) struct DirtyChunks(pub BTreeSet<ChunkPos>);
@@ -24,7 +29,7 @@ struct TerrainMaterial(Handle<StandardMaterial>);
 
 impl Plugin for VoxelScenePlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(VoxelWorld(demo_world()))
+        app.init_resource::<VoxelWorld>()
             .init_resource::<DirtyChunks>()
             .init_resource::<ChunkRenders>()
             .add_systems(Startup, spawn_scene)
@@ -116,7 +121,7 @@ fn spawn_scene(
         },
         Transform::from_xyz(-12.0, 24.0, 12.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
-    info!("RustCraft slice 3: in-memory block edits; changes are lost when the game closes.");
+    info!("RustCraft slice 4: editable world with versioned snapshots and autosave.");
 }
 
 fn rebuild_dirty_chunks(

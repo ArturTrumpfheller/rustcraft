@@ -4,7 +4,7 @@ This document tracks intended milestones, not promised delivery dates. Implement
 
 ## v0.1 — Classic-style prototype
 
-Slice 3 adds precise targeting and in-memory block breaking/placement to the walking four-chunk scene. Full v0.1 is not complete. Slice 1 was tested on Void by the owner and passed Linux/Windows CI. Current platform coverage is recorded in `docs/VALIDATION.md`; new native play-tests are still needed. Indexing/meshing/physics tests exist; serialization and seeded generation are still absent.
+Slice 4 adds versioned world save/load, manual/background autosave and safe final saving to the editable walking scene. Full v0.1 is not complete. The owner tested slices 1–3 on Void and their Linux/Windows CI passed. Current coverage is recorded in `docs/VALIDATION.md`; new native play-tests are still needed. Serialization/recovery tests now exist; seeded generation is still absent.
 
 - [x] Cargo workspace and pinned Bevy dependency
 - [x] Launch client with a first-person walking player and interpolated camera
@@ -13,8 +13,10 @@ Slice 3 adds precise targeting and in-memory block breaking/placement to the wal
 - [ ] Terrain generation from deterministic seed
 - [x] Solid block collision, gravity and jumping (fixed 60-Hz AABB controller; boundary and tunneling regression tests)
 - [x] Block targeting, breaking and placement (five-block DDA, validated player-safe edits and dirty neighbor remeshing)
-- [ ] Hotbar and persistent world saves
-- [ ] Tests for indexing, serialization and deterministic generation
+- [x] Persistent world saves (versioned full snapshots, F5, dirty-only autosave, safe close and recoverable replacement)
+- [ ] Full inventory/hotbar (three unlimited block-selection slots exist)
+- [x] Tests for indexing and serialization, corruption and save-failure recovery
+- [ ] Tests for deterministic seeded generation
 
 **Exit criterion:** Start a world, walk around, place and break blocks, save, restart, and recover changes.
 

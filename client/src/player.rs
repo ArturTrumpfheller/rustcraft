@@ -17,6 +17,10 @@ impl Plugin for PlayerPlugin {
             .init_resource::<PlayerSettings>()
             .init_resource::<PlayerState>()
             .init_resource::<ControllerInput>()
+            .add_systems(
+                Startup,
+                initialize_player.before(crate::camera::CameraSetup),
+            )
             .add_systems(FixedUpdate, simulate_player);
     }
 }
@@ -61,22 +65,31 @@ fn simulate_player(
         return;
     } // Local single-player pause while cursor is free.
     if std::mem::take(&mut input.reset_pending) || player.body.position[1] < RECOVERY_Y {
-        // Building at the old spawn must not make R/void recovery embed the
-        // body in solids. Search upward; above EDIT_MAX all editable cells are air.
-        let mut body = Player::new(SPAWN);
-        while !body.fits_in_world(&world.0, &config.0)
-            && body.position[1] < f64::from(voxel_core::EDIT_MAX[1])
-        {
-            body.position[1] += 1.0;
-        }
-        *player = PlayerState {
-            previous_position: body.position,
-            body,
-        };
+        *player = safe_spawn(&world.0, &config.0);
         input.jump_pending = false;
         return;
     }
     let mut command = input.command;
     command.jump = std::mem::take(&mut input.jump_pending);
     player.body.tick(&world.0, command, &config.0);
+}
+
+fn safe_spawn(world: &voxel_core::World, config: &PhysicsConfig) -> PlayerState {
+    let mut body = Player::new(SPAWN);
+    while !body.fits_in_world(world, config)
+        && body.position[1] < f64::from(voxel_core::EDIT_MAX[1])
+    {
+        body.position[1] += 1.0;
+    }
+    PlayerState {
+        previous_position: body.position,
+        body,
+    }
+}
+fn initialize_player(
+    world: Res<VoxelWorld>,
+    settings: Res<PlayerSettings>,
+    mut player: ResMut<PlayerState>,
+) {
+    *player = safe_spawn(&world.0, &settings.0);
 }
