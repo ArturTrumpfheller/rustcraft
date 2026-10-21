@@ -59,3 +59,9 @@ Resolve these incrementally while preserving backward-compatible migration paths
 - Latch input edges before the fixed loop and interpolate camera translation afterwards. Mouse view remains immediate. Held Space does not auto-jump and pre-capture hover motion does not rotate the view.
 - Replace free flight with walking as the only mode. R respawns; Y below -32 triggers automatic recovery. Pointer release/focus loss pauses the local prototype, including gravity; this must be revisited for an authoritative server.
 - Retain Rust 1.99.1 / Bevy 0.20.0, both desktop Linux window backends, native Windows backend selection, the original scene and existing asset/dependency policy.
+
+## Planned texture and visual asset direction
+
+- The owner prefers **Minecraft-inspired retro pixel-art textures** that are independently drawn or distributed under an explicitly suitable license. Similar aesthetics do not authorize copying Minecraft's original texture pixels, audio, branding or extracted game resources.
+- When implementing textures, require provenance and verifiable permission for **public source redistribution**, modification and distribution with future binaries; record exact authors, upstream URL, license/terms, attribution and modifications for every included asset.
+- Treat source code's MIT OR Apache-2.0 license separately from the asset licenses. Default to original placeholders until licensed art is available; no asset-pack download/copy without review.
