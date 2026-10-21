@@ -49,3 +49,13 @@ Resolve these incrementally while preserving backward-compatible migration paths
 - The first-person camera flies without collision. Capture starts on click; Escape and focus loss release it. Physics, editing, inventory and saving remain subsequent slices as scoped in the handoff.
 - One-time synchronous construction of four small chunks is an explicit bounded prototype tradeoff. Streaming or interactive remeshing must not extend this into unbounded frame-loop work.
 - Enable X11 and Wayland together. Preserve Bevy/wgpu's supported per-platform backend selection and omit unused audio/gamepad/UI/import features.
+
+
+## Slice 2 implementation decisions
+
+- Keep physics as `voxel_core::physics`, a focused module with no new dependencies. The client adapts commands/time and presents the player; it does not own collision rules.
+- Use feet-centre f64 coordinates, a 0.6×1.8-block AABB and eye height 1.62. Run commands at fixed 60 Hz, with yaw-relative acceleration, sprinting and grounded-only jump requests. All motion tuning is in `PhysicsConfig::default`.
+- Resolve swept voxel collisions in fixed Y/X/Z order. Query authoritative neighboring blocks (missing chunks are air), clip to contact faces and preserve tangential movement. Static block overlap at spawn is not supported; automatic step-up and a general rigid-body engine are out of scope.
+- Latch input edges before the fixed loop and interpolate camera translation afterwards. Mouse view remains immediate. Held Space does not auto-jump and pre-capture hover motion does not rotate the view.
+- Replace free flight with walking as the only mode. R respawns; Y below -32 triggers automatic recovery. Pointer release/focus loss pauses the local prototype, including gravity; this must be revisited for an authoritative server.
+- Retain Rust 1.99.1 / Bevy 0.20.0, both desktop Linux window backends, native Windows backend selection, the original scene and existing asset/dependency policy.

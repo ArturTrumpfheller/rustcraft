@@ -1,6 +1,6 @@
 # RustCraft platform support and development setup
 
-Status: **slice 1 platform requirements and acceptance procedure**. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
+Status: **slice 2 platform requirements and acceptance procedure**. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
 
 ## Supported platforms and targets
 
@@ -69,7 +69,7 @@ The Rust workflow checks both **ubuntu-latest** and **windows-latest** for suppo
 - [ ] Package separate executable builds and include compatible assets/licenses
 - [ ] Verify all supported GPU driver/API assumptions against real hardware
 
-## Slice 1 manual test
+## Historical slice 1 manual test
 
 On a real graphical desktop, run `cargo run --locked -p rustcraft` from the repository root:
 
@@ -82,3 +82,17 @@ On a real graphical desktop, run `cargo run --locked -p rustcraft` from the repo
 No collision, block editing or saves are expected in this slice. Passing headless ECS tests is not evidence that native pointer capture, presentation or graphics drivers work. Windows compilation is covered by the CI matrix when it runs; it is not a Linux cross-compilation claim.
 
 The minimal Bevy feature selection does not enable audio or gamepads yet, so ALSA and udev development libraries are not required by this slice. The earlier broader dependency list remains useful for future engine features. No custom Vulkan-only setting is imposed by the client.
+
+## Slice 2 manual test
+
+Use `cargo run --locked -p rustcraft` in a real graphical session. The build dependencies and pinned toolchain above remain unchanged.
+
+1. Confirm the original four-chunk scene and stone landmark still render. Click to capture the mouse; the player falls a short distance onto the low terrace. Looking around must not move the body or alter walking speed.
+2. Walk with WASD; hold left Shift to sprint. Check smooth starts/stops, equal diagonal speed, and mouse pitch limits at both high and low FPS. Left Ctrl no longer flies down; there is no flying mode.
+3. Walk toward a terrace without jumping: the solid side must stop you. Walk diagonally into walls/landmarks and check sliding. Jump with Space to climb a one-block terrace. Holding Space must not bounce repeatedly; pressing again in air must not create another jump.
+4. Stand still, cross x=0/z=0 chunk seams, and explore negative x/z. Look for shaking, catches or floor penetration. Core tests also cover negative -16 boundaries, ceilings and high-speed sweeps that the current open-air scene cannot conveniently reproduce manually.
+5. Walk off the island. Gravity should continue until automatic respawn below Y=-32; R while captured also restores the safe spawn and clears velocity. Neither reset should animate the camera across the map.
+6. Escape must release/show the cursor and pause local walking/gravity. Focus loss does the same. Returning requires a new click, without a view jump or stale queued jump. Resize the window and close it normally.
+7. Repeat on Void glibc X11 and Wayland, then Windows 10/11 MSVC. Record GPU/driver/backend and input issues. Slice 1's successful native test does not substitute for this new physics/input acceptance.
+
+CI continues to build/lint/test Ubuntu and Windows. Local software-rendering checks do not establish physical GPU performance or native Wayland/Windows cursor behavior. Block edits, inventory and persistence remain outside slice 2.
