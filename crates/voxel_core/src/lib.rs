@@ -2,6 +2,7 @@
 
 mod chunk;
 mod mesh;
+pub mod physics;
 mod world;
 
 pub use chunk::{Block, BlockPos, CHUNK_SIZE, Chunk, ChunkPos, LocalPos};

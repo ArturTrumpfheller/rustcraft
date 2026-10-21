@@ -4,14 +4,14 @@ This document tracks intended milestones, not promised delivery dates. Implement
 
 ## v0.1 — Classic-style prototype
 
-Slice 1 supplies the fixed rendered scene and free-flight controls. Full v0.1 is not complete. The camera implementation and headless input tests do not replace native GUI acceptance. Indexing/meshing tests exist; serialization and seeded generation are still absent.
+Slice 2 adds walking, gravity, jumping and solid-block collision to the fixed four-chunk scene. Full v0.1 is not complete. Slice 1 was tested on Void by the owner and passed Linux/Windows CI. Slice 2 platform coverage is recorded in `docs/VALIDATION.md`; new native play-tests are still needed. Indexing/meshing/physics tests exist; serialization and seeded generation are still absent.
 
 - [x] Cargo workspace and pinned Bevy dependency
-- [x] Launch client with controllable first-person free-flight camera (X11 software-rendered smoke test; native platform checks pending)
+- [x] Launch client with a first-person walking player and interpolated camera
 - [x] Initial closed block-ID enum and simple voxel materials (extensible registry deferred)
 - [x] Chunk storage and visible-face meshing, including chunk-boundary culling
 - [ ] Terrain generation from deterministic seed
-- [ ] Solid block collision, gravity and jumping
+- [x] Solid block collision, gravity and jumping (fixed 60-Hz AABB controller; boundary and tunneling regression tests)
 - [ ] Block targeting, breaking and placement
 - [ ] Hotbar and persistent world saves
 - [ ] Tests for indexing, serialization and deterministic generation

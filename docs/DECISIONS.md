@@ -10,7 +10,7 @@ This document summarizes choices already made by the project owner and is intend
 - **Language:** Rust rather than Java or C.
 - **Engine:** Bevy is preferred for app/rendering/input; game simulation, voxel model and core rules should have a modular boundary.
 - **Open-source assistance:** allowed; use appropriate, documented licenses and existing crates rather than writing every low-level facility from scratch.
-- **Repository:** `ArturTrumpfheller/rustcraft`, private during early development, potentially public later.
+- **Repository:** `ArturTrumpfheller/rustcraft`, made public by the project owner on 2026-10-21 to simplify cloning. Early-development source visibility does not imply a packaged public game release.
 - **Own code/documents license:** MIT OR Apache-2.0. Third-party components and artwork need separate checks.
 - **Implementation responsibility:** Codex will implement code with user review and testing. ChatGPT planning conversations do not automatically transfer into Codex sessions.
 - **Development approach:** incremental, testable changes, preserve working baselines, support Git branches and pull requests.
@@ -28,7 +28,7 @@ This document summarizes choices already made by the project owner and is intend
 - Chunk dimensions and persistence format.
 - Final branding and asset style for public distribution.
 - Multiplayer protocol, mod/plugin architecture, redstone compatibility specifics.
-- Timing of any publication and final asset licensing.
+- Timing of packaged releases, third-party notice bundles and final asset licensing (the source repository is already public).
 
 Resolve these incrementally while preserving backward-compatible migration paths when practical.
 
@@ -49,3 +49,13 @@ Resolve these incrementally while preserving backward-compatible migration paths
 - The first-person camera flies without collision. Capture starts on click; Escape and focus loss release it. Physics, editing, inventory and saving remain subsequent slices as scoped in the handoff.
 - One-time synchronous construction of four small chunks is an explicit bounded prototype tradeoff. Streaming or interactive remeshing must not extend this into unbounded frame-loop work.
 - Enable X11 and Wayland together. Preserve Bevy/wgpu's supported per-platform backend selection and omit unused audio/gamepad/UI/import features.
+
+
+## Slice 2 implementation decisions
+
+- Keep physics as `voxel_core::physics`, a focused module with no new dependencies. The client adapts commands/time and presents the player; it does not own collision rules.
+- Use feet-centre f64 coordinates, a 0.6×1.8-block AABB and eye height 1.62. Run commands at fixed 60 Hz, with yaw-relative acceleration, sprinting and grounded-only jump requests. All motion tuning is in `PhysicsConfig::default`.
+- Resolve swept voxel collisions in fixed Y/X/Z order. Query authoritative neighboring blocks (missing chunks are air), clip to contact faces and preserve tangential movement. Static block overlap at spawn is not supported; automatic step-up and a general rigid-body engine are out of scope.
+- Latch input edges before the fixed loop and interpolate camera translation afterwards. Mouse view remains immediate. Held Space does not auto-jump and pre-capture hover motion does not rotate the view.
+- Replace free flight with walking as the only mode. R respawns; Y below -32 triggers automatic recovery. Pointer release/focus loss pauses the local prototype, including gravity; this must be revisited for an authoritative server.
+- Retain Rust 1.99.1 / Bevy 0.20.0, both desktop Linux window backends, native Windows backend selection, the original scene and existing asset/dependency policy.

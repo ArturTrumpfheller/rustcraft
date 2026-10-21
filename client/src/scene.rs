@@ -6,7 +6,7 @@ use voxel_core::{CHUNK_SIZE, World, demo_world, mesh_chunk};
 pub struct VoxelScenePlugin;
 
 #[derive(Resource)]
-struct VoxelWorld(World);
+pub(crate) struct VoxelWorld(pub World);
 
 impl Plugin for VoxelScenePlugin {
     fn build(&self, app: &mut App) {
@@ -59,7 +59,7 @@ fn spawn_scene(
         },
         Transform::from_xyz(-12.0, 24.0, 12.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
-    info!("RustCraft slice 1: four chunks; free-flight camera, no collision or world editing yet.");
+    info!("RustCraft slice 2: four chunks; walking, gravity, jumping and block collision.");
 }
 
 #[cfg(test)]

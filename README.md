@@ -1,6 +1,6 @@
 # RustCraft
 
-**RustCraft** is a private, experimental Minecraft-inspired voxel sandbox written in Rust. The first v0.1 slice displays a small, contiguous block world with a controllable first-person **free-flight camera**. The long-term goal is a Classic-style editable world, followed by survival and original sandbox mechanics.
+**RustCraft** is a public, experimental Minecraft-inspired voxel sandbox written in Rust. The current v0.1 prototype displays a small, contiguous block world with a first-person **walking player**, gravity, jumping and voxel collision. The long-term goal is a Classic-style editable world, followed by survival and original sandbox mechanics.
 
 RustCraft is an independent project, not a Minecraft source port, and is not affiliated with or endorsed by Mojang or Microsoft.
 
@@ -9,10 +9,11 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Four adjacent 16×16×16 chunks, fixed terraced terrain and a stone landmark.
 - Grass, dirt and stone represented by original vertex colors; no downloaded game assets.
 - One surface mesh per chunk; faces shared by solid blocks are removed, including at chunk boundaries.
-- Mouse look, horizontal WASD flight, vertical movement, speed boost and camera reset.
+- Mouse look, yaw-relative WASD walking, sprinting, grounded jumping and safe respawn.
+- Fixed 60-Hz engine-independent AABB physics, wall sliding and interpolated camera movement.
 - Engine-independent voxel library with coordinate, storage and mesh regression tests.
 
-This is **v0.1 / slice 1**, not the complete v0.1 milestone. There is no collision, gravity, block editing, seeded terrain, hotbar or persistence yet. The camera can pass through blocks. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 2**, not the complete v0.1 milestone. Block editing, seeded terrain, hotbar and persistence are still future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## Build and run on Linux
 
@@ -51,14 +52,16 @@ In the prepared Codex cloud machine, first run `. /workspace/.rustcraft-env/acti
 
 | Input | Action |
 | --- | --- |
-| Left click inside the focused window | Capture/hide the mouse and enable camera controls |
-| Escape | Release/show the mouse and pause camera input |
+| Left click inside the focused window | Capture/hide the mouse and resume the local player simulation |
+| Escape | Release/show the mouse and pause the local player simulation |
 | Window focus loss | Release mouse; click again after returning |
 | Mouse | Look around; pitch is clamped |
-| W / A / S / D | Move horizontally relative to view direction |
-| Space / left Ctrl | Fly up / down |
-| Left Shift | Fly faster |
-| R while captured | Reset camera to the initial overview |
+| W / A / S / D | Walk relative to horizontal view direction |
+| Space | Jump when grounded (press again for another jump) |
+| Left Shift | Sprint |
+| R while captured | Respawn above the starting terrace and reset view/velocity |
+
+The 0.6×1.8-block player spawns above solid ground, with eyes 1.62 blocks above the feet. Walking accelerates toward 4.3 blocks/s; sprinting toward 5.6 blocks/s. Falling below Y=-32 automatically respawns the player. Escape or focus loss pauses the local simulation, including gravity; click again to continue.
 
 Movement speed is independent of diagonal input. Mouse sensitivity does not depend on frame time. The window title also lists the essential controls.
 
@@ -71,14 +74,14 @@ cargo test --locked --workspace
 cargo build --locked --workspace
 ```
 
-Run only the engine-independent tests with `cargo test --locked -p voxel_core`. Client tests exercise actual Bevy scene and input systems without initializing a GPU or window. They do not substitute for real input/rendering checks.
+Run only the engine-independent voxel and physics tests with `cargo test --locked -p voxel_core`. Client tests exercise actual Bevy scene/input/fixed schedules without initializing a GPU or window, including frame-rate comparisons at 30/60/144 FPS. They do not substitute for real input/rendering checks.
 
-The [slice 1 validation report](docs/VALIDATION.md) records the executed checks and remaining platform coverage.
+The [validation report](docs/VALIDATION.md) records the executed checks and remaining platform coverage.
 
-[Manual acceptance checks](docs/PLATFORMS.md#slice-1-manual-test) cover the visible scene, pointer capture/release, focus changes and platform behavior. CI checks Linux and Windows compilation, formatting, Clippy and unit tests; it does not establish GUI compatibility on Void or Windows.
+[Manual acceptance checks](docs/PLATFORMS.md#slice-2-manual-test) cover the visible scene, pointer capture/release, focus changes and platform behavior. CI checks Linux and Windows compilation, formatting, Clippy and unit tests; it does not establish GUI compatibility on Void or Windows.
 
 ## Licensing and development policy
 
 Project-authored source code and documentation are **MIT OR Apache-2.0**; see [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE). Third-party dependencies and artwork keep their own licenses. See [dependency and asset inventory](docs/THIRD_PARTY.md).
 
-Keep the repository private and `main` stable. Develop features on topic branches and submit pull requests for review. No proprietary game source, textures, sounds or logos are included.
+The source repository is public; keep `main` stable. Develop features on topic branches and submit pull requests for review. Publishing packaged game releases is a separate decision. No proprietary game source, textures, sounds or logos are included.
