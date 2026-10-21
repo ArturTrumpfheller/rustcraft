@@ -42,9 +42,15 @@ impl BlockChange {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct World {
     chunks: BTreeMap<ChunkPos, Chunk>,
+    revision: u64,
 }
 
 impl World {
+    /// Process-local change generation; never part of the save format.
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+
     /// Raw bounded mutation for trusted world-edit operations. Placement rules
     /// (solid replacement/player overlap) live in interaction::edit.
     pub fn set_block(
@@ -63,6 +69,7 @@ impl World {
         }
         let (chunk, local) = position.split();
         self.chunks.entry(chunk).or_default().set(local, block);
+        self.revision = self.revision.wrapping_add(1);
         Ok(Some(BlockChange {
             position,
             before,
@@ -71,7 +78,10 @@ impl World {
     }
 
     pub fn insert_chunk(&mut self, position: ChunkPos, chunk: Chunk) {
-        self.chunks.insert(position, chunk);
+        if self.chunks.get(&position) != Some(&chunk) {
+            self.chunks.insert(position, chunk);
+            self.revision = self.revision.wrapping_add(1);
+        }
     }
 
     pub fn chunk(&self, position: ChunkPos) -> Option<&Chunk> {

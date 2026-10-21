@@ -1,0 +1,325 @@
+use super::*;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+struct TestDir(PathBuf);
+impl TestDir {
+    fn new() -> Self {
+        let path = std::env::temp_dir().join(format!(
+            "rustcraft-save-test-{}-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos(),
+            NEXT_TEMP.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir(&path).unwrap();
+        Self(path)
+    }
+}
+impl Drop for TestDir {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
+fn edited_world() -> World {
+    let mut world = demo_world();
+    for (p, block) in [
+        ([-1, 0, -1], Block::Air),
+        ([0, 0, 0], Block::Dirt),
+        ([-17, 10, -16], Block::Grass),
+        ([16, 16, 16], Block::Stone),
+        ([31, -16, 31], Block::Dirt),
+    ] {
+        world.set_block(BlockPos(p), block).unwrap();
+    }
+    world
+}
+fn repair_checksum(bytes: &mut [u8]) {
+    let crc = checksum(bytes);
+    bytes[20..24].copy_from_slice(&crc.to_le_bytes());
+}
+fn one_block() -> Vec<u8> {
+    let mut world = World::default();
+    world.set_block(BlockPos([0; 3]), Block::Stone).unwrap();
+    encode(&world).unwrap()
+}
+
+#[test]
+fn golden_fixture_fixes_magic_version_coordinates_ids_and_crc() {
+    // Independently constructed little-endian fixture with zlib CRC-32.
+    let hex = "5255535457524c4401000000010000000e000000b2d255a90000000000000000000000000300";
+    let expected: Vec<u8> = hex
+        .as_bytes()
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())
+        .collect();
+    assert_eq!(one_block(), expected);
+    assert_eq!(
+        decode(&expected).unwrap().block(BlockPos([0; 3])),
+        Block::Stone
+    );
+}
+
+#[test]
+fn full_snapshot_preserves_removals_replacements_and_all_materials_across_seams() {
+    let world = edited_world();
+    let loaded = decode(&encode(&world).unwrap()).unwrap();
+    assert_eq!(loaded.block(BlockPos([-1, 0, -1])), Block::Air);
+    assert_eq!(loaded.block(BlockPos([0; 3])), Block::Dirt);
+    assert_eq!(loaded.block(BlockPos([-17, 10, -16])), Block::Grass);
+    assert_eq!(loaded.block(BlockPos([16; 3])), Block::Stone);
+    assert_eq!(loaded.block(BlockPos([31, -16, 31])), Block::Dirt);
+    assert_eq!(encode(&loaded).unwrap(), encode(&world).unwrap());
+}
+
+#[test]
+fn valid_empty_snapshot_is_not_mistaken_for_a_new_demo() {
+    let bytes = encode(&World::default()).unwrap();
+    assert_eq!(bytes.len(), HEADER_SIZE);
+    assert_eq!(decode(&bytes).unwrap().chunks().count(), 0);
+    let dir = TestDir::new();
+    fs::write(dir.0.join("world.rcw"), bytes).unwrap();
+    let (_, world, source) = SaveStore::open(&dir.0).unwrap();
+    assert_eq!(source, LoadSource::Saved);
+    assert_eq!(world.chunks().count(), 0);
+}
+
+#[test]
+fn every_truncated_prefix_trailing_bytes_and_payload_damage_are_rejected() {
+    let bytes = encode(&edited_world()).unwrap();
+    for end in 0..bytes.len() {
+        assert!(decode(&bytes[..end]).is_err(), "accepted prefix {end}");
+    }
+    let mut extra = bytes.clone();
+    extra.push(0);
+    assert_eq!(decode(&extra), Err(FormatError::Length));
+    let mut damaged = bytes;
+    damaged[HEADER_SIZE + 5] ^= 0x80;
+    assert_eq!(decode(&damaged), Err(FormatError::Checksum));
+}
+
+#[test]
+fn malformed_headers_ids_coordinates_and_record_order_are_rejected() {
+    let valid = one_block();
+    let mut bytes = valid.clone();
+    bytes[0] ^= 1;
+    assert_eq!(decode(&bytes), Err(FormatError::Magic));
+    let mut bytes = valid.clone();
+    bytes[8..12].copy_from_slice(&999_u32.to_le_bytes());
+    assert_eq!(decode(&bytes), Err(FormatError::Version(999)));
+    let mut bytes = valid.clone();
+    bytes[12..16].copy_from_slice(&((MAX_RECORDS + 1) as u32).to_le_bytes());
+    assert_eq!(decode(&bytes), Err(FormatError::TooLarge));
+    let mut bytes = valid.clone();
+    bytes[16..20].copy_from_slice(&0_u32.to_le_bytes());
+    assert_eq!(decode(&bytes), Err(FormatError::Length));
+    for id in [0_u16, 4, 65535] {
+        let mut bytes = valid.clone();
+        bytes[HEADER_SIZE + 12..].copy_from_slice(&id.to_le_bytes());
+        repair_checksum(&mut bytes);
+        assert_eq!(decode(&bytes), Err(FormatError::BlockId(id)));
+    }
+    let mut bytes = valid;
+    bytes[HEADER_SIZE..HEADER_SIZE + 4].copy_from_slice(&32_i32.to_le_bytes());
+    repair_checksum(&mut bytes);
+    assert_eq!(decode(&bytes), Err(FormatError::Coordinates));
+    let mut world = World::default();
+    world.set_block(BlockPos([0; 3]), Block::Dirt).unwrap();
+    world.set_block(BlockPos([1, 0, 0]), Block::Stone).unwrap();
+    let mut duplicate = encode(&world).unwrap();
+    let first = duplicate[HEADER_SIZE..HEADER_SIZE + RECORD_SIZE].to_vec();
+    duplicate[HEADER_SIZE + RECORD_SIZE..].copy_from_slice(&first);
+    repair_checksum(&mut duplicate);
+    assert_eq!(decode(&duplicate), Err(FormatError::UnsortedOrDuplicate));
+    let mut reversed = encode(&world).unwrap();
+    for i in 0..RECORD_SIZE {
+        reversed.swap(HEADER_SIZE + i, HEADER_SIZE + RECORD_SIZE + i);
+    }
+    repair_checksum(&mut reversed);
+    assert_eq!(decode(&reversed), Err(FormatError::UnsortedOrDuplicate));
+    assert_eq!(
+        decode(&vec![0; MAX_FILE_SIZE + 1]),
+        Err(FormatError::TooLarge)
+    );
+}
+
+#[test]
+fn absent_save_and_stale_temporary_files_leave_the_demo_clean_and_do_not_write_world() {
+    let dir = TestDir::new();
+    fs::write(dir.0.join("world.rcw.tmp.stale"), b"interrupted").unwrap();
+    for _ in 0..2 {
+        let (store, world, source) = SaveStore::open(&dir.0).unwrap();
+        assert_eq!(source, LoadSource::NewDemo);
+        assert_eq!(world, demo_world());
+        assert!(!store.path().exists());
+        assert!(!store.backup_path().exists());
+    }
+    assert_eq!(
+        fs::read(dir.0.join("world.rcw.tmp.stale")).unwrap(),
+        b"interrupted"
+    );
+}
+
+#[test]
+fn atomic_replacement_keeps_previous_generation_and_restarts_into_latest_world() {
+    let dir = TestDir::new();
+    let old = demo_world();
+    let new = edited_world();
+    {
+        let (store, _, _) = SaveStore::open(&dir.0).unwrap();
+        store.save(&old).unwrap();
+        store.save(&new).unwrap();
+        assert_eq!(
+            fs::read(store.backup_path()).unwrap(),
+            encode(&old).unwrap()
+        );
+        assert_eq!(fs::read(store.path()).unwrap(), encode(&new).unwrap());
+    }
+    let (_, loaded, source) = SaveStore::open(&dir.0).unwrap();
+    assert_eq!(source, LoadSource::Saved);
+    assert_eq!(encode(&loaded).unwrap(), encode(&new).unwrap());
+}
+
+#[test]
+fn injected_partial_write_sync_and_rename_failures_preserve_previous_primary() {
+    for stage in [
+        SaveStage::PartialTemp,
+        SaveStage::TempSynced,
+        SaveStage::BackupCommitted,
+        SaveStage::BeforePrimaryRename,
+    ] {
+        let dir = TestDir::new();
+        let (store, _, _) = SaveStore::open(&dir.0).unwrap();
+        store.save(&demo_world()).unwrap();
+        let before = fs::read(store.path()).unwrap();
+        let result = store.save_with(&edited_world(), |current| {
+            if current == stage {
+                Err(io::Error::other("injected disk failure"))
+            } else {
+                Ok(())
+            }
+        });
+        assert!(result.is_err());
+        assert_eq!(fs::read(store.path()).unwrap(), before);
+        assert!(decode(&fs::read(store.path()).unwrap()).is_ok());
+        let leftovers: Vec<_> = fs::read_dir(&dir.0)
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .filter(|name| name.to_string_lossy().contains(".tmp."))
+            .collect();
+        assert!(leftovers.is_empty(), "{leftovers:?}");
+    }
+}
+
+#[test]
+fn first_failed_save_never_leaves_a_partial_primary_and_postcommit_error_is_not_success() {
+    let dir = TestDir::new();
+    let (store, _, _) = SaveStore::open(&dir.0).unwrap();
+    assert!(
+        store
+            .save_with(&demo_world(), |stage| if stage == SaveStage::PartialTemp {
+                Err(io::Error::other("disk full"))
+            } else {
+                Ok(())
+            })
+            .is_err()
+    );
+    assert!(!store.path().exists());
+    store.save(&demo_world()).unwrap();
+    assert!(
+        store
+            .save_with(&edited_world(), |stage| {
+                if stage == SaveStage::PrimaryCommitted {
+                    Err(io::Error::other("injected completion failure"))
+                } else {
+                    Ok(())
+                }
+            })
+            .is_err()
+    );
+    assert_eq!(
+        fs::read(store.path()).unwrap(),
+        encode(&edited_world()).unwrap()
+    );
+    assert_eq!(
+        fs::read(store.backup_path()).unwrap(),
+        encode(&demo_world()).unwrap()
+    );
+}
+
+#[test]
+fn corrupt_primary_is_never_overwritten_and_backup_can_be_recovered_explicitly() {
+    let dir = TestDir::new();
+    {
+        let (store, _, _) = SaveStore::open(&dir.0).unwrap();
+        store.save(&demo_world()).unwrap();
+        store.save(&edited_world()).unwrap();
+        fs::write(store.path(), b"damaged user data").unwrap();
+        assert!(store.save(&demo_world()).is_err());
+        assert_eq!(fs::read(store.path()).unwrap(), b"damaged user data");
+        assert!(decode(&fs::read(store.backup_path()).unwrap()).is_ok());
+    }
+    assert!(SaveStore::open(&dir.0).is_err());
+    assert_eq!(
+        fs::read(dir.0.join("world.rcw")).unwrap(),
+        b"damaged user data"
+    );
+    fs::rename(dir.0.join("world.rcw"), dir.0.join("world.rcw.damaged")).unwrap();
+    assert!(SaveStore::open(&dir.0).is_err()); // Backup presence is not a new world.
+    fs::copy(dir.0.join("world.rcw.bak"), dir.0.join("world.rcw")).unwrap();
+    let (_, recovered, source) = SaveStore::open(&dir.0).unwrap();
+    assert_eq!(source, LoadSource::Saved);
+    assert_eq!(encode(&recovered).unwrap(), encode(&demo_world()).unwrap());
+}
+
+#[test]
+fn invalid_paths_backup_failure_and_oversized_files_do_not_damage_existing_save() {
+    let dir = TestDir::new();
+    fs::write(dir.0.join("not-a-directory"), b"keep").unwrap();
+    assert!(SaveStore::open(dir.0.join("not-a-directory/child")).is_err());
+    let (store, _, _) = SaveStore::open(dir.0.join("valid")).unwrap();
+    store.save(&demo_world()).unwrap();
+    fs::create_dir(store.backup_path()).unwrap();
+    assert!(store.save(&edited_world()).is_err());
+    assert_eq!(
+        fs::read(store.path()).unwrap(),
+        encode(&demo_world()).unwrap()
+    );
+    let other = dir.0.join("oversized");
+    fs::create_dir(&other).unwrap();
+    let file = File::create(other.join("world.rcw")).unwrap();
+    file.set_len(MAX_FILE_SIZE as u64 + 1).unwrap();
+    drop(file);
+    assert!(matches!(
+        SaveStore::open(&other),
+        Err(SaveError::Invalid(FormatError::TooLarge))
+    ));
+}
+
+#[test]
+fn second_instance_cannot_open_the_same_world_until_the_lock_is_released() {
+    let dir = TestDir::new();
+    let (store, _, _) = SaveStore::open(&dir.0).unwrap();
+    assert!(SaveStore::open(&dir.0).is_err());
+    drop(store);
+    assert!(SaveStore::open(&dir.0).is_ok());
+}
+
+#[test]
+fn encoder_refuses_unsupported_imported_coordinates_and_noops_do_not_change_revision() {
+    let mut world = demo_world();
+    let revision = world.revision();
+    assert_eq!(
+        world.set_block(BlockPos([0; 3]), Block::Stone).unwrap(),
+        None
+    );
+    assert_eq!(world.revision(), revision);
+    world.set_block(BlockPos([0; 3]), Block::Grass).unwrap();
+    assert_ne!(world.revision(), revision);
+    world.insert_chunk(crate::ChunkPos([2, 0, 0]), crate::Chunk::default());
+    assert_eq!(encode(&world), Err(FormatError::Coordinates));
+}

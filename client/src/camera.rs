@@ -100,10 +100,14 @@ fn read_input(
     windows: Query<(&Window, &CursorOptions), With<PrimaryWindow>>,
     mut view: ResMut<ViewAngles>,
     mut input: ResMut<ControllerInput>,
+    save: Option<Res<crate::persistence::SaveFeedback>>,
 ) {
     input.active = windows
         .single()
         .is_ok_and(|(window, cursor)| window.focused && cursor.grab_mode != CursorGrabMode::None);
+    if save.is_some_and(|status| status.closing) {
+        input.active = false;
+    }
     if !input.active {
         *input = ControllerInput::default();
         return;

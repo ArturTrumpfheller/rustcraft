@@ -1,6 +1,6 @@
 # RustCraft platform support and development setup
 
-Status: **slice 3 platform requirements and acceptance procedure**. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
+Status: **slice 4 platform requirements and acceptance procedure**. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
 
 ## Supported platforms and targets
 
@@ -108,3 +108,23 @@ Build/run `cargo run --locked -p rustcraft` from `feat/slice-3-block-interaction
 5. Walk, sprint, jump, reset and resize the window. Build at the old spawn from a distance, then R: the player should recover in clear space above, while edits remain. Editable bounds are X/Z [-32,32), Y [-16,32); placement beyond them is ignored.
 6. Escape/focus loss must release capture and prevent edits. Right click while released must do nothing. Returning requires a fresh left capture click without mining. R and simultaneous click must not edit the old position.
 7. Close/restart and confirm the original four-chunk scene returns. Repeat on Void glibc X11/Wayland and Windows MSVC, recording GPU/driver/backend and any cursor/editing issues. Software X11 coverage does not establish these native GUI configurations.
+
+## Slice 4 manual test
+
+Use the current slice-4 branch and unchanged native build dependencies. On Void, isolate test data from real worlds:
+
+```sh
+RUSTCRAFT_DATA_DIR="$HOME/.local/share/rustcraft-slice4-test" cargo run --locked -p rustcraft
+```
+
+The normal Linux location is `${XDG_DATA_HOME}/rustcraft` when absolute, otherwise `$HOME/.local/share/rustcraft`. Windows uses `%LOCALAPPDATA%\RustCraft`, falling back to `%APPDATA%\RustCraft`; in PowerShell set `$env:RUSTCRAFT_DATA_DIR = Join-Path $env:LOCALAPPDATA 'RustCraft-Slice4-Test'` for isolation. The absolute override is a directory, not a filename. The startup log shows the resolved `world.rcw` path.
+
+1. With a new directory, confirm `New demo`, the original terrain and working capture/mouse/walking/sprint/jump. F5 without edits should not create `world.rcw`. The lock file alone is normal.
+2. Add Grass/Dirt/Stone, replace terrain through break/place, remove several original blocks, cross x=0/z=0 and positive/negative 16-block seams, and extend into previously missing chunks. Check immediate rendering and safe placement. Press F5, wait for `Saved`, close and relaunch using exactly the same data directory. Confirm `Loaded`, all edits and correct solid collision. Empty spaces must stay empty; R must preserve edits.
+3. Change blocks again, release the mouse and wait at least 30 seconds. Confirm `Saved` and updated file. Restart and verify these changes. Idle intervals must not continually rewrite the file/backup.
+4. Edit once more and immediately close normally without F5. Wait for process exit, restart and verify the last edit. Build over the original spawn from a distance, save and restart: the player must start in clear space above the new blocks.
+5. While the game runs, starting a second process with the same directory should fail with a lock error. After clean exit it should open normally. Never delete the lock file while a session runs.
+6. With all instances closed, copy the entire test directory. Only in the disposable copy, truncate/damage `world.rcw`; launching with that copy must stop with an error and preserve it. Restore `world.rcw.bak` by following README's preserve/copy recovery instructions. A backup appears after the second successful changed save; it restores the previous generation.
+7. Test resize, Escape, focus changes, targeting and player-overlap rejection again. Repeat on native Void X11/Wayland and Windows, recording GPU/driver/backend. CI tests file replacement/locking on both OSes, but it does not test desktop GUI input or real power loss.
+
+Do not force-kill during saves. On save failure the game stays open and dirty; fix the problem and use F5 or close again. Player position is deliberately reset, not persisted. No multi-world menu, migration, cloud save or inventory persistence is included. See [format and durability limits](SAVE_FORMAT.md).

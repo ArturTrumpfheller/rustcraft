@@ -85,7 +85,7 @@ fn edit_and_target(
         && let Ok(mut window) = ctx.windows.single_mut()
     {
         window.title = format!(
-            "RustCraft | Block: {} {} | 1/2/3 select | LMB break | RMB place | Esc release | R respawn",
+            "RustCraft | Block: {} {} | 1/2/3 select | LMB break | RMB place | F5 save | Esc release | R respawn",
             ctx.editor.selected.slot(),
             ctx.editor.selected.name()
         );

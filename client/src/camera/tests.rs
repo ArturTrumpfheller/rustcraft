@@ -293,3 +293,30 @@ fn mining_clicks_do_not_suppress_mouse_look_after_capture() {
             .captured_this_frame
     );
 }
+
+#[test]
+fn final_save_pauses_controls_and_a_canceled_close_can_resume() {
+    let mut app = test_app();
+    settle(&mut app);
+    let original = body(&app);
+    app.insert_resource(crate::persistence::SaveFeedback {
+        label: "Saving".into(),
+        closing: true,
+    });
+    key(&mut app, KeyCode::KeyW);
+    key(&mut app, KeyCode::Space);
+    tick(&mut app);
+    assert_eq!(body(&app), original);
+    assert!(!app.world().resource::<ControllerInput>().active);
+    assert!(!app.world().resource::<ControllerInput>().jump_pending);
+    app.world_mut()
+        .resource_mut::<crate::persistence::SaveFeedback>()
+        .closing = false;
+    tick(&mut app);
+    assert!(app.world().resource::<ControllerInput>().active);
+    assert_ne!(body(&app).position, original.position);
+    assert!(
+        body(&app).grounded,
+        "the stale jump edge must not survive a paused save"
+    );
+}

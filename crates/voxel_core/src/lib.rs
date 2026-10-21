@@ -3,6 +3,7 @@
 mod chunk;
 pub mod interaction;
 mod mesh;
+pub mod persistence;
 pub mod physics;
 pub mod raycast;
 mod world;

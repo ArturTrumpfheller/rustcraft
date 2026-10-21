@@ -1,0 +1,380 @@
+//! Versioned full-world snapshots and recoverable filesystem commits. No Bevy
+//! types, transient revisions, enum discriminants, meshes or vector layout are
+//! serialized. See docs/SAVE_FORMAT.md for the byte-level contract.
+use crate::{Block, BlockPos, CHUNK_SIZE, EDIT_MAX, EDIT_MIN, LocalPos, World, demo_world};
+use std::{
+    fmt,
+    fs::{self, File, OpenOptions},
+    io::{self, Read, Write},
+    path::{Path, PathBuf},
+    sync::atomic::{AtomicU64, Ordering},
+};
+
+pub const MAGIC: &[u8; 8] = b"RUSTWRLD";
+pub const FORMAT_VERSION: u32 = 1;
+pub const HEADER_SIZE: usize = 24;
+pub const RECORD_SIZE: usize = 14;
+pub const MAX_RECORDS: usize = 64 * 48 * 64;
+pub const MAX_FILE_SIZE: usize = HEADER_SIZE + MAX_RECORDS * RECORD_SIZE;
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum FormatError {
+    Magic,
+    Version(u32),
+    Length,
+    TooLarge,
+    Checksum,
+    BlockId(u16),
+    Coordinates,
+    UnsortedOrDuplicate,
+}
+impl fmt::Display for FormatError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "invalid world save: {self:?}")
+    }
+}
+impl std::error::Error for FormatError {}
+
+fn in_bounds(p: [i32; 3]) -> bool {
+    (0..3).all(|axis| p[axis] >= EDIT_MIN[axis] && p[axis] < EDIT_MAX[axis])
+}
+fn block_id(block: Block) -> u16 {
+    match block {
+        Block::Air => 0,
+        Block::Grass => 1,
+        Block::Dirt => 2,
+        Block::Stone => 3,
+    }
+}
+fn stored_block(id: u16) -> Result<Block, FormatError> {
+    match id {
+        1 => Ok(Block::Grass),
+        2 => Ok(Block::Dirt),
+        3 => Ok(Block::Stone),
+        _ => Err(FormatError::BlockId(id)),
+    }
+}
+fn checksum(bytes: &[u8]) -> u32 {
+    let mut hash = crc32fast::Hasher::new();
+    hash.update(&bytes[..20]);
+    hash.update(&bytes[HEADER_SIZE..]);
+    hash.finalize()
+}
+
+/// Canonical sparse non-air records representing a FULL world, not an overlay.
+/// Missing records mean Air even where the original demo used to have solids.
+pub fn encode(world: &World) -> Result<Vec<u8>, FormatError> {
+    let mut records = Vec::new();
+    if world.chunks().count() > MAX_RECORDS / (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE) {
+        return Err(FormatError::TooLarge);
+    }
+    for (position, chunk) in world.chunks() {
+        for x in 0..CHUNK_SIZE {
+            for y in 0..CHUNK_SIZE {
+                for z in 0..CHUNK_SIZE {
+                    let local = LocalPos::new([x, y, z]).expect("bounded local coordinates");
+                    let p = position
+                        .block_position(local)
+                        .ok_or(FormatError::Coordinates)?
+                        .0;
+                    if !in_bounds(p) {
+                        return Err(FormatError::Coordinates);
+                    }
+                    let block = chunk.get(local);
+                    if block.is_solid() {
+                        records.push((p, block_id(block)));
+                    }
+                }
+            }
+        }
+    }
+    records.sort_unstable_by_key(|(p, _)| *p);
+    let payload_length = records.len() * RECORD_SIZE;
+    let mut bytes = Vec::with_capacity(HEADER_SIZE + payload_length);
+    bytes.extend(MAGIC);
+    bytes.extend(FORMAT_VERSION.to_le_bytes());
+    bytes.extend((records.len() as u32).to_le_bytes());
+    bytes.extend((payload_length as u32).to_le_bytes());
+    bytes.extend(0_u32.to_le_bytes());
+    for (p, id) in records {
+        for coordinate in p {
+            bytes.extend(coordinate.to_le_bytes());
+        }
+        bytes.extend(id.to_le_bytes());
+    }
+    let crc = checksum(&bytes);
+    bytes[20..24].copy_from_slice(&crc.to_le_bytes());
+    Ok(bytes)
+}
+
+pub fn decode(bytes: &[u8]) -> Result<World, FormatError> {
+    if bytes.len() > MAX_FILE_SIZE {
+        return Err(FormatError::TooLarge);
+    }
+    if bytes.len() < HEADER_SIZE {
+        return Err(FormatError::Length);
+    }
+    if &bytes[..8] != MAGIC {
+        return Err(FormatError::Magic);
+    }
+    let u32_at = |offset| {
+        u32::from_le_bytes(
+            bytes[offset..offset + 4]
+                .try_into()
+                .expect("header length checked"),
+        )
+    };
+    let version = u32_at(8);
+    if version != FORMAT_VERSION {
+        return Err(FormatError::Version(version));
+    }
+    let count = u32_at(12) as usize;
+    if count > MAX_RECORDS {
+        return Err(FormatError::TooLarge);
+    }
+    let length = u32_at(16) as usize;
+    if length != count * RECORD_SIZE || bytes.len() != HEADER_SIZE + length {
+        return Err(FormatError::Length);
+    }
+    if u32_at(20) != checksum(bytes) {
+        return Err(FormatError::Checksum);
+    }
+    let mut world = World::default();
+    let mut previous = None;
+    for record in bytes[HEADER_SIZE..].as_chunks::<RECORD_SIZE>().0 {
+        let p: [i32; 3] = std::array::from_fn(|axis| {
+            i32::from_le_bytes(
+                record[axis * 4..axis * 4 + 4]
+                    .try_into()
+                    .expect("fixed record size"),
+            )
+        });
+        if !in_bounds(p) {
+            return Err(FormatError::Coordinates);
+        }
+        if previous.is_some_and(|old| p <= old) {
+            return Err(FormatError::UnsortedOrDuplicate);
+        }
+        previous = Some(p);
+        let block = stored_block(u16::from_le_bytes(
+            record[12..14].try_into().expect("fixed record size"),
+        ))?;
+        world
+            .set_block(BlockPos(p), block)
+            .map_err(|_| FormatError::Coordinates)?;
+    }
+    Ok(world)
+}
+
+#[derive(Debug)]
+pub enum SaveError {
+    Io(io::Error),
+    Invalid(FormatError),
+    RecoveryRequired(String),
+}
+impl fmt::Display for SaveError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Io(error) => write!(f, "{error}"),
+            Self::Invalid(error) => write!(f, "{error}"),
+            Self::RecoveryRequired(message) => write!(f, "{message}"),
+        }
+    }
+}
+impl std::error::Error for SaveError {}
+impl From<io::Error> for SaveError {
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
+    }
+}
+impl From<FormatError> for SaveError {
+    fn from(error: FormatError) -> Self {
+        Self::Invalid(error)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LoadSource {
+    NewDemo,
+    Saved,
+}
+
+/// Holds an exclusive OS file lock for the session. Do not delete world.lock
+/// while instances run. Temporary files are never used as implicit load data.
+pub struct SaveStore {
+    directory: PathBuf,
+    _lock: File,
+}
+impl SaveStore {
+    pub fn open(directory: impl AsRef<Path>) -> Result<(Self, World, LoadSource), SaveError> {
+        let directory = directory.as_ref().to_path_buf();
+        if !directory.is_absolute() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "data directory must be absolute",
+            )
+            .into());
+        }
+        fs::create_dir_all(&directory)?;
+        let lock = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(directory.join("world.lock"))?;
+        lock.try_lock().map_err(|error| {
+            io::Error::other(format!("world already in use or lock unavailable: {error}"))
+        })?;
+        let store = Self {
+            directory,
+            _lock: lock,
+        };
+        let (world, source) = match read_save(&store.path()) {
+            Ok(Some(bytes)) => (decode(&bytes)?, LoadSource::Saved),
+            Ok(None) if store.backup_path().try_exists()? => {
+                return Err(SaveError::RecoveryRequired(format!(
+                    "primary save missing; backup retained at {}. Recover it explicitly before restarting",
+                    store.backup_path().display()
+                )));
+            }
+            Ok(None) => (demo_world(), LoadSource::NewDemo),
+            Err(error) => return Err(error),
+        };
+        Ok((store, world, source))
+    }
+    pub fn path(&self) -> PathBuf {
+        self.directory.join("world.rcw")
+    }
+    pub fn backup_path(&self) -> PathBuf {
+        self.directory.join("world.rcw.bak")
+    }
+    pub fn save(&self, world: &World) -> Result<(), SaveError> {
+        self.save_with(world, |_| Ok(()))
+    }
+
+    fn save_with(
+        &self,
+        world: &World,
+        mut hook: impl FnMut(SaveStage) -> io::Result<()>,
+    ) -> Result<(), SaveError> {
+        let bytes = encode(world)?;
+        match read_save(&self.path())? {
+            Some(previous) => {
+                decode(&previous)?; // Never replace a corrupt/unknown primary.
+                atomic_replace(&self.backup_path(), &previous, false, &mut hook)?;
+                hook(SaveStage::BackupCommitted)?;
+            }
+            None if self.backup_path().try_exists()? => {
+                return Err(SaveError::RecoveryRequired(
+                    "primary disappeared while backup exists; refusing to overwrite recovery state"
+                        .into(),
+                ));
+            }
+            None => {}
+        }
+        atomic_replace(&self.path(), &bytes, true, &mut hook)?;
+        Ok(())
+    }
+}
+
+fn read_save(path: &Path) -> Result<Option<Vec<u8>>, SaveError> {
+    let file = match File::open(path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.into()),
+    };
+    if !file.metadata()?.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "save path is not a regular file",
+        )
+        .into());
+    }
+    if file.metadata()?.len() > MAX_FILE_SIZE as u64 {
+        return Err(FormatError::TooLarge.into());
+    }
+    let mut bytes = Vec::new();
+    file.take(MAX_FILE_SIZE as u64 + 1)
+        .read_to_end(&mut bytes)?;
+    if bytes.len() > MAX_FILE_SIZE {
+        return Err(FormatError::TooLarge.into());
+    }
+    Ok(Some(bytes))
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum SaveStage {
+    PartialTemp,
+    TempSynced,
+    BackupCommitted,
+    BeforePrimaryRename,
+    PrimaryCommitted,
+}
+struct TempFile {
+    path: PathBuf,
+    file: Option<File>,
+}
+impl Drop for TempFile {
+    fn drop(&mut self) {
+        drop(self.file.take());
+        let _ = fs::remove_file(&self.path);
+    }
+}
+static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
+
+fn atomic_replace(
+    path: &Path,
+    bytes: &[u8],
+    primary: bool,
+    hook: &mut impl FnMut(SaveStage) -> io::Result<()>,
+) -> io::Result<()> {
+    let parent = path.parent().ok_or_else(|| {
+        io::Error::new(io::ErrorKind::InvalidInput, "save needs parent directory")
+    })?;
+    let mut temp = (0..16)
+        .find_map(|_| {
+            let mut name = path.file_name()?.to_os_string();
+            name.push(format!(
+                ".tmp.{}.{}",
+                std::process::id(),
+                NEXT_TEMP.fetch_add(1, Ordering::Relaxed)
+            ));
+            let temp = parent.join(name);
+            match OpenOptions::new().write(true).create_new(true).open(&temp) {
+                Ok(file) => Some(Ok(TempFile {
+                    path: temp,
+                    file: Some(file),
+                })),
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => None,
+                Err(error) => Some(Err(error)),
+            }
+        })
+        .unwrap_or_else(|| {
+            Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                "temporary file name collision",
+            ))
+        })?;
+    let file = temp.file.as_mut().expect("new temporary file");
+    let split = bytes.len() / 2;
+    file.write_all(&bytes[..split])?;
+    hook(SaveStage::PartialTemp)?;
+    file.write_all(&bytes[split..])?;
+    file.flush()?;
+    file.sync_all()?;
+    hook(SaveStage::TempSynced)?;
+    drop(temp.file.take()); // Close before rename on every platform.
+    if primary {
+        hook(SaveStage::BeforePrimaryRename)?;
+    }
+    fs::rename(&temp.path, path)?;
+    #[cfg(unix)]
+    File::open(parent)?.sync_all()?;
+    if primary {
+        hook(SaveStage::PrimaryCommitted)?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests;

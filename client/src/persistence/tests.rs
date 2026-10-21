@@ -1,0 +1,374 @@
+use super::*;
+use bevy::time::TimeUpdateStrategy;
+use std::{
+    fs,
+    sync::atomic::{AtomicU64, Ordering},
+    time::Instant,
+};
+use voxel_core::{
+    Block, BlockPos,
+    persistence::{decode, encode},
+};
+
+static NEXT_DIR: AtomicU64 = AtomicU64::new(0);
+struct TestDir(PathBuf);
+impl TestDir {
+    fn new() -> Self {
+        let path = std::env::temp_dir().join(format!(
+            "rustcraft-client-test-{}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos(),
+            NEXT_DIR.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir(&path).unwrap();
+        Self(path)
+    }
+}
+impl Drop for TestDir {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
+fn app_at(dir: &TestDir) -> App {
+    let (store, world, source) = SaveStore::open(&dir.0).unwrap();
+    let session = SaveSession::new(store, &world, source);
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO))
+        .insert_resource(VoxelWorld(world))
+        .insert_resource(session)
+        .init_resource::<ButtonInput<KeyCode>>()
+        .add_plugins(PersistencePlugin);
+    app.world_mut().spawn((
+        Window {
+            focused: true,
+            title: "RustCraft — test".into(),
+            ..default()
+        },
+        PrimaryWindow,
+    ));
+    frame(&mut app, Duration::ZERO);
+    app
+}
+fn frame(app: &mut App, duration: Duration) {
+    *app.world_mut().resource_mut::<TimeUpdateStrategy>() =
+        TimeUpdateStrategy::ManualDuration(duration);
+    app.update();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+}
+fn edit(app: &mut App, pos: [i32; 3], block: Block) {
+    app.world_mut()
+        .resource_mut::<VoxelWorld>()
+        .0
+        .set_block(BlockPos(pos), block)
+        .unwrap();
+}
+fn f5(app: &mut App) {
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::F5);
+    frame(app, Duration::ZERO);
+}
+fn drain(app: &mut App) {
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while app.world().resource::<SaveSession>().job.is_some() {
+        assert!(Instant::now() < deadline, "save worker timed out");
+        std::thread::yield_now();
+        frame(app, Duration::ZERO);
+    }
+}
+fn close(app: &mut App) {
+    let window = app
+        .world_mut()
+        .query_filtered::<Entity, With<PrimaryWindow>>()
+        .single(app.world())
+        .unwrap();
+    app.world_mut()
+        .write_message(WindowCloseRequested { window });
+    frame(app, Duration::ZERO);
+}
+
+#[test]
+fn platform_paths_obey_override_xdg_and_appdata_without_changing_process_environment() {
+    let root = std::env::temp_dir();
+    let path = |windows, vars: &[(&str, OsString)]| {
+        directory_from(windows, |name| {
+            vars.iter()
+                .find(|(k, _)| *k == name)
+                .map(|(_, v)| v.clone())
+        })
+    };
+    let xdg = root.join("xdg");
+    let home = root.join("home");
+    assert_eq!(
+        path(
+            false,
+            &[
+                ("XDG_DATA_HOME", xdg.clone().into()),
+                ("HOME", home.clone().into())
+            ]
+        )
+        .unwrap(),
+        xdg.join("rustcraft")
+    );
+    for invalid in ["", "relative"] {
+        assert_eq!(
+            path(
+                false,
+                &[
+                    ("XDG_DATA_HOME", invalid.into()),
+                    ("HOME", home.clone().into())
+                ]
+            )
+            .unwrap(),
+            home.join(".local/share/rustcraft")
+        );
+        assert!(
+            path(
+                false,
+                &[
+                    ("RUSTCRAFT_DATA_DIR", invalid.into()),
+                    ("HOME", home.clone().into())
+                ]
+            )
+            .is_err()
+        );
+    }
+    for windows in [true, false] {
+        assert_eq!(
+            path(windows, &[("RUSTCRAFT_DATA_DIR", root.clone().into())]).unwrap(),
+            root
+        );
+        assert!(path(windows, &[]).is_err());
+    }
+    let local = root.join("local");
+    let roaming = root.join("roaming");
+    assert_eq!(
+        path(
+            true,
+            &[
+                ("LOCALAPPDATA", local.clone().into()),
+                ("APPDATA", roaming.clone().into())
+            ]
+        )
+        .unwrap(),
+        local.join("RustCraft")
+    );
+    assert_eq!(
+        path(
+            true,
+            &[
+                ("LOCALAPPDATA", "relative".into()),
+                ("APPDATA", roaming.clone().into())
+            ]
+        )
+        .unwrap(),
+        roaming.join("RustCraft")
+    );
+}
+
+#[test]
+fn unchanged_demo_frames_f5_and_close_do_not_create_a_save() {
+    let dir = TestDir::new();
+    let mut app = app_at(&dir);
+    for _ in 0..3 {
+        frame(&mut app, Duration::from_secs(60));
+    }
+    edit(&mut app, [0; 3], Block::Stone); // The original stone: a no-op.
+    f5(&mut app);
+    assert_eq!(app.world().resource::<SaveFeedback>().label, "New demo");
+    assert!(!dir.0.join("world.rcw").exists());
+    close(&mut app);
+    assert!(app.should_exit().is_some());
+    assert!(!dir.0.join("world.rcw").exists());
+}
+
+#[test]
+fn manual_save_restarts_with_removed_replaced_and_new_boundary_blocks_then_stays_clean() {
+    let dir = TestDir::new();
+    let expected;
+    {
+        let mut app = app_at(&dir);
+        edit(&mut app, [-1, 0, -1], Block::Air);
+        edit(&mut app, [0; 3], Block::Dirt);
+        edit(&mut app, [16, 8, -17], Block::Grass);
+        frame(&mut app, Duration::ZERO);
+        assert_eq!(app.world().resource::<SaveFeedback>().label, "Dirty");
+        expected = encode(&app.world().resource::<VoxelWorld>().0).unwrap();
+        f5(&mut app);
+        drain(&mut app);
+        assert_eq!(app.world().resource::<SaveFeedback>().label, "Saved");
+        assert_eq!(fs::read(dir.0.join("world.rcw")).unwrap(), expected);
+    }
+    let mut app = app_at(&dir);
+    assert_eq!(app.world().resource::<SaveFeedback>().label, "Loaded");
+    assert_eq!(
+        encode(&app.world().resource::<VoxelWorld>().0).unwrap(),
+        expected
+    );
+    frame(&mut app, Duration::from_secs(120));
+    f5(&mut app);
+    assert!(
+        !dir.0.join("world.rcw.bak").exists(),
+        "unchanged world was saved again"
+    );
+}
+
+#[test]
+fn autosave_uses_real_time_even_without_player_or_focus_and_skips_idle_intervals() {
+    let dir = TestDir::new();
+    let mut app = app_at(&dir);
+    app.world_mut()
+        .query::<&mut Window>()
+        .single_mut(app.world_mut())
+        .unwrap()
+        .focused = false;
+    edit(&mut app, [0; 3], Block::Dirt);
+    frame(&mut app, Duration::from_secs(29));
+    assert!(!dir.0.join("world.rcw").exists());
+    frame(&mut app, Duration::from_secs(1));
+    drain(&mut app);
+    assert!(dir.0.join("world.rcw").exists());
+    frame(&mut app, Duration::from_secs(90));
+    assert!(!dir.0.join("world.rcw.bak").exists());
+}
+
+#[test]
+fn edits_during_in_flight_snapshot_remain_dirty_and_close_saves_the_latest_revision() {
+    let dir = TestDir::new();
+    let mut app = app_at(&dir);
+    edit(&mut app, [0; 3], Block::Dirt);
+    // Hold an actual worker at a channel barrier to deterministically edit
+    // after capture, without timing-dependent assumptions about disk speed.
+    let snapshot = app.world().resource::<VoxelWorld>().0.clone();
+    let revision = snapshot.revision();
+    let store = Arc::clone(&app.world().resource::<SaveSession>().store);
+    let (tx, rx) = std::sync::mpsc::channel();
+    let handle = std::thread::spawn(move || {
+        rx.recv().unwrap();
+        store.save(&snapshot)
+    });
+    app.world_mut().resource_mut::<SaveSession>().job = Some(SaveJob { revision, handle });
+    edit(&mut app, [16, 8, -17], Block::Grass);
+    frame(&mut app, Duration::ZERO);
+    tx.send(()).unwrap();
+    drain(&mut app);
+    assert_eq!(app.world().resource::<SaveFeedback>().label, "Dirty");
+    assert_eq!(
+        decode(&fs::read(dir.0.join("world.rcw")).unwrap())
+            .unwrap()
+            .block(BlockPos([16, 8, -17])),
+        Block::Air
+    );
+    close(&mut app);
+    assert!(
+        app.should_exit().is_none(),
+        "exited before the final save finished"
+    );
+    drain(&mut app);
+    assert!(app.should_exit().is_some());
+    assert_eq!(
+        fs::read(dir.0.join("world.rcw")).unwrap(),
+        encode(&app.world().resource::<VoxelWorld>().0).unwrap()
+    );
+}
+
+#[test]
+fn save_failure_preserves_primary_keeps_changes_dirty_cancels_close_and_allows_f5_retry() {
+    let dir = TestDir::new();
+    let mut app = app_at(&dir);
+    edit(&mut app, [0; 3], Block::Dirt);
+    f5(&mut app);
+    drain(&mut app);
+    let primary = fs::read(dir.0.join("world.rcw")).unwrap();
+    fs::create_dir(dir.0.join("world.rcw.bak")).unwrap(); // Real cross-platform I/O failure.
+    edit(&mut app, [0; 3], Block::Grass);
+    close(&mut app);
+    drain(&mut app);
+    assert_eq!(
+        app.world().resource::<SaveFeedback>().label,
+        "ERROR / DIRTY"
+    );
+    assert!(!app.world().resource::<SaveFeedback>().closing);
+    assert!(app.should_exit().is_none());
+    assert_eq!(fs::read(dir.0.join("world.rcw")).unwrap(), primary);
+    fs::remove_dir(dir.0.join("world.rcw.bak")).unwrap();
+    f5(&mut app);
+    drain(&mut app);
+    assert_eq!(app.world().resource::<SaveFeedback>().label, "Saved");
+    assert_eq!(fs::read(dir.0.join("world.rcw.bak")).unwrap(), primary);
+}
+
+#[test]
+fn restored_world_initializes_meshes_collision_and_clear_spawn_instead_of_demo() {
+    use crate::{
+        player::{PlayerPlugin, PlayerSettings, PlayerState, SPAWN},
+        scene::VoxelScenePlugin,
+    };
+    use voxel_core::{
+        ChunkPos,
+        physics::{MovementInput, PhysicsConfig, Player},
+    };
+    let mut world = World::default();
+    // Saved blocks occupy the usual spawn; initialization must move above them.
+    world.set_block(BlockPos([0, 4, 10]), Block::Stone).unwrap();
+    world
+        .set_block(BlockPos([16, 1, -17]), Block::Dirt)
+        .unwrap();
+    let world = decode(&encode(&world).unwrap()).unwrap();
+    let mut body = Player::new([16.5, 4., -16.5]);
+    for _ in 0..120 {
+        body.tick(&world, MovementInput::default(), &PhysicsConfig::default());
+    }
+    assert!(body.grounded);
+    assert!((body.position[1] - 2.).abs() < 1e-7);
+    let mut app = App::new();
+    app.insert_resource(VoxelWorld(world))
+        .init_resource::<Assets<Mesh>>()
+        .init_resource::<Assets<StandardMaterial>>()
+        .add_plugins((VoxelScenePlugin, PlayerPlugin));
+    app.update();
+    let world = app.world_mut();
+    let state = world.resource::<PlayerState>();
+    assert!(state.body.position[1] > SPAWN[1]);
+    assert_eq!(state.body.position, state.previous_position);
+    assert!(state.body.fits_in_world(
+        &world.resource::<VoxelWorld>().0,
+        &world.resource::<PlayerSettings>().0
+    ));
+    assert_eq!(
+        world.resource::<VoxelWorld>().0.block(BlockPos([0; 3])),
+        Block::Air
+    );
+    assert!(
+        world
+            .resource::<VoxelWorld>()
+            .0
+            .chunk(ChunkPos([1, 0, -2]))
+            .is_some()
+    );
+    let handles: Vec<_> = world
+        .query::<&Mesh3d>()
+        .iter(world)
+        .map(|h| h.0.clone())
+        .collect();
+    assert_eq!(handles.len(), 2);
+    for handle in handles {
+        assert_eq!(
+            world
+                .resource::<Assets<Mesh>>()
+                .get(&handle)
+                .unwrap()
+                .indices()
+                .unwrap()
+                .len(),
+            36
+        );
+    }
+}

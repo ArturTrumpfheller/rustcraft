@@ -75,3 +75,14 @@ Resolve these incrementally while preserving backward-compatible migration paths
 - Rebuild only the changed chunk and face-neighbors at boundaries. Keep one retained CPU/GPU mesh handle per resident chunk, hide empty geometry and refresh culling bounds. Synchronous click jobs stay bounded; larger worlds will need scheduling budgets.
 - Render an original procedural crosshair, target wire cube and three color swatches without additional crates, engine features, fonts or downloaded assets. Keep the existing original block colors; future pixel art follows the recorded provenance policy.
 - Preserve edits across R/void respawn and choose clear space above an obstructed spawn. All changes are memory-only and disappear when closing the application.
+
+## Slice 4 implementation decisions
+
+- Keep persistence in the existing Bevy-independent `voxel_core::persistence` module. Use full-world sparse non-air snapshots, rather than overlays coupled to demo/worldgen revisions. Missing records mean Air; only a missing file with no backup creates the demo.
+- Specify little-endian magic/version, stable explicit IDs, sorted signed world coordinates, strict bounded validation and CRC-32. Version 1 preserves the existing finite edit volume. Reject unknown versions/IDs without rewriting; future upgrades need explicit migration. See `SAVE_FORMAT.md` for the byte contract.
+- Add only `crc32fast` 1.5.3 (MIT OR Apache-2.0), keeping Rust 1.99.1 and Bevy 0.20.0. No new assets or renderer features.
+- Resolve Linux XDG/HOME and Windows LOCALAPPDATA/APPDATA per-user paths in the client, support an absolute `RUSTCRAFT_DATA_DIR`, and log the actual path. Core filesystem tests inject isolated directories.
+- Keep transient mutation revisions, capture bounded immutable snapshots and serialize/sync on a single background save worker. F5 saves changed data; 30-second real-time autosave skips clean worlds. A completed old snapshot must not clear newer edits.
+- Use same-directory exclusive temporary files, file flush/sync, replacement rename, previous-generation backup and Unix directory sync. Refuse corrupt/unknown primary replacement and require explicit recovery; do not silently fall back to a new demo. Hold an OS file lock to prevent concurrent RustCraft sessions on one world.
+- Handle native window close explicitly, pausing controls and awaiting the latest successful save before exit. Save failure keeps dirty data and cancels close so F5 can retry. Forced termination and absolute power-loss durability are not promised.
+- Load authoritative world data before startup meshes/physics and search upward for a clear spawn. Player position, selected block, inventory, world selection, cloud saves and seeded generation remain outside this slice.
