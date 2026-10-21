@@ -1,6 +1,6 @@
 # RustCraft
 
-**RustCraft** is a private, experimental Minecraft-inspired voxel sandbox written in Rust. The current v0.1 prototype displays a small, contiguous block world with a first-person **walking player**, gravity, jumping and voxel collision. The long-term goal is a Classic-style editable world, followed by survival and original sandbox mechanics.
+**RustCraft** is a public, experimental Minecraft-inspired voxel sandbox written in Rust. The current v0.1 prototype displays a small, contiguous block world with a first-person **walking player**, gravity, jumping and voxel collision. The long-term goal is a Classic-style editable world, followed by survival and original sandbox mechanics.
 
 RustCraft is an independent project, not a Minecraft source port, and is not affiliated with or endorsed by Mojang or Microsoft.
 
@@ -84,4 +84,4 @@ The [validation report](docs/VALIDATION.md) records the executed checks and rema
 
 Project-authored source code and documentation are **MIT OR Apache-2.0**; see [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE). Third-party dependencies and artwork keep their own licenses. See [dependency and asset inventory](docs/THIRD_PARTY.md).
 
-Keep the repository private and `main` stable. Develop features on topic branches and submit pull requests for review. No proprietary game source, textures, sounds or logos are included.
+The source repository is public; keep `main` stable. Develop features on topic branches and submit pull requests for review. Publishing packaged game releases is a separate decision. No proprietary game source, textures, sounds or logos are included.
