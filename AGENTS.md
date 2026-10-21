@@ -9,9 +9,9 @@ This is a **private** Rust project intended to become an independent, open-sourc
 - `docs/ARCHITECTURE.md`: technical separation and future components
 - `docs/DECISIONS.md`: decisions already made with the project owner
 - `docs/THIRD_PARTY.md`: dependency and asset policy
-- `docs/CODEX_HANDOFF.md`: first implementation scope and workflow
+- `docs/CODEX_HANDOFF.md`: historical handoff for completed slice 1; **do not** treat it as the scope of new tasks
 
-The repository files are the persistent source of project context. Do not assume access to previous ChatGPT conversations.
+The repository files are the persistent source of project context. Do not assume access to previous ChatGPT conversations. For new development, read the **current GitHub issue** and its acceptance criteria first; that issue supersedes historical handoffs. Start from the latest `main` instead of reusing a finished feature branch.
 
 ## Technical rules
 
