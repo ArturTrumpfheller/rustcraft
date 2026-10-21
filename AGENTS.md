@@ -1,6 +1,6 @@
 # RustCraft — Codex agent instructions
 
-This is a **private** Rust project intended to become an independent, open-source voxel sandbox. We start with a Minecraft Classic-inspired prototype and iterate toward survival, richer world generation, multiplayer, and original ideas. It is **not** an existing Minecraft source port.
+This is a **publicly accessible, early-development** Rust project intended to become an independent, open-source voxel sandbox. We start with a Minecraft Classic-inspired prototype and iterate toward survival, richer world generation, multiplayer, and original ideas. It is **not** an existing Minecraft source port.
 
 ## Required reading before changing code
 
@@ -29,7 +29,7 @@ The repository files are the persistent source of project context. Do not assume
 - Newly authored source code and documentation: **MIT OR Apache-2.0**; retain both root license files and use the same SPDX expression in Cargo manifests.
 - Check each third-party dependency's license, and record direct dependencies / vendored code / included assets in `docs/THIRD_PARTY.md` before a release.
 - Use self-created or appropriately licensed temporary assets. Do not assume licensing for artwork matches code licensing.
-- Keep the repository private unless the owner explicitly decides otherwise. Never publish a release, alter visibility, or push secrets without explicit authorization.
+- The project owner explicitly made the repository **public** in October 2026. Do not change visibility, publish binaries/releases, or push secrets without explicit authorization. Public repositories expose commits, branches, PRs and history; check all additions for private data, licenses and proprietary assets.
 
 ## Implementation workflow
 
