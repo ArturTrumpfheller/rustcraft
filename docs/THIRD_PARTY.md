@@ -2,7 +2,7 @@
 
 Project-created code and documentation are **MIT OR Apache-2.0**, at the recipient's option. See the root LICENSE-MIT and LICENSE-APACHE files. This does not relicense dependencies or separately licensed artwork.
 
-## Direct dependencies (slice 4)
+## Direct dependencies (slice 5; unchanged from slice 4)
 
 | Component | Version | Upstream | SPDX license | Notices / use |
 | --- | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Project-created code and documentation are **MIT OR Apache-2.0**, at the recipie
 | crc32fast | 1.5.3 (exact pin) | https://github.com/srijs/rust-crc32fast | MIT OR Apache-2.0 | CRC-32 checksums in `voxel_core::persistence`; retain chosen upstream license/notice when distributing it. |
 | voxel_core | 0.1.0 (workspace) | This repository | MIT OR Apache-2.0 | Project-authored engine-independent library, not vendored third-party code. |
 
-`Cargo.lock` records exact transitive versions and checksums. No third-party source is copied or vendored. Slices 2 and 3 added only project-authored physics/controller/interaction code. Slice 4 adds `crc32fast` (Cargo metadata declares MIT OR Apache-2.0); its `cfg-if` dependency already existed in the graph. No asset or Bevy feature changes are required. Bevy's native renderer selection remains enabled; application features omit audio, gamepad, UI and external scene/texture import. All new project-authored persistence code remains MIT OR Apache-2.0.
+`Cargo.lock` records exact transitive versions and checksums. No third-party source is copied or vendored. Slices 2 and 3 added only project-authored physics/controller/interaction code. Slice 4 adds `crc32fast` (Cargo metadata declares MIT OR Apache-2.0); its `cfg-if` dependency already existed in the graph. No asset or Bevy feature changes are required. Bevy's native renderer selection remains enabled; application features omit audio, gamepad, UI and external scene/texture import. All project-authored persistence code remains MIT OR Apache-2.0. Slice 5 adds only original Rust code/colors/bitmap glyphs; no crates, Bevy features, lockfile changes, downloaded fonts or art are added.
 
 ## Dependency license review
 
@@ -29,8 +29,10 @@ No copyleft-only crate was identified in the reviewed graph. This is an initial 
 
 | Asset | Author / origin | License | Attribution |
 | --- | --- | --- | --- |
-| Grass, dirt and stone vertex colors | Original values authored in `crates/voxel_core/src/chunk.rs` for RustCraft | MIT OR Apache-2.0 | Root project licenses |
+| Grass, dirt, stone, wood and leaves vertex colors | Original values authored in `crates/voxel_core/src/chunk.rs` for RustCraft | MIT OR Apache-2.0 | Root project licenses |
 | Crosshair, selection swatches/frame and target wire cube | Original procedural geometry in `client/src/interaction.rs` | MIT OR Apache-2.0 | Root project licenses |
+| Original 5×7 bitmap save-status lettering and panel mesh | Authored in `client/src/save_hud.rs` | MIT OR Apache-2.0 | Root project licenses |
+| Seeded terrain, integer noise/hash composition, cave/ramp and tree geometry | Authored in `crates/voxel_core/src/worldgen.rs` | MIT OR Apache-2.0 | Root project licenses |
 | Terraced demo geometry and stone landmark | Original procedural layout in `crates/voxel_core/src/world.rs` | MIT OR Apache-2.0 | Root project licenses |
 
 There are no downloaded textures, music, sounds, fonts, logos, models or Mojang/Microsoft assets. Engine-provided shaders and platform window decorations are dependencies, not project-authored assets; their upstream licensing remains applicable.

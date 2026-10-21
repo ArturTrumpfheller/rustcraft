@@ -174,6 +174,8 @@ fn selection_feedback_and_crosshair_target_track_the_current_frame() {
         (KeyCode::Digit1, BuildBlock::Grass),
         (KeyCode::Digit2, BuildBlock::Dirt),
         (KeyCode::Digit3, BuildBlock::Stone),
+        (KeyCode::Digit4, BuildBlock::Wood),
+        (KeyCode::Digit5, BuildBlock::Leaves),
     ] {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
@@ -288,4 +290,27 @@ fn configured_reach_applies_to_highlight_and_clicks() {
     assert_eq!(world(&app), &before);
     click(&mut app, MouseButton::Right);
     assert_eq!(world(&app), &before);
+}
+
+#[test]
+fn wood_and_leaves_select_place_break_and_use_opaque_chunk_faces() {
+    let mut app = app();
+    prepare_target(&mut app);
+    click(&mut app, MouseButton::Left);
+    for (key, block) in [
+        (KeyCode::Digit4, Block::Wood),
+        (KeyCode::Digit5, Block::Leaves),
+    ] {
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(key);
+        frame(&mut app);
+        let before = index_count(&app);
+        click(&mut app, MouseButton::Right);
+        assert_eq!(world(&app).block(BlockPos([0, 5, 8])), block);
+        assert!(index_count(&app) > before);
+        click(&mut app, MouseButton::Left);
+        assert_eq!(world(&app).block(BlockPos([0, 5, 8])), Block::Air);
+        assert_eq!(index_count(&app), before);
+    }
 }

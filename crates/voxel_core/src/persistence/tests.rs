@@ -57,7 +57,11 @@ fn golden_fixture_fixes_magic_version_coordinates_ids_and_crc() {
         .iter()
         .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())
         .collect();
-    assert_eq!(one_block(), expected);
+    assert_eq!(&expected[8..12], &1_u32.to_le_bytes());
+    let mut upgraded = expected.clone();
+    upgraded[8..12].copy_from_slice(&2_u32.to_le_bytes());
+    repair_checksum(&mut upgraded);
+    assert_eq!(one_block(), upgraded);
     assert_eq!(
         decode(&expected).unwrap().block(BlockPos([0; 3])),
         Block::Stone
@@ -117,7 +121,7 @@ fn malformed_headers_ids_coordinates_and_record_order_are_rejected() {
     let mut bytes = valid.clone();
     bytes[16..20].copy_from_slice(&0_u32.to_le_bytes());
     assert_eq!(decode(&bytes), Err(FormatError::Length));
-    for id in [0_u16, 4, 65535] {
+    for id in [0_u16, 6, 65535] {
         let mut bytes = valid.clone();
         bytes[HEADER_SIZE + 12..].copy_from_slice(&id.to_le_bytes());
         repair_checksum(&mut bytes);
@@ -322,4 +326,71 @@ fn encoder_refuses_unsupported_imported_coordinates_and_noops_do_not_change_revi
     assert_ne!(world.revision(), revision);
     world.insert_chunk(crate::ChunkPos([2, 0, 0]), crate::Chunk::default());
     assert_eq!(encode(&world), Err(FormatError::Coordinates));
+}
+
+fn historical_v1() -> Vec<u8> {
+    // Independently authored with Python struct + zlib, not the current encoder.
+    let hex = "5255535457524c4401000000030000002a000000972f333aefffffffffffffff100000000100ffffffff02000000ffffffff02000000000000000000000000000300";
+    hex.as_bytes()
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|p| u8::from_str_radix(std::str::from_utf8(p).unwrap(), 16).unwrap())
+        .collect()
+}
+
+#[test]
+fn historical_v1_load_is_read_only_factory_is_not_called_and_changed_save_upgrades_with_backup() {
+    let dir = TestDir::new();
+    let fixture = historical_v1();
+    fs::write(dir.0.join("world.rcw"), &fixture).unwrap();
+    let (store, mut world, source) =
+        SaveStore::open_with(&dir.0, || panic!("must not regenerate existing worlds")).unwrap();
+    assert_eq!(source, LoadSource::Saved);
+    assert_eq!(world.block(BlockPos([-17, -1, 16])), Block::Grass);
+    assert_eq!(world.block(BlockPos([-1, 2, -1])), Block::Dirt);
+    assert_eq!(world.block(BlockPos([0; 3])), Block::Stone);
+    assert_eq!(world.block(BlockPos([1, 0, 0])), Block::Air); // No demo overlay.
+    assert_eq!(fs::read(store.path()).unwrap(), fixture);
+    assert!(!store.backup_path().exists());
+    world
+        .set_block(BlockPos([16, 16, -17]), Block::Wood)
+        .unwrap();
+    world
+        .set_block(BlockPos([-16, 17, 16]), Block::Leaves)
+        .unwrap();
+    store.save(&world).unwrap();
+    assert_eq!(fs::read(store.backup_path()).unwrap(), fixture);
+    assert_eq!(
+        &fs::read(store.path()).unwrap()[8..12],
+        &2_u32.to_le_bytes()
+    );
+    drop(store);
+    let (_, loaded, source) =
+        SaveStore::open_with(&dir.0, || panic!("override seed must be ignored")).unwrap();
+    assert_eq!(source, LoadSource::Saved);
+    assert_eq!(encode(&loaded).unwrap(), encode(&world).unwrap());
+    assert_eq!(loaded.block(BlockPos([1, 0, 0])), Block::Air);
+}
+
+#[test]
+fn v1_never_accepts_new_ids_and_unknown_formats_never_call_new_world_factory() {
+    let mut world = World::default();
+    world.set_block(BlockPos([0; 3]), Block::Wood).unwrap();
+    let wood = encode(&world).unwrap();
+    assert_eq!(decode(&wood).unwrap().block(BlockPos([0; 3])), Block::Wood);
+    for id in [4_u16, 5] {
+        let mut bytes = wood.clone();
+        bytes[8..12].copy_from_slice(&1_u32.to_le_bytes());
+        bytes[36..38].copy_from_slice(&id.to_le_bytes());
+        repair_checksum(&mut bytes);
+        assert_eq!(decode(&bytes), Err(FormatError::BlockId(id)));
+    }
+    let dir = TestDir::new();
+    let mut bytes = wood;
+    bytes[8..12].copy_from_slice(&3_u32.to_le_bytes());
+    repair_checksum(&mut bytes);
+    fs::write(dir.0.join("world.rcw"), &bytes).unwrap();
+    assert!(SaveStore::open_with(&dir.0, || panic!("not a missing save")).is_err());
+    assert_eq!(fs::read(dir.0.join("world.rcw")).unwrap(), bytes);
 }

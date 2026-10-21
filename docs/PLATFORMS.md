@@ -1,6 +1,6 @@
 # RustCraft platform support and development setup
 
-Status: **slice 4 platform requirements and acceptance procedure**. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
+Status: **slice 5 platform requirements and acceptance procedure**. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
 
 ## Supported platforms and targets
 
@@ -128,3 +128,26 @@ The normal Linux location is `${XDG_DATA_HOME}/rustcraft` when absolute, otherwi
 7. Test resize, Escape, focus changes, targeting and player-overlap rejection again. Repeat on native Void X11/Wayland and Windows, recording GPU/driver/backend. CI tests file replacement/locking on both OSes, but it does not test desktop GUI input or real power loss.
 
 Do not force-kill during saves. On save failure the game stays open and dirty; fix the problem and use F5 or close again. Player position is deliberately reset, not persisted. No multi-world menu, migration, cloud save or inventory persistence is included. See [format and durability limits](SAVE_FORMAT.md).
+
+## Slice 5 manual test
+
+Use the slice-5 branch and the same Void glibc / Windows MSVC dependencies. Native X11/Wayland and Windows GUI tests are still required. **Use fresh disposable directories**, never an actual world for fault injection.
+
+```sh
+git fetch origin
+git switch feat/slice-5-seeded-worldgen
+test_root="$(mktemp -d /tmp/rustcraft-slice5.XXXXXX)"
+RUSTCRAFT_DATA_DIR="$test_root/seed-42" RUSTCRAFT_WORLD_SEED=42 cargo run --locked -p rustcraft
+RUSTCRAFT_DATA_DIR="$test_root/seed-2026" RUSTCRAFT_WORLD_SEED=2026 cargo run --locked -p rustcraft
+```
+
+Keep the shell/variable or record the printed paths to resume the same test worlds. For persistent tests outside /tmp, choose a new absolute directory under your home, without reusing your real `rustcraft` data directory. Windows PowerShell can use `$env:RUSTCRAFT_DATA_DIR = Join-Path $env:TEMP ('RustCraft-' + [guid]::NewGuid())` and `$env:RUSTCRAFT_WORLD_SEED = '42'` before `cargo run --locked -p rustcraft`.
+
+1. Start a fresh world with seed 42. Confirm creation logs (seed/version/timings), coherent terrain, recognizable trees and the in-game status panel. Wait for green `SAVED` **without editing**. Close/restart in the same directory: confirm `LOADED` and the same landscape. Change the override seed in that same directory; it must still load the exact saved world.
+2. Start seed 2026 in a separate fresh directory. Terrain should differ; starting a second fresh directory with seed 42 should reproduce the first seed's landscape. Invalid/overflowing seeds should prevent new-world creation, but should not prevent loading an existing valid snapshot.
+3. Capture/look, walk, sprint and jump across hills and x/z chunk seams. Find the access ramp near x=-10,z=20 and explore toward the cave around z=-10. Check headroom, collision, descending/jumping back up and wider chambers; finite world edges are intentional. R and falling below Y=-32 must choose safe ground from this world, not fixed demo height or tree tops.
+4. Select 1–5, break/place Wood/Leaves around chunk boundaries, and try player-overlap placement. Both new blocks are solid/opaque. Five swatches and selected frame should track the keys. Confirm immediate mesh updates and standing on new blocks.
+5. F5: observe yellow saving then green success. Release the cursor and verify the panel remains visible. Edit and wait for the 30-second autosave check, then restart. Make another edit and close normally without F5; verify it after restart. Clean intervals must not repeatedly change the save/backup.
+6. With the game closed, make a disposable directory copy of a historical v1 world. Load it with a different seed; its blocks/deletions and file bytes must remain unchanged. After an edit/F5, expect v2 with exact prior v1 bytes in `world.rcw.bak`. Keep an external copy if older-client rollback matters: the ordinary backup is only one generation. Do not test upgrades on the only copy of valuable constructions.
+7. In a disposable world, test a save-path failure and confirm persistent red `SAVE ERROR - F5 RETRY`, intact prior primary and no false success. Fix the cause and retry F5; the panel should turn green. Normal close on save failure must stay open for retry. Follow README's preserve/copy recovery procedure for corrupt files; never silently start over on invalid data.
+8. Repeat on native Void X11/Wayland and Windows. Record driver/GPU/backend, pointer capture/focus/resize, cave traversal and frame performance. Software X11/CI coverage does not verify physical GPU performance or compositor behavior.

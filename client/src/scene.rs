@@ -93,6 +93,7 @@ fn spawn_scene(
     world: Res<VoxelWorld>,
     mut renders: ResMut<ChunkRenders>,
 ) {
+    let started = std::time::Instant::now();
     let material = materials.add(StandardMaterial {
         base_color: Color::WHITE,
         perceptual_roughness: 1.0,
@@ -121,7 +122,11 @@ fn spawn_scene(
         },
         Transform::from_xyz(-12.0, 24.0, 12.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
-    info!("RustCraft slice 4: editable world with versioned snapshots and autosave.");
+    info!(
+        "RustCraft slice 5: {} restored/generated chunk meshes built in {:?}",
+        world.0.chunks().count(),
+        started.elapsed()
+    );
 }
 
 fn rebuild_dirty_chunks(

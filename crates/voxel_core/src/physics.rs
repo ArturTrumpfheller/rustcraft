@@ -234,5 +234,56 @@ impl Player {
     }
 }
 
+/// Finds sky-exposed solid ground near a preferred column without changing the
+/// world. Tree tops are skipped. Used at startup and respawn, never each tick.
+/// An intentionally empty world has no supported spawn; return clear space.
+pub fn spawn_position(world: &World, config: &PhysicsConfig, preferred: [f64; 3]) -> [f64; 3] {
+    let px = (preferred[0].floor() as i32).clamp(crate::EDIT_MIN[0], crate::EDIT_MAX[0] - 1);
+    let pz = (preferred[2].floor() as i32).clamp(crate::EDIT_MIN[2], crate::EDIT_MAX[2] - 1);
+    let extent =
+        (crate::EDIT_MAX[0] - crate::EDIT_MIN[0]).max(crate::EDIT_MAX[2] - crate::EDIT_MIN[2]);
+    for radius in 0_i32..extent {
+        for dz in -radius..=radius {
+            for dx in -radius..=radius {
+                if dx.abs().max(dz.abs()) != radius {
+                    continue;
+                }
+                let x = px + dx;
+                let z = pz + dz;
+                if !(crate::EDIT_MIN[0]..crate::EDIT_MAX[0]).contains(&x)
+                    || !(crate::EDIT_MIN[2]..crate::EDIT_MAX[2]).contains(&z)
+                {
+                    continue;
+                }
+                for y in (crate::EDIT_MIN[1]..crate::EDIT_MAX[1]).rev() {
+                    let ground = world.block(BlockPos([x, y, z]));
+                    if !ground.is_solid() {
+                        continue;
+                    }
+                    if matches!(ground, crate::Block::Wood | crate::Block::Leaves) {
+                        break;
+                    }
+                    let surface = f64::from(y + 1);
+                    let feet = if (surface..=surface + 1.0).contains(&preferred[1]) {
+                        preferred[1]
+                    } else {
+                        surface
+                    };
+                    let p = [f64::from(x) + 0.5, feet, f64::from(z) + 0.5];
+                    if Player::new(p).fits_in_world(world, config) {
+                        return p;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    [
+        f64::from(px) + 0.5,
+        f64::from(crate::EDIT_MAX[1]),
+        f64::from(pz) + 0.5,
+    ]
+}
+
 #[cfg(test)]
 mod tests;

@@ -8,10 +8,13 @@ use std::time::Duration;
 use voxel_core::physics::{PhysicsConfig, Player};
 
 fn test_app() -> App {
+    test_app_with_world(voxel_core::demo_world())
+}
+fn test_app_with_world(world: voxel_core::World) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO))
-        .insert_resource(VoxelWorld(voxel_core::demo_world()))
+        .insert_resource(VoxelWorld(world))
         .init_resource::<ButtonInput<KeyCode>>()
         .init_resource::<ButtonInput<MouseButton>>()
         .init_resource::<AccumulatedMouseMotion>()
@@ -319,4 +322,31 @@ fn final_save_pauses_controls_and_a_canceled_close_can_resume() {
         body(&app).grounded,
         "the stale jump edge must not survive a paused save"
     );
+}
+
+#[test]
+fn generated_startup_reset_and_void_recovery_use_actual_ground_not_legacy_spawn_height() {
+    let world =
+        voxel_core::worldgen::Generator::new(voxel_core::worldgen::GenerationConfig::default())
+            .unwrap()
+            .generate();
+    let expected = voxel_core::physics::spawn_position(&world, &PhysicsConfig::default(), SPAWN);
+    assert_ne!(expected[1], SPAWN[1]);
+    let mut app = test_app_with_world(world);
+    assert_eq!(body(&app).position, expected);
+    capture(&mut app);
+    app.world_mut().resource_mut::<PlayerState>().body.position = [20., -33., 20.];
+    tick(&mut app);
+    assert_eq!(body(&app).position, expected);
+    key(&mut app, KeyCode::KeyR);
+    tick(&mut app);
+    assert_eq!(body(&app).position, expected);
+    assert_eq!(
+        app.world().resource::<PlayerState>().previous_position,
+        expected
+    );
+    assert!(body(&app).fits_in_world(
+        &app.world().resource::<VoxelWorld>().0,
+        &PhysicsConfig::default()
+    ));
 }

@@ -1,4 +1,4 @@
-# RustCraft world snapshot version 1
+# RustCraft world snapshots — versions 1 and 2
 
 Project-authored specification: MIT OR Apache-2.0. Implemented by `voxel_core::persistence`, independent of Bevy. One local world is stored in `world.rcw`; `world.rcw.bak` is its previous valid generation. Paths and recovery commands are in [README](../README.md#saving-loading-and-recovery).
 
@@ -9,7 +9,7 @@ All integers are little-endian, with no padding. Coordinates are signed two's-co
 | Offset | Size | Field |
 | --- | --- | --- |
 | 0 | 8 | ASCII magic `RUSTWRLD` |
-| 8 | 4 | u32 format version, exactly 1 |
+| 8 | 4 | u32 format version: 1 (legacy read) or 2 (current write) |
 | 12 | 4 | u32 record count N |
 | 16 | 4 | u32 payload length, exactly 14 × N |
 | 20 | 4 | u32 CRC-32/ISO-HDLC (the standard zlib/IEEE CRC-32) |
@@ -22,17 +22,25 @@ The CRC covers header bytes `[0,20)` followed by the entire payload `[24,end)`, 
 | 0 | Air, implicit through absence; never stored as a record |
 | 1 | Grass |
 | 2 | Dirt |
-| 3 | Stone |
+| 3 | Stone, v1 and v2 |
+| 4 | Wood, v2 only |
+| 5 | Leaves, v2 only |
 
-Every record must be within X/Z [-32,32), Y [-16,32). Duplicate/unsorted coordinates, ID 0 or unknown IDs, invalid magic/version, inconsistent counts/lengths, checksum errors, truncation and trailing bytes are rejected. The maximum is 196,608 records and **2,752,536 bytes**, enforced before disk reads allocate an unbounded buffer. This finite-volume limit is part of version 1. Trusted imports outside the volume cannot be saved, including out-of-bounds empty chunks.
+IDs 1 and 2 also retain their exact v1 meaning. Version 1 strictly rejects IDs 4/5; version 2 accepts 1–5. Both new materials are solid and opaque. Air is implicit in both versions.
 
-A snapshot is the entire world, sparsely encoded by non-air content. Missing coordinates are Air, not a reference to demo terrain. This preserves both removed and replaced original terrain, negative/boundary blocks and new chunks. Empty chunks need not be stored. A valid 24-byte empty snapshot decodes to an empty world. Only absence of both primary and backup creates the original demo. There is no persisted player state, seed, inventory or presentation data.
+Every record must be within X/Z [-32,32), Y [-16,32). Duplicate/unsorted coordinates, ID 0 or unknown IDs, invalid magic/version, inconsistent counts/lengths, checksum errors, truncation and trailing bytes are rejected. The maximum is 196,608 records and **2,752,536 bytes**, enforced before disk reads allocate an unbounded buffer. This finite-volume limit is part of both versions. Trusted imports outside the volume cannot be saved, including out-of-bounds empty chunks.
 
-An independent one-Stone-at-(0,0,0) golden fixture is pinned in tests. Encoding is canonical: repeating a load/encode produces identical bytes regardless of transient revisions or insertion order. CRC detects accidental damage, not malicious alteration or authenticity.
+A snapshot is the entire world, sparsely encoded by non-air content. Missing coordinates are Air, not a reference to demo terrain. This preserves both removed and replaced original terrain, negative/boundary blocks and new chunks. Empty chunks need not be stored. A valid 24-byte empty snapshot decodes to an empty world. Only absence of both primary and backup invokes the new-world factory. The client creates seeded terrain; the library’s legacy `open` helper retains the historical demo factory. Neither factory is called for a loaded/corrupt/unsupported file. There is no persisted player state, seed, inventory or presentation data. New terrain is saved in full; no generator is needed to restore it.
+
+Independent v1 golden fixtures (one Stone and mixed materials/negative coordinates) are pinned in tests; re-encoding uses v2 while retaining exact block semantics. Encoding is canonical: repeating a load/encode produces identical bytes regardless of transient revisions or insertion order. CRC detects accidental damage, not malicious alteration or authenticity.
 
 ## Upgrade policy
 
-Version 1 is deliberately small and generator-independent. A new demo or future seeded generator must not regenerate terrain over an existing snapshot. New meanings, dimensions, coordinates outside these limits or a block registry need a new documented version and explicit migration. IDs must never be reassigned. Unknown versions/IDs currently stop loading without rewriting files; there is no speculative migration layer. Back up real worlds before future upgrades.
+v1 and v2 share the header/record/CRC layout and full-snapshot semantics. **Loading never writes or migrates a file.** A valid v1 primary (including removed terrain or a completely empty world) is authoritative. The seed override is not even parsed for existing saves. Loaded worlds start clean; idle autosave and F5 with no changes leave the original bytes untouched.
+
+After meaningful edits, the normal F5/autosave/final-save protocol validates the old v1 primary, backs its exact bytes up, and commits a complete v2 snapshot. Even if only old materials remain, current saves use v2. A failed upgrade follows the same recovery policy as any save and never truncates the old primary. The ordinary backup retains only one generation: a subsequent save may replace that legacy backup with v2. Keep an external directory copy if rollback to an older client is important. Older v1-only clients safely reject v2; there is no automatic downgrade.
+
+Version 2 adds only explicit IDs 4/5, not metadata, larger bounds or changed terrain defaults. IDs must never be reassigned. Future dimensions, bounds or material semantics require another version and an explicit migration policy. Unknown versions/IDs stop loading without rewriting files. Seeded generation changes only truly new worlds, never existing snapshots.
 
 ## Commit and failure policy
 
@@ -47,7 +55,7 @@ The implementation uses Rust `std::fs::rename` with replacement semantics on Lin
 
 | Failure / state | Behavior |
 | --- | --- |
-| Missing primary and backup | Clean demo; no world file written until a meaningful change |
+| Missing primary and backup | Create seeded world, then explicitly save it once in the background even without edits |
 | Missing primary with existing backup | Stop; explicit backup recovery required |
 | Corrupt, truncated, unknown version/ID or unreadable primary | Stop before the game starts; preserve all files |
 | Lock or directory unavailable | Actionable startup error; no fallback to another save location |
@@ -63,8 +71,8 @@ This protocol protects the known good primary against ordinary partial writes an
 
 ## Client scheduling and status
 
-F5 while focused requests saving if dirty. Every 30 seconds of real application time, autosave checks for meaningful changes, including while player simulation is paused or unfocused. Clean frames, failed/no-op edits and unchanged loaded/demo worlds do not write. A change followed by a revert still counts as changed; revisions intentionally do not hash the whole world every frame.
+F5 while focused requests saving if dirty. Every 30 seconds of real application time, autosave checks for meaningful changes, including while player simulation is paused or unfocused. Clean frames, failed/no-op edits and unchanged loaded worlds do not write. New generated worlds have a separate first-creation pending flag: the first Update requests a background save, even if the world has never been edited. Failure retains this flag and dirty status; successful completion clears it once. Later edits during that job remain dirty through revision tracking. A change followed by a revert still counts as changed; revisions intentionally do not hash the whole world every frame.
 
-Only the small bounded world clone happens on the main thread; all format and filesystem work is on one save thread. Edits may continue while it runs. Success marks only the captured revision clean; newer changes remain dirty. Manual requests queue behind a current job. A native close pauses controls, waits for a current job and saves any newer changes, then exits. Failures keep dirty data available for retry and are logged. The title shows `New demo`, `Loaded`, `Dirty`, `Saving`, `Saved` or `ERROR / DIRTY`. Startup logs always show the actual save path and source.
+Only the small bounded world clone happens on the main thread; all format and filesystem work is on one save thread. Edits may continue while it runs. Success marks only the captured revision clean; newer changes remain dirty. Manual requests queue behind a current job. A native close pauses controls, waits for a current job and saves any newer changes, then exits. Failures keep dirty data available for retry and are logged. The in-game bitmap panel shows loaded/unsaved state, yellow `SAVING...`, green `SAVED`, or persistent red `SAVE ERROR - F5 RETRY`, even with the cursor released. Title/logs retain status too. Startup logs always show the actual save path and source.
 
 Tests use isolated temporary directories, independent format fixtures, injected partial-write/commit failures, real backup-path errors, restart tests and actual ECS scheduling. See [validation](VALIDATION.md) for executed platform and GUI coverage.

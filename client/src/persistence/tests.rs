@@ -35,6 +35,9 @@ impl Drop for TestDir {
 
 fn app_at(dir: &TestDir) -> App {
     let (store, world, source) = SaveStore::open(&dir.0).unwrap();
+    app_from(store, world, source)
+}
+fn app_from(store: SaveStore, world: World, source: LoadSource) -> App {
     let session = SaveSession::new(store, &world, source);
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -370,5 +373,119 @@ fn restored_world_initializes_meshes_collision_and_clear_spawn_instead_of_demo()
                 .len(),
             36
         );
+    }
+}
+
+fn generated_app(dir: &TestDir, seed: u64) -> App {
+    let (store, world, source) = SaveStore::open_with(&dir.0, || {
+        Ok(
+            voxel_core::worldgen::Generator::new(voxel_core::worldgen::GenerationConfig {
+                seed,
+                ..default()
+            })
+            .unwrap()
+            .generate(),
+        )
+    })
+    .unwrap();
+    app_from(store, world, source)
+}
+
+#[test]
+fn new_world_without_edits_is_saved_once_and_changed_seed_never_changes_loaded_blocks() {
+    let dir = TestDir::new();
+    let original;
+    {
+        let mut app = generated_app(&dir, 42);
+        original = encode(&app.world().resource::<VoxelWorld>().0).unwrap();
+        drain(&mut app);
+        assert_eq!(app.world().resource::<SaveFeedback>().label, "Saved");
+        assert_eq!(fs::read(dir.0.join("world.rcw")).unwrap(), original);
+        assert!(!dir.0.join("world.rcw.bak").exists());
+        frame(&mut app, Duration::from_secs(120));
+        f5(&mut app);
+        close(&mut app);
+        assert!(app.should_exit().is_some());
+        assert!(
+            !dir.0.join("world.rcw.bak").exists(),
+            "clean new world was saved repeatedly"
+        );
+    }
+    let mut app = generated_app(&dir, 999);
+    assert_eq!(app.world().resource::<SaveFeedback>().label, "Loaded");
+    assert_eq!(
+        encode(&app.world().resource::<VoxelWorld>().0).unwrap(),
+        original
+    );
+    edit(&mut app, [-17, 30, 16], Block::Wood);
+    edit(&mut app, [-16, 30, 16], Block::Leaves);
+    edit(&mut app, [0, -16, 0], Block::Air);
+    f5(&mut app);
+    drain(&mut app);
+    let edited = encode(&app.world().resource::<VoxelWorld>().0).unwrap();
+    assert_eq!(fs::read(dir.0.join("world.rcw.bak")).unwrap(), original);
+    drop(app);
+    let app = generated_app(&dir, 0);
+    assert_eq!(
+        encode(&app.world().resource::<VoxelWorld>().0).unwrap(),
+        edited
+    );
+    assert_eq!(
+        app.world()
+            .resource::<VoxelWorld>()
+            .0
+            .block(BlockPos([0, -16, 0])),
+        Block::Air
+    );
+}
+
+#[test]
+fn first_creation_failure_remains_unsaved_and_close_cannot_silently_drop_new_world() {
+    let dir = TestDir::new();
+    fs::create_dir(dir.0.join("world.rcw.bak")).unwrap();
+    // Open first, then obstruct the backup path before the first save attempt.
+    fs::remove_dir(dir.0.join("world.rcw.bak")).unwrap();
+    let (store, world, source) = SaveStore::open_with(&dir.0, || Ok(World::default())).unwrap();
+    fs::create_dir(dir.0.join("world.rcw.bak")).unwrap();
+    let mut app = app_from(store, world, source);
+    drain(&mut app);
+    assert_eq!(
+        app.world().resource::<SaveFeedback>().label,
+        "ERROR / DIRTY"
+    );
+    assert!(!dir.0.join("world.rcw").exists());
+    close(&mut app);
+    drain(&mut app);
+    assert!(app.should_exit().is_none());
+    fs::remove_dir(dir.0.join("world.rcw.bak")).unwrap();
+    f5(&mut app);
+    drain(&mut app);
+    assert_eq!(app.world().resource::<SaveFeedback>().label, "Saved");
+    assert_eq!(
+        decode(&fs::read(dir.0.join("world.rcw")).unwrap())
+            .unwrap()
+            .chunks()
+            .count(),
+        0
+    );
+}
+
+#[test]
+fn seed_parser_has_defined_default_and_strict_u64_validation() {
+    assert_eq!(seed_from(None).unwrap(), 2026);
+    for (s, n) in [("0", 0), ("42", 42), ("18446744073709551615", u64::MAX)] {
+        assert_eq!(seed_from(Some(s.into())).unwrap(), n);
+    }
+    for s in [
+        "",
+        "-1",
+        "+1",
+        " 42",
+        "42 ",
+        "0xff",
+        "18446744073709551616",
+        "seed",
+    ] {
+        assert!(seed_from(Some(s.into())).is_err(), "{s}");
     }
 }

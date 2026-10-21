@@ -12,6 +12,8 @@ pub enum BuildBlock {
     Grass,
     Dirt,
     Stone,
+    Wood,
+    Leaves,
 }
 
 impl BuildBlock {
@@ -20,6 +22,8 @@ impl BuildBlock {
             1 => Some(Self::Grass),
             2 => Some(Self::Dirt),
             3 => Some(Self::Stone),
+            4 => Some(Self::Wood),
+            5 => Some(Self::Leaves),
             _ => None,
         }
     }
@@ -28,6 +32,8 @@ impl BuildBlock {
             Self::Grass => 1,
             Self::Dirt => 2,
             Self::Stone => 3,
+            Self::Wood => 4,
+            Self::Leaves => 5,
         }
     }
     pub fn block(self) -> Block {
@@ -35,6 +41,8 @@ impl BuildBlock {
             Self::Grass => Block::Grass,
             Self::Dirt => Block::Dirt,
             Self::Stone => Block::Stone,
+            Self::Wood => Block::Wood,
+            Self::Leaves => Block::Leaves,
         }
     }
     pub fn name(self) -> &'static str {
@@ -42,6 +50,8 @@ impl BuildBlock {
             Self::Grass => "Grass",
             Self::Dirt => "Dirt",
             Self::Stone => "Stone",
+            Self::Wood => "Wood",
+            Self::Leaves => "Leaves",
         }
     }
 }

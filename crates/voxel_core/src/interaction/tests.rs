@@ -45,14 +45,14 @@ fn mutation_reports_changes_noops_and_bounds_without_allocating_empty_chunks() {
 
 #[test]
 fn selection_slots_only_offer_solid_blocks() {
-    for slot in 1..=3 {
+    for slot in 1..=5 {
         let choice = BuildBlock::from_slot(slot).unwrap();
         assert!(choice.block().is_solid());
         assert_eq!(choice.slot(), slot);
         assert!(!choice.name().is_empty());
     }
     assert_eq!(BuildBlock::from_slot(0), None);
-    assert_eq!(BuildBlock::from_slot(4), None);
+    assert_eq!(BuildBlock::from_slot(6), None);
 }
 
 #[test]
