@@ -1,0 +1,27 @@
+[workspace]
+members = ["crates/voxel_core", "client"]
+default-members = ["client"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99.1"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/ArturTrumpfheller/rustcraft"
+
+[workspace.dependencies]
+voxel_core = { path = "crates/voxel_core" }
+bevy = { version = "=0.20.0", default-features = false, features = [
+    "std", "async_executor", "multi_threaded", "bevy_asset", "bevy_log",
+    "bevy_color", "bevy_camera", "bevy_core_pipeline", "bevy_image",
+    "bevy_mesh", "bevy_light", "bevy_shader", "bevy_material", "bevy_render",
+    "bevy_pbr", "bevy_window", "bevy_winit", "keyboard", "mouse", "x11", "wayland",
+] }
+
+# Keep debug builds practical on development machines without huge symbol files.
+[profile.dev]
+debug = 1
+
+[profile.test]
+debug = 1

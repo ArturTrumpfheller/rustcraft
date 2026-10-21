@@ -3,10 +3,13 @@
 This document tracks intended milestones, not promised delivery dates. Implement and test one vertical slice at a time.
 
 ## v0.1 — Classic-style prototype
-- [ ] Cargo workspace and pinned Bevy dependency
-- [ ] Launch client with controllable first-person camera
-- [ ] Block registry and simple voxel materials
-- [ ] Chunk storage and visible-face meshing
+
+Slice 1 supplies the fixed rendered scene and free-flight controls. Full v0.1 is not complete. The camera implementation and headless input tests do not replace native GUI acceptance. Indexing/meshing tests exist; serialization and seeded generation are still absent.
+
+- [x] Cargo workspace and pinned Bevy dependency
+- [x] Launch client with controllable first-person free-flight camera (X11 software-rendered smoke test; native platform checks pending)
+- [x] Initial closed block-ID enum and simple voxel materials (extensible registry deferred)
+- [x] Chunk storage and visible-face meshing, including chunk-boundary culling
 - [ ] Terrain generation from deterministic seed
 - [ ] Solid block collision, gravity and jumping
 - [ ] Block targeting, breaking and placement

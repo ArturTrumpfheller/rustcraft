@@ -18,35 +18,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Detect Rust workspace
-        id: workspace
-        shell: bash
-        run: |
-          if [[ -f Cargo.toml ]]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "No Cargo.toml yet; Rust checks will start with the first code milestone."
-          fi
       - name: Install native Linux dependencies
-        if: runner.os == 'Linux' && steps.workspace.outputs.present == 'true'
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends             pkg-config libasound2-dev libudev-dev libx11-dev             libxcursor-dev libxi-dev libxrandr-dev libxkbcommon-dev             libwayland-dev libvulkan-dev
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libx11-dev libxcursor-dev libxi-dev libxrandr-dev \
+            libxkbcommon-dev libwayland-dev libvulkan-dev
       - name: Install Rust
-        if: steps.workspace.outputs.present == 'true'
         uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: '1.99.1'
           components: rustfmt, clippy
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
       - name: Cargo format
-        if: steps.workspace.outputs.present == 'true'
         run: cargo fmt --all -- --check
       - name: Cargo Clippy
-        if: steps.workspace.outputs.present == 'true'
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - name: Cargo test
-        if: steps.workspace.outputs.present == 'true'
-        run: cargo test --workspace
+        run: cargo test --locked --workspace
       - name: Cargo build
-        if: steps.workspace.outputs.present == 'true'
-        run: cargo build --workspace
+        run: cargo build --locked --workspace

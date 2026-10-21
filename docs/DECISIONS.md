@@ -38,3 +38,14 @@ Resolve these incrementally while preserving backward-compatible migration paths
 - Support both **Wayland and X11** on Linux where Bevy/wgpu allow it.
 - Void Linux musl, older GPU hardware and additional CPU architectures are experimental; do not promise them without testing.
 - Keep the simulation OS-agnostic and rely on the graphics library's supported native backends. See `docs/PLATFORMS.md`.
+
+## Slice 1 implementation decisions
+
+- Use Rust **1.99.1**, pinned in `rust-toolchain.toml`, and Bevy **0.20.0**, pinned in the workspace manifest. Commit the application lockfile. Revisit versions together in a tested dependency-upgrade PR.
+- Start with two workspace members: the dependency-free `voxel_core` library and the Bevy `rustcraft` client. Do not create speculative empty subsystems.
+- Use **16³** chunks, Y-up integer block coordinates, Euclidean handling of negative coordinates and checked coordinate conversions. X varies fastest in storage, followed by Z and Y.
+- Use an original fixed four-chunk test world and a simple closed block enum for slice 1. This resolves the initial scene scope, not seeded generation or a persistent registry format.
+- Generate visible faces across chunk boundaries with engine-neutral mesh buffers. Use original vertex colors instead of textures. Greedy meshing is deferred until profiling justifies it.
+- The first-person camera flies without collision. Capture starts on click; Escape and focus loss release it. Physics, editing, inventory and saving remain subsequent slices as scoped in the handoff.
+- One-time synchronous construction of four small chunks is an explicit bounded prototype tradeoff. Streaming or interactive remeshing must not extend this into unbounded frame-loop work.
+- Enable X11 and Wayland together. Preserve Bevy/wgpu's supported per-platform backend selection and omit unused audio/gamepad/UI/import features.
