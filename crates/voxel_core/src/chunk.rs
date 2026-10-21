@@ -106,8 +106,13 @@ impl Chunk {
         self.blocks[position.index()]
     }
 
-    pub fn set(&mut self, position: LocalPos, block: Block) {
-        self.blocks[position.index()] = block;
+    pub fn set(&mut self, position: LocalPos, block: Block) -> bool {
+        let cell = &mut self.blocks[position.index()];
+        if *cell == block {
+            return false;
+        }
+        *cell = block;
+        true
     }
 }
 
@@ -175,5 +180,20 @@ mod tests {
             ChunkPos([i32::MAX, 0, 0]).block_position(LocalPos::new([0; 3]).unwrap()),
             None
         );
+    }
+}
+
+#[cfg(test)]
+mod mutation_tests {
+    use super::*;
+    #[test]
+    fn chunk_set_reports_actual_changes_and_noops() {
+        let mut chunk = Chunk::default();
+        let local = LocalPos::new([15, 0, 15]).unwrap();
+        assert!(!chunk.set(local, Block::Air));
+        assert!(chunk.set(local, Block::Stone));
+        assert!(!chunk.set(local, Block::Stone));
+        assert!(chunk.set(local, Block::Dirt));
+        assert_eq!(chunk.get(local), Block::Dirt);
     }
 }

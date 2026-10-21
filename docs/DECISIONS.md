@@ -65,3 +65,13 @@ Resolve these incrementally while preserving backward-compatible migration paths
 - The owner prefers **Minecraft-inspired retro pixel-art textures** that are independently drawn or distributed under an explicitly suitable license. Similar aesthetics do not authorize copying Minecraft's original texture pixels, audio, branding or extracted game resources.
 - When implementing textures, require provenance and verifiable permission for **public source redistribution**, modification and distribution with future binaries; record exact authors, upstream URL, license/terms, attribution and modifications for every included asset.
 - Treat source code's MIT OR Apache-2.0 license separately from the asset licenses. Default to original placeholders until licensed art is available; no asset-pack download/copy without review.
+
+
+## Slice 3 implementation decisions
+
+- Keep targeting/mutation in dependency-free `voxel_core`; use f64 DDA from the displayed interpolated eye, five-block default reach and explicit X/Y/Z tie ordering. Starting in solid permits breaking but supplies no placement face.
+- Use one operation per mouse click, suppress capture/reset frames, prioritize breaking for simultaneous buttons and select grass/dirt/stone using 1/2/3. No inventory, mining timers or save/load are introduced.
+- Bound editable cells to X/Z [-32,32), Y [-16,32). Create missing chunks lazily and return explicit change/no-op/error outcomes. Reject placement inside both authoritative and displayed player bodies or over existing solids.
+- Rebuild only the changed chunk and face-neighbors at boundaries. Keep one retained CPU/GPU mesh handle per resident chunk, hide empty geometry and refresh culling bounds. Synchronous click jobs stay bounded; larger worlds will need scheduling budgets.
+- Render an original procedural crosshair, target wire cube and three color swatches without additional crates, engine features, fonts or downloaded assets. Keep the existing original block colors; future pixel art follows the recorded provenance policy.
+- Preserve edits across R/void respawn and choose clear space above an obstructed spawn. All changes are memory-only and disappear when closing the application.

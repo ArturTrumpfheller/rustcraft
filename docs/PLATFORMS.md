@@ -1,6 +1,6 @@
 # RustCraft platform support and development setup
 
-Status: **slice 2 platform requirements and acceptance procedure**. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
+Status: **slice 3 platform requirements and acceptance procedure**. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
 
 ## Supported platforms and targets
 
@@ -96,3 +96,15 @@ Use `cargo run --locked -p rustcraft` in a real graphical session. The build dep
 7. Repeat on Void glibc X11 and Wayland, then Windows 10/11 MSVC. Record GPU/driver/backend and input issues. Slice 1's successful native test does not substitute for this new physics/input acceptance.
 
 CI continues to build/lint/test Ubuntu and Windows. Local software-rendering checks do not establish physical GPU performance or native Wayland/Windows cursor behavior. Block edits, inventory and persistence remain outside slice 2.
+
+## Slice 3 manual test
+
+Build/run `cargo run --locked -p rustcraft` from `feat/slice-3-block-interaction` using the unchanged Void/native dependency setup above. **Edits are not saved; closing the game loses them.**
+
+1. Click to capture; that first click must not mine/place. Aim down at nearby blocks: the crosshair and black target outline should agree. No target should appear beyond five blocks. Change view/FPS and verify the highlight follows the displayed eye.
+2. Left click repeatedly to break, right click to place on the face. Try top/side/underside faces, negative coordinates and x=0/z=0 chunk seams. Newly hidden/exposed neighboring faces must update immediately, with no seam holes.
+3. Use 1/2/3 for grass/dirt/stone. Check the swatches/selected frame and title. A selection is not an inventory; no items are consumed. Empty clicks do nothing; holding a button does not auto-repeat.
+4. Try placing into feet, head or body corners: it must be rejected. Mine the supporting floor and confirm falling/collision uses the changed data. Walk/jump on newly placed blocks. Try extending outside the initial island into a missing chunk, then remove the new cells again; empty geometry should be safe.
+5. Walk, sprint, jump, reset and resize the window. Build at the old spawn from a distance, then R: the player should recover in clear space above, while edits remain. Editable bounds are X/Z [-32,32), Y [-16,32); placement beyond them is ignored.
+6. Escape/focus loss must release capture and prevent edits. Right click while released must do nothing. Returning requires a fresh left capture click without mining. R and simultaneous click must not edit the old position.
+7. Close/restart and confirm the original four-chunk scene returns. Repeat on Void glibc X11/Wayland and Windows MSVC, recording GPU/driver/backend and any cursor/editing issues. Software X11 coverage does not establish these native GUI configurations.

@@ -1,4 +1,5 @@
 mod camera;
+mod interaction;
 mod player;
 mod scene;
 
@@ -15,6 +16,6 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins((scene::VoxelScenePlugin, player::PlayerPlugin, camera::FirstPersonPlugin))
+        .add_plugins((scene::VoxelScenePlugin, player::PlayerPlugin, camera::FirstPersonPlugin, interaction::BlockInteractionPlugin))
         .run();
 }

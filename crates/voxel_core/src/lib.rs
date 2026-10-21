@@ -1,10 +1,12 @@
 //! Engine-independent voxel storage, coordinates and surface generation.
 
 mod chunk;
+pub mod interaction;
 mod mesh;
 pub mod physics;
+pub mod raycast;
 mod world;
 
 pub use chunk::{Block, BlockPos, CHUNK_SIZE, Chunk, ChunkPos, LocalPos};
 pub use mesh::{ChunkMesh, mesh_chunk};
-pub use world::{World, demo_world};
+pub use world::{BlockChange, EDIT_MAX, EDIT_MIN, World, demo_world};

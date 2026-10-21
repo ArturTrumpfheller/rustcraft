@@ -248,3 +248,48 @@ fn reset_uses_the_reset_yaw_for_movement_in_the_same_render_frame() {
     assert_eq!(body(&app).position[0], SPAWN[0]);
     assert!(body(&app).position[2] < SPAWN[2]);
 }
+
+#[test]
+fn respawn_searches_above_blocks_built_at_the_old_spawn() {
+    let mut app = test_app();
+    settle(&mut app);
+    for y in 4..=6 {
+        app.world_mut()
+            .resource_mut::<VoxelWorld>()
+            .0
+            .set_block(voxel_core::BlockPos([0, y, 10]), voxel_core::Block::Stone)
+            .unwrap();
+    }
+    key(&mut app, KeyCode::KeyR);
+    tick(&mut app);
+    assert_eq!(body(&app).position, [0.5, 7.0, 10.5]);
+    assert!(body(&app).fits_in_world(
+        &app.world().resource::<VoxelWorld>().0,
+        &PhysicsConfig::default()
+    ));
+    assert_eq!(
+        app.world().resource::<PlayerState>().previous_position,
+        body(&app).position
+    );
+}
+
+#[test]
+fn mining_clicks_do_not_suppress_mouse_look_after_capture() {
+    let mut app = test_app();
+    settle(&mut app);
+    let previous = camera(&mut app).rotation;
+    app.world_mut()
+        .resource_mut::<AccumulatedMouseMotion>()
+        .delta
+        .x = 20.0;
+    app.world_mut()
+        .resource_mut::<ButtonInput<MouseButton>>()
+        .press(MouseButton::Left);
+    frame(&mut app, Duration::ZERO);
+    assert_ne!(camera(&mut app).rotation, previous);
+    assert!(
+        !app.world()
+            .resource::<ControllerInput>()
+            .captured_this_frame
+    );
+}

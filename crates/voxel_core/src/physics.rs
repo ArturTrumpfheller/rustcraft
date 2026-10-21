@@ -92,6 +92,30 @@ impl Player {
         [x, y + config.eye_height, z]
     }
 
+    /// Strict positive-volume overlap: face contact alone is allowed. This
+    /// shares the exact dimensions used by collision, including feet/head.
+    pub fn intersects_block(&self, position: BlockPos, config: &PhysicsConfig) -> bool {
+        let (min, max) = self.bounds(config);
+        (0..3).all(|axis| {
+            min[axis] < f64::from(position.0[axis]) + 1.0 && max[axis] > f64::from(position.0[axis])
+        })
+    }
+
+    /// Clearance query for validated spawn/recovery, using the same AABB.
+    pub fn fits_in_world(&self, world: &World, config: &PhysicsConfig) -> bool {
+        let (min, max) = self.bounds(config);
+        for x in min[0].floor() as i32..max[0].ceil() as i32 {
+            for y in min[1].floor() as i32..max[1].ceil() as i32 {
+                for z in min[2].floor() as i32..max[2].ceil() as i32 {
+                    if world.block(BlockPos([x, y, z])).is_solid() {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
+    }
+
     pub fn tick(&mut self, world: &World, input: MovementInput, config: &PhysicsConfig) {
         // Never trust last tick's support after walking off a ledge or a world edit.
         self.grounded = self.velocity[1] <= 0.0 && self.supported(world, config);
