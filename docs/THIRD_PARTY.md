@@ -42,3 +42,9 @@ There are no downloaded textures, music, sounds, fonts, logos, models or Mojang/
 - Document each asset's author, origin, license and attribution obligations separately from code.
 - The source repository is already public: review every new committed source/asset for licensing and sensitive data. Before packaged releases, audit target-specific/transitive dependencies, included assets and Git history and assemble required distribution notices.
 - The owner made the repository public on 2026-10-21. Never change visibility or publish binary releases without explicit owner approval.
+
+## Planned pixel-art asset policy
+
+The intended aesthetic is classic, blocky **Minecraft-inspired** pixel art, but the repo must not include extracted Minecraft textures, edited proprietary originals, or packs whose authors do not explicitly permit the planned use.
+
+For an external texture pack, check its precise license/permission covers redistribution in this **public GitHub repository**, game distribution, editing/derivative use and intended commercial use if applicable. Save its name, author, direct source URL, license text/version, modification notes and required credit. A free download, a fan-made pack, or "Minecraft-style" alone is **not** sufficient permission. Avoid assets with incompatible usage conditions. Prefer original art or clearly licensed works such as CC0/appropriately attributed CC BY assets when their terms fit. Never assume code's MIT OR Apache-2.0 license applies to the artwork.
