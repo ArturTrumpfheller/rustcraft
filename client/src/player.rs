@@ -43,6 +43,7 @@ impl Default for PlayerState {
 pub(crate) struct ControllerInput {
     pub command: MovementInput,
     pub active: bool,
+    pub captured_this_frame: bool,
     // Edges survive frames with no fixed tick, and are consumed only once even
     // when a slow render frame runs several physics ticks.
     pub jump_pending: bool,
@@ -60,7 +61,18 @@ fn simulate_player(
         return;
     } // Local single-player pause while cursor is free.
     if std::mem::take(&mut input.reset_pending) || player.body.position[1] < RECOVERY_Y {
-        *player = PlayerState::default();
+        // Building at the old spawn must not make R/void recovery embed the
+        // body in solids. Search upward; above EDIT_MAX all editable cells are air.
+        let mut body = Player::new(SPAWN);
+        while !body.fits_in_world(&world.0, &config.0)
+            && body.position[1] < f64::from(voxel_core::EDIT_MAX[1])
+        {
+            body.position[1] += 1.0;
+        }
+        *player = PlayerState {
+            previous_position: body.position,
+            body,
+        };
         input.jump_pending = false;
         return;
     }

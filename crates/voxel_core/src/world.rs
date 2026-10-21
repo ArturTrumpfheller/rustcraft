@@ -1,6 +1,42 @@
-use std::collections::BTreeMap;
+use crate::interaction::EditError;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{Block, BlockPos, CHUNK_SIZE, Chunk, ChunkPos, LocalPos};
+
+/// Editable prototype bounds, minimum inclusive and maximum exclusive.
+/// Reads/meshing retain the existing missing-chunk-is-air semantics.
+pub const EDIT_MIN: [i32; 3] = [-32, -16, -32];
+pub const EDIT_MAX: [i32; 3] = [32, 32, 32];
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct BlockChange {
+    pub position: BlockPos,
+    pub before: Block,
+    pub after: Block,
+}
+
+impl BlockChange {
+    /// Only face-sharing neighbor chunks need remeshing, never diagonals.
+    pub fn affected_chunks(self) -> BTreeSet<ChunkPos> {
+        let (chunk, local) = self.position.split();
+        let mut result = BTreeSet::from([chunk]);
+        for (axis, coordinate) in local.coordinates().into_iter().enumerate() {
+            let delta = if coordinate == 0 {
+                -1
+            } else if coordinate == CHUNK_SIZE - 1 {
+                1
+            } else {
+                continue;
+            };
+            let mut neighbor = chunk.0;
+            if let Some(value) = neighbor[axis].checked_add(delta) {
+                neighbor[axis] = value;
+                result.insert(ChunkPos(neighbor));
+            }
+        }
+        result
+    }
+}
 
 /// Finite world. Missing chunks are air; this rule also applies at mesh boundaries.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -9,6 +45,31 @@ pub struct World {
 }
 
 impl World {
+    /// Raw bounded mutation for trusted world-edit operations. Placement rules
+    /// (solid replacement/player overlap) live in interaction::edit.
+    pub fn set_block(
+        &mut self,
+        position: BlockPos,
+        block: Block,
+    ) -> Result<Option<BlockChange>, EditError> {
+        if !(0..3)
+            .all(|axis| position.0[axis] >= EDIT_MIN[axis] && position.0[axis] < EDIT_MAX[axis])
+        {
+            return Err(EditError::OutOfBounds);
+        }
+        let before = self.block(position);
+        if before == block {
+            return Ok(None);
+        }
+        let (chunk, local) = position.split();
+        self.chunks.entry(chunk).or_default().set(local, block);
+        Ok(Some(BlockChange {
+            position,
+            before,
+            after: block,
+        }))
+    }
+
     pub fn insert_chunk(&mut self, position: ChunkPos, chunk: Chunk) {
         self.chunks.insert(position, chunk);
     }

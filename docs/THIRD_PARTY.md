@@ -2,14 +2,14 @@
 
 Project-created code and documentation are **MIT OR Apache-2.0**, at the recipient's option. See the root LICENSE-MIT and LICENSE-APACHE files. This does not relicense dependencies or separately licensed artwork.
 
-## Direct dependencies (unchanged in slice 2)
+## Direct dependencies (unchanged in slice 3)
 
 | Component | Version | Upstream | SPDX license | Notices / use |
 | --- | --- | --- | --- | --- |
 | Bevy | 0.20.0 (exact pin) | https://github.com/bevyengine/bevy | MIT OR Apache-2.0 | Engine/rendering/window/input in `client`; retain chosen upstream license and applicable notices when distributing it. |
 | voxel_core | 0.1.0 (workspace) | This repository | MIT OR Apache-2.0 | Project-authored engine-independent library, not vendored third-party code. |
 
-`Cargo.lock` records exact transitive versions and checksums. No third-party source is copied or vendored. Slice 2 adds only project-authored physics/controller code under MIT OR Apache-2.0; no dependency, lockfile or asset additions are required. Bevy's native renderer selection remains enabled; application features omit audio, gamepad, UI and external scene/texture import.
+`Cargo.lock` records exact transitive versions and checksums. No third-party source is copied or vendored. Slices 2 and 3 add only project-authored physics/controller/interaction code under MIT OR Apache-2.0; no dependency, lockfile or asset additions are required. Bevy's native renderer selection remains enabled; application features omit audio, gamepad, UI and external scene/texture import.
 
 ## Dependency license review
 
@@ -29,6 +29,7 @@ No copyleft-only crate was identified in the reviewed graph. This is an initial 
 | Asset | Author / origin | License | Attribution |
 | --- | --- | --- | --- |
 | Grass, dirt and stone vertex colors | Original values authored in `crates/voxel_core/src/chunk.rs` for RustCraft | MIT OR Apache-2.0 | Root project licenses |
+| Crosshair, selection swatches/frame and target wire cube | Original procedural geometry in `client/src/interaction.rs` | MIT OR Apache-2.0 | Root project licenses |
 | Terraced demo geometry and stone landmark | Original procedural layout in `crates/voxel_core/src/world.rs` | MIT OR Apache-2.0 | Root project licenses |
 
 There are no downloaded textures, music, sounds, fonts, logos, models or Mojang/Microsoft assets. Engine-provided shaders and platform window decorations are dependencies, not project-authored assets; their upstream licensing remains applicable.

@@ -15,7 +15,8 @@ pub struct FirstPersonPlugin;
 impl Plugin for FirstPersonPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ViewAngles>()
-            .add_systems(Startup, spawn_camera)
+            .init_resource::<ViewPose>()
+            .add_systems(Startup, spawn_camera.in_set(CameraSetup))
             .add_systems(
                 RunFixedMainLoop,
                 (manage_cursor, read_input)
@@ -24,13 +25,27 @@ impl Plugin for FirstPersonPlugin {
             )
             .add_systems(
                 RunFixedMainLoop,
-                sync_camera.in_set(RunFixedMainLoopSystems::AfterFixedMainLoop),
+                sync_camera
+                    .in_set(RunFixedMainLoopSystems::AfterFixedMainLoop)
+                    .in_set(ViewSync),
             );
     }
 }
 
 #[derive(Component)]
-struct FirstPersonCamera;
+pub(crate) struct FirstPersonCamera;
+
+#[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub(crate) struct ViewSync;
+
+#[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub(crate) struct CameraSetup;
+
+#[derive(Resource, Default)]
+pub(crate) struct ViewPose {
+    pub eye: [f64; 3],
+    pub direction: [f64; 3],
+}
 
 #[derive(Resource)]
 struct ViewAngles {
@@ -62,7 +77,9 @@ fn manage_cursor(
     mut windows: Query<(&Window, &mut CursorOptions), With<PrimaryWindow>>,
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
+    mut input: ResMut<ControllerInput>,
 ) {
+    input.captured_this_frame = false;
     let Ok((window, mut cursor)) = windows.single_mut() else {
         return;
     };
@@ -71,6 +88,7 @@ fn manage_cursor(
         cursor.visible = true;
     } else if mouse.just_pressed(MouseButton::Left) {
         // winit falls back from Locked to Confined where native X11 needs it.
+        input.captured_this_frame = cursor.grab_mode == CursorGrabMode::None;
         cursor.grab_mode = CursorGrabMode::Locked;
         cursor.visible = false;
     }
@@ -78,7 +96,6 @@ fn manage_cursor(
 
 fn read_input(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mouse: Res<ButtonInput<MouseButton>>,
     motion: Res<AccumulatedMouseMotion>,
     windows: Query<(&Window, &CursorOptions), With<PrimaryWindow>>,
     mut view: ResMut<ViewAngles>,
@@ -92,7 +109,7 @@ fn read_input(
         return;
     }
     // Do not apply pre-capture hover motion to the freshly captured view.
-    if !mouse.just_pressed(MouseButton::Left) {
+    if !input.captured_this_frame {
         view.pitch =
             (view.pitch - motion.delta.y * 0.002).clamp(-FRAC_PI_2 + 0.01, FRAC_PI_2 - 0.01);
         view.yaw = (view.yaw - motion.delta.x * 0.002) % std::f32::consts::TAU;
@@ -123,6 +140,7 @@ fn sync_camera(
     input: Res<ControllerInput>,
     view: Res<ViewAngles>,
     mut cameras: Query<&mut Transform, With<FirstPersonCamera>>,
+    mut pose: ResMut<ViewPose>,
 ) {
     // A single fixed tick of interpolation latency smooths translation even at
     // render rates above/below 60 Hz; mouse rotation remains immediate.
@@ -134,13 +152,20 @@ fn sync_camera(
     let position: [f64; 3] = std::array::from_fn(|axis| {
         player.previous_position[axis] * (1.0 - alpha) + player.body.position[axis] * alpha
     });
+    pose.eye = [
+        position[0],
+        position[1] + settings.0.eye_height,
+        position[2],
+    ];
+    let rotation = Quat::from_euler(EulerRot::YXZ, view.yaw, view.pitch, 0.0);
+    pose.direction = (rotation * Vec3::NEG_Z).to_array().map(f64::from);
     for mut transform in &mut cameras {
         transform.translation = Vec3::new(
             position[0] as f32,
             (position[1] + settings.0.eye_height) as f32,
             position[2] as f32,
         );
-        transform.rotation = Quat::from_euler(EulerRot::YXZ, view.yaw, view.pitch, 0.0);
+        transform.rotation = rotation;
     }
 }
 
