@@ -1,8 +1,8 @@
-# Codex handoff — first coding task
+# Codex handoff — historical slice 1 (completed)
 
 ## Original starting state (before slice 1)
 
-RustCraft is currently documentation-only: no `Cargo.toml`, source crates, game client or game assets are present. The repository is private. A GitHub Actions workflow is present and will run Rust checks once a root Cargo manifest exists.
+At the time of the original handoff, RustCraft was documentation-only: no `Cargo.toml`, source crates, game client or game assets existed. The repository is private. A GitHub Actions workflow is present and will run Rust checks once a root Cargo manifest exists.
 
 **Start with milestone v0.1 in `docs/ROADMAP.md`.** The full milestone includes a playable Classic-style prototype; do not try to implement the whole long-term roadmap in a single coding task.
 
@@ -45,4 +45,4 @@ Review `docs/PLATFORMS.md`. The first slice targets Void Linux **glibc** (x86-64
 
 ## Implementation handoff after slice 1
 
-The two-member workspace, fixed surface-meshed scene, free-flight camera and regression tests are now implemented. See README.md for commands and docs/ARCHITECTURE.md for actual boundaries. Do not treat the full v0.1 exit criterion as achieved: collision, block interaction, seeded generation and persistence remain outstanding. Native Void/Windows GUI testing is still required before compatibility can be claimed.
+The two-member workspace, fixed surface-meshed scene, free-flight camera and regression tests are now implemented. See README.md for commands and docs/ARCHITECTURE.md for actual boundaries. Do not treat the full v0.1 exit criterion as achieved: collision, block interaction, seeded generation and persistence remain outstanding. After PR #2, the project owner confirmed the map, camera controls and mouse cursor work on Void Linux glibc. The Linux/Windows CI workflow passed. Native Windows and Wayland GUI tests remain unverified. **For new coding tasks, follow the current GitHub issue rather than this historical handoff.**
