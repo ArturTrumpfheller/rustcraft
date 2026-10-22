@@ -4,11 +4,11 @@ This document tracks intended milestones, not promised delivery dates. Implement
 
 ## v0.1 — Classic-style prototype
 
-Slice 7 adds local generator v3, a large 65,536×65,536×48 rollout, bounded regional edit caching/persistence and floating-origin rendering. The owner accepted slices 1–6 including the native Void corrections. Existing v1/v2/v3 worlds stay in their original modes; no automatic migration. Full v0.1 is not complete. Current measurements and remaining native Slice-7 acceptance are in VALIDATION.
+Slice 8 adds original 16×16 art and one shared atlas/material with compact UV-bearing meshes. The owner accepted Slice 7 on Void. Slice 7 added local generator v3, a large 65,536×65,536×48 rollout, bounded regional edit caching/persistence and floating-origin rendering. The owner accepted slices 1–6 including the native Void corrections. Existing v1/v2/v3 worlds stay in their original modes; no automatic migration. Full v0.1 is not complete. Current measurements and remaining native Slice-8 acceptance are in VALIDATION.
 
 - [x] Cargo workspace and pinned Bevy dependency
 - [x] Launch client with a first-person walking player and interpolated camera
-- [x] Initial closed block-ID enum and simple voxel materials (extensible registry deferred)
+- [x] Initial closed block-ID enum and original 16×16 terrain atlas (extensible registry deferred)
 - [x] Chunk storage and visible-face meshing, including chunk-boundary culling
 - [x] Terrain generation from deterministic seed (versioned finite hills/valleys, connected caves and simple trees)
 - [x] Solid block collision, gravity and jumping (fixed 60-Hz AABB controller; boundary and tunneling regression tests)

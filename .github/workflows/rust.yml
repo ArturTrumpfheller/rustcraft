@@ -32,6 +32,8 @@ jobs:
           components: rustfmt, clippy
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
+      - name: Check original texture artifacts
+        run: python tools/generate_textures.py --check
       - name: Cargo format
         run: cargo fmt --all -- --check
       - name: Cargo Clippy

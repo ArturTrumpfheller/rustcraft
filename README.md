@@ -8,7 +8,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 
 - Deterministic seeded terrain, rolling hills/valleys, a walkable cave network with surface entrance, and blocky trees.
 - 16³ chunks streamed in a **65,536×65,536×48** new-world rollout with local generation and regional saves; configurable load radius, bounded background generation/meshing and cache eviction.
-- Grass, dirt, stone, wood and opaque solid leaves represented by original vertex colors; no downloaded game assets.
+- Seven original 16×16 pixel textures for grass, dirt, stone, bark, end-grain and opaque leaves, using one shared nearest-filtered atlas.
 - At most one surface mesh per rendered chunk; faces shared by solid blocks are removed, including at chunk boundaries.
 - Mouse look, yaw-relative WASD walking, sprinting, grounded jumping and safe respawn.
 - Fixed 60-Hz engine-independent AABB physics, wall sliding and interpolated camera movement.
@@ -18,7 +18,24 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 7**, not the complete v0.1 milestone. **World edits survive restart.** Further coordinate expansion, richer world generation and a full inventory/hotbar are still future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 8**, not the complete v0.1 milestone. **World edits survive restart.** Further coordinate expansion, richer world generation and a full inventory/hotbar are still future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+
+## Original retro textures
+
+Grass has separate turf tops, grassy dirt sides and dirt undersides. Upright logs
+use bark on walls and end-grain on both ends. Stone and opaque leaves have their
+own tiles. The seven authored 16×16 grids use restrained earth/foliage palettes;
+no external texture pack or Minecraft image was used. Art, editable source and
+standard-library generator are **MIT OR Apache-2.0**: [asset provenance](assets/terrain/README.md).
+
+![Original Slice-8 terrain, software-rendered X11](docs/images/slice8-terrain.png)
+
+A single embedded 128×64 sRGB atlas/material serves all chunks, with eight texels
+of extruded padding per tile, nearest sampling and one mip. Chunk meshes retain
+face culling and async updates; UVs replace terrain vertex colors (32 instead of
+40 bytes/vertex). UI colors are unchanged. Intentional distant pixel shimmer is
+a consequence of nearest LOD0 sampling. See [texture contract](docs/TEXTURES.md)
+and [measurements/limits](docs/VALIDATION.md).
 
 ## Build and run on Linux
 
@@ -49,7 +66,7 @@ From the repository root:
 cargo run --locked -p rustcraft
 ```
 
-The first Bevy build can take several minutes. To limit CPU and memory consumption, use `CARGO_BUILD_JOBS=4 cargo run --locked -p rustcraft`. No asset folder, service, credentials or environment file is required. Closing the window exits the application.
+The first Bevy build can take several minutes. To limit CPU and memory consumption, use `CARGO_BUILD_JOBS=4 cargo run --locked -p rustcraft`. The original atlas is embedded; no external asset folder, image decoder, Python runtime, service, credentials or environment file is required. Closing the window exits the application.
 
 In the prepared Codex cloud machine, first run `. /workspace/.rustcraft-env/activate.sh` in each shell. A cloud build alone does not establish native graphical compatibility.
 
@@ -157,8 +174,8 @@ Use a fresh directory and keep this shell/path for restarts:
 
 ```fish
 git fetch origin
-git switch feat/slice-7-large-world-streaming
-set test_dir (mktemp -d /tmp/rustcraft-slice7.XXXXXX)
+git switch feat/slice-8-retro-textures
+set test_dir (mktemp -d /tmp/rustcraft-slice8.XXXXXX)
 env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_WORLD_SEED=42 RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
 ```
 
@@ -173,7 +190,7 @@ chunk and region seams, travel away and return before saving, then F5 and wait f
 `SAVED`. Close and repeat the same distant-start command to check restoration.
 R returns to origin; repeat with `-1000,1000` and a different **fresh directory**
 for another seed. Existing saves ignore seed overrides. These explicit test paths
-do not touch normal saves. See [native acceptance](docs/PLATFORMS.md#slice-7-manual-test-fish).
+do not touch normal saves. See [native acceptance](docs/PLATFORMS.md#slice-8-texture-test-fish).
 
 ## Development checks
 
@@ -188,7 +205,7 @@ Run only the engine-independent voxel and physics tests with `cargo test --locke
 
 The [validation report](docs/VALIDATION.md) records the executed checks and remaining platform coverage.
 
-[Manual acceptance checks](docs/PLATFORMS.md#slice-7-manual-test-fish) cover save/restart, the visible scene, pointer capture/release, focus changes and platform behavior. CI checks Linux and Windows compilation, formatting, Clippy and unit tests; it does not establish GUI compatibility on Void or Windows.
+[Manual acceptance checks](docs/PLATFORMS.md#slice-8-texture-test-fish) cover save/restart, the visible scene, pointer capture/release, focus changes and platform behavior. CI checks Linux and Windows compilation, formatting, Clippy and unit tests; it does not establish GUI compatibility on Void or Windows.
 
 ## Licensing and development policy
 

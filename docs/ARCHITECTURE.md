@@ -1,7 +1,7 @@
 # RustCraft architecture
 
-Status: **Slice 7 large-world rollout**. The owner accepted Slice 6 and its native
-Void fixes before this work. See DECISIONS for earlier choices and VALIDATION for
+Status: **Slice 8 original terrain atlas**. The owner accepted Slices 1–7 on
+Void before this work. World, storage and simulation contracts are unchanged. See DECISIONS for earlier choices and VALIDATION for
 actual measurements and remaining native acceptance.
 
 ## Slice 7 design note (before implementation)
@@ -43,7 +43,8 @@ actual measurements and remaining native acceptance.
 meshing, f64 player physics, DDA targeting, validated mutation and persistence.
 It has no Bevy types; its only external dependency remains crc32fast. `client`
 adapts Bevy input/schedules, owns entities/GPU assets, save feedback and worker
-scheduling. No new dependencies, assets, renderer features or crates.
+scheduling. No new dependencies, renderer features or crates; the original embedded atlas is
+shared by one terrain material. See TEXTURES for the core face/UV contract.
 
 Y is up. Local cells are validated and coordinates split by Euclidean division,
 including negatives. Material IDs remain Air=0, Grass=1, Dirt=2, Stone=3, Wood=4,
@@ -170,4 +171,24 @@ VALIDATION records headless CPU/RSS and graphical comparisons. The measured loca
 job cost does not currently justify a pool; one worker avoids unneeded concurrency
 and memory complexity. Larger radii, dense-region latency, asynchronous allocator
 cleanup, multi-job budgets, further coordinate ranges and opt-in migrations need
-separate measured work. Texture assets remain a later step.
+separate measured work. The original Slice-8 atlas is documented in TEXTURES; additional lighting, mipmap
+strategies and richer material systems remain separate work.
+
+## Slice 8 texture pipeline
+
+`voxel_core::texture` maps solid blocks and axis normals to seven atlas slots,
+without Bevy or persistence IDs. `ChunkMesh` carries local positions, normals,
+UVs and indices. Original winding/face order/culling stay unchanged. A constant
+quad table supplies UVs per visible face; there is no per-vertex atlas division,
+image generation per chunk or new work in the idle render loop. Terrain colors
+are replaced by UVs; UI/swatch colors continue using the original block palette.
+The logical vertex stride is 32 bytes (was 40); index buffers are unchanged.
+
+`client::terrain_texture` creates one 128×64 RGBA8 sRGB Image from embedded original
+bytes and pins nearest min/mag/mipmap, LOD0, clamp addressing and no anisotropy.
+`spawn_scene` creates one opaque rough StandardMaterial referencing that Image.
+It remains retained across remesh, empty chunks, travel and far-origin rebasing;
+chunk teardown removes only the chunk mesh/entity. GPU and CPU art pixels are
+32 KiB each, excluding driver alignment/overhead. No PNG decoder or async asset
+loading path is needed. Lighting/exposure and all bitmap UI remain unchanged.
+Authoring source, padding/orientation and the mip aliasing tradeoff are in TEXTURES.

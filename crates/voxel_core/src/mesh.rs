@@ -80,6 +80,8 @@ pub fn mesh_chunk(world: &World, position: ChunkPos) -> ChunkMesh {
                     }
                     let start = mesh.positions.len() as u32;
                     let tile = crate::texture::face_tile(block, face.normal).unwrap();
+                    mesh.uvs
+                        .extend_from_slice(crate::texture::face_uvs(tile, face.normal[1] != 0));
                     for corner in face.corners {
                         mesh.positions.push([
                             x as f32 + f32::from(corner[0]),
@@ -87,8 +89,6 @@ pub fn mesh_chunk(world: &World, position: ChunkPos) -> ChunkMesh {
                             z as f32 + f32::from(corner[2]),
                         ]);
                         mesh.normals.push(face.normal.map(|value| value as f32));
-                        mesh.uvs
-                            .push(tile.uv(crate::texture::face_uv(face.normal, corner)));
                     }
                     mesh.indices
                         .extend([start, start + 1, start + 2, start, start + 2, start + 3]);

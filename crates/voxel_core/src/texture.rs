@@ -36,31 +36,39 @@ pub fn face_tile(block: Block, normal: [i32; 3]) -> Option<Tile> {
 impl Tile {
     /// Full 16-texel face, not a half-texel inset (which would stretch edge pixels).
     /// Eight extruded texels surround it; nearest LOD0 sampling cannot mix tiles.
-    pub fn uv(self, local: [u8; 2]) -> [f32; 2] {
+    pub const fn uv(self, local: [u8; 2]) -> [f32; 2] {
         let i = self as u32;
-        let start = [
-            (i % 4) * TILE_PITCH + TILE_PADDING,
-            (i / 4) * TILE_PITCH + TILE_PADDING,
-        ];
-        std::array::from_fn(|a| {
-            (start[a] + u32::from(local[a]) * TILE_SIZE) as f32 / ATLAS_SIZE[a] as f32
-        })
+        [
+            ((i % 4) * TILE_PITCH + TILE_PADDING + local[0] as u32 * TILE_SIZE) as f32
+                / ATLAS_SIZE[0] as f32,
+            ((i / 4) * TILE_PITCH + TILE_PADDING + local[1] as u32 * TILE_SIZE) as f32
+                / ATLAS_SIZE[1] as f32,
+        ]
     }
 }
 
-/// Image V points down. Bark/grass sides stay upright on all four walls.
-/// Top: U=+X,V=+Z; bottom: U=+X,V=-Z. Faces remain right-handed outside.
-pub(crate) fn face_uv(normal: [i32; 3], corner: [u8; 3]) -> [u8; 2] {
-    let [x, y, z] = corner;
-    match normal {
-        [1, 0, 0] => [1 - z, 1 - y],
-        [-1, 0, 0] => [z, 1 - y],
-        [0, 1, 0] => [x, z],
-        [0, -1, 0] => [x, 1 - z],
-        [0, 0, 1] => [x, 1 - y],
-        [0, 0, -1] => [1 - x, 1 - y],
-        _ => unreachable!("axis-aligned face"),
-    }
+// Precompute the two existing CCW corner orders, avoiding per-vertex divisions
+// or normal matches in the worker's hot loop. Image V points down: walls are
+// upright; top U=+X,V=+Z and bottom U=+X,V=-Z.
+const fn quad(tile: Tile) -> [[[f32; 2]; 4]; 2] {
+    let min = tile.uv([0, 0]);
+    let max = tile.uv([1, 1]);
+    [
+        [max, [max[0], min[1]], min, [min[0], max[1]]],
+        [[min[0], max[1]], max, [max[0], min[1]], min],
+    ]
+}
+const QUADS: [[[[f32; 2]; 4]; 2]; 7] = [
+    quad(Tile::GrassTop),
+    quad(Tile::GrassSide),
+    quad(Tile::Dirt),
+    quad(Tile::Stone),
+    quad(Tile::Bark),
+    quad(Tile::EndGrain),
+    quad(Tile::Leaves),
+];
+pub(crate) fn face_uvs(tile: Tile, horizontal: bool) -> &'static [[f32; 2]; 4] {
+    &QUADS[tile as usize][usize::from(horizontal)]
 }
 
 #[cfg(test)]
