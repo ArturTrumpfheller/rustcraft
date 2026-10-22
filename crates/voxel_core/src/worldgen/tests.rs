@@ -368,7 +368,7 @@ fn local_generation_benchmark_reports_fixed_planning_and_column_latency() {
                 bytes += r
                     .chunks
                     .iter()
-                    .map(|(_, _, m)| m.positions.len() * 40 + m.indices.len() * 4)
+                    .map(|(_, _, m)| m.positions.len() * 32 + m.indices.len() * 4)
                     .sum::<usize>();
             }
         }

@@ -1,0 +1,4 @@
+# Embedded raw art is binary even when its first 8 KiB contain no NUL bytes.
+assets/terrain/*.rgba binary
+assets/terrain/*.png binary
+docs/images/*.png binary

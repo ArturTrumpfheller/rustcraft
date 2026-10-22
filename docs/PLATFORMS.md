@@ -1,6 +1,6 @@
 # RustCraft platform support and development setup
 
-Status: **slice 6 platform requirements and acceptance procedure**. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
+Status: **Slice 8 texture acceptance**. The owner accepted Slices 1–7 on Void. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
 
 ## Supported platforms and targets
 
@@ -248,3 +248,49 @@ env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_START_CHUNK="1000,-1000" RUSTCRAFT_
 Back up **all** v4 files, including `regions/`, with the game closed. The manifest
 alone is not a backup. For another seed use a separate fresh directory. The start
 chunk is a session preference, not persisted player position; R remains origin.
+
+## Slice 8 texture test (Fish)
+
+The owner accepted Slice 7 on Void. The atlas is embedded and uses the unchanged
+native rendering/window backends; Python/PNG support is unnecessary to run/build.
+Authoring/CI regeneration uses Python 3's standard library only. Start in an
+isolated directory (a fresh directory per seed):
+
+```fish
+git fetch origin
+git switch feat/slice-8-retro-textures
+set test_dir (mktemp -d /tmp/rustcraft-slice8.XXXXXX)
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_WORLD_SEED=42 RUSTCRAFT_LOAD_RADIUS=2 RUST_LOG=info cargo run --locked -p rustcraft
+# After normal close, keep this same Fish shell/path:
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_START_CHUNK="1000,-1000" RUSTCRAFT_LOAD_RADIUS=2 RUST_LOG=info cargo run --locked -p rustcraft
+```
+
+1. Inspect all seven tiles close up: turf top; grass lip above earthy sides;
+   plain dirt underneath; stone; upright bark; end-grain on both ends; opaque
+   leaves. Pixel edges must remain sharp. Distant minification shimmer is a
+   documented LOD0 tradeoff, not atlas-edge bleeding. No magenta slot/neighbor
+   tile should appear on edges, steep angles, near/far starts or after resizing.
+2. Click to capture, look/walk/sprint/jump, press 1–5 and check the five original
+   colored swatches/white selection frame, crosshair and black target outline.
+   Escape/focus loss must release/pause. Save HUD stays readable while released.
+3. Mine/place rapidly at signed X/Y/Z chunk seams and 64-block region boundaries.
+   Check exposed faces, shared-face removal, collision, player-overlap rejection
+   and no diagonal jitter. Empty/rebuild chunks, travel several radii and return.
+   Counts/mesh bytes should settle without repeated image/material growth.
+4. Make far Air/Wood/Leaves edits, save F5, wait for green SAVED, close and repeat
+   the far command. R reloads origin without pinning distant/spawn meshes. Legacy
+   v1/v2/v3 tests must use disposable **copies**, preserving their original modes.
+5. Compare against accepted Slice 7 with identical seed/save bytes, camera,
+   resolution, radius, build mode and driver. Record frame P50/P95/P99, FPS,
+   worker/queue/dirty latency, CPU/RSS and logical mesh bytes. UVs replace colors,
+   so vertices shrink 40→32 bytes; one 32-KiB atlas adds a texture sample. Software
+   Mesa results do not establish physical AMD GPU, Wayland or Windows behavior.
+6. Repeat on native Void X11/Wayland and Windows. No backend is hardcoded by the
+   application. Native input, driver/VRAM endurance and distant aliasing remain
+   human acceptance checks; CI covers both platform builds and Rust/art tests.
+
+Use a persistent new absolute directory under your home if the test world must
+survive `/tmp` cleanup/reboot. Keep/record its path. Back up the **whole closed
+world directory**, including `regions/`; a v4 manifest alone is not a backup.
+No save format, generator, world extent, block ID or physics change is part of
+this visual slice. Exact measurements and test limitations: VALIDATION.

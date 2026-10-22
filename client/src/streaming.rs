@@ -546,7 +546,7 @@ fn update_streaming(
             .0
             .values()
             .filter_map(|r| scene.meshes.get(&r.mesh))
-            .map(|m| m.count_vertices() * 40 + m.indices().map_or(0, |i| i.len() * 4))
+            .map(|m| m.count_vertices() * 32 + m.indices().map_or(0, |i| i.len() * 4))
             .sum();
     }
     state.max_update = state.max_update.max(update_start.elapsed());

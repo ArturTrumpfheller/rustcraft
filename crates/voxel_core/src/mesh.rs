@@ -5,7 +5,7 @@ use crate::{BlockPos, CHUNK_SIZE, ChunkPos, LocalPos, World};
 pub struct ChunkMesh {
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
-    pub colors: Vec<[f32; 4]>,
+    pub uvs: Vec<[f32; 2]>,
     pub indices: Vec<u32>,
 }
 
@@ -79,6 +79,9 @@ pub fn mesh_chunk(world: &World, position: ChunkPos) -> ChunkMesh {
                         continue;
                     }
                     let start = mesh.positions.len() as u32;
+                    let tile = crate::texture::face_tile(block, face.normal).unwrap();
+                    mesh.uvs
+                        .extend_from_slice(crate::texture::face_uvs(tile, face.normal[1] != 0));
                     for corner in face.corners {
                         mesh.positions.push([
                             x as f32 + f32::from(corner[0]),
@@ -86,7 +89,6 @@ pub fn mesh_chunk(world: &World, position: ChunkPos) -> ChunkMesh {
                             z as f32 + f32::from(corner[2]),
                         ]);
                         mesh.normals.push(face.normal.map(|value| value as f32));
-                        mesh.colors.push(block.color());
                     }
                     mesh.indices
                         .extend([start, start + 1, start + 2, start, start + 2, start + 3]);
@@ -168,7 +170,7 @@ mod tests {
         let mesh = mesh_chunk(&world, ChunkPos([0; 3]));
         assert_eq!(mesh.positions.len(), 24);
         assert_eq!(mesh.normals.len(), 24);
-        assert_eq!(mesh.colors, vec![Block::Grass.color(); 24]);
+        assert_eq!(mesh.uvs.len(), 24);
         for triangle in mesh.indices.as_chunks::<3>().0 {
             let a = mesh.positions[triangle[0] as usize];
             let b = mesh.positions[triangle[1] as usize];
@@ -181,6 +183,95 @@ mod tests {
                 ab[0] * ac[1] - ab[1] * ac[0],
             ];
             assert_eq!(cross, mesh.normals[triangle[0] as usize]);
+        }
+    }
+}
+
+#[cfg(test)]
+mod texture_tests {
+    use super::*;
+    use crate::{
+        Block, Chunk,
+        texture::{Tile, face_tile},
+    };
+
+    #[test]
+    fn every_material_has_upright_uvs_and_unchanged_face_geometry_and_indices() {
+        // Expected UV corner order in the existing CCW face order: walls start
+        // at image bottom-right; horizontal planes start at image bottom-left.
+        let wall = [[1, 1], [1, 0], [0, 0], [0, 1]];
+        let horizontal = [[0, 1], [1, 1], [1, 0], [0, 0]];
+        for block in [
+            Block::Grass,
+            Block::Dirt,
+            Block::Stone,
+            Block::Wood,
+            Block::Leaves,
+        ] {
+            let mut chunk = Chunk::default();
+            chunk.set(LocalPos::new([0; 3]).unwrap(), block);
+            let mut world = World::default();
+            world.insert_chunk(ChunkPos([0; 3]), chunk);
+            let m = mesh_chunk(&world, ChunkPos([0; 3]));
+            assert_eq!(m.uvs.len(), m.positions.len());
+            for (i, face) in FACES.iter().enumerate() {
+                let tile = face_tile(block, face.normal).unwrap();
+                let uv = if face.normal[1] == 0 {
+                    wall
+                } else {
+                    horizontal
+                };
+                for (j, &expected_uv) in uv.iter().enumerate() {
+                    assert_eq!(m.positions[4 * i + j], face.corners[j].map(f32::from));
+                    assert_eq!(m.normals[4 * i + j], face.normal.map(|v| v as f32));
+                    assert_eq!(m.uvs[4 * i + j], tile.uv(expected_uv));
+                }
+                let s = (4 * i) as u32;
+                assert_eq!(
+                    m.indices[6 * i..6 * i + 6],
+                    [s, s + 1, s + 2, s, s + 2, s + 3]
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn mixed_textures_cull_shared_faces_and_keep_uvs_across_all_signed_chunk_seams() {
+        for axis in 0..3 {
+            for edge in [-16, 0, 16] {
+                let mut a = [2; 3];
+                a[axis] = edge - 1;
+                let mut b = a;
+                b[axis] = edge;
+                let mut world = World::default();
+                for (p, block) in [(BlockPos(a), Block::Grass), (BlockPos(b), Block::Wood)] {
+                    let (cp, lp) = p.split();
+                    let mut chunk = Chunk::default();
+                    chunk.set(lp, block);
+                    world.insert_chunk(cp, chunk);
+                }
+                for (p, block) in [(BlockPos(a), Block::Grass), (BlockPos(b), Block::Wood)] {
+                    let cp = p.split().0;
+                    let m = mesh_chunk(&world, cp);
+                    assert_eq!(m.indices.len(), 30);
+                    assert_eq!(m.uvs.len(), 20);
+                    for i in 0..5 {
+                        let n = m.normals[4 * i].map(|v| v as i32);
+                        let tile = face_tile(block, n).unwrap();
+                        let min = tile.uv([0, 0]);
+                        let max = tile.uv([1, 1]);
+                        for uv in &m.uvs[4 * i..4 * i + 4] {
+                            assert!(
+                                uv.iter()
+                                    .enumerate()
+                                    .all(|(a, &v)| v == min[a] || v == max[a])
+                            );
+                        }
+                    }
+                }
+                // No culling/texture policy change for opaque leaves.
+                assert_eq!(face_tile(Block::Leaves, [0, 1, 0]), Some(Tile::Leaves));
+            }
         }
     }
 }

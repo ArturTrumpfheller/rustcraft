@@ -357,9 +357,9 @@ fn assert_geometry(app: &App, targets: &BTreeSet<ChunkPos>) {
                     "normals {p:?}"
                 );
                 assert_eq!(
-                    actual.attribute(Mesh::ATTRIBUTE_COLOR),
-                    Some(&VertexAttributeValues::Float32x4(mesh.colors)),
-                    "colors {p:?}"
+                    actual.attribute(Mesh::ATTRIBUTE_UV_0),
+                    Some(&VertexAttributeValues::Float32x2(mesh.uvs)),
+                    "UVs {p:?}"
                 );
                 assert_eq!(
                     actual.indices().unwrap().iter().collect::<Vec<_>>(),
@@ -836,6 +836,7 @@ fn large_world_travel_bounds_cpu_gpu_overlays_and_keeps_far_edits_across_restart
         0,
         "clean far overlays must be evicted"
     );
+    assert_textured_residency(&mut app);
     timings.sort_unstable();
     let s = app.world().resource::<StreamState>();
     println!(
@@ -1007,5 +1008,64 @@ fn unrelated_regional_edit_survives_accepted_worker_overlay_and_voxel_install() 
     assert_eq!(
         app.world().resource::<VoxelWorld>().0.block(p),
         Block::Leaves
+    );
+}
+
+fn assert_textured_residency(app: &mut App) {
+    let w = app.world_mut();
+    let material = w.resource::<TerrainMaterial>().0.clone();
+    assert_eq!(w.resource::<Assets<Image>>().len(), 1);
+    assert_eq!(w.resource::<Assets<StandardMaterial>>().len(), 1);
+    let renders = w.resource::<ChunkRenders>();
+    assert_eq!(w.resource::<Assets<Mesh>>().len(), renders.0.len());
+    for render in renders.0.values() {
+        let m = w.resource::<Assets<Mesh>>().get(&render.mesh).unwrap();
+        assert_eq!(
+            m.attribute(Mesh::ATTRIBUTE_UV_0).unwrap().len(),
+            m.count_vertices()
+        );
+        assert!(m.attribute(Mesh::ATTRIBUTE_COLOR).is_none());
+        assert_eq!(
+            w.get::<MeshMaterial3d<StandardMaterial>>(render.entity)
+                .unwrap()
+                .0,
+            material
+        );
+    }
+}
+
+#[test]
+fn streaming_reuses_one_atlas_through_repeated_mesh_empty_refill_and_eviction() {
+    let mut app = app(1);
+    drain(&mut app);
+    let image = app
+        .world()
+        .resource::<Assets<StandardMaterial>>()
+        .get(&app.world().resource::<TerrainMaterial>().0)
+        .unwrap()
+        .base_color_texture
+        .clone();
+    // An entirely empty upper chunk must release its terrain asset then recreate
+    // one shared-material mesh, without allocating images/materials per edit.
+    let p = BlockPos([0, 30, 0]);
+    for _ in 0..12 {
+        edit(&mut app, p, Block::Wood);
+        drain(&mut app);
+        assert_textured_residency(&mut app);
+        edit(&mut app, p, Block::Air);
+        drain(&mut app);
+        assert_textured_residency(&mut app);
+    }
+    for c in [[3, 3], [-4, -4], [0, 0]] {
+        go(&mut app, c);
+        assert_textured_residency(&mut app);
+    }
+    assert_eq!(
+        app.world()
+            .resource::<Assets<StandardMaterial>>()
+            .get(&app.world().resource::<TerrainMaterial>().0)
+            .unwrap()
+            .base_color_texture,
+        image
     );
 }

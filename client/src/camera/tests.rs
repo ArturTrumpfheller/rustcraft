@@ -448,6 +448,20 @@ fn floating_origin_keeps_far_camera_and_chunk_transforms_precise_without_changin
         let terrain = app.world().get::<Transform>(render.entity).unwrap();
         assert_eq!(f64::from(terrain.translation.x) + origin[0], 16000.);
         assert_eq!(f64::from(terrain.translation.z) + origin[2], -16000.);
+        let uv = app
+            .world()
+            .resource::<Assets<Mesh>>()
+            .get(&render.mesh)
+            .unwrap()
+            .attribute(Mesh::ATTRIBUTE_UV_0)
+            .unwrap();
+        let expected = voxel_core::mesh_chunk(
+            &app.world().resource::<VoxelWorld>().0,
+            ChunkPos([1000, 0, -1000]),
+        )
+        .uvs;
+        assert_eq!(uv, &bevy::mesh::VertexAttributeValues::Float32x2(expected));
+        assert_eq!(app.world().resource::<Assets<Image>>().len(), 1);
     }
 }
 #[test]

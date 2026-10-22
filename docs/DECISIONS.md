@@ -116,3 +116,11 @@ Resolve these incrementally while preserving backward-compatible migration paths
 - Retain file-level atomic temp/sync/backup/rename and session locks. Regions commit individually; partial multi-region failure is not a whole-world rollback, retains dirty RAM state and cancels normal close. Idempotent retries retain older backups. Forced termination still can lose unsaved changes.
 - Use a floating presentation origin while keeping f64 world-space physics/rays. Add an optional v4-only distant startup chunk for testing; R still requests origin and does not keep its meshes pinned.
 - No dependency/feature/toolchain upgrades or texture assets. Future larger extents, migration, dense-region and bulk-edit work remain distinct follow-ups, guided by measurements.
+
+## Slice 8 implementation decisions
+
+- Author seven original editable 16×16 pixel grids and sRGB palettes under explicit MIT OR Apache-2.0 art licensing; no imported/reference textures. Commit JSON, a standard-library Python compiler, PNG previews/atlas and matching raw bytes; CI checks regeneration.
+- Embed one immutable 128×64 RGBA8 sRGB atlas, so the existing feature/dependency graph needs no PNG decoder or asset-directory lookup. One opaque rough terrain material and one mesh per rendered chunk remain; no per-block entity/material.
+- Allocate 32×32 atlas slots with a centered 16×16 tile and eight-pixel edge extrusion. Nearest LOD0, one mip and no anisotropy prevent neighbor-tile filtering. Distant minification shimmer is an explicit tradeoff; per-tile mip chains/array textures are future work.
+- Replace terrain vertex colors with engine-neutral UVs; keep UI colors, original CCW geometry and hidden-face culling. Precompute quad UVs to avoid repeated per-vertex atlas math. Terrain stride drops from 40 to 32 bytes, with identical index count.
+- Keep lighting, floating origin, physics, block IDs, generation and every save-format byte contract unchanged. Validate geometry/UV seams, atlas resources and gameplay against accepted Slice 7, separating software rendering from native Void/Windows acceptance.

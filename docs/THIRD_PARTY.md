@@ -2,7 +2,7 @@
 
 Project-created code and documentation are **MIT OR Apache-2.0**, at the recipient's option. See the root LICENSE-MIT and LICENSE-APACHE files. This does not relicense dependencies or separately licensed artwork.
 
-## Direct dependencies (slice 7; unchanged from slice 4)
+## Direct dependencies (slice 8; unchanged from slice 4)
 
 | Component | Version | Upstream | SPDX license | Notices / use |
 | --- | --- | --- | --- | --- |
@@ -31,7 +31,7 @@ No copyleft-only crate was identified in the reviewed graph. This is an initial 
 
 | Asset | Author / origin | License | Attribution |
 | --- | --- | --- | --- |
-| Grass, dirt, stone, wood and leaves vertex colors | Original values authored in `crates/voxel_core/src/chunk.rs` for RustCraft | MIT OR Apache-2.0 | Root project licenses |
+| UI swatch colors / historical terrain vertex colors | Original values authored in `crates/voxel_core/src/chunk.rs` for RustCraft | MIT OR Apache-2.0 | Root project licenses |
 | Crosshair, selection swatches/frame and target wire cube | Original procedural geometry in `client/src/interaction.rs` | MIT OR Apache-2.0 | Root project licenses |
 | Original 5×7 bitmap save-status lettering and panel mesh | Authored in `client/src/save_hud.rs` | MIT OR Apache-2.0 | Root project licenses |
 | Seeded terrain, integer noise/hash composition, cave/ramp and tree geometry | Authored in `crates/voxel_core/src/worldgen.rs` | MIT OR Apache-2.0 | Root project licenses |
@@ -61,3 +61,18 @@ Local generator-v3 planning, regional formats/storage, cache/scheduling changes,
 floating-origin presentation and tests/benchmarks are original project-authored
 MIT OR Apache-2.0 Rust/documentation. No new crate, lockfile, Bevy feature,
 toolchain, texture, font, third-party source or imported asset was added.
+
+## Slice 8 original terrain textures
+
+The seven 16×16 tiles, editable `assets/terrain/source.json`, generated individual
+PNGs, `atlas.png`, `atlas.rgba`, and `tools/generate_textures.py` are **original
+RustCraft project artwork/code authored for Slice 8 through Codex-assisted
+development, MIT OR Apache-2.0**. This explicit license covers the artwork as well
+as code. No input/reference images, Minecraft files, third-party packs or external
+art were used. Root license/notice obligations apply to future redistribution.
+See [asset provenance and reproduction](../assets/terrain/README.md) for each tile,
+source grids/palettes, generator and output layout. The in-game screenshot `docs/images/slice8-terrain.png` is a capture of this
+original art/procedural geometry/bitmap UI, under the same project license.
+No new game dependency, Bevy
+feature, image decoder or toolchain change is required. Python standard library
+is an optional authoring/check tool, not a game runtime/build requirement.
