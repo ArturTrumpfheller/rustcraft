@@ -192,3 +192,86 @@ fn all_materials_share_one_opaque_texture_and_mesh_layout_is_compact() {
         48
     );
 }
+
+#[test]
+fn stale_legacy_worker_retains_complete_old_mesh_until_current_batch_is_ready() {
+    let mut app = terrain_app();
+    edit_cell(&mut app, [1, 1, 1], voxel_core::Block::Stone);
+    let snapshot = app.world().resource::<VoxelWorld>().0.clone();
+    let revision = snapshot.revision();
+    let (tx, rx) = std::sync::mpsc::channel();
+    let job = std::thread::spawn(move || {
+        rx.recv().unwrap();
+        vec![(
+            ChunkPos([0; 3]),
+            voxel_core::mesh_chunk(&snapshot, ChunkPos([0; 3])),
+        )]
+    });
+    app.world_mut().resource_mut::<LegacyMeshing>().job = Some(LegacyJob {
+        revision,
+        handle: job,
+    });
+    let change = app
+        .world_mut()
+        .resource_mut::<VoxelWorld>()
+        .0
+        .set_block(voxel_core::BlockPos([2, 1, 1]), voxel_core::Block::Wood)
+        .unwrap()
+        .unwrap();
+    app.world_mut().resource_mut::<DirtyChunks>().mark(change);
+    app.update();
+    let handle = app.world().resource::<ChunkRenders>().0[&ChunkPos([0; 3])]
+        .mesh
+        .clone();
+    assert_eq!(
+        app.world()
+            .resource::<Assets<Mesh>>()
+            .get(&handle)
+            .unwrap()
+            .indices()
+            .unwrap()
+            .len(),
+        36
+    );
+    tx.send(()).unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while !app
+        .world()
+        .resource::<LegacyMeshing>()
+        .job
+        .as_ref()
+        .unwrap()
+        .handle
+        .is_finished()
+    {
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    app.update();
+    assert!(!app.world().resource::<DirtyChunks>().0.is_empty());
+    assert_eq!(
+        app.world()
+            .resource::<Assets<Mesh>>()
+            .get(&handle)
+            .unwrap()
+            .indices()
+            .unwrap()
+            .len(),
+        36
+    );
+    while app.world().resource::<LegacyMeshing>().pending() {
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::sleep(std::time::Duration::from_millis(1));
+        app.update();
+    }
+    assert_eq!(
+        app.world()
+            .resource::<Assets<Mesh>>()
+            .get(&handle)
+            .unwrap()
+            .indices()
+            .unwrap()
+            .len(),
+        60
+    );
+}

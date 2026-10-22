@@ -364,6 +364,11 @@ fn assert_geometry(app: &App, targets: &BTreeSet<ChunkPos>) {
                     "UVs {p:?}"
                 );
                 assert_eq!(
+                    actual.attribute(Mesh::ATTRIBUTE_COLOR),
+                    Some(&VertexAttributeValues::Float32x4(mesh.colors)),
+                    "lighting {p:?}"
+                );
+                assert_eq!(
                     actual.indices().unwrap().iter().collect::<Vec<_>>(),
                     mesh.indices
                         .into_iter()
@@ -1019,6 +1024,9 @@ fn assert_textured_residency(app: &mut App) {
     let material = w.resource::<TerrainMaterial>().0.clone();
     assert_eq!(w.resource::<Assets<Image>>().len(), 1);
     assert_eq!(w.resource::<Assets<StandardMaterial>>().len(), 1);
+    let state = w.resource::<StreamState>();
+    assert!(state.lights.len() <= 147);
+    assert!(state.cache.columns() <= 81);
     let renders = w.resource::<ChunkRenders>();
     assert_eq!(w.resource::<Assets<Mesh>>().len(), renders.0.len());
     for render in renders.0.values() {
@@ -1073,5 +1081,106 @@ fn streaming_reuses_one_atlas_through_repeated_mesh_empty_refill_and_eviction() 
             .unwrap()
             .base_color_texture,
         image
+    );
+}
+
+fn light_at(app: &App, p: BlockPos) -> u8 {
+    let (cp, lp) = p.split();
+    let [x, y, z] = lp.coordinates();
+    app.world().resource::<StreamState>().lights[&cp].0[(y + 1) * 18 * 18 + (z + 1) * 18 + x + 1]
+}
+#[test]
+fn roof_open_close_relights_floor_in_other_vertical_chunk_and_reuses_mesh_handles() {
+    let mut app = app(1);
+    drain(&mut app);
+    for x in 4..=12 {
+        for y in 10..=20 {
+            for z in 4..=12 {
+                let b = if x == 4 || x == 12 || y == 10 || y == 20 || z == 4 || z == 12 {
+                    Block::Stone
+                } else {
+                    Block::Air
+                };
+                let p = BlockPos([x, y, z]);
+                if app.world().resource::<VoxelWorld>().0.block(p) != b {
+                    edit(&mut app, p, b);
+                }
+            }
+        }
+    }
+    drain(&mut app);
+    let floor = ChunkPos([0, 0, 0]);
+    assert_eq!(light_at(&app, BlockPos([8, 15, 8])), 0);
+    let handle = app.world().resource::<ChunkRenders>().0[&floor]
+        .mesh
+        .clone();
+    let original = app
+        .world()
+        .resource::<Assets<Mesh>>()
+        .get(&handle)
+        .unwrap()
+        .clone();
+    edit(&mut app, BlockPos([8, 20, 8]), Block::Air);
+    drain(&mut app);
+    assert_eq!(light_at(&app, BlockPos([8, 15, 8])), 15);
+    let lit = app.world().resource::<Assets<Mesh>>().get(&handle).unwrap();
+    assert_eq!(
+        original.attribute(Mesh::ATTRIBUTE_POSITION),
+        lit.attribute(Mesh::ATTRIBUTE_POSITION)
+    );
+    assert_ne!(
+        original.attribute(Mesh::ATTRIBUTE_COLOR),
+        lit.attribute(Mesh::ATTRIBUTE_COLOR)
+    );
+    edit(&mut app, BlockPos([8, 20, 8]), Block::Leaves);
+    drain(&mut app);
+    assert_eq!(light_at(&app, BlockPos([8, 15, 8])), 0);
+    assert_eq!(
+        app.world().resource::<ChunkRenders>().0[&floor].mesh,
+        handle
+    );
+    assert_eq!(
+        original.attribute(Mesh::ATTRIBUTE_COLOR),
+        app.world()
+            .resource::<Assets<Mesh>>()
+            .get(&handle)
+            .unwrap()
+            .attribute(Mesh::ATTRIBUTE_COLOR)
+    );
+    assert_geometry(&app, &BTreeSet::from([floor, ChunkPos([0, 1, 0])]));
+}
+
+#[test]
+fn non_geometry_roof_edit_rejects_old_load_without_installing_stale_light_samples() {
+    let mut app = app(1);
+    drain(&mut app);
+    let previous = app.world().resource::<StreamState>().lights.clone();
+    let before = app.world().resource::<StreamState>().discarded;
+    let tx = blocked_column(&mut app, [1, 0]);
+    let p = BlockPos([8, 31, 8]);
+    assert!(
+        !voxel_core::BlockChange {
+            position: p,
+            before: Block::Air,
+            after: Block::Wood
+        }
+        .affected_chunks()
+        .contains(&ChunkPos([1, 1, 0]))
+    );
+    edit(&mut app, p, Block::Wood);
+    app.update();
+    tx.send(()).unwrap();
+    wait_finished(&app);
+    app.update();
+    assert_eq!(app.world().resource::<StreamState>().discarded, before + 1);
+    assert_eq!(app.world().resource::<StreamState>().lights, previous);
+    drain(&mut app);
+    assert_geometry(
+        &app,
+        &BTreeSet::from([
+            ChunkPos([0, 1, 0]),
+            ChunkPos([1, 1, 0]),
+            ChunkPos([1, 0, 0]),
+        ]),
     );
 }

@@ -419,6 +419,13 @@ fn update_streaming(
                 let result = payload.result;
                 state.worker_time += result.elapsed();
                 state.max_job = state.max_job.max(result.elapsed());
+                let metrics = match &result {
+                    WorkResult::Load(r) => &r.lighting,
+                    WorkResult::Mesh(r) => &r.lighting,
+                };
+                state.light_cells += metrics.cells;
+                state.light_propagated += metrics.propagated;
+                state.source_columns_generated += metrics.generated_columns;
                 if wanted && current {
                     let install_start = Instant::now();
                     changed = true;
@@ -431,13 +438,11 @@ fn update_streaming(
                         state.failures.remove(&[p.0[0], p.0[2]]);
                     }
                     state.completed += 1;
-                    let (light_samples, metrics) = match &result {
-                        WorkResult::Load(r) => (&r.lights, &r.lighting),
-                        WorkResult::Mesh(r) => (&r.lights, &r.lighting),
+                    let light_samples = match &result {
+                        WorkResult::Load(r) => &r.lights,
+                        WorkResult::Mesh(r) => &r.lights,
                     };
-                    state.light_cells += metrics.cells;
-                    state.light_propagated += metrics.propagated;
-                    state.source_columns_generated += metrics.generated_columns;
+
                     state
                         .lights
                         .extend(light_samples.iter().map(|(&p, l)| (p, l.clone())));
@@ -632,6 +637,14 @@ fn update_streaming(
         } else {
             0.
         };
+        info!(
+            "Light work: {} cells, {} propagated, {} source columns generated, {} halo columns cached, {} applied chunk samples",
+            state.light_cells,
+            state.light_propagated,
+            state.source_columns_generated,
+            state.cache.columns(),
+            state.lights.len()
+        );
         info!(
             "Stream metrics: regions {} edits {} dirty regions {}, load queue-to-install max {:?}, frames p50 {:?} p95 {:?} p99 {:?}, mean fps {:.1}",
             world.0.cached_regions(),
