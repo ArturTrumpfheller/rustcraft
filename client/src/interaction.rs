@@ -167,6 +167,7 @@ fn edit_and_target(
         };
         ctx.editor.rejection = result.as_ref().err().copied();
         if let Ok(Some(change)) = result {
+            ctx.inventory.message = "";
             ctx.dirty.0.extend(change.affected_chunks());
         }
     }

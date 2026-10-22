@@ -437,3 +437,63 @@ mod tests {
         assert_eq!(inv.selected_stack().unwrap().count(), 1);
     }
 }
+
+#[cfg(test)]
+mod transaction_regressions {
+    use super::*;
+    #[test]
+    fn quick_transfer_merges_only_available_capacity_and_retains_the_rest() {
+        let mut slots = [Stack::new(Item::Stone, 64); SLOT_COUNT];
+        slots[0] = Stack::new(Item::Dirt, 60);
+        slots[9] = Stack::new(Item::Dirt, 64);
+        let mut i = Inventory::from_parts(slots, None, 0).unwrap();
+        i.click(9, Click::Quick);
+        assert_eq!(i.slots()[0].unwrap().count(), 64);
+        assert_eq!(i.slots()[9].unwrap().count(), 60);
+        let before = i.clone();
+        assert!(!i.click(9, Click::Quick));
+        assert_eq!(i, before);
+    }
+    #[test]
+    fn failed_player_overlap_or_pending_placement_never_consumes_a_stack() {
+        use crate::{BlockPos, Chunk, ChunkPos, LocalPos};
+        let mut world = World::default();
+        let mut c = Chunk::default();
+        c.set(LocalPos::new([0, 1, 0]).unwrap(), Block::Stone);
+        world.insert_chunk(ChunkPos([0; 3]), c);
+        let ray = Ray {
+            origin: [0.5, 1.5, 3.],
+            direction: [0., 0., -1.],
+            reach: 5.,
+        };
+        let mut inv = Inventory::starter();
+        let before = inv.clone();
+        let cfg = PhysicsConfig::default();
+        assert_eq!(
+            edit_inventory(
+                &mut world,
+                &mut inv,
+                ray,
+                true,
+                &Player::new([0.5, 1., 1.5]),
+                &cfg
+            ),
+            Err(InventoryEditError::World(EditError::IntersectsPlayer))
+        );
+        assert_eq!(inv, before);
+        assert_eq!(world.block(BlockPos([0, 1, 1])), Block::Air);
+        let mut pending = crate::streaming::new_large_world(42);
+        assert_eq!(
+            edit_inventory(
+                &mut pending,
+                &mut inv,
+                ray,
+                true,
+                &Player::new([8., 1., 8.]),
+                &cfg
+            ),
+            Err(InventoryEditError::World(EditError::NotLoaded))
+        );
+        assert_eq!(inv, before);
+    }
+}

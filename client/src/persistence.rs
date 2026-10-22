@@ -134,7 +134,12 @@ pub(crate) struct SaveSession {
     saved_once: bool,
 }
 impl SaveSession {
+    // World-only fixture support is unavailable to the production client.
+    #[cfg(test)]
     pub fn new(store: SaveStore, world: &World, source: LoadSource) -> Self {
+        Self::base(store, world, source)
+    }
+    fn base(store: SaveStore, world: &World, source: LoadSource) -> Self {
         Self {
             store: Arc::new(store),
             saved_revision: world.revision(),
@@ -157,7 +162,7 @@ impl SaveSession {
         source: LoadSource,
         inventory: &voxel_core::inventory::Inventory,
     ) -> Self {
-        let mut s = Self::new(store, world, source);
+        let mut s = Self::base(store, world, source);
         s.saved_inventory_revision = Some(inventory.revision());
         s
     }

@@ -333,7 +333,8 @@ impl SaveStore {
             }
             Ok(None)
                 if store.directory.join("player.rcp").try_exists()?
-                    || store.directory.join("player-world.rcid").try_exists()? =>
+                    || store.directory.join("player-world.rcid").try_exists()?
+                    || store.directory.join("player.rcp.bak").try_exists()? =>
             {
                 return Err(SaveError::RecoveryRequired(
                     "player files exist without world or recovery journal".into(),
@@ -357,6 +358,15 @@ impl SaveStore {
         self.directory.join("world.rcw.bak")
     }
     pub fn save(&self, world: &World) -> Result<(), SaveError> {
+        if self.directory.join("player-world.rcid").try_exists()?
+            || self.directory.join("player.rcp").try_exists()?
+            || self.directory.join("session.pending").try_exists()?
+        {
+            return Err(SaveError::RecoveryRequired(
+                "paired player state exists; use save_player_session rather than world-only saving"
+                    .into(),
+            ));
+        }
         self.save_with(world, |_| Ok(()))
     }
 

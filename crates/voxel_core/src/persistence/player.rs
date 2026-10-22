@@ -290,7 +290,7 @@ impl SaveStore {
         }
         if binding.is_some() || self.player_path().with_extension("rcp.bak").try_exists()? {
             return Err(recovery(
-                "initialized player primary missing; restore matching backup or complete directory",
+                "initialized player primary missing; restore a complete consistent world/player backup",
             ));
         }
         let id = Binding::new(world);
@@ -349,6 +349,19 @@ impl SaveStore {
     ) -> Result<(), SaveError> {
         if !tx.binding.matches(&tx.world) {
             return Err(FormatError::Identity.into());
+        }
+        // Validate the existing player before advancing any world file. A
+        // corrupt/foreign primary is never overwritten, even during replay.
+        match read_limited(&self.player_path(), PLAYER_SIZE)? {
+            Some(b) if decode_player(&b)?.0 != tx.binding => {
+                return Err(FormatError::Identity.into());
+            }
+            None if self.player_path().with_extension("rcp.bak").try_exists()? => {
+                return Err(recovery(
+                    "missing player primary; restore a complete consistent world/player backup",
+                ));
+            }
+            _ => {}
         }
         if tx.world_dirty {
             // Idempotent legacy retries must not rotate a valid older backup away.

@@ -575,3 +575,139 @@ fn historical_v1_stays_byte_identical_through_loaded_idle_f5_and_close() {
     assert!(!dir.0.join("world.rcw.bak").exists());
     assert!(app.world().resource::<VoxelWorld>().0.identity().is_none());
 }
+
+#[test]
+fn inventory_only_autosave_and_final_close_preserve_selection_and_held_stacks() {
+    let dir = TestDir::new();
+    let (store, mut world, source) = SaveStore::open(&dir.0).unwrap();
+    let inv = store.load_player(&mut world).unwrap();
+    let session = SaveSession::with_player(store, &world, source, &inv);
+    let mut app = app_from_session(world, session, inv);
+    let old_world = fs::read(dir.0.join("world.rcw")).unwrap();
+    app.world_mut()
+        .resource_mut::<crate::inventory_ui::GameInventory>()
+        .contents
+        .select(8);
+    frame(&mut app, Duration::from_secs(31));
+    drain(&mut app);
+    assert_eq!(app.world().resource::<SaveFeedback>().label, "Saved");
+    assert_eq!(fs::read(dir.0.join("world.rcw")).unwrap(), old_world);
+    app.world_mut()
+        .resource_mut::<crate::inventory_ui::GameInventory>()
+        .contents
+        .click(0, voxel_core::inventory::Click::Right);
+    close(&mut app);
+    drain(&mut app);
+    assert!(app.should_exit().is_some());
+    let expected = app
+        .world()
+        .resource::<crate::inventory_ui::GameInventory>()
+        .contents
+        .clone();
+    drop(app);
+    let (s, mut w, _) = SaveStore::open(&dir.0).unwrap();
+    let got = s.load_player(&mut w).unwrap();
+    assert_eq!(got.selected(), 8);
+    assert_eq!(got.cursor(), expected.cursor());
+    assert_eq!(got.slots(), expected.slots());
+}
+fn app_from_session(
+    world: World,
+    session: SaveSession,
+    inv: voxel_core::inventory::Inventory,
+) -> App {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO))
+        .insert_resource(VoxelWorld(world))
+        .insert_resource(session)
+        .insert_resource(crate::inventory_ui::GameInventory::loaded(inv))
+        .init_resource::<ButtonInput<KeyCode>>()
+        .add_plugins(PersistencePlugin);
+    app.world_mut().spawn((
+        Window {
+            focused: true,
+            ..default()
+        },
+        PrimaryWindow,
+    ));
+    frame(&mut app, Duration::ZERO);
+    app
+}
+#[test]
+fn a_completed_old_player_snapshot_never_clears_newer_inventory_edits() {
+    let dir = TestDir::new();
+    let (store, mut world, source) = SaveStore::open(&dir.0).unwrap();
+    let inv = store.load_player(&mut world).unwrap();
+    let session = SaveSession::with_player(store, &world, source, &inv);
+    let mut app = app_from_session(world, session, inv);
+    let snapshot = app.world().resource::<VoxelWorld>().0.save_snapshot();
+    let revision = snapshot.revision();
+    let inv = app
+        .world()
+        .resource::<crate::inventory_ui::GameInventory>()
+        .contents
+        .clone();
+    let inventory_revision = Some(inv.revision());
+    let store = Arc::clone(&app.world().resource::<SaveSession>().store);
+    let (tx, rx) = std::sync::mpsc::channel();
+    let handle = std::thread::spawn(move || {
+        rx.recv().unwrap();
+        store.save_player_session(&snapshot, &inv, false)
+    });
+    app.world_mut().resource_mut::<SaveSession>().job = Some(SaveJob {
+        revision,
+        inventory_revision,
+        handle,
+    });
+    app.world_mut()
+        .resource_mut::<crate::inventory_ui::GameInventory>()
+        .contents
+        .select(7);
+    frame(&mut app, Duration::ZERO);
+    tx.send(()).unwrap();
+    drain(&mut app);
+    assert_eq!(app.world().resource::<SaveFeedback>().label, "Dirty");
+    f5(&mut app);
+    drain(&mut app);
+    assert_eq!(app.world().resource::<SaveFeedback>().label, "Saved");
+}
+#[test]
+fn failed_player_save_retains_items_cancels_close_and_retry_saves_the_pair() {
+    let dir = TestDir::new();
+    let (store, mut world, source) = SaveStore::open(&dir.0).unwrap();
+    let inv = store.load_player(&mut world).unwrap();
+    let session = SaveSession::with_player(store, &world, source, &inv);
+    let mut app = app_from_session(world, session, inv);
+    let expected = app
+        .world()
+        .resource::<crate::inventory_ui::GameInventory>()
+        .contents
+        .clone();
+    app.world_mut()
+        .resource_mut::<crate::inventory_ui::GameInventory>()
+        .contents
+        .select(4);
+    edit(&mut app, [0, 20, 0], Block::Wood);
+    fs::create_dir(dir.0.join("player.rcp.bak")).unwrap();
+    close(&mut app);
+    drain(&mut app);
+    assert!(app.should_exit().is_none());
+    assert_eq!(
+        app.world().resource::<SaveFeedback>().label,
+        "ERROR / DIRTY"
+    );
+    assert_eq!(
+        app.world()
+            .resource::<crate::inventory_ui::GameInventory>()
+            .contents
+            .slots(),
+        expected.slots()
+    );
+    assert!(dir.0.join("session.pending").exists());
+    fs::remove_dir(dir.0.join("player.rcp.bak")).unwrap();
+    f5(&mut app);
+    drain(&mut app);
+    assert_eq!(app.world().resource::<SaveFeedback>().label, "Saved");
+    assert!(!dir.0.join("session.pending").exists());
+}

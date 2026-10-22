@@ -110,6 +110,7 @@ fn input(
         return;
     };
     if !window.focused || save.is_some_and(|s| s.closing) {
+        state.wheel = 0.;
         return;
     }
     if keyboard.just_pressed(KeyCode::KeyE)
@@ -397,7 +398,11 @@ fn draw(
         t.translation = Vec3::new(p.x + 10., p.y - 10., 4.);
     }
     if let Ok(mut v) = visibility.get_mut(assets.cursor) {
-        *v = if state.open && state.contents.cursor().is_some() {
+        *v = if state.open
+            && state.contents.cursor().is_some()
+            && window.focused
+            && window.cursor_position().is_some()
+        {
             Visibility::Inherited
         } else {
             Visibility::Hidden
@@ -419,20 +424,41 @@ fn draw(
     let mut held_text = Batch::default();
     let mut held_icon = Batch::default();
     let y = layout.center(0, state.open).y;
-    let height = if state.open { 166. } else { 34. };
+    let height = if state.open { 175. } else { 34. };
+    let bottom = if state.open { y - 26. } else { y - 17. };
     flat.rect(
-        Vec2::new(-136., y - 17.),
+        Vec2::new(-136., bottom),
         Vec2::new(272., height),
         0.,
         [0.17, 0.11, 0.075, 1.],
     );
     flat.rect(
-        Vec2::new(-134., y - 15.),
+        Vec2::new(-134., bottom + 2.),
         Vec2::new(268., height - 4.),
         0.1,
         [0.035, 0.055, 0.07, 1.],
     );
+    if !state.open && !state.message.is_empty() {
+        let width = state.message.len() as f32 * 4.;
+        flat.rect(
+            Vec2::new(-width / 2. - 3., y + 19.),
+            Vec2::new(width + 6., 10.),
+            0.,
+            [0.035, 0.055, 0.07, 1.],
+        );
+        flat.text(
+            Vec2::new(-width / 2., y + 22.),
+            state.message,
+            [1., 0.7, 0.3, 1.],
+        );
+    }
     if state.open {
+        flat.rect(
+            Vec2::new(-128., -34.),
+            Vec2::new(256., 1.),
+            0.2,
+            [0.3, 0.22, 0.14, 1.],
+        );
         flat.text(Vec2::new(-18., 72.), "INVENTORY", [0.9, 0.68, 0.35, 1.]);
         flat.text(
             Vec2::new(-18., -72.),
@@ -483,3 +509,6 @@ fn draw(
         *meshes.get_mut(&assets.meshes[i]).unwrap() = b.mesh(i % 2 == 1);
     }
 }
+
+#[cfg(test)]
+mod tests;

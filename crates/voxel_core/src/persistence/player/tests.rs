@@ -130,3 +130,196 @@ fn legacy_v1_inventory_only_saves_never_upgrade_or_rewrite_world() {
     assert_eq!(fs::read(s.path()).unwrap(), bytes);
     assert!(!s.backup_path().exists());
 }
+
+#[test]
+fn valid_checksums_do_not_bypass_slot_counts_ids_or_selection_validation() {
+    let w = crate::streaming::new_large_world(42);
+    let root = encode(&w).unwrap();
+    let b = player_bytes(Binding::new(&w), &root, &Inventory::starter());
+    for (pos, value) in [(64, 9), (65, 6), (67, 0), (67, 65), (65, 0)] {
+        let mut bad = b.clone();
+        bad[pos] = value;
+        let crc = checksum(&bad);
+        bad[20..24].copy_from_slice(&crc.to_le_bytes());
+        assert!(decode_player(&bad).is_err(), "field {pos}={value}");
+    }
+}
+#[test]
+fn partially_written_far_regions_replay_with_the_matching_inventory() {
+    for failure in [2, 3] {
+        let t = Temp::new();
+        let (s, mut w, _) =
+            SaveStore::open_with(&t.0, || Ok(crate::streaming::new_large_world(42))).unwrap();
+        let mut inv = s.load_player(&mut w).unwrap();
+        for c in [[1000, -1000], [-1000, 1000]] {
+            s.prepare_regional_column(&mut w, c).unwrap();
+            crate::streaming::prepare_column(&mut w, c).unwrap();
+        }
+        let air = crate::BlockPos([16000, -15, -16000]);
+        let wood = crate::BlockPos([-16000, 25, 16000]);
+        w.set_block(air, crate::Block::Air).unwrap();
+        w.set_block(wood, crate::Block::Wood).unwrap();
+        inv.insert(Item::Stone, 1);
+        inv.select(5);
+        let mut commits = 0;
+        assert!(
+            s.save_player_with(&w, &inv, true, |stage| {
+                if stage == SaveStage::PrimaryCommitted {
+                    commits += 1;
+                    if commits == failure {
+                        return Err(io::Error::other("partial region commit"));
+                    }
+                }
+                Ok(())
+            })
+            .is_err()
+        );
+        assert_eq!(w.dirty_regions(), 2);
+        drop(s);
+        let (s, mut got, _) = SaveStore::open(&t.0).unwrap();
+        let items = s.load_player(&mut got).unwrap();
+        assert_eq!(items.slots(), inv.slots());
+        assert_eq!(items.selected(), 5);
+        for c in [[1000, -1000], [-1000, 1000]] {
+            s.prepare_regional_column(&mut got, c).unwrap();
+            crate::streaming::prepare_column(&mut got, c).unwrap();
+        }
+        assert_eq!(got.block(air), crate::Block::Air);
+        assert_eq!(got.block(wood), crate::Block::Wood);
+        assert!(!s.pending_path().exists());
+    }
+}
+#[test]
+fn interrupted_initial_save_recovers_identity_before_factory_or_starter_can_run() {
+    let t = Temp::new();
+    let (s, w, _) =
+        SaveStore::open_with(&t.0, || Ok(crate::streaming::new_large_world(42))).unwrap();
+    let binding = Binding::new(&w);
+    atomic_replace(
+        &s.binding_path(),
+        &pack(ID_MAGIC, 0, &binding.0),
+        true,
+        &mut |_| Ok(()),
+    )
+    .unwrap();
+    let mut inv = Inventory::starter();
+    inv.select(8);
+    assert!(
+        s.save_player_with(&w, &inv, true, |stage| {
+            if stage == SaveStage::SessionPrepared {
+                Err(io::Error::other("crash before initial world"))
+            } else {
+                Ok(())
+            }
+        })
+        .is_err()
+    );
+    assert!(!s.path().exists());
+    drop(s);
+    let (s, mut w, _) =
+        SaveStore::open_with(&t.0, || panic!("must not create another world")).unwrap();
+    let restored = s.load_player(&mut w).unwrap();
+    assert_eq!(restored.selected(), 8);
+    assert_eq!(w.identity().unwrap().seed, 42);
+    assert!(s.path().exists());
+}
+#[test]
+fn corruption_of_pending_session_blocks_loading_without_touching_files() {
+    let t = Temp::new();
+    let (s, mut w, _) = SaveStore::open(&t.0).unwrap();
+    let inv = s.load_player(&mut w).unwrap();
+    assert!(
+        s.save_player_with(&w, &inv, false, |stage| {
+            if stage == SaveStage::SessionPrepared {
+                Err(io::Error::other("stop"))
+            } else {
+                Ok(())
+            }
+        })
+        .is_err()
+    );
+    let original_world = fs::read(s.path()).unwrap();
+    let original_player = fs::read(s.player_path()).unwrap();
+    let good = fs::read(s.pending_path()).unwrap();
+    for pos in [0, 8, 16, 24, good.len() - 1] {
+        let mut bad = good.clone();
+        bad[pos] ^= 1;
+        fs::write(s.pending_path(), &bad).unwrap();
+        assert!(s.load_player(&mut w).is_err());
+        assert_eq!(fs::read(s.pending_path()).unwrap(), bad);
+        assert_eq!(fs::read(s.path()).unwrap(), original_world);
+        assert_eq!(fs::read(s.player_path()).unwrap(), original_player);
+    }
+    fs::write(s.pending_path(), &good).unwrap();
+    s.load_player(&mut w).unwrap();
+}
+#[test]
+fn inventory_initialization_preserves_world_bytes_in_every_existing_mode() {
+    for world in [
+        crate::demo_world(),
+        crate::streaming::new_world(42),
+        crate::streaming::new_large_world(42),
+    ] {
+        let t = Temp::new();
+        let (s, _, _) = SaveStore::open(&t.0).unwrap();
+        s.save(&world).unwrap();
+        drop(s);
+        let (s, mut w, _) = SaveStore::open(&t.0).unwrap();
+        let before = fs::read(s.path()).unwrap();
+        let inv = s.load_player(&mut w).unwrap();
+        s.save_player_session(&w, &inv, false).unwrap();
+        assert_eq!(fs::read(s.path()).unwrap(), before);
+    }
+}
+
+#[test]
+fn a_foreign_or_corrupt_player_blocks_redo_before_the_world_advances() {
+    let t = Temp::new();
+    let (s, mut w, _) = SaveStore::open(&t.0).unwrap();
+    let inv = s.load_player(&mut w).unwrap();
+    let prior = fs::read(s.path()).unwrap();
+    w.set_block(crate::BlockPos([0, 20, 0]), crate::Block::Wood)
+        .unwrap();
+    assert!(
+        s.save_player_with(&w, &inv, true, |stage| {
+            if stage == SaveStage::SessionPrepared {
+                Err(io::Error::other("stop before world"))
+            } else {
+                Ok(())
+            }
+        })
+        .is_err()
+    );
+    let mut corrupt = fs::read(s.player_path()).unwrap();
+    corrupt[65] ^= 1;
+    fs::write(s.player_path(), &corrupt).unwrap();
+    assert!(s.load_player(&mut w).is_err());
+    assert_eq!(fs::read(s.path()).unwrap(), prior);
+    assert_eq!(fs::read(s.player_path()).unwrap(), corrupt);
+    assert!(s.pending_path().exists());
+}
+
+#[test]
+fn orphan_player_backup_never_invokes_a_new_world_initializer() {
+    let t = Temp::new();
+    fs::write(t.0.join("player.rcp.bak"), b"preserve").unwrap();
+    assert!(
+        SaveStore::open_with(&t.0, || panic!(
+            "must not initialize over orphan player data"
+        ))
+        .is_err()
+    );
+    assert!(!t.0.join("world.rcw").exists());
+}
+
+#[test]
+fn world_only_save_api_refuses_to_decouple_an_initialized_inventory() {
+    let t = Temp::new();
+    let (s, mut w, _) = SaveStore::open(&t.0).unwrap();
+    s.load_player(&mut w).unwrap();
+    let bytes = fs::read(s.path()).unwrap();
+    w.set_block(crate::BlockPos([0, 20, 0]), crate::Block::Wood)
+        .unwrap();
+    assert!(s.save(&w).is_err());
+    assert_eq!(fs::read(s.path()).unwrap(), bytes);
+}

@@ -119,6 +119,7 @@ fn main() -> std::process::ExitCode {
             primary_window: Some(Window {
                 title: "RustCraft — Click: capture | Esc: release | WASD: move | Space: jump | Shift: sprint | R: respawn".into(),
                 resolution: (1280, 720).into(),
+                resize_constraints: WindowResizeConstraints {min_width:320.,min_height:240.,..default()},
                 ..default()
             }),
             ..default()
