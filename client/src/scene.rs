@@ -6,6 +6,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use voxel_core::{CHUNK_SIZE, ChunkPos, World, demo_world, mesh_chunk};
 
 pub struct VoxelScenePlugin;
+#[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub(crate) struct SceneSetup;
 /// World-space offset used only by presentation. Physics/rays remain f64 world coordinates.
 #[derive(Resource, Default)]
 pub(crate) struct RenderOrigin(pub [f64; 3]);
@@ -37,7 +39,7 @@ impl Plugin for VoxelScenePlugin {
             .init_resource::<RenderOrigin>()
             .init_resource::<DirtyChunks>()
             .init_resource::<ChunkRenders>()
-            .add_systems(Startup, spawn_scene)
+            .add_systems(Startup, spawn_scene.in_set(SceneSetup))
             .add_systems(Update, rebuild_dirty_chunks);
     }
 }

@@ -67,6 +67,8 @@ pub enum EditError {
     OutOfBounds,
     NotLoaded,
     SaveRequired,
+    InventoryFull,
+    EmptySlot,
     Occupied,
     IntersectsPlayer,
     NoPlacementFace,

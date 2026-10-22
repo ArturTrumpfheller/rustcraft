@@ -257,7 +257,11 @@ fn edits_during_in_flight_snapshot_remain_dirty_and_close_saves_the_latest_revis
         rx.recv().unwrap();
         store.save(&snapshot)
     });
-    app.world_mut().resource_mut::<SaveSession>().job = Some(SaveJob { revision, handle });
+    app.world_mut().resource_mut::<SaveSession>().job = Some(SaveJob {
+        revision,
+        inventory_revision: None,
+        handle,
+    });
     edit(&mut app, [16, 8, -17], Block::Grass);
     frame(&mut app, Duration::ZERO);
     tx.send(()).unwrap();

@@ -10,7 +10,7 @@ use bevy::{
     render::render_resource::PrimitiveTopology, window::PrimaryWindow,
 };
 use voxel_core::{
-    interaction::{BuildBlock, EditAction, EditError, edit},
+    interaction::{BuildBlock, EditAction, EditError},
     physics::Player,
     raycast::{DEFAULT_REACH, Ray, RayHit, raycast},
 };
@@ -19,6 +19,7 @@ pub struct BlockInteractionPlugin;
 impl Plugin for BlockInteractionPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Editor>()
+            .init_resource::<crate::inventory_ui::GameInventory>()
             .add_systems(Startup, setup_visuals.after(CameraSetup))
             .add_systems(
                 RunFixedMainLoop,
@@ -36,7 +37,7 @@ struct Editor {
     target: Option<RayHit>,
     reach: f64,
     rejection: Option<EditError>,
-    title_initialized: bool,
+    last_selection: Option<(usize, Option<voxel_core::inventory::Item>)>,
 }
 impl Default for Editor {
     fn default() -> Self {
@@ -45,7 +46,7 @@ impl Default for Editor {
             target: None,
             reach: DEFAULT_REACH,
             rejection: None,
-            title_initialized: false,
+            last_selection: None,
         }
     }
 }
@@ -59,6 +60,7 @@ struct EditContext<'w, 's> {
     control: Res<'w, ControllerInput>,
     view: Res<'w, ViewPose>,
     editor: ResMut<'w, Editor>,
+    inventory: ResMut<'w, crate::inventory_ui::GameInventory>,
     windows: Query<'w, 's, &'static mut Window, With<PrimaryWindow>>,
     cameras: Query<'w, 's, Entity, With<FirstPersonCamera>>,
 }
@@ -68,8 +70,11 @@ fn edit_and_target(
     mouse: Res<ButtonInput<MouseButton>>,
     mut ctx: EditContext,
 ) {
-    let old_selection = ctx.editor.selected;
-    let active = ctx.control.active && !ctx.player.awaiting_spawn && ctx.cameras.single().is_ok();
+    let active = ctx.control.active
+        && !ctx.player.awaiting_spawn
+        && ctx.cameras.single().is_ok()
+        && !ctx.inventory.open
+        && !ctx.inventory.transition;
     if active {
         for (key, slot) in [
             (KeyCode::Digit1, 1),
@@ -77,21 +82,35 @@ fn edit_and_target(
             (KeyCode::Digit3, 3),
             (KeyCode::Digit4, 4),
             (KeyCode::Digit5, 5),
+            (KeyCode::Digit6, 6),
+            (KeyCode::Digit7, 7),
+            (KeyCode::Digit8, 8),
+            (KeyCode::Digit9, 9),
         ] {
             if keyboard.just_pressed(key) {
-                ctx.editor.selected = BuildBlock::from_slot(slot).expect("valid selection slot");
+                ctx.inventory.contents.select(slot - 1);
             }
         }
     }
-    if (!ctx.editor.title_initialized || old_selection != ctx.editor.selected)
+    if let Some(stack) = ctx.inventory.contents.selected_stack() {
+        ctx.editor.selected = stack.item().build();
+    }
+    let selection = (
+        ctx.inventory.contents.selected(),
+        ctx.inventory.contents.selected_stack().map(|s| s.item()),
+    );
+    if ctx.editor.last_selection != Some(selection)
         && let Ok(mut window) = ctx.windows.single_mut()
     {
         window.title = format!(
-            "RustCraft | Block: {} {} | 1–5 select | LMB break | RMB place | F5 save | Esc release | R respawn",
-            ctx.editor.selected.slot(),
-            ctx.editor.selected.name()
+            "RustCraft | Slot: {} {} | 1–9 / wheel | E inventory | LMB break | RMB place | F5 save | Esc release | R respawn",
+            ctx.inventory.contents.selected() + 1,
+            ctx.inventory
+                .contents
+                .selected_stack()
+                .map_or("Empty", |s| s.item().build().name())
         );
-        ctx.editor.title_initialized = true;
+        ctx.editor.last_selection = Some(selection);
     }
     if !active {
         ctx.editor.target = None;
@@ -129,7 +148,22 @@ fn edit_and_target(
         let result = if overlaps_view {
             Err(EditError::IntersectsPlayer)
         } else {
-            edit(&mut ctx.world.0, ray, action, &body, &config)
+            match voxel_core::inventory::edit_inventory(
+                &mut ctx.world.0,
+                &mut ctx.inventory.contents,
+                ray,
+                matches!(action, EditAction::Place(_)),
+                &body,
+                &config,
+            ) {
+                Ok(v) => Ok(v),
+                Err(voxel_core::inventory::InventoryEditError::World(e)) => Err(e),
+                Err(voxel_core::inventory::InventoryEditError::Full) => {
+                    ctx.inventory.message = "NO ROOM";
+                    Err(EditError::InventoryFull)
+                }
+                Err(voxel_core::inventory::InventoryEditError::Empty) => Err(EditError::EmptySlot),
+            }
         };
         ctx.editor.rejection = result.as_ref().err().copied();
         if let Ok(Some(change)) = result {
@@ -143,8 +177,6 @@ fn edit_and_target(
 struct TargetHighlight;
 #[derive(Component)]
 struct OverlayRoot;
-#[derive(Component)]
-struct SelectionMarker;
 
 fn outline_mesh() -> Mesh {
     let corners: Vec<[f32; 3]> = (0..8)
@@ -197,8 +229,6 @@ fn setup_visuals(
         Visibility::Hidden,
     ));
     let crosshair = meshes.add(Rectangle::new(12.0, 2.0));
-    let square = meshes.add(Rectangle::new(12.0, 12.0));
-    let marker = meshes.add(Rectangle::new(16.0, 16.0));
     let overlay = commands
         .spawn((
             OverlayRoot,
@@ -214,35 +244,10 @@ fn setup_visuals(
             MeshMaterial3d(white.clone()),
             Transform::from_rotation(Quat::from_rotation_z(std::f32::consts::FRAC_PI_2)),
         ));
-        parent.spawn((
-            SelectionMarker,
-            Mesh3d(marker),
-            MeshMaterial3d(white),
-            Transform::from_xyz(-40.0, -24.0, -0.1),
-        ));
-        for slot in 1..=5 {
-            let color = BuildBlock::from_slot(slot).unwrap().block().color();
-            let material = materials.add(StandardMaterial {
-                base_color: Color::linear_rgba(color[0], color[1], color[2], color[3]),
-                unlit: true,
-                ..default()
-            });
-            parent.spawn((
-                Mesh3d(square.clone()),
-                MeshMaterial3d(material),
-                Transform::from_xyz((f32::from(slot) - 3.0) * 20.0, -24.0, 0.0),
-            ));
-        }
     });
 }
 
 type OverlayFilter = (With<OverlayRoot>, Without<TargetHighlight>);
-type MarkerFilter = (
-    With<SelectionMarker>,
-    Without<TargetHighlight>,
-    Without<OverlayRoot>,
-);
-
 #[derive(SystemParam)]
 struct VisualState<'w> {
     editor: Res<'w, Editor>,
@@ -255,7 +260,6 @@ fn update_visuals(
     cameras: Query<&Projection, With<FirstPersonCamera>>,
     mut highlights: Query<(&mut Transform, &mut Visibility), With<TargetHighlight>>,
     mut overlays: Query<(&mut Transform, &mut Visibility), OverlayFilter>,
-    mut markers: Query<&mut Transform, MarkerFilter>,
 ) {
     for (mut transform, mut visibility) in &mut highlights {
         if let Some(hit) = state.editor.target {
@@ -280,9 +284,6 @@ fn update_visuals(
                 Visibility::Hidden
             };
         }
-    }
-    for mut transform in &mut markers {
-        transform.translation.x = (f32::from(state.editor.selected.slot()) - 3.0) * 20.0;
     }
 }
 

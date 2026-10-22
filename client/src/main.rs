@@ -1,5 +1,6 @@
 mod camera;
 mod interaction;
+mod inventory_ui;
 mod persistence;
 mod player;
 mod save_hud;
@@ -29,6 +30,15 @@ fn main() -> std::process::ExitCode {
         Err(error) => {
             eprintln!(
                 "RustCraft could not load world: {error}. No world file was overwritten. If available, preserve the damaged primary and recover world.rcw.bak explicitly (see README)."
+            );
+            return std::process::ExitCode::FAILURE;
+        }
+    };
+    let inventory = match store.load_player(&mut world) {
+        Ok(i) => i,
+        Err(e) => {
+            eprintln!(
+                "RustCraft player/session recovery error: {e}; preserve the whole data directory"
             );
             return std::process::ExitCode::FAILURE;
         }
@@ -91,7 +101,7 @@ fn main() -> std::process::ExitCode {
         eprintln!("RustCraft mode: legacy finite snapshot (64x64); no generation or eviction");
         streaming::StreamState::default()
     };
-    let session = persistence::SaveSession::new(store, &world, source);
+    let session = persistence::SaveSession::with_player(store, &world, source, &inventory);
     let preferred = start.map_or(player::SPAWN, |c| {
         [
             f64::from(c[0]) * 16. + 8.5,
@@ -99,7 +109,7 @@ fn main() -> std::process::ExitCode {
             f64::from(c[1]) * 16. + 8.5,
         ]
     });
-    App::new().insert_resource(player::InitialSpawn(preferred))
+    App::new().insert_resource(inventory_ui::GameInventory::loaded(inventory)).insert_resource(player::InitialSpawn(preferred))
         .insert_resource(scene::VoxelWorld(world))
         .insert_resource(session)
         .insert_resource(stream)
@@ -113,7 +123,7 @@ fn main() -> std::process::ExitCode {
             }),
             ..default()
         }))
-        .add_plugins((scene::VoxelScenePlugin, player::PlayerPlugin, camera::FirstPersonPlugin, interaction::BlockInteractionPlugin, persistence::PersistencePlugin, save_hud::SaveHudPlugin, streaming::StreamingPlugin))
+        .add_plugins((scene::VoxelScenePlugin, inventory_ui::InventoryPlugin, player::PlayerPlugin, camera::FirstPersonPlugin, interaction::BlockInteractionPlugin, persistence::PersistencePlugin, save_hud::SaveHudPlugin, streaming::StreamingPlugin))
         .run();
     std::process::ExitCode::SUCCESS
 }

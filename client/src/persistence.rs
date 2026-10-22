@@ -114,12 +114,14 @@ impl Default for SaveFeedback {
 }
 struct SaveJob {
     revision: u64,
+    inventory_revision: Option<u64>,
     handle: JoinHandle<Result<(), SaveError>>,
 }
 #[derive(Resource)]
 pub(crate) struct SaveSession {
     pub(crate) store: Arc<SaveStore>,
     saved_revision: u64,
+    saved_inventory_revision: Option<u64>,
     creation_pending: bool,
     observed_revision: u64,
     job: Option<SaveJob>,
@@ -136,6 +138,7 @@ impl SaveSession {
         Self {
             store: Arc::new(store),
             saved_revision: world.revision(),
+            saved_inventory_revision: None,
             creation_pending: source == LoadSource::NewWorld,
             observed_revision: world.revision(),
             job: None,
@@ -148,18 +151,50 @@ impl SaveSession {
             saved_once: false,
         }
     }
-    fn start(&mut self, world: &World, now: Duration) {
+    pub fn with_player(
+        store: SaveStore,
+        world: &World,
+        source: LoadSource,
+        inventory: &voxel_core::inventory::Inventory,
+    ) -> Self {
+        let mut s = Self::new(store, world, source);
+        s.saved_inventory_revision = Some(inventory.revision());
+        s
+    }
+    fn start(
+        &mut self,
+        world: &World,
+        now: Duration,
+        inventory: Option<&voxel_core::inventory::Inventory>,
+    ) {
         let snapshot = world.save_snapshot(); // Stream saves share only identity/edits, no resident chunks.
         let store = Arc::clone(&self.store);
+        let inventory = if self.saved_inventory_revision.is_some() {
+            let Some(inv) = inventory else {
+                self.failed("player inventory resource missing".into());
+                return;
+            };
+            Some(inv.clone())
+        } else {
+            None
+        };
+        let inventory_revision = inventory.as_ref().map(|i| i.revision());
+        let world_dirty = self.creation_pending || world.revision() != self.saved_revision;
         self.last_attempt = now;
         self.manual_pending = false;
         match thread::Builder::new()
             .name("rustcraft-save".into())
-            .spawn(move || store.save(&snapshot))
-        {
+            .spawn(move || {
+                if let Some(inv) = inventory {
+                    store.save_player_session(&snapshot, &inv, world_dirty)
+                } else {
+                    store.save(&snapshot)
+                }
+            }) {
             Ok(handle) => {
                 self.job = Some(SaveJob {
                     revision: world.revision(),
+                    inventory_revision,
                     handle,
                 });
                 info!("Saving world to {}", self.store.path().display());
@@ -184,6 +219,9 @@ impl SaveSession {
             match job.handle.join() {
                 Ok(Ok(())) => {
                     self.saved_revision = job.revision;
+                    if let Some(r) = job.inventory_revision {
+                        self.saved_inventory_revision = Some(r);
+                    }
                     self.creation_pending = false;
                     self.saved_once = true;
                     self.last_error = None;
@@ -242,6 +280,7 @@ fn update_saving(
     time: Res<Time<Real>>,
     keyboard: Res<ButtonInput<KeyCode>>,
     mut ui: SaveUi,
+    inventory: Option<Res<crate::inventory_ui::GameInventory>>,
 ) {
     if let Some(revision) = session.poll() {
         world.0.mark_regions_saved(revision);
@@ -253,7 +292,12 @@ fn update_saving(
         }
         session.observed_revision = current;
     }
-    let dirty = session.creation_pending || current != session.saved_revision;
+    let inventory_dirty = session.saved_inventory_revision.is_some_and(|r| {
+        inventory
+            .as_ref()
+            .is_none_or(|i| i.contents.revision() != r)
+    });
+    let dirty = session.creation_pending || current != session.saved_revision || inventory_dirty;
     if ui.close.read().count() > 0 {
         session.closing = true;
     }
@@ -274,7 +318,11 @@ fn update_saving(
             || due
             || (world.0.save_pressure() && session.last_error.is_none()))
     {
-        session.start(&world.0, time.elapsed());
+        session.start(
+            &world.0,
+            time.elapsed(),
+            inventory.as_ref().map(|i| &i.contents),
+        );
     }
     if !dirty {
         session.manual_pending = false;
