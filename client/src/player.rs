@@ -10,6 +10,29 @@ pub(crate) const SPAWN: [f64; 3] = [0.5, 4.0, 10.5];
 const RECOVERY_Y: f64 = -32.0;
 
 pub struct PlayerPlugin;
+#[derive(Resource)]
+pub(crate) struct InitialSpawn(pub [f64; 3]);
+pub(crate) fn start_column(
+    value: Option<std::ffi::OsString>,
+    limit: i32,
+) -> Result<Option<[i32; 2]>, std::io::Error> {
+    let Some(value) = value else {
+        return Ok(None);
+    };
+    let result = value
+        .to_str()
+        .and_then(|s| s.split_once(','))
+        .and_then(|(x, z)| Some([x.parse::<i32>().ok()?, z.parse::<i32>().ok()?]));
+    result
+        .filter(|c| c.iter().all(|v| (-limit..limit).contains(v)))
+        .map(Some)
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "RUSTCRAFT_START_CHUNK must be x,z within this world's chunk bounds",
+            )
+        })
+}
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
@@ -118,6 +141,16 @@ fn initialize_player(
     world: Res<VoxelWorld>,
     settings: Res<PlayerSettings>,
     mut player: ResMut<PlayerState>,
+    start: Option<Res<InitialSpawn>>,
 ) {
-    *player = safe_spawn(&world.0, &settings.0);
+    if let Some(start) = start {
+        let p = voxel_core::physics::spawn_position(&world.0, &settings.0, start.0);
+        *player = PlayerState {
+            body: Player::new(p),
+            previous_position: p,
+            awaiting_spawn: false,
+        };
+    } else {
+        *player = safe_spawn(&world.0, &settings.0);
+    }
 }

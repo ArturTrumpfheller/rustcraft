@@ -4,7 +4,7 @@ This document tracks intended milestones, not promised delivery dates. Implement
 
 ## v0.1 — Classic-style prototype
 
-Slice 6 adds bounded dynamic chunk caching/rendering, expanded 128×128 new worlds and v3 seed/version/edit-overlay persistence. Legacy snapshots remain exact finite worlds. Full v0.1 is not complete. The owner tested slices 1–5 on Void and their Linux/Windows CI passed. The owner also verified Slice 6 streaming and edit durability on Void; PR #12 addresses the reported spawn visibility, diagonal contact and rapid mining problems. Current coverage and before/after measurements are recorded in `docs/VALIDATION.md`; native retesting of these corrections is still needed. Serialization/recovery and deterministic generation tests exist; infinite streaming and richer gameplay remain deferred.
+Slice 7 adds local generator v3, a large 65,536×65,536×48 rollout, bounded regional edit caching/persistence and floating-origin rendering. The owner accepted slices 1–6 including the native Void corrections. Existing v1/v2/v3 worlds stay in their original modes; no automatic migration. Full v0.1 is not complete. Current measurements and remaining native Slice-7 acceptance are in VALIDATION.
 
 - [x] Cargo workspace and pinned Bevy dependency
 - [x] Launch client with a first-person walking player and interpolated camera
@@ -22,11 +22,13 @@ Slice 6 adds bounded dynamic chunk caching/rendering, expanded 128×128 new worl
 
 ## v0.2 — Indev / Infdev-inspired foundations
 - [x] First bounded streaming: configurable radius, one worker, cache/GPU eviction, safe pending barriers and persistent edits
-- [ ] Infinite/region-based streaming and per-chunk disk storage
+- [x] First local large-world rollout with versioned regional storage and bounded caches
+- [ ] Further coordinate expansion and opt-in legacy migration
 - [ ] More interesting terrain and caves
 - [ ] Basic light propagation and chunk remeshing
 - [ ] Inventory and reusable item/block registry
-- [ ] Performance profiling and memory budgets
+- [x] Initial profiling, matched baseline comparisons and explicit active/dirty memory budgets
+- [ ] Dense-region/bulk-edit profiling and further native GPU optimization
 
 ## v0.3 — Alpha-inspired survival
 - [ ] Health, damage and respawning

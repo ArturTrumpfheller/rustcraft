@@ -6,6 +6,7 @@ mod mesh;
 pub mod persistence;
 pub mod physics;
 pub mod raycast;
+pub mod regions;
 pub mod streaming;
 mod world;
 pub mod worldgen;

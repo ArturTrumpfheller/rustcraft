@@ -3,7 +3,7 @@
 use crate::{
     camera::{CameraSetup, FirstPersonCamera, ViewPose, ViewSync},
     player::{ControllerInput, PlayerSettings, PlayerState},
-    scene::{DirtyChunks, VoxelWorld},
+    scene::{DirtyChunks, RenderOrigin, VoxelWorld},
 };
 use bevy::{
     asset::RenderAssetUsages, ecs::system::SystemParam, mesh::Indices, prelude::*,
@@ -243,9 +243,14 @@ type MarkerFilter = (
     Without<OverlayRoot>,
 );
 
+#[derive(SystemParam)]
+struct VisualState<'w> {
+    editor: Res<'w, Editor>,
+    control: Res<'w, ControllerInput>,
+    origin: Res<'w, RenderOrigin>,
+}
 fn update_visuals(
-    editor: Res<Editor>,
-    control: Res<ControllerInput>,
+    state: VisualState,
     windows: Query<&Window, With<PrimaryWindow>>,
     cameras: Query<&Projection, With<FirstPersonCamera>>,
     mut highlights: Query<(&mut Transform, &mut Visibility), With<TargetHighlight>>,
@@ -253,10 +258,10 @@ fn update_visuals(
     mut markers: Query<&mut Transform, MarkerFilter>,
 ) {
     for (mut transform, mut visibility) in &mut highlights {
-        if let Some(hit) = editor.target {
-            *transform = Transform::from_translation(Vec3::from_array(
-                hit.position.0.map(|v| v as f32 - 0.002),
-            ))
+        if let Some(hit) = state.editor.target {
+            *transform = Transform::from_translation(Vec3::from_array(std::array::from_fn(|a| {
+                (f64::from(hit.position.0[a]) - state.origin.0[a]) as f32 - 0.002
+            })))
             .with_scale(Vec3::splat(1.004));
             *visibility = Visibility::Inherited;
         } else {
@@ -269,7 +274,7 @@ fn update_visuals(
         let pixel_scale = 2.0 * 0.2 * (projection.fov * 0.5).tan() / window.height().max(1.0);
         for (mut transform, mut visibility) in &mut overlays {
             transform.scale = Vec3::splat(pixel_scale);
-            *visibility = if control.active {
+            *visibility = if state.control.active {
                 Visibility::Inherited
             } else {
                 Visibility::Hidden
@@ -277,7 +282,7 @@ fn update_visuals(
         }
     }
     for mut transform in &mut markers {
-        transform.translation.x = (f32::from(editor.selected.slot()) - 3.0) * 20.0;
+        transform.translation.x = (f32::from(state.editor.selected.slot()) - 3.0) * 20.0;
     }
 }
 

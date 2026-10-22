@@ -38,9 +38,28 @@ fn main() -> std::process::ExitCode {
             "RustCraft loaded existing snapshot unchanged; world seed overrides do not apply."
         );
     }
+    let start = if world.region_identity().is_some() {
+        match player::start_column(
+            std::env::var_os("RUSTCRAFT_START_CHUNK"),
+            world.bounds().1[0] / 16,
+        ) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("RustCraft start position error: {e}");
+                return std::process::ExitCode::FAILURE;
+            }
+        }
+    } else {
+        None
+    };
+    let column = start.unwrap_or([0, 0]);
+    if let Err(e) = store.prepare_regional_column(&mut world, column) {
+        eprintln!("RustCraft spawn region load failed: {e}; files preserved");
+        return std::process::ExitCode::FAILURE;
+    }
     let stream = if world.identity().is_some() {
         let prepared = std::time::Instant::now();
-        let generator = match voxel_core::streaming::prepare_spawn(&mut world) {
+        let generator = match voxel_core::streaming::prepare_column(&mut world, column) {
             Ok(g) => g,
             Err(e) => {
                 eprintln!("RustCraft generation error: {e}");
@@ -55,8 +74,11 @@ fn main() -> std::process::ExitCode {
             }
         };
         eprintln!(
-            "RustCraft mode: streamed 128x128, seed {}, generator v2, radius {radius}",
-            world.identity().unwrap().seed
+            "RustCraft mode: streamed {}x{}, seed {}, generator v{}, radius {radius}",
+            world.bounds().1[0] * 2,
+            world.bounds().1[2] * 2,
+            world.identity().unwrap().seed,
+            world.identity().unwrap().generator
         );
         eprintln!(
             "RustCraft spawn prepared: {} chunks in {:?}",
@@ -69,7 +91,14 @@ fn main() -> std::process::ExitCode {
         streaming::StreamState::default()
     };
     let session = persistence::SaveSession::new(store, &world, source);
-    App::new()
+    let preferred = start.map_or(player::SPAWN, |c| {
+        [
+            f64::from(c[0]) * 16. + 8.5,
+            32.,
+            f64::from(c[1]) * 16. + 8.5,
+        ]
+    });
+    App::new().insert_resource(player::InitialSpawn(preferred))
         .insert_resource(scene::VoxelWorld(world))
         .insert_resource(session)
         .insert_resource(stream)

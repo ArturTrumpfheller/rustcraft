@@ -403,3 +403,62 @@ fn diagonal_contact_does_not_trigger_clearance_recovery_or_camera_backtracking()
     assert!((previous[0] - 2.3).abs() < 1e-8);
     assert!((previous[2] - 0.7).abs() < 1e-8);
 }
+
+#[test]
+fn floating_origin_keeps_far_camera_and_chunk_transforms_precise_without_changing_world_pose() {
+    use voxel_core::{Block, Chunk, ChunkPos, LocalPos, World};
+    let mut world = World::default();
+    let mut chunk = Chunk::default();
+    chunk.set(LocalPos::new([0, 0, 0]).unwrap(), Block::Stone);
+    world.insert_chunk(ChunkPos([1000, 0, -1000]), chunk);
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO))
+        .insert_resource(VoxelWorld(world))
+        .init_resource::<Assets<Mesh>>()
+        .init_resource::<Assets<StandardMaterial>>()
+        .init_resource::<ButtonInput<KeyCode>>()
+        .init_resource::<ButtonInput<MouseButton>>()
+        .init_resource::<AccumulatedMouseMotion>()
+        .add_plugins((
+            crate::scene::VoxelScenePlugin,
+            PlayerPlugin,
+            FirstPersonPlugin,
+        ));
+    app.update();
+    for position in [
+        [16000.5, 2., -15999.5],
+        [16016.5, 2., -15983.5],
+        [0.5, 2., 10.5],
+    ] {
+        *app.world_mut().resource_mut::<PlayerState>() = PlayerState {
+            body: Player::new(position),
+            previous_position: position,
+            awaiting_spawn: false,
+        };
+        app.update();
+        assert_eq!(body(&app).position, position);
+        let origin = app.world().resource::<crate::scene::RenderOrigin>().0;
+        let transform = camera(&mut app);
+        assert!(transform.translation.x.abs() < 16. && transform.translation.z.abs() < 16.);
+        let pose = app.world().resource::<ViewPose>();
+        assert!((f64::from(transform.translation.x) + origin[0] - pose.eye[0]).abs() < 1e-6);
+        let render =
+            &app.world().resource::<crate::scene::ChunkRenders>().0[&ChunkPos([1000, 0, -1000])];
+        let terrain = app.world().get::<Transform>(render.entity).unwrap();
+        assert_eq!(f64::from(terrain.translation.x) + origin[0], 16000.);
+        assert_eq!(f64::from(terrain.translation.z) + origin[2], -16000.);
+    }
+}
+#[test]
+fn far_start_configuration_is_bounded_and_does_not_accept_invalid_coordinates() {
+    use crate::player::start_column;
+    assert_eq!(start_column(None, 2048).unwrap(), None);
+    assert_eq!(
+        start_column(Some("1000,-1000".into()), 2048).unwrap(),
+        Some([1000, -1000])
+    );
+    for s in ["", "0", "1,2,3", "2048,0", "-2049,0", "NaN,1"] {
+        assert!(start_column(Some(s.into()), 2048).is_err());
+    }
+}

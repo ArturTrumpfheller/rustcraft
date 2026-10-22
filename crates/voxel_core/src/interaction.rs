@@ -66,6 +66,7 @@ pub enum EditAction {
 pub enum EditError {
     OutOfBounds,
     NotLoaded,
+    SaveRequired,
     Occupied,
     IntersectsPlayer,
     NoPlacementFace,

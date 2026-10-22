@@ -2,6 +2,9 @@
 //! coordinates, never a shared RNG or chunk traversal order. No Bevy types.
 use crate::{Block, BlockPos, CHUNK_SIZE, Chunk, ChunkPos, LocalPos, World};
 
+mod local;
+pub use local::Sampler;
+
 pub const GENERATOR_VERSION: u32 = 1;
 pub const DEFAULT_SEED: u64 = 2026;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -71,8 +74,17 @@ fn noise(seed: u64, x: i32, z: i32, scale: i32, salt: u64) -> i32 {
 }
 impl Generator {
     pub fn new(config: GenerationConfig) -> Result<Self, UnsupportedGenerator> {
-        if ![GENERATOR_VERSION, 2].contains(&config.version) {
+        if ![GENERATOR_VERSION, 2, 3].contains(&config.version) {
             return Err(UnsupportedGenerator(config.version));
+        }
+        if config.version == 3 {
+            return Ok(Self {
+                config,
+                heights: Vec::new(),
+                trees: Vec::new(),
+                entrance_height: 0,
+                extent: crate::regions::LARGE_EXTENT,
+            });
         }
         let extent = if config.version == 1 { 32 } else { 64 };
         let mut heights = Vec::with_capacity((extent * extent * 4) as usize);
@@ -131,10 +143,22 @@ impl Generator {
         }
         Ok(generator)
     }
+    pub fn chunk_limit(&self) -> i32 {
+        self.extent / 16
+    }
+    pub fn sampler(&self, column: [i32; 2]) -> Sampler<'_> {
+        Sampler::new(self, column)
+    }
+    pub fn planning_bytes(&self) -> usize {
+        self.heights.capacity() * 4 + self.trees.capacity() * std::mem::size_of::<Tree>()
+    }
     /// Surface block Y before caves/trees; None outside the finite plan.
     pub fn height(&self, x: i32, z: i32) -> Option<i32> {
         if !(-self.extent..self.extent).contains(&x) || !(-self.extent..self.extent).contains(&z) {
             return None;
+        }
+        if self.config.version == 3 {
+            return Some(local::height(self.config.seed, x, z));
         }
         Some(self.heights[((z + self.extent) * self.extent * 2 + x + self.extent) as usize])
     }
@@ -173,6 +197,9 @@ impl Generator {
     /// Samples world-space cells. Trees are planned once and cross chunk seams;
     /// no neighboring chunk must already exist for a correct result.
     pub fn block(&self, BlockPos([x, y, z]): BlockPos) -> Block {
+        if self.config.version == 3 {
+            return local::point(self, BlockPos([x, y, z]));
+        }
         let terrain = self.terrain(x, y, z);
         if terrain != Block::Air || !(-16..32).contains(&y) {
             return terrain;
@@ -203,6 +230,9 @@ impl Generator {
         Block::Air
     }
     pub fn chunk(&self, pos: ChunkPos) -> Option<Chunk> {
+        if self.config.version == 3 {
+            return self.sampler([pos.0[0], pos.0[2]]).chunk(pos);
+        }
         if !(-self.extent / 16..self.extent / 16).contains(&pos.0[0])
             || !(-1..2).contains(&pos.0[1])
             || !(-self.extent / 16..self.extent / 16).contains(&pos.0[2])
@@ -221,6 +251,10 @@ impl Generator {
         Some(chunk)
     }
     pub fn generate(&self) -> World {
+        assert_ne!(
+            self.config.version, 3,
+            "local generator is streamed, never materialize its entire extent"
+        );
         let mut world = if self.config.version == 1 {
             World::default()
         } else {

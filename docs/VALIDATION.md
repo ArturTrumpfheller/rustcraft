@@ -1,5 +1,153 @@
 # RustCraft validation
 
+## Slice 7 — local large-world generation and regional persistence
+
+Started from accepted `main` **d2acca8** (Slice 6 and native corrections). This
+section describes the current implementation; earlier sections below are historical.
+No dependencies, engine features, lockfile, toolchain or texture assets changed.
+
+### Architecture and regression coverage
+
+New worlds: **65,536×65,536×48**, generator v3 and format v4. This is a deliberately
+bounded rollout with local sampling and floating rendering origin, not an infinite
+world claim. v1/v2 snapshots and v3/gen2 worlds keep their exact bounds/generation;
+there is no implicit migration. See ARCHITECTURE, WORLDGEN and SAVE_FORMAT for the
+full contracts. One worker and radius-bounded caches remain; distant clean region
+maps and local tokens are pruned. Unsaved regional data is retained with pressure
+saving and an eight-dirty-region edit cap, including after I/O failures.
+
+Passed locally on Debian 13 glibc / Rust 1.99.1 / Bevy 0.20.0:
+
+```sh
+cargo fmt --all -- --check
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo test --locked --workspace
+cargo build --locked --workspace
+```
+
+**154 tests passed (95 core + 59 client), none failed or ignored**; all 132 accepted
+Slice-6 tests remain. Added coverage: distant deterministic columns/seed extremes,
+visit order, local/full halo equality, far trees/caves, region and chunk boundaries,
+far startup with saved edits, render-origin camera/mesh alignment, bounded distant
+travel, directional load priority, fast edit batches without column regeneration,
+stale work versus regional edits, failed regional loads/barriers/F5 retry, v4/region
+byte goldens, corrupt/truncated/foreign/unknown data, partial multi-region commits,
+post-rename sync failure/retry, backups, saved-revision versus newer edits, regional
+COW/backpressure, save/evict/revisit/restart and repeated 24-region eviction. Existing
+diagonal contact, spawn eviction, physics, seam meshes and v1/v2/v3 tests still pass.
+Headless ECS resource assertions match resident chunks, terrain entities and Mesh
+assets exactly after travel and empty/refill cycles.
+
+### Comparison with accepted Slice 6
+
+Debug builds, seed 42, radius 1, same host. Baseline production source is the
+accepted d2acca8; only the benchmark harness gained the same P99 print. Local
+packages were cleaned between source trees to avoid shared-target mtime reuse.
+Measurements execute compiled binaries without Cargo compilation/competing builds.
+No absolute timing thresholds gate CI; cloud scheduling is noisy.
+
+| Workload / metric | Accepted Slice 6 | Slice 7 |
+| --- | --- | --- |
+| Generator setup / persistent height-tree planning | gen2: 3.077 ms / 69,632 bytes | gen3: 0.000756 ms / 0 bytes |
+| 12 column jobs: median / P95 including generation + meshing | gen2: 37.64 / 41.25 ms | gen3: 11.39 / 14.33 ms |
+| Identical gen2 128 surface changes: median elapsed, three trials | 409.82 ms | 252.28 ms (~38% less) |
+| Same workload: median longest worker | 16.91 ms | 9.38 ms |
+| Same workload: median headless update P50 / P95 / P99 | 0.396 / 0.738 / 2.162 ms | 0.459 / 1.038 / 2.241 ms |
+| Same workload: median whole-process CPU (includes initial load) | 1.050 CPU s | 0.984 CPU s |
+| Same workload: sampled process peak RSS range | 34,428–34,668 KiB | 33,588–35,804 KiB |
+| Identical gen2 seven-center tour / two edits: elapsed | 2.867 s | 2.227 s |
+| Tour: longest worker / process peak RSS | 113.24 ms / 34,312 KiB | 45.59 ms / 35,208 KiB |
+| Tour: accepted jobs / discarded / peak resident chunks | 55 / 0 / 27 | 55 / 0 / 27 |
+
+The generation comparison uses different explicitly versioned terrains; equal
+aggregate mesh bytes (2,455,848) do not imply identical terrain. The mining and
+seven-center comparisons **do** use identical frozen gen2 geometry (final logical
+buffers 1,909,736 and 1,849,384 bytes respectively). Faster worker time is not a
+claim of better every-frame latency: the measured headless main-thread P95/P99
+increased slightly. Regional snapshots/caches are bounded but not free.
+
+New regional tour: nine visits including chunk coordinates ±1000 and supported
+edges (blocks approximately ±16,000 and ±32,768), edits/eviction/save/restart:
+1.120 s after initial loading, visit P50/P95 114.22/123.57 ms, longest worker
+31.25 ms, peak 27 resident chunks, queue peak 11, final four cached region maps.
+Whole test process (including startup/restart assertions): 1.648 s wall,
+1.908 CPU s, peak RSS 36,360 KiB. No historical region index or global edit map
+accumulates. A separate 24-region core test saves then prunes each regional map,
+keeps the manifest byte-identical and reloads every far edit.
+
+Reproduce separately, without competing workloads:
+
+```sh
+cargo test --locked -p voxel_core local_generation_benchmark -- --nocapture
+cargo test --locked -p rustcraft surface_seam_mining_metrics -- --nocapture
+cargo test --locked -p rustcraft moving_radius_releases -- --nocapture
+cargo test --locked -p rustcraft large_world_travel -- --nocapture
+```
+
+Frame intervals, CPU and RSS refer to different scopes: frame metrics are host
+update/wall intervals, worker durations include scheduling, process CPU sums all
+threads, RSS includes runtime/driver allocations. Logs also expose recent native
+P50/P95/P99, queue-to-install maximum, dirty latency and buffers. These are not GPU
+execution timestamps or a release-build FPS guarantee.
+
+### Graphical tests (software renderer, not native acceptance)
+
+Xvfb X11, Mesa 25.0.7 llvmpipe Vulkan, debug client, 640×360, radius 1,
+`LP_NUM_THREADS=4`. Backend selection was confined to the test process.
+
+- Matched legacy gen2 seam fixture: **64 break/restore cycles, 128 applied edits**,
+  confirmed by save revision 2 → 130. Restored save bytes and inspected settled
+  screenshots matched the original exactly (pixel difference empty). Eight
+  initial load jobs remained eight: no full-column regeneration during mining.
+  Final resources returned to 27 chunks / 23 meshes / 1,971,192 logical buffer
+  bytes. Stale local batches retried safely (five discards), preserving geometry.
+- Current graphical stress: 25.934 wall s / 60.65 CPU s (~234% of one core), sampled
+  RSS 411,056 → 412,224 KiB, plateauing around 412,000 KiB. Final rolling
+  frame P50/P95/P99 36.82/44.56/50.50 ms, mean 26.5 FPS. Lifetime streaming-system
+  maximum 3.78 ms; these include host/driver scheduling. Mesa dominates overall
+  process cost; lower worker CPU does not establish a physical GPU/fan improvement.
+- Synthetic 80-ms clicks and one 200-ms baseline run lost button edges during
+  irregular software frames (baseline revision reached 129 instead of 130).
+  Those attempts are **not valid matched graphical performance comparisons** and
+  are excluded from improvement claims. The current successful 200-ms run waited
+  for visible save completion before reading bytes. Headless matched comparisons
+  above provide the reproducible before/after performance evidence. Driver/VRAM
+  leaks are not ruled out by short RSS samples; headless counts test ownership.
+- Fresh v4/gen3 seed-42 native client start at chunk `1000,-1000` (feet
+  `[16008.5,6,-15991.5]`): actual mining and Wood placement persisted regional
+  records `(16008,5,-15993)=Air` and `(16008,4,-15993)=Wood`. CRCs checked; restart
+  retained both records and the inspected hole/placed-block geometry. An override
+  seed 12345 did not change the loaded seed 42. R evicted all nine distant columns
+  and safely reloaded origin, with 27 chunks / four cached regions and no far
+  overlays retained. Capture/release, look, target outline, HUD and normal close
+  were exercised. The harness needed pointer recentering after resize to keep
+  injected button events inside the window; no backend changes were made.
+- Far graphical observations: cold full radius-1 readiness ~1.00 s queue-to-install
+  maximum, eight loads, longest generation/mesh job 32.05 ms. After the final edit,
+  rolling P50/P95/P99 32.23/40.54/104.17 ms, mean 28.9 FPS; lifetime streaming update
+  max 1.80 ms. Startup samples include shader/renderer initialization and are not
+  steady-state FPS estimates. Respawn/reload also succeeded after restart.
+
+All fixtures, separate baseline source, logs, scripts and screenshots are outside
+the repository. No player's saves were accessed. Graphical runs verify operation,
+not long-distance walking endurance, Wayland or Windows GUI performance.
+
+### Persistence limits and safe native acceptance
+
+Regions are **individually atomic**, not a whole-world transaction. A failed save
+may commit some regions; all dirty in-memory state remains for retry. Eight dirty
+regions bound unsaved cache growth; later new-region edits are refused while
+saving fails. No per-click journal: forced termination can lose unsaved edits.
+Missing primaries with backups, corrupt data and identity mismatches block loading
+rather than regenerating. External deletion of the sole regional primary without
+its backup cannot be distinguished from never-edited terrain. Back up the complete
+closed data directory, not only the manifest. Details/recovery: SAVE_FORMAT.
+
+Use the [isolated Fish instructions](PLATFORMS.md#slice-7-manual-test-fish).
+Native Void X11/Wayland and Windows GUI, physical GPU profiling, dense-region COW,
+large connected bulk edits and long-duration driver/VRAM tracking remain manual
+acceptance work. No actual player directories are accessed by development tests.
+
 ## Slice 6 — PR #12 native-review corrections
 
 The owner's first native Void test confirmed streaming, timely terrain loading,

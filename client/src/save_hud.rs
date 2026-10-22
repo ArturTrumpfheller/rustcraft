@@ -49,6 +49,7 @@ fn message(label: &str) -> (&'static str, [f32; 4]) {
     match label {
         "Saving" => ("SAVING...", [1.0, 0.8, 0.1, 1.0]),
         "Saved" => ("SAVED", [0.3, 1.0, 0.35, 1.0]),
+        "ERROR / LOAD" => ("LOAD ERROR - F5 RETRY", [1.0, 0.2, 0.15, 1.0]),
         "ERROR / DIRTY" => ("SAVE ERROR - F5 RETRY", [1.0, 0.2, 0.15, 1.0]),
         "Dirty" => ("UNSAVED - F5 SAVE", [1.0, 0.8, 0.1, 1.0]),
         "Loaded" => ("LOADED", [0.8, 0.95, 1.0, 1.0]),
@@ -178,7 +179,14 @@ mod tests {
         ));
         app.update();
         for _ in 0..10 {
-            for label in ["Saving", "Saved", "ERROR / DIRTY", "Dirty", "Loaded"] {
+            for label in [
+                "Saving",
+                "Saved",
+                "ERROR / LOAD",
+                "ERROR / DIRTY",
+                "Dirty",
+                "Loaded",
+            ] {
                 app.world_mut().resource_mut::<SaveFeedback>().label = label.into();
                 app.update();
                 let world = app.world_mut();

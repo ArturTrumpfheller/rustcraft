@@ -1,4 +1,8 @@
 use crate::interaction::EditError;
+use crate::regions::{
+    EditSnapshot, LARGE_EXTENT, MAX_DIRTY_REGIONS, RegionData, RegionEdits, RegionIdentity,
+    RegionPos,
+};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,
@@ -59,6 +63,8 @@ pub struct World {
     // Only the owner and face-sharing meshes advance for an actual edit.
     mesh_revisions: BTreeMap<ChunkPos, u64>,
     identity: Option<StreamIdentity>,
+    regional: Option<RegionIdentity>,
+    regions: BTreeMap<RegionPos, RegionData>,
     edits: Arc<BTreeMap<BlockPos, Block>>,
 }
 
@@ -69,11 +75,81 @@ impl World {
             ..Self::default()
         }
     }
+    pub fn regional(identity: RegionIdentity) -> Self {
+        assert_ne!(identity.nonce, [0; 16]);
+        Self {
+            regional: Some(identity),
+            identity: Some(StreamIdentity {
+                seed: identity.seed,
+                generator: 3,
+            }),
+            ..Self::default()
+        }
+    }
+    pub fn region_identity(&self) -> Option<RegionIdentity> {
+        self.regional
+    }
+    pub fn overlay_snapshot(&self) -> EditSnapshot {
+        let mut s = EditSnapshot::from(Arc::clone(&self.edits));
+        for (&p, r) in &self.regions {
+            s.insert_region(p, Arc::clone(&r.edits));
+        }
+        s
+    }
+    pub fn install_region(&mut self, p: RegionPos, edits: RegionEdits) {
+        assert!(self.regional.is_some() && p.valid());
+        self.regions.entry(p).or_insert(RegionData {
+            edits,
+            revision: 0,
+            dirty: false,
+        });
+    }
+    pub fn cached_regions(&self) -> usize {
+        self.regions.len()
+    }
+    pub fn edit_count(&self) -> usize {
+        self.edits.len() + self.regions.values().map(|r| r.edits.len()).sum::<usize>()
+    }
+    pub fn dirty_regions(&self) -> usize {
+        self.regions.values().filter(|r| r.dirty).count()
+    }
+    pub fn save_pressure(&self) -> bool {
+        self.dirty_regions() >= MAX_DIRTY_REGIONS / 2
+    }
+    pub fn mark_regions_saved(&mut self, revision: u64) {
+        for r in self.regions.values_mut() {
+            if r.revision <= revision {
+                r.dirty = false;
+            }
+        }
+    }
+    pub fn retain_regions(&mut self, keep: &BTreeSet<RegionPos>) {
+        self.regions.retain(|p, r| r.dirty || keep.contains(p));
+        self.mesh_revisions.retain(|p, _| {
+            keep.contains(&RegionPos([
+                p.0[0].div_euclid(crate::regions::REGION_CHUNKS),
+                p.0[2].div_euclid(crate::regions::REGION_CHUNKS),
+            ]))
+        });
+    }
+    pub(crate) fn dirty_region_snapshots(
+        &self,
+    ) -> impl Iterator<Item = (RegionPos, RegionEdits)> + '_ {
+        self.regions
+            .iter()
+            .filter(|(_, r)| r.dirty)
+            .map(|(&p, r)| (p, Arc::clone(&r.edits)))
+    }
     pub fn identity(&self) -> Option<StreamIdentity> {
         self.identity
     }
     pub fn bounds(&self) -> ([i32; 3], [i32; 3]) {
-        if self.identity.is_some() {
+        if self.regional.is_some() {
+            (
+                [-LARGE_EXTENT, -16, -LARGE_EXTENT],
+                [LARGE_EXTENT, 32, LARGE_EXTENT],
+            )
+        } else if self.identity.is_some() {
             ([-64, -16, -64], [64, 32, 64])
         } else {
             (EDIT_MIN, EDIT_MAX)
@@ -89,6 +165,10 @@ impl World {
         self.identity.is_none() || !self.in_bounds(p) || self.chunks.contains_key(&p.split().0)
     }
     pub fn edits(&self) -> Arc<BTreeMap<BlockPos, Block>> {
+        assert!(
+            self.regional.is_none(),
+            "use overlay_snapshot for regional worlds"
+        );
         Arc::clone(&self.edits)
     }
     pub(crate) fn restore_edit(&mut self, p: BlockPos, block: Block) {
@@ -117,6 +197,13 @@ impl World {
             revision: self.revision,
             mesh_revisions: BTreeMap::new(),
             identity: self.identity,
+            regional: self.regional,
+            regions: self
+                .regions
+                .iter()
+                .filter(|(_, r)| r.dirty)
+                .map(|(&p, r)| (p, r.clone()))
+                .collect(),
             edits: Arc::clone(&self.edits),
         }
     }
@@ -148,9 +235,23 @@ impl World {
         if before == block {
             return Ok(None);
         }
+        if self.regional.is_some() {
+            let r = self
+                .regions
+                .get(&RegionPos::of(position))
+                .ok_or(EditError::NotLoaded)?;
+            if !r.dirty && self.dirty_regions() >= MAX_DIRTY_REGIONS {
+                return Err(EditError::SaveRequired);
+            }
+        }
         let (chunk, local) = position.split();
         self.chunks.entry(chunk).or_default().set(local, block);
-        if self.identity.is_some() {
+        if self.regional.is_some() {
+            let r = self.regions.get_mut(&RegionPos::of(position)).unwrap();
+            Arc::make_mut(&mut r.edits).insert(position, block);
+            r.dirty = true;
+            r.revision = self.revision.wrapping_add(1);
+        } else if self.identity.is_some() {
             Arc::make_mut(&mut self.edits).insert(position, block);
         }
         self.revision = self.revision.wrapping_add(1);

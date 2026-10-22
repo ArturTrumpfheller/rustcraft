@@ -1,4 +1,4 @@
-//! Versioned full-world snapshots and recoverable filesystem commits. No Bevy
+//! Versioned snapshots, streamed identities and recoverable filesystem commits. No Bevy
 //! types, transient revisions, enum discriminants, meshes or vector layout are
 //! serialized. See docs/SAVE_FORMAT.md for the byte-level contract.
 use crate::{Block, BlockPos, CHUNK_SIZE, EDIT_MAX, EDIT_MIN, LocalPos, World, demo_world};
@@ -9,6 +9,9 @@ use std::{
     path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
 };
+
+mod regional;
+pub use regional::REGIONAL_VERSION;
 
 pub const MAGIC: &[u8; 8] = b"RUSTWRLD";
 /// Current legacy full-snapshot writer. Streamed identity/overlays use v3.
@@ -72,9 +75,13 @@ fn checksum(bytes: &[u8]) -> u32 {
 }
 
 /// Canonical mode-specific save: legacy full non-Air snapshot, or v3 identity
-/// and complete edit overlay (including Air). Resident cache data is never a
-/// substitute for a streamed world's authoritative edit map.
+/// and complete edit overlay (including Air). For v4 this encodes ONLY the
+/// identity manifest: use `SaveStore::save` to persist regional edits as well.
+/// Resident cache data never substitutes for authoritative edits.
 pub fn encode(world: &World) -> Result<Vec<u8>, FormatError> {
+    if let Some(id) = world.region_identity() {
+        return Ok(regional::manifest(id));
+    }
     if let Some(identity) = world.identity() {
         if identity.generator != 2 || world.edits().len() > MAX_STREAM_RECORDS {
             return Err(FormatError::Identity);
@@ -163,6 +170,9 @@ pub fn decode(bytes: &[u8]) -> Result<World, FormatError> {
         )
     };
     let version = u32_at(8);
+    if version == REGIONAL_VERSION {
+        return regional::decode_manifest(bytes);
+    }
     if ![1, FORMAT_VERSION, STREAM_FORMAT_VERSION].contains(&version) {
         return Err(FormatError::Version(version));
     }
@@ -317,6 +327,12 @@ impl SaveStore {
                     store.backup_path().display()
                 )));
             }
+            Ok(None) if store.directory.join("regions").try_exists()? => {
+                return Err(SaveError::RecoveryRequired(
+                    "region directory exists without a world manifest; refusing new identity"
+                        .into(),
+                ));
+            }
             Ok(None) => create()?,
             Err(error) => return Err(error),
         };
@@ -337,11 +353,16 @@ impl SaveStore {
         world: &World,
         mut hook: impl FnMut(SaveStage) -> io::Result<()>,
     ) -> Result<(), SaveError> {
+        if world.region_identity().is_some() {
+            return self.save_regional(world, &mut hook);
+        }
         let bytes = encode(world)?;
         match read_save(&self.path())? {
             Some(previous) => {
                 let prior = decode(&previous)?; // Never replace corrupt/unknown data.
-                if prior.identity() != world.identity() {
+                if prior.identity() != world.identity()
+                    || prior.region_identity() != world.region_identity()
+                {
                     return Err(SaveError::RecoveryRequired(
                         "world identity/mode changed; refusing implicit migration".into(),
                     ));
@@ -363,6 +384,9 @@ impl SaveStore {
 }
 
 fn read_save(path: &Path) -> Result<Option<Vec<u8>>, SaveError> {
+    read_limited(path, MAX_FILE_SIZE)
+}
+fn read_limited(path: &Path, limit: usize) -> Result<Option<Vec<u8>>, SaveError> {
     let file = match File::open(path) {
         Ok(file) => file,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
@@ -375,13 +399,12 @@ fn read_save(path: &Path) -> Result<Option<Vec<u8>>, SaveError> {
         )
         .into());
     }
-    if file.metadata()?.len() > MAX_FILE_SIZE as u64 {
+    if file.metadata()?.len() > limit as u64 {
         return Err(FormatError::TooLarge.into());
     }
     let mut bytes = Vec::new();
-    file.take(MAX_FILE_SIZE as u64 + 1)
-        .read_to_end(&mut bytes)?;
-    if bytes.len() > MAX_FILE_SIZE {
+    file.take(limit as u64 + 1).read_to_end(&mut bytes)?;
+    if bytes.len() > limit {
         return Err(FormatError::TooLarge.into());
     }
     Ok(Some(bytes))

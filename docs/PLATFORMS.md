@@ -200,3 +200,51 @@ Record resolution, radius, GPU/driver, debug versus release build and X11/Waylan
 The cloud software-rendering comparison in VALIDATION does not predict native GPU
 performance. No world extent, generator identity, save format or texture changes
 are introduced by this correction.
+
+## Slice 7 manual test (Fish)
+
+Use the existing Void glibc / Windows MSVC toolchain and drivers; no dependencies
+or graphics backend requirements changed. Linux supports X11 and Wayland. With
+Fish, choose an isolated absolute path and keep it for restarts:
+
+```fish
+git fetch origin
+git switch feat/slice-7-large-world-streaming
+set test_dir (mktemp -d /tmp/rustcraft-slice7.XXXXXX)
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_WORLD_SEED=42 RUSTCRAFT_LOAD_RADIUS=2 RUST_LOG=info cargo run --locked -p rustcraft
+# After normal close, visit far coordinates in the same world:
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_START_CHUNK="1000,-1000" RUSTCRAFT_LOAD_RADIUS=2 RUST_LOG=info cargo run --locked -p rustcraft
+```
+
+1. Confirm generator 3 / regional 65536×65536 mode, identity saved, and the
+   resident count settling to 75 chunks at radius 2. The title shows world
+   position; rendering/HUD should stay precise near ±16000 and near corner
+   chunks `2047,2047` / `-2048,-2048`. Values outside -2048..2047 fail clearly.
+2. Explore beyond ±64 on both axes, move repeatedly through column boundaries
+   and compare loaded meshes/CPU/region cache counts. New terrain must match on
+   return without origin meshes remaining visible. R and falling below Y=-32
+   request origin safely. Check cursor capture/release, focus and resizing.
+3. Mine/place rapidly across chunk and 64-block region seams. Check both faces,
+   collision, target outline and body-overlap rejection. Diagonally touching
+   block corners must stay stable while pushing/sliding/jumping. Repeated empty/
+   refill cycles must not accumulate terrain assets or queues.
+4. Modify distant blocks to Air and add Wood/Leaves. Leave several radii and
+   return before F5; changes must survive eviction. Save, wait for green SAVED,
+   close and repeat the same distant-start command. Also verify 30-second and
+   pressure autosave, and final-close saving without F5.
+5. Copy a historical world directory with all instances closed, and point only
+   the disposable copy at the client. v1/v2 stays 64×64 and v3/gen2 stays 128×128;
+   seed/start overrides must not expand it. Idle/F5 must leave bytes unchanged.
+6. Exercise I/O/corruption recovery only in disposable copies. The error names
+   the affected file; preserve it and the whole directory before restoring its
+   matching backup. Never delete real region files to bypass an error. Dirty
+   data must survive failed saves/eviction and final close must cancel until
+   successful retry. Eight unsaved regions limit further new-region edits.
+7. Logs report worker/load/dirty/update latency, cache/queue/buffer counts and
+   rolling frame P50/P95/P99/FPS. Record resolution, driver/GPU, radius, debug/
+   release build and X11/Wayland. Compare matched scenes; software Mesa is not
+   a physical GPU benchmark. Repeat on Windows with equivalent isolated paths.
+
+Back up **all** v4 files, including `regions/`, with the game closed. The manifest
+alone is not a backup. For another seed use a separate fresh directory. The start
+chunk is a session preference, not persisted player position; R remains origin.

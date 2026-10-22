@@ -1,6 +1,6 @@
-# RustCraft saves — legacy snapshots v1/v2 and streamed overlays v3
+# RustCraft saves — v1/v2 snapshots, v3 finite overlays and v4 regional worlds
 
-Project-authored specification: MIT OR Apache-2.0. Implemented by `voxel_core::persistence`, independent of Bevy. One local world is stored in `world.rcw`; `world.rcw.bak` is its previous valid generation. Paths and recovery commands are in [README](../README.md#saving-loading-and-recovery).
+Project-authored specification: MIT OR Apache-2.0. Implemented by `voxel_core::persistence`, independent of Bevy. The root `world.rcw` is a complete snapshot/overlay in v1–v3, or an immutable identity manifest in v4. Regional v4 data lives beside it under `regions/`. Backups retain one previous generation of each replaced data file. Paths and recovery commands are in [README](../README.md#saving-loading-and-recovery).
 
 ## Legacy byte contract (v1/v2)
 
@@ -30,7 +30,7 @@ IDs 1 and 2 also retain their exact v1 meaning. Version 1 strictly rejects IDs 4
 
 Every record must be within X/Z [-32,32), Y [-16,32). Duplicate/unsorted coordinates, ID 0 or unknown IDs, invalid magic/version, inconsistent counts/lengths, checksum errors, truncation and trailing bytes are rejected. The maximum is 196,608 records and **2,752,536 bytes**, enforced before disk reads allocate an unbounded buffer. This finite-volume limit is part of both versions. Trusted imports outside the volume cannot be saved, including out-of-bounds empty chunks.
 
-A snapshot is the entire world, sparsely encoded by non-air content. Missing coordinates are Air, not a reference to demo terrain. This preserves both removed and replaced original terrain, negative/boundary blocks and new chunks. Empty chunks need not be stored. A valid 24-byte empty snapshot decodes to an empty world. Only absence of both primary and backup invokes the new-world factory. The client now creates v3 streamed identity/overlay worlds; the library’s legacy `open` helper retains the historical demo factory. Neither factory is called for a loaded/corrupt/unsupported file. There is no persisted player state, seed, inventory or presentation data. Legacy terrain is saved in full; no generator is used to restore it. This paragraph describes v1/v2 only.
+A snapshot is the entire world, sparsely encoded by non-air content. Missing coordinates are Air, not a reference to demo terrain. This preserves both removed and replaced original terrain, negative/boundary blocks and new chunks. Empty chunks need not be stored. A valid 24-byte empty snapshot decodes to an empty world. Only absence of both primary and backup invokes the new-world factory. Slice 6 created v3 streamed identity/overlay worlds; Slice 7 creates v4 regional worlds; the library’s legacy `open` helper retains the historical demo factory. Neither factory is called for a loaded/corrupt/unsupported file. There is no persisted player state, seed, inventory or presentation data. Legacy terrain is saved in full; no generator is used to restore it. This paragraph describes v1/v2 only.
 
 Independent v1 golden fixtures (one Stone and mixed materials/negative coordinates) are pinned in tests; re-encoding uses v2 while retaining exact block semantics. Encoding is canonical: repeating a load/encode produces identical bytes regardless of transient revisions or insertion order. CRC detects accidental damage, not malicious alteration or authenticity.
 
@@ -74,7 +74,7 @@ The implementation uses Rust `std::fs::rename` with replacement semantics on Lin
 
 | Failure / state | Behavior |
 | --- | --- |
-| Missing primary and backup | Create v3 identity, then explicitly save the initial empty overlay once, even without edits |
+| Missing primary and backup | Current client creates a v4 manifest (see regional protocol below); Slice 6 created v3 identity/empty overlay once, even without edits |
 | Missing primary with existing backup | Stop; explicit backup recovery required |
 | Corrupt, truncated, unknown version/ID or unreadable primary | Stop before the game starts; preserve all files |
 | Lock or directory unavailable | Actionable startup error; no fallback to another save location |
@@ -97,3 +97,91 @@ Legacy saves clone bounded resident data; v3 snapshots capture only identity/rev
 The in-game bitmap panel shows loaded/unsaved state, yellow `SAVING...`, green `SAVED`, or persistent red `SAVE ERROR - F5 RETRY`, even with the cursor released. Title/logs retain status too. Startup logs always show the actual save path and source.
 
 Tests use isolated temporary directories, independent format fixtures, injected partial-write/commit failures, real backup-path errors, restart tests and actual ECS scheduling. See [validation](VALIDATION.md) for executed platform and GUI coverage.
+
+## v4 manifest and regional overlay contract (Slice 7)
+
+Only genuinely new worlds select v4 / generator v3. **No v1/v2/v3 world is
+implicitly migrated or expanded.** Their byte contracts, bounds and generators
+remain unchanged. A root manifest is exactly 64 bytes, with little-endian fields:
+
+| Offset | Bytes | Field |
+| --- | --- | --- |
+| 0 | 8 | `RUSTWRLD` |
+| 8 | 4 | World format 4 |
+| 12 | 8 | Record count and payload length, both 0 |
+| 20 | 4 | CRC-32 over [0,20) + [24,64) |
+| 24 | 8 | u64 seed |
+| 32 | 4 | Generator 3 |
+| 36 | 4 | Reserved 0 |
+| 40 | 4 | Supported X/Z half-extent 32768 |
+| 44 | 16 | Nonzero world nonce |
+| 60 | 4 | Reserved 0 |
+
+The nonce is a world identifier, not a cryptographic credential. The generator,
+extent and reserved fields are strict; future extent/algorithm changes need a
+new explicit version decision. `encode`/`decode` on a v4 world handle this manifest
+only; **use SaveStore.save for regional data**, never encode a resident cache as a
+complete save. `save_snapshot` retains dirty region maps, not resident chunks.
+
+A region covers 64×64 blocks and the full Y [-16,32) range. Signed region (rx,rz)
+is floor-divided from world X/Z by 64; block -1 belongs to region -1. The path is
+`regions/<rx div_euclid 32>_<rz div_euclid 32>/<rx>_<rz>.rcw`. At most 1,024 primary
+region coordinates share a shard; directories/files are created only on edits.
+There is no startup scan/global visited-region index. A never-edited region has
+no file. A missing primary with a backup is a recovery error, not empty terrain.
+External deletion of a sole primary cannot be distinguished from a never-edited
+region; external mutation is outside the session locking contract. Keep whole-
+directory backups with the game closed.
+
+Each region file has its own frozen version, independent of world-format v1:
+
+| Offset | Bytes | Field |
+| --- | --- | --- |
+| 0 | 8 | `RUSTREGN` |
+| 8 | 4 | Region format 1 |
+| 12 | 4 | Record count N, at most 196,608 |
+| 16 | 4 | Payload length, exactly 14×N |
+| 20 | 4 | CRC-32 over [0,20) + [24,end) |
+| 24 | 16 | Matching world nonce |
+| 40 | 8 | Matching seed |
+| 48 | 4 | Generator 3 |
+| 52 | 4 | Signed i32 rx |
+| 56 | 4 | Signed i32 rz |
+| 60 | 4 | Reserved 0 |
+| 64 | 14×N | Sorted unique global i32 X/Y/Z + u16 ID records |
+
+IDs 0–5 have their established meanings; explicit Air=0 preserves removals.
+Absent records refer to the frozen generator-v3 cell. Every coordinate must belong
+to the named valid region and vertical range. Unknown IDs/versions, mismatched
+identity/region, bad CRC, truncation, trailing/duplicate/unsorted/out-of-range data
+are rejected. Maximum file size is **2,752,576 bytes**, enforced before reading.
+One edited cell uses a 78-byte region plus the 64-byte manifest; two use 92 bytes.
+
+The manifest is committed/synced before first region writes and remains unchanged
+on ordinary saves. Each dirty region independently reuses validated previous data,
+synced same-directory temporary files, backup replacement and primary rename.
+New shard directory entries are synced on Unix. `.rcw.bak` retains the previous
+valid version of that region. Identical retries retain that backup and repeat
+needed directory sync. There is no whole-world transaction: a failed save can
+commit some regions and leave others old. All dirty in-memory regions remain
+pinned for retry; only complete successful captured revisions are marked clean.
+A failed final save cancels close. Later edits during a save remain dirty.
+
+At most eight dirty regions may accumulate; four request a pressure save in
+addition to F5 / 30-second autosave / final close. When that hard limit is reached,
+edits in another clean region are rejected until a successful save frees capacity.
+Dirty voxel/GPU chunks can still unload: their regional overlay stays in RAM.
+This bounds memory during disk errors without deleting changes. Regional COW
+cost is bounded by one region, not every edit ever made. Disk-full and permission
+errors remain visible; there is no fallback to another world/data directory.
+
+Corrupt/missing/unknown regional primaries are never automatically replaced by
+generated terrain or a backup. Spawn-region errors stop startup; later load errors
+show `LOAD ERROR - F5 RETRY` and leave solid pending barriers. After preserving the
+entire directory, recover the matching region backup explicitly while the game is
+closed, then restart/retry. A missing/corrupt root manifest needs its matching
+external backup; v4 does not rotate an unchanged manifest on every regional save.
+An orphan `regions` directory without a manifest prevents new identity creation.
+Copying only `world.rcw` is **not a backup of a v4 world**. File-level atomicity,
+Windows directory-sync limitations and losses since the last successful save on
+forced termination remain as documented above. No per-edit crash journal exists.
