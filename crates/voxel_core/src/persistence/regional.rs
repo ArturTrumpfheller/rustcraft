@@ -49,7 +49,7 @@ pub(super) fn decode_manifest(b: &[u8]) -> Result<World, FormatError> {
         nonce: b[44..60].try_into().unwrap(),
     }))
 }
-fn encode_region(
+pub(super) fn encode_region(
     id: RegionIdentity,
     p: RegionPos,
     edits: &RegionEdits,
@@ -78,7 +78,11 @@ fn encode_region(
     }
     Ok(finish(b))
 }
-fn decode_region(b: &[u8], id: RegionIdentity, p: RegionPos) -> Result<RegionEdits, FormatError> {
+pub(super) fn decode_region(
+    b: &[u8],
+    id: RegionIdentity,
+    p: RegionPos,
+) -> Result<RegionEdits, FormatError> {
     if b.len() > MAX_REGION_FILE {
         return Err(FormatError::TooLarge);
     }

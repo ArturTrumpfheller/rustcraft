@@ -10,6 +10,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
+mod player;
 mod regional;
 pub use regional::REGIONAL_VERSION;
 
@@ -327,6 +328,17 @@ impl SaveStore {
                     store.backup_path().display()
                 )));
             }
+            Ok(None) if store.directory.join("session.pending").try_exists()? => {
+                (store.pending_world()?, LoadSource::Saved)
+            }
+            Ok(None)
+                if store.directory.join("player.rcp").try_exists()?
+                    || store.directory.join("player-world.rcid").try_exists()? =>
+            {
+                return Err(SaveError::RecoveryRequired(
+                    "player files exist without world or recovery journal".into(),
+                ));
+            }
             Ok(None) if store.directory.join("regions").try_exists()? => {
                 return Err(SaveError::RecoveryRequired(
                     "region directory exists without a world manifest; refusing new identity"
@@ -417,6 +429,9 @@ enum SaveStage {
     BackupCommitted,
     BeforePrimaryRename,
     PrimaryCommitted,
+    SessionPrepared,
+    WorldSaved,
+    PlayerSaved,
 }
 struct TempFile {
     path: PathBuf,

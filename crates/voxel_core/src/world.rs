@@ -104,6 +104,20 @@ impl World {
             dirty: false,
         });
     }
+    pub(crate) fn restore_dirty_region(
+        &mut self,
+        p: RegionPos,
+        edits: crate::regions::RegionEdits,
+    ) {
+        self.regions.insert(
+            p,
+            RegionData {
+                edits,
+                revision: self.revision,
+                dirty: true,
+            },
+        );
+    }
     pub fn cached_regions(&self) -> usize {
         self.regions.len()
     }

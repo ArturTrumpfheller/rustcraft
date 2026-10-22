@@ -2,6 +2,7 @@
 
 mod chunk;
 pub mod interaction;
+pub mod inventory;
 mod mesh;
 pub mod persistence;
 pub mod physics;
