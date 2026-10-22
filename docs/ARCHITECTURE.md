@@ -1,8 +1,9 @@
 # RustCraft architecture
 
-Status: **Slice 8 original terrain atlas**. The owner accepted Slices 1–7 on
-Void before this work. World, storage and simulation contracts are unchanged. See DECISIONS for earlier choices and VALIDATION for
-actual measurements and remaining native acceptance.
+Status: **Slice 9 inventory/hotbar** from accepted Slice-8 main `ee16009` (PR #16).
+World formats, IDs, generator output and terrain rendering remain unchanged.
+Player persistence adds a save-level redo protocol around existing world writes.
+See INVENTORY, SAVE_FORMAT and VALIDATION for contracts and measured coverage.
 
 ## Slice 7 design note (before implementation)
 
@@ -192,3 +193,30 @@ chunk teardown removes only the chunk mesh/entity. GPU and CPU art pixels are
 32 KiB each, excluding driver alignment/overhead. No PNG decoder or async asset
 loading path is needed. Lighting/exposure and all bitmap UI remain unchanged.
 Authoring source, padding/orientation and the mip aliasing tradeoff are in TEXTURES.
+
+## Slice 9 inventory and player sessions
+
+`voxel_core::inventory` owns fixed 36-slot storage, validated stacks, cursor,
+selection, merge/split/swap/quick-transfer and staged world/inventory edits.
+It imports no Bevy types. Failed/full/pending/body-overlap actions commit neither
+side. There are no item entities, tools, crafting or extensible registry yet.
+Five explicit item IDs map to the existing five block types.
+
+`client::inventory_ui` handles modal input before view/physics and renders original
+pixel geometry/glyphs in four retained meshes, two unlit materials and the existing
+atlas image. Pointer movement updates cursor transforms only. No per-frame asset
+allocation or terrain material changes. Hidden empty batches retain valid small
+buffers rather than uploading zero-vertex meshes. Camera parenting preserves
+floating-origin precision. Existing crosshair and target outline remain.
+
+Production startup loads/replays player state before spawn preparation. The one
+save worker captures world and inventory revisions together. A checksummed,
+bounded journal records the intended root, dirty regions and player before any
+world commit; replay completes it before gameplay. World-only SaveStore saving is
+refused once player state is initialized. Successful old jobs clear only captured
+revisions. Inventory-only changes trigger F5/autosave/final close too.
+
+This extends the historical per-file world write protocol above; it does not
+change any world byte format or generator, and does not make filesystem writes
+simultaneous. Full closed-directory backups are necessary; older clients must
+use isolated copies. See INVENTORY for initialization failure and recovery limits.

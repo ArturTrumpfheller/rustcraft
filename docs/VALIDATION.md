@@ -1,5 +1,153 @@
 # RustCraft validation
 
+## Slice 9 — functional inventory, retained hotbar and paired session saves
+
+Started from accepted `main` **ee16009** (PR #16); the owner accepted Slice 8
+on native Void. Branch `feat/slice-9-inventory-hotbar`. Rust 1.99.1 / Bevy 0.20.0,
+Cargo.lock, engine features, terrain atlas, block IDs, frozen generators and world
+formats v1–v4 are unchanged. Player/session sidecars are separately versioned v1.
+The Slice-8 and older sections below are historical, not current UI instructions.
+
+### Checks and regression coverage
+
+Passed locally on Debian 13 glibc x86-64, debug profiles:
+
+```sh
+python3 tools/generate_textures.py --check
+cargo fmt --all -- --check
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo test --locked --workspace
+cargo build --locked --workspace
+```
+
+**196 tests passed: 119 core + 77 client, zero failed/ignored**; all 162 accepted
+Slice-8 tests remain. New/extended coverage:
+
+- Stack bounds/IDs, full/partial merging, unlike swaps, half rounding, single
+  placement, both quick-transfer directions and remainders; 20,000 deterministic
+  mixed operations conserve each item total including cursor. Invalid slots,
+  extreme selection scroll, full cursor return and failed/no-op edits lose nothing.
+- Actual input schedules for nine keys, line/pixel wheel, focus, E/Escape capture
+  restoration, click suppression, paused camera/physics/reset and outside clicks.
+  Actual mining/placing counts, full/empty refusal, body/pending safety and 64
+  alternating gameplay input cycles preserve block/item totals.
+- New player/identity/journal round trips, truncation/corruption, valid-CRC invalid
+  fields, foreign IDs/worlds, unknown versions, missing initialized files/backups,
+  orphan player state, read-only legacy-v1 initialization, byte-compatible v1–v4.
+  Injected journal/world/player commit failures and multi-region far-edit replay,
+  idempotent backups, no factory/refill on recovery, corrupt-player preflight,
+  inventory-only autosave/normal close/held cursor, failed close/retry, newer edits
+  during an older captured save, world-only API refusal after initialization.
+- Retained UI asset bounds and buffer reuse over 1,000 idle updates and 60 modal
+  cycles, all 36 filled slots, cursor pointer motion without rebuild. Existing UV,
+  atlas seams, regional corruption, travel/eviction, floating origin, spawn unload,
+  diagonal collision and connected dirty publication tests all still pass.
+
+Ubuntu and Windows GitHub Actions run artifact regeneration, fmt, Clippy, all
+workspace tests and build using the unchanged workflow. Intermediate pushed
+implementation `39bd25f` passed both jobs (run **39843251619**); the PR contains
+current-head results. Neither CI job tests native graphical behavior.
+
+### Matched CPU workloads versus accepted Slice 8
+
+Same cloud host, debug binaries, seed 42, radius 1; three independent trials each,
+medians. Preserved accepted Slice-8 production binary (`ee16009`, same tree as
+`54c1347`) versus Slice-9 implementation, without compilation or overlapping GUI
+work. These existing headless streaming tests isolate world/meshing, not the full
+new UI/save protocol; their update timings are **not displayed GPU frametimes**.
+
+| Workload / metric | Slice 8 | Slice 9 |
+| --- | ---: | ---: |
+| Surface seam, 32 installs, elapsed | 280.07 ms | 271.71 ms |
+| Surface headless update p50 / p95 | 0.510 / 0.639 ms | 0.546 / 0.685 ms |
+| Surface complete-process CPU time | 0.890 s | 0.899 s |
+| Surface process peak RSS | 36,812 KiB | 35,732 KiB |
+| Surface terrain buffer bytes | 1,577,608 | 1,577,608 |
+| Far travel elapsed | 1.149 s | 1.122 s |
+| Far visit p50 / p95 | 124.01 / 129.45 ms | 124.26 / 126.66 ms |
+| Far complete-process CPU time | 2.082 s | 2.073 s |
+| Far process peak RSS | 36,960 KiB | 36,204 KiB |
+
+Both versions: 27 peak resident chunks, four region overlays, queue peak 11,
+1,641,296 far-travel terrain bytes; zero discarded seam outputs. Differences are
+small and noisy, not evidence of a new streaming optimization. No world/mesh
+algorithm changed in this slice.
+
+New retained-UI workload, three trials: median **854.97 ms for 1,000 idle app
+updates** and **124.64 ms for 60 modal cycles**. These include all test-app systems,
+not isolated UI function times. No idle rebuild, no resource-count growth: four
+UI meshes, two UI materials, existing single atlas image. Counted vertex/index
+payload is **39,184 bytes closed**, **74,144 open** with starter contents and
+**199,376 with all 36 slots filled** (includes small valid hidden buffer caches;
+excludes driver/ECS overhead). Moving a held cursor changes transforms only.
+
+### Graphical input, restart and matched stress
+
+Xvfb X11, Mesa 25.0.7 llvmpipe LLVM19 Vulkan software renderer, LP_NUM_THREADS=4,
+independent temporary worlds, no native user saves. Actual XTest input at 960×640
+verified nine-slot selection/wheel, E modal, original 3×9+9 layout/icons/counts,
+left/right/Shift transfers, Wood32 → Wood31+Wood1, Grass64 split into slot32 +
+held32, F5 and normal close. Restart with a different seed override retained the
+world identity, selected slot6, all exact stacks and held cursor; modal reopened.
+Returning the held stack restored Grass64. E/Escape release/regrab and second
+Escape release were checked against native X11 pointer ownership. UI-only edits
+left the original world manifest byte-identical. A separate fresh v4 far-start
+run at X16008.5/Z-15991.5 verified modal/hotbar rendering and selected slot9 F5
+persistence with 27 residents/18 meshes and no pending work. Screenshot:
+`docs/images/slice9-inventory.png` (actual restored held stack).
+
+The first restart script used 100-ms key presses and an immediate pointer probe;
+it raced software-renderer/window event handling. Repeating with 350-ms presses
+and bounded pointer-state polling passed. An early graphics run exposed Bevy
+warnings for empty cursor meshes: corrected by retaining valid hidden buffers;
+subsequent runs have no empty-mesh warnings. A separate benchmark launch initially
+lacked the cloud's Mesa library path; it was repeated with the same explicit
+software-driver environment on both versions. These are not native GPU results.
+
+Matched graphical stress used the same saved v3 seed42 platform/wall fixture,
+640×360, radius1, same camera, eight-second warmup and **32 break/place pairs**
+(64 applied edits) at 0.4 seconds per input. Both restored the exact root bytes,
+and before/after screenshots were pixel-identical within each version. New player
+state retained Stone64 total (63+1 due to merge ordering), other starter totals,
+selected slot3 and no held item. Revision reached66 including preliminary pair.
+
+| Software-rendered stress / final 128-frame window | Slice 8 | Slice 9 |
+| --- | ---: | ---: |
+| Mean FPS | 24.3 | 24.7 |
+| Frame p50 / p95 / p99 | 40.82 / 44.91 / 51.49 ms | 40.00 / 43.85 / 46.67 ms |
+| 64-input wall time | 25.65 s | 25.64 s |
+| Process CPU / elapsed (100% = one CPU) | 263.4% | 264.4% |
+| RSS before → after stress | 419,496 → 420,288 KiB | 412,072 → 412,396 KiB |
+| Resident / terrain meshes | 27 / 23 | 27 / 23 |
+| Final terrain bytes | 1,628,376 | 1,628,376 |
+
+One graphical trial per version: not a statistically rigorous hardware comparison.
+RSS plateaued during the short run; this alone cannot prove absence of all leaks.
+Resource lifetime is additionally covered by repeated asset-count/travel tests.
+Startup-inclusive queue-to-install maximum was 1.090 vs 1.046 seconds; maximum
+observed dirty latency was 99.9 vs 299.6 ms, including first-use pipeline warmup.
+The latter spike must not be hidden by the steady-state frame table; physical GPU
+and longer-duration latency checks remain necessary. Both runs had zero discarded
+outputs and correct seam restoration. No compiler/CPU tests overlapped GUI runs.
+
+### Remaining limits and safe native acceptance
+
+Native Void X11/Wayland, physical GPU/older GPU, high-DPI/touchpad and Windows GUI
+remain untested here. Use PLATFORMS' Slice-9 Fish instructions in a fresh absolute
+save directory. No crafting, dragging/drop entities, armor/offhand or player
+position persistence. World size/streaming/texture contracts stay Slice8's.
+
+Session durability is save-level redo, not per-click or simultaneous multi-file
+commit. Inventory-only changes also save; unsaved changes after capture can be
+lost on forced termination. Dense journals add bounded temporary memory/disk I/O
+(max32MiB, eight dirty regions), not measured here as a dense-write benchmark.
+The identity-before-first-journal gap deliberately fails closed if interrupted.
+Corrupt/unknown/missing initialized data is preserved, not silently reset.
+Only complete closed-directory backups preserve region/player consistency; older
+clients/external file edits can violate the protocol. See INVENTORY/SAVE_FORMAT.
+Logs, binaries, scripts and disposable saves stay outside the repository; no
+private data, third-party UI art, new dependencies or generated texture changes.
+
 ## Slice 8 — original 16×16 art and shared terrain atlas
 
 Started from accepted `main` **c1186df** (PR #14). The owner confirmed Slices 1–7

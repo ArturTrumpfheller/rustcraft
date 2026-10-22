@@ -24,7 +24,8 @@ impl Plugin for FirstPersonPlugin {
                 RunFixedMainLoop,
                 (manage_cursor, read_input)
                     .chain()
-                    .in_set(RunFixedMainLoopSystems::BeforeFixedMainLoop),
+                    .in_set(RunFixedMainLoopSystems::BeforeFixedMainLoop)
+                    .after(crate::inventory_ui::InventoryInput),
             )
             .add_systems(
                 RunFixedMainLoop,
@@ -82,11 +83,29 @@ fn manage_cursor(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
     mut input: ResMut<ControllerInput>,
+    inventory: Option<Res<crate::inventory_ui::GameInventory>>,
 ) {
     input.captured_this_frame = false;
     let Ok((window, mut cursor)) = windows.single_mut() else {
         return;
     };
+    if let Some(inv) = inventory {
+        if inv.open {
+            cursor.grab_mode = CursorGrabMode::None;
+            cursor.visible = true;
+            return;
+        }
+        if inv.transition {
+            cursor.grab_mode = if inv.resume_capture {
+                CursorGrabMode::Locked
+            } else {
+                CursorGrabMode::None
+            };
+            cursor.visible = !inv.resume_capture;
+            input.captured_this_frame = true;
+            return;
+        }
+    }
     if !window.focused || keyboard.just_pressed(KeyCode::Escape) {
         cursor.grab_mode = CursorGrabMode::None;
         cursor.visible = true;
@@ -105,11 +124,14 @@ fn read_input(
     mut view: ResMut<ViewAngles>,
     mut input: ResMut<ControllerInput>,
     save: Option<Res<crate::persistence::SaveFeedback>>,
+    inventory: Option<Res<crate::inventory_ui::GameInventory>>,
 ) {
     input.active = windows
         .single()
         .is_ok_and(|(window, cursor)| window.focused && cursor.grab_mode != CursorGrabMode::None);
-    if save.is_some_and(|status| status.closing) {
+    if inventory.is_some_and(|i| i.open || i.transition)
+        || save.is_some_and(|status| status.closing)
+    {
         input.active = false;
     }
     if !input.active {

@@ -185,3 +185,98 @@ An orphan `regions` directory without a manifest prevents new identity creation.
 Copying only `world.rcw` is **not a backup of a v4 world**. File-level atomicity,
 Windows directory-sync limitations and losses since the last successful save on
 forced termination remain as documented above. No per-edit crash journal exists.
+
+## Player/session v1 sidecars (Slice 9; world v1–v4 unchanged)
+
+The preceding world contracts remain byte-for-byte unchanged. Production clients
+now use `load_player` before spawn and `save_player_session` for all saves. The
+world-only `save` API refuses inventory-enabled directories. Initializing an
+inventory on legacy v1 does not upgrade or replace the world file; an actual
+world edit retains the existing v1→v2 policy. No generators/IDs are reassigned.
+
+All sidecar integers are little-endian. Common header:
+
+| Offset | Bytes | Meaning |
+| --- | --- | --- |
+| 0 | 8 | File magic (below) |
+| 8 | 4 | Sidecar version, exactly 1 |
+| 12 | 4 | Count (36 for player, 0 for identity/journal) |
+| 16 | 4 | Exact payload byte length |
+| 20 | 4 | CRC-32 over [0,20) + [24,end), excluding checksum field |
+
+`player-world.rcid`: **56 bytes**, magic `RUSTPID1`, payload a 32-byte immutable
+binding: class u32 (2 = finite v1/v2; 3 = v3; 4 = v4), seed u64, generator u32,
+nonce [u8;16]. Finite class requires seed/gen zero; v3 requires its frozen seed/gen;
+v4 requires seed/gen3/nonce from manifest. Nonce must be nonzero; legacy modes
+receive a time/process/counter-generated sidecar identity, not cryptographic RNG.
+
+`player.rcp`: **176 bytes**, magic `RUSTPLY1`, count 36, payload 152:
+
+| Offset | Bytes | Meaning |
+| --- | --- | --- |
+| 24 | 32 | Exact immutable binding |
+| 56 | 8 | Root fingerprint: u32 complete root-file length + u32 CRC-32 of root bytes |
+| 64 | 1 | Selected zero-based hotbar index, 0–8 |
+| 65 | 108 | 36 ordered slots: hotbar 0–8, then three row-major main rows |
+| 173 | 3 | Held cursor stack |
+
+Each three-byte stack is u16 item ID plus u8 count. `(0,0)` is empty; only IDs
+1 Grass, 2 Dirt, 3 Stone, 4 Wood, 5 Leaves with counts **1–64** are valid. ID0
+with nonzero count, nonzero ID with zero count, unknown IDs and oversized stacks
+are rejected. Inventory revision and modal-open state are not saved. A held stack
+opens inventory on load. Player position/view/velocity remain outside this format.
+
+`session.pending`: magic `RUSTTXN1`, count0, maximum **32 MiB total**, exact ordered
+payload:
+
+1. world-dirty u8, only 0 or 1;
+2. u32 root length + complete intended root file (legacy full snapshot, v3 overlay
+   or v4 manifest), validated with the existing decoder;
+3. u32 regional entry count, at most eight; each entry is signed i32 rx, i32 rz,
+   u32 byte length + complete encoded v4 region file. Positions must be strictly
+   ordered/unique, identity and coordinates valid. Clean-world journals have none;
+4. u32 player length + complete 176-byte player file with matching binding and
+   fingerprint of the embedded root; no trailing bytes.
+
+Files are bounded before reading; CRC, versions, lengths, enum/counts, nested
+world/regions and identity are all validated. No automatic fallback, regeneration
+or starter refill replaces corrupt/unknown/foreign/missing initialized player data.
+A missing primary with player backup/identity prevents reinitialization. Orphan
+player files also prevent a missing world from silently invoking a new factory.
+
+### Paired commit and recovery
+
+Within the existing OS session lock, one worker captures world and inventory,
+atomically replaces/syncs `session.pending`, validates an existing player primary
+before any world advancement, writes changed world files with their existing
+validated backup/replace protocol, then backs up/replaces/syncs player. Finally it
+removes the journal and syncs the directory on Unix. Only full success marks the
+captured revisions clean; newer RAM changes remain dirty. F5, autosave, pressure
+save and normal close all include inventory-only changes. Failed final save keeps
+the application open. Idempotent retries avoid rotating unchanged world/player
+backups away. `player.rcp.bak` is the previous valid player, not a session rollback.
+
+A known valid pending journal replays idempotently **before gameplay**, completing
+all captured dirty regions and player. Missing initial root can be recovered from
+valid pending intent without invoking another world/starter factory. Unknown/bad
+journal, corrupt current player or identity mismatch stops loading and preserves
+files. Multi-file writes are not simultaneous; the journal provides **save-level
+redo**, not per-action durability. Changes after the captured save can be lost on
+forced termination. This extends the historical per-file protocol above; it is
+not a claim that individual region/backup files form an atomic session.
+
+Keep complete backups with the game closed, including root, all regions, player,
+identity and pending journal. To recover, preserve the entire damaged directory
+and restore a complete consistent copy. Never restore player alone or delete a
+journal to make an error disappear. The v4 root fingerprint cannot detect all
+historical region replacements: external edits and old clients ignoring sidecars
+can break consistency. Use older clients only on isolated copies.
+
+Initial creation commits identity before preparing the first journal. Failure in
+that narrow gap leaves an identity without player/journal and deliberately fails
+closed; there is no guessed refill. Preserve existing data and recover a complete
+backup; for a genuinely disposable fresh test use another fresh directory.
+Windows directory-sync and filesystem/hardware limits described above still apply;
+checksums/nonce are validation, not cryptographic authenticity. Dense captures can
+require tens of MiB of bounded temporary encoding and journal disk I/O. See
+INVENTORY and VALIDATION for behavior, injected-failure tests and measurements.

@@ -10,6 +10,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
+mod player;
 mod regional;
 pub use regional::REGIONAL_VERSION;
 
@@ -76,7 +77,8 @@ fn checksum(bytes: &[u8]) -> u32 {
 
 /// Canonical mode-specific save: legacy full non-Air snapshot, or v3 identity
 /// and complete edit overlay (including Air). For v4 this encodes ONLY the
-/// identity manifest: use `SaveStore::save` to persist regional edits as well.
+/// identity manifest: use `SaveStore::save_player_session` for player-enabled
+/// sessions, or `SaveStore::save` for world-only storage, to persist regions too.
 /// Resident cache data never substitutes for authoritative edits.
 pub fn encode(world: &World) -> Result<Vec<u8>, FormatError> {
     if let Some(id) = world.region_identity() {
@@ -327,6 +329,18 @@ impl SaveStore {
                     store.backup_path().display()
                 )));
             }
+            Ok(None) if store.directory.join("session.pending").try_exists()? => {
+                (store.pending_world()?, LoadSource::Saved)
+            }
+            Ok(None)
+                if store.directory.join("player.rcp").try_exists()?
+                    || store.directory.join("player-world.rcid").try_exists()?
+                    || store.directory.join("player.rcp.bak").try_exists()? =>
+            {
+                return Err(SaveError::RecoveryRequired(
+                    "player files exist without world or recovery journal".into(),
+                ));
+            }
             Ok(None) if store.directory.join("regions").try_exists()? => {
                 return Err(SaveError::RecoveryRequired(
                     "region directory exists without a world manifest; refusing new identity"
@@ -345,6 +359,15 @@ impl SaveStore {
         self.directory.join("world.rcw.bak")
     }
     pub fn save(&self, world: &World) -> Result<(), SaveError> {
+        if self.directory.join("player-world.rcid").try_exists()?
+            || self.directory.join("player.rcp").try_exists()?
+            || self.directory.join("session.pending").try_exists()?
+        {
+            return Err(SaveError::RecoveryRequired(
+                "paired player state exists; use save_player_session rather than world-only saving"
+                    .into(),
+            ));
+        }
         self.save_with(world, |_| Ok(()))
     }
 
@@ -417,6 +440,9 @@ enum SaveStage {
     BackupCommitted,
     BeforePrimaryRename,
     PrimaryCommitted,
+    SessionPrepared,
+    WorldSaved,
+    PlayerSaved,
 }
 struct TempFile {
     path: PathBuf,

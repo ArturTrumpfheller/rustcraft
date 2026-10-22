@@ -12,13 +12,27 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - At most one surface mesh per rendered chunk; faces shared by solid blocks are removed, including at chunk boundaries.
 - Mouse look, yaw-relative WASD walking, sprinting, grounded jumping and safe respawn.
 - Fixed 60-Hz engine-independent AABB physics, wall sliding and interpolated camera movement.
-- Precise five-block targeting, visible target outline, click-to-break/place and 1–5 block selection.
+- Precise five-block targeting, visible target outline and inventory-backed click-to-break/place.
+- Persistent nine-slot hotbar and 27-slot inventory, stacks up to 64, original pixel UI and atlas icons.
 - Engine-independent raycasts and validated edits; authoritative blocks change immediately and connected dirty meshes update together off-thread.
 - Versioned legacy snapshots / new-world identity and edit overlays, F5 saving, 30-second dirty-only autosave and final save on normal window close.
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 8**, not the complete v0.1 milestone. **World edits survive restart.** Further coordinate expansion, richer world generation and a full inventory/hotbar are still future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 9**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+
+## Inventory and hotbar
+
+Nine hotbar slots remain visible at the bottom. E opens three additional rows of
+nine slots. Original pixel frames and numerals reuse our own terrain atlas for
+icons; no external UI/font images are required. New player inventories start with
+64 each of grass/dirt/stone and 32 each of wood/leaves. Mining collects blocks;
+placing consumes the selected stack. A full inventory rejects mining without
+changing the block. This slice has no dropped items or crafting.
+
+![Original Slice-9 inventory and held stack](docs/images/slice9-inventory.png)
+
+See [inventory controls, architecture and recovery limits](docs/INVENTORY.md).
 
 ## Original retro textures
 
@@ -33,7 +47,7 @@ standard-library generator are **MIT OR Apache-2.0**: [asset provenance](assets/
 A single embedded 128×64 sRGB atlas/material serves all chunks, with eight texels
 of extruded padding per tile, nearest sampling and one mip. Chunk meshes retain
 face culling and async updates; UVs replace terrain vertex colors (32 instead of
-40 bytes/vertex). UI colors are unchanged. Intentional distant pixel shimmer is
+40 bytes/vertex). Inventory icons share that image. Intentional distant pixel shimmer is
 a consequence of nearest LOD0 sampling. See [texture contract](docs/TEXTURES.md)
 and [measurements/limits](docs/VALIDATION.md).
 
@@ -77,21 +91,24 @@ In the prepared Codex cloud machine, first run `. /workspace/.rustcraft-env/acti
 | First left click after release | Capture/hide the mouse and resume; does not break/place anything |
 | Left click while captured | Break the targeted block (one block per click) |
 | Right click while captured | Place the selected block on the target face |
-| 1 / 2 / 3 / 4 / 5 | Select grass / dirt / stone / wood / leaves |
-| Escape | Release/show the mouse and pause the local player simulation |
+| 1–9 / mouse wheel | Select hotbar slot; wheel wraps, up selects previous |
+| E | Open/close inventory; free cursor and pause gameplay while open |
+| Inventory left / right click | Pick/place/merge/swap / take rounded-up half or place one |
+| Shift + inventory left click | Transfer between main inventory and hotbar, merging first |
+| Escape | Close inventory first; otherwise release mouse and pause player |
 | Window focus loss | Release mouse; click again after returning |
 | Mouse | Look around; pitch is clamped |
 | W / A / S / D | Walk relative to horizontal view direction |
 | Space | Jump when grounded (press again for another jump) |
 | Left Shift | Sprint |
 | R while captured | Respawn on safe ground near the starting area and reset view/velocity |
-| F5 while focused | Save changed world, including while the mouse is released |
+| F5 while focused | Save world and inventory, including with inventory open or mouse released |
 
 The 0.6×1.8-block player spawns on or just above safe solid ground, with eyes 1.62 blocks above the feet. Walking accelerates toward 4.3 blocks/s; sprinting toward 5.6 blocks/s. Falling below Y=-32 automatically respawns the player. Escape or focus loss pauses the local simulation, including gravity; click again to continue.
 
-The center crosshair aims at blocks within five blocks of the displayed eye. A black outline marks the current target; five colored swatches below the crosshair correspond to 1–5, with a white frame on the selected one. The window title also names the selected block. Empty clicks do nothing. Placement cannot replace solid blocks or intersect the current/displayed player body. Simultaneous buttons prioritize breaking.
+The center crosshair aims at blocks within five blocks of the displayed eye. A black outline marks the current target; the hotbar frames the selected slot and shows actual counts. Empty clicks and empty selected slots do nothing. Placement cannot replace solid blocks or intersect the current/displayed player body. Simultaneous buttons prioritize breaking. Closing inventory returns a held stack only if it all fits; otherwise NO ROOM keeps it open. Outside clicks never discard items. Normal application close saves a held stack and restores it with inventory open next time.
 
-New regional worlds permit edits within **X/Z [-32768,32768), Y [-16,32)**. Legacy v3 worlds retain **X/Z [-64,64)**; v1/v2 snapshots retain **X/Z [-32,32)** with the same Y bounds. Outside the corresponding box, edits are rejected. Pending chunks temporarily block collision/rays and reject edits until ready; they are never treated as a hole in the floor. R preserves your edits and finds clear sky-exposed ground near the starting area, avoiding tree tops and unsupported columns. Loading uses the same search; player position, velocity and selected slot are not saved.
+New regional worlds permit edits within **X/Z [-32768,32768), Y [-16,32)**. Legacy v3 worlds retain **X/Z [-64,64)**; v1/v2 snapshots retain **X/Z [-32,32)** with the same Y bounds. Outside the corresponding box, edits are rejected. Pending chunks temporarily block collision/rays and reject edits until ready; they are never treated as a hole in the floor. R preserves edits/inventory and finds clear sky-exposed ground near the starting area, avoiding tree tops and unsupported columns. Loading uses the same search; player position and velocity are not saved.
 
 Movement speed is independent of diagonal input. Mouse sensitivity does not depend on frame time. The window title also lists the essential controls.
 
@@ -159,14 +176,22 @@ the OS lock prevents cooperating instances overwriting a world. Unknown/corrupt
 files are preserved, never automatically replaced with generated terrain or a
 backup. Region errors stop spawn loading or leave a visible safe pending frontier.
 
-For recovery, close all instances, copy the entire directory externally, preserve
-the damaged file, then explicitly restore its matching valid backup. A v4 region
-needs that region's backup with matching world identity; a missing/damaged v4
-manifest needs its matching external backup. Do not overwrite a `.damaged` copy
-or remove regional files to make an error disappear. Backup restoration can lose
-newer edits. Filesystem/hardware failure and forced termination can still lose
-changes since successful saves; no per-click crash journal or absolute power-loss
-guarantee exists. v1/v2/v3 retain their historical full-file recovery rules.
+Slice 9 adds checksummed `player.rcp`, immutable `player-world.rcid` and a temporary
+`session.pending` redo journal without changing world formats v1–v4. A save worker
+captures world edits and inventory together, syncs the intent before changing
+world files, then commits player state. Known valid pending saves complete before
+gameplay on restart. Corrupt, foreign or missing initialized player data stops
+loading rather than granting new items. See [format](docs/SAVE_FORMAT.md).
+
+For recovery, close all instances and preserve the complete damaged directory,
+then restore a **complete consistent directory backup**, including every region,
+player file, identity and pending journal. Per-file `.bak` files are not a whole
+world rollback; never restore an old player alone or remove a pending journal to
+dismiss an error. Do not run older clients against inventory-enabled directories;
+test those against separate copies. Forced termination can lose changes newer
+than the captured save; this is save-level redo, not a per-click journal or an
+absolute power-loss guarantee. [Initialization and recovery limits](docs/INVENTORY.md#recovery-limits)
+describe the deliberately conservative failure behavior.
 
 ## Safe Void Linux test with Fish
 
@@ -174,8 +199,8 @@ Use a fresh directory and keep this shell/path for restarts:
 
 ```fish
 git fetch origin
-git switch feat/slice-8-retro-textures
-set test_dir (mktemp -d /tmp/rustcraft-slice8.XXXXXX)
+git switch feat/slice-9-inventory-hotbar
+set test_dir (mktemp -d /tmp/rustcraft-slice9.XXXXXX)
 env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_WORLD_SEED=42 RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
 ```
 
@@ -185,12 +210,17 @@ After normal close, reuse that same directory at a distant position:
 env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_START_CHUNK="1000,-1000" RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
 ```
 
-This starts near X=16008, Z=-15992 on clear actual ground. Break/place across
+Before restarting, try E, left/right/Shift-click transfers, 1–9 and the wheel.
+Save with F5, wait for SAVED, then close normally. Check the same stacks and
+selected slot after restart, including a deliberately held stack. These explicit
+paths do not touch normal saves; do not substitute your existing save directory.
+
+The distant command starts near X=16008, Z=-15992 on clear actual ground. Break/place across
 chunk and region seams, travel away and return before saving, then F5 and wait for
 `SAVED`. Close and repeat the same distant-start command to check restoration.
 R returns to origin; repeat with `-1000,1000` and a different **fresh directory**
 for another seed. Existing saves ignore seed overrides. These explicit test paths
-do not touch normal saves. See [native acceptance](docs/PLATFORMS.md#slice-8-texture-test-fish).
+do not touch normal saves. See [native acceptance](docs/PLATFORMS.md#slice-9-inventory-test-fish).
 
 ## Development checks
 
@@ -205,7 +235,7 @@ Run only the engine-independent voxel and physics tests with `cargo test --locke
 
 The [validation report](docs/VALIDATION.md) records the executed checks and remaining platform coverage.
 
-[Manual acceptance checks](docs/PLATFORMS.md#slice-8-texture-test-fish) cover save/restart, the visible scene, pointer capture/release, focus changes and platform behavior. CI checks Linux and Windows compilation, formatting, Clippy and unit tests; it does not establish GUI compatibility on Void or Windows.
+[Manual acceptance checks](docs/PLATFORMS.md#slice-9-inventory-test-fish) cover save/restart, inventory, the visible scene, pointer capture/release, focus changes and platform behavior. CI checks Linux and Windows compilation, formatting, Clippy and unit tests; it does not establish GUI compatibility on Void or Windows.
 
 ## Licensing and development policy
 

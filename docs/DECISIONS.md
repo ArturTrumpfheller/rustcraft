@@ -124,3 +124,24 @@ Resolve these incrementally while preserving backward-compatible migration paths
 - Allocate 32×32 atlas slots with a centered 16×16 tile and eight-pixel edge extrusion. Nearest LOD0, one mip and no anisotropy prevent neighbor-tile filtering. Distant minification shimmer is an explicit tradeoff; per-tile mip chains/array textures are future work.
 - Replace terrain vertex colors with engine-neutral UVs; keep UI colors, original CCW geometry and hidden-face culling. Precompute quad UVs to avoid repeated per-vertex atlas math. Terrain stride drops from 40 to 32 bytes, with identical index count.
 - Keep lighting, floating origin, physics, block IDs, generation and every save-format byte contract unchanged. Validate geometry/UV seams, atlas resources and gameplay against accepted Slice 7, separating software rendering from native Void/Windows acceptance.
+
+## Slice 9 implementation decisions
+
+- Fixed nine hotbar + 27 main slots, stacks 64, explicit five item IDs, held cursor
+  persisted; validated private stack fields and conservative no-drop behavior.
+  Starter Grass/Dirt/Stone 64 and Wood/Leaves 32 is granted only at initialization.
+- Stage the complete inventory result before validated world mutation; commit it
+  only after success. Full inventory refuses mining; empty slot refuses placement.
+  Retain current click-based mining, body/pending safety and mesh batching.
+- E is modal: free pointer, paused gameplay, no click-through on transitions.
+  Return held items all-or-nothing on close; if full keep open. Normal application
+  close saves a held stack, automatically reopening the modal on restart.
+- Original geometry/glyph UI reuses the atlas: four retained meshes, two unlit
+  materials, no image additions/dependencies. Cursor movement only moves transforms.
+- Keep world formats v1–v4 and frozen generators intact; add player v1 sidecars
+  and a bounded save-level redo journal under the existing world lock. Capture
+  world/player together on one worker; replay valid intent before gameplay.
+  Fail closed on corrupt/foreign/unknown/missing initialized data, never refill.
+- Whole closed-directory backups only; no promise of per-click durability or
+  cross-file atomicity. Initial identity-before-journal failure and old-client/
+  external-region restoration limits are explicit in INVENTORY and SAVE_FORMAT.

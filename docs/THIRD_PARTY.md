@@ -2,7 +2,7 @@
 
 Project-created code and documentation are **MIT OR Apache-2.0**, at the recipient's option. See the root LICENSE-MIT and LICENSE-APACHE files. This does not relicense dependencies or separately licensed artwork.
 
-## Direct dependencies (slice 8; unchanged from slice 4)
+## Direct dependencies (slice 9; unchanged from slice 4)
 
 | Component | Version | Upstream | SPDX license | Notices / use |
 | --- | --- | --- | --- | --- |
@@ -32,7 +32,7 @@ No copyleft-only crate was identified in the reviewed graph. This is an initial 
 | Asset | Author / origin | License | Attribution |
 | --- | --- | --- | --- |
 | UI swatch colors / historical terrain vertex colors | Original values authored in `crates/voxel_core/src/chunk.rs` for RustCraft | MIT OR Apache-2.0 | Root project licenses |
-| Crosshair, selection swatches/frame and target wire cube | Original procedural geometry in `client/src/interaction.rs` | MIT OR Apache-2.0 | Root project licenses |
+| Crosshair and target wire cube (historical selection swatches removed) | Original procedural geometry in `client/src/interaction.rs` | MIT OR Apache-2.0 | Root project licenses |
 | Original 5×7 bitmap save-status lettering and panel mesh | Authored in `client/src/save_hud.rs` | MIT OR Apache-2.0 | Root project licenses |
 | Seeded terrain, integer noise/hash composition, cave/ramp and tree geometry | Authored in `crates/voxel_core/src/worldgen.rs` | MIT OR Apache-2.0 | Root project licenses |
 | Terraced demo geometry and stone landmark | Original procedural layout in `crates/voxel_core/src/world.rs` | MIT OR Apache-2.0 | Root project licenses |
@@ -76,3 +76,15 @@ original art/procedural geometry/bitmap UI, under the same project license.
 No new game dependency, Bevy
 feature, image decoder or toolchain change is required. Python standard library
 is an optional authoring/check tool, not a game runtime/build requirement.
+
+## Slice 9 original inventory UI
+
+All new inventory/persistence/UI code, tests and documentation are original
+RustCraft work, MIT OR Apache-2.0. Frames, navy/earth/copper palette and 3×5 bitmap
+count/label glyphs are authored directly in `client/src/inventory_ui.rs`; these
+editable geometry/tables are the UI source, with no downloaded font or texture.
+Icons sample the already licensed original terrain atlas from Slice 8. No image,
+crate, dependency graph, toolchain or engine-feature changes were introduced.
+`docs/images/slice9-inventory.png` is an actual X11/software-rendered screenshot
+of this original code/art, under the same project licenses. Platform decorations
+and engine shaders retain their upstream licenses. No proprietary UI assets used.
