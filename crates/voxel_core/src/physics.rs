@@ -272,7 +272,7 @@ pub fn spawn_position(world: &World, config: &PhysicsConfig, preferred: [f64; 3]
     let px = (preferred[0].floor() as i32).clamp(world_min[0], world_max[0] - 1);
     let pz = (preferred[2].floor() as i32).clamp(world_min[2], world_max[2] - 1);
     let extent = (world_max[0] - world_min[0]).max(world_max[2] - world_min[2]);
-    for radius in 0_i32..extent {
+    for radius in 0_i32..extent.min(64) {
         for dz in -radius..=radius {
             for dx in -radius..=radius {
                 if dx.abs().max(dz.abs()) != radius {

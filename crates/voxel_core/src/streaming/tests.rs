@@ -1,10 +1,12 @@
 use super::*;
+use crate::Block;
 use crate::{
     interaction::{EditAction, EditError, edit},
     persistence::{decode, encode},
     physics::{MovementInput, PhysicsConfig, Player},
     raycast::Ray,
 };
+use std::collections::BTreeMap;
 fn gen2(seed: u64) -> Arc<Generator> {
     Arc::new(Generator::new(GenerationConfig { seed, version: 2 }).unwrap())
 }
@@ -301,4 +303,23 @@ fn cached_remeshing_matches_full_neighbors_at_pending_faces_and_all_axis_seams()
     for (p, mesh) in batch.meshes {
         assert_eq!(mesh, mesh_chunk(&reference, p));
     }
+}
+
+#[test]
+fn motion_priority_prefers_forward_inside_near_ring_without_skipping_nearby_chunks() {
+    let set = BTreeSet::from([[999, -1000], [1001, -1000], [1002, -1000]]);
+    assert_eq!(
+        nearest_ahead(&set, [1000, -1000], [1., 0.]),
+        Some([1001, -1000])
+    );
+    assert_eq!(
+        nearest_ahead(&set, [1000, -1000], [-1., 0.]),
+        Some([999, -1000])
+    );
+    let set = BTreeSet::from([[999, -1000], [1002, -1000]]);
+    assert_eq!(
+        nearest_ahead(&set, [1000, -1000], [1., 0.]),
+        Some([999, -1000])
+    );
+    assert!(nearest_ahead(&set, [1000, -1000], [f64::NAN, f64::INFINITY]).is_some());
 }

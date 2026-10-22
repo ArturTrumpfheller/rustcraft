@@ -1,0 +1,200 @@
+//! Version 3: bounded local height/tree plans; no world-area allocation.
+use super::*;
+pub(super) fn height(seed: u64, x: i32, z: i32) -> i32 {
+    5 + (noise(seed, x, z, 32, 11) * 7
+        + noise(seed, x, z, 16, 23) * 4
+        + noise(seed, x, z, 8, 37) * 2)
+        / 1024
+}
+fn cave(g: &Generator, x: i32, y: i32, z: i32) -> bool {
+    if y <= -14 || (x.abs() <= 3 && (8..=13).contains(&z)) {
+        return false;
+    }
+    let base_z = (z + 64).div_euclid(128) * 128;
+    let center = base_z - 10 + noise(g.config.seed, x, base_z, 16, 53) * 3 / 1024;
+    let radius = if x.rem_euclid(19) < 5 { 5_i64 } else { 3 };
+    let dz = i64::from(z - center);
+    let dy = i64::from(y + 4);
+    let main = dz * dz * 9 + dy * dy * radius * radius <= radius * radius * 9;
+    let entrance_x = (x + 74).div_euclid(128) * 128 - 10;
+    let local_z = z - base_z;
+    if (x - entrance_x).abs() > 1 || !(-16..=22).contains(&local_z) {
+        return main;
+    }
+    let top = height(g.config.seed, entrance_x, base_z + 20) + 1;
+    let floor = top - ((20 - local_z).clamp(0, 36) * (top + 6) / 32).min(top + 6);
+    main || (y >= floor && y < floor + 4)
+}
+pub(super) fn terrain(g: &Generator, p: BlockPos, h: i32) -> Block {
+    let [x, y, z] = p.0;
+    if !(-g.extent..g.extent).contains(&x)
+        || !(-g.extent..g.extent).contains(&z)
+        || !(-16..32).contains(&y)
+        || y > h
+        || cave(g, x, y, z)
+    {
+        return Block::Air;
+    }
+    if y == h {
+        Block::Grass
+    } else if y >= h - 3 {
+        Block::Dirt
+    } else {
+        Block::Stone
+    }
+}
+fn trees(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Vec<Tree> {
+    let mut result = Vec::new();
+    for gz in (min[1] - 3).div_euclid(8)..=(max[1] + 3).div_euclid(8) {
+        for gx in (min[0] - 3).div_euclid(8)..=(max[0] + 3).div_euclid(8) {
+            let h = hash(g.config.seed, gx, gz, 71);
+            if h.is_multiple_of(5) {
+                continue;
+            }
+            let x = gx * 8 + (h % 3) as i32 - 1;
+            let z = gz * 8 + ((h >> 8) % 3) as i32 - 1;
+            if x < min[0] - 2
+                || x > max[0] + 2
+                || z < min[1] - 2
+                || z > max[1] + 2
+                || x < -g.extent + 2
+                || x >= g.extent - 2
+                || z < -g.extent + 2
+                || z >= g.extent - 2
+                || (x.abs() <= 4 && (z - 10).abs() <= 4)
+            {
+                continue;
+            }
+            let ground = height(g.config.seed, x, z);
+            let trunk = 4 + ((h >> 16) % 2) as i32;
+            if terrain(g, BlockPos([x, ground, z]), ground) != Block::Grass {
+                continue;
+            }
+            if (-2..=2).all(|dx| {
+                (-2..=2).all(|dz| height(g.config.seed, x + dx, z + dz) < ground + trunk - 1)
+            }) {
+                result.push(Tree {
+                    x,
+                    z,
+                    ground,
+                    trunk,
+                });
+            }
+        }
+    }
+    result
+}
+fn sample(g: &Generator, p: BlockPos, h: i32, trees: &[Tree]) -> Block {
+    let [x, y, z] = p.0;
+    let b = terrain(g, p, h);
+    if b != Block::Air
+        || y <= h
+        || !(-16..32).contains(&y)
+        || !(-g.extent..g.extent).contains(&x)
+        || !(-g.extent..g.extent).contains(&z)
+    {
+        return b;
+    }
+    if trees
+        .iter()
+        .any(|t| x == t.x && z == t.z && (1..=t.trunk).contains(&(y - t.ground)))
+    {
+        return Block::Wood;
+    }
+    if trees.iter().any(|t| {
+        let dx = (x - t.x).abs();
+        let dz = (z - t.z).abs();
+        let dy = y - t.ground - t.trunk;
+        (-1..=1).contains(&dy) && dx <= 2 && dz <= 2 && dx + dz <= if dy == 1 { 2 } else { 3 }
+    }) {
+        Block::Leaves
+    } else {
+        Block::Air
+    }
+}
+pub(super) fn point(g: &Generator, p: BlockPos) -> Block {
+    let [x, y, z] = p.0;
+    if !(-g.extent..g.extent).contains(&x)
+        || !(-g.extent..g.extent).contains(&z)
+        || !(-16..32).contains(&y)
+    {
+        return Block::Air;
+    }
+    let h = height(g.config.seed, x, z);
+    let b = terrain(g, p, h);
+    if b != Block::Air || y <= h || y > h + 7 {
+        return b;
+    }
+    sample(g, p, h, &trees(g, [x, z], [x, z]))
+}
+pub(super) struct Plan {
+    min: [i32; 2],
+    heights: Vec<i32>,
+    trees: Vec<Tree>,
+}
+impl Plan {
+    fn new(g: &Generator, c: [i32; 2]) -> Self {
+        let min = [c[0] * 16 - 1, c[1] * 16 - 1];
+        let max = [min[0] + 17, min[1] + 17];
+        let mut heights = Vec::with_capacity(18 * 18);
+        for z in min[1]..=max[1] {
+            for x in min[0]..=max[0] {
+                heights.push(height(g.config.seed, x, z));
+            }
+        }
+        Self {
+            min,
+            heights,
+            trees: trees(g, min, max),
+        }
+    }
+    fn block(&self, g: &Generator, p: BlockPos) -> Block {
+        let x = p.0[0] - self.min[0];
+        let z = p.0[2] - self.min[1];
+        let h = if (0..18).contains(&x) && (0..18).contains(&z) {
+            self.heights[(z * 18 + x) as usize]
+        } else {
+            return point(g, p);
+        };
+        sample(g, p, h, &self.trees)
+    }
+}
+pub struct Sampler<'a> {
+    g: &'a Generator,
+    plan: Option<Plan>,
+}
+impl<'a> Sampler<'a> {
+    pub(super) fn new(g: &'a Generator, c: [i32; 2]) -> Self {
+        Self {
+            g,
+            plan: (g.config.version == 3
+                && c.iter()
+                    .all(|v| (-g.chunk_limit()..g.chunk_limit()).contains(v)))
+            .then(|| Plan::new(g, c)),
+        }
+    }
+    pub fn block(&self, p: BlockPos) -> Block {
+        self.plan
+            .as_ref()
+            .map_or_else(|| self.g.block(p), |plan| plan.block(self.g, p))
+    }
+    pub fn chunk(&self, p: ChunkPos) -> Option<Chunk> {
+        let limit = self.g.chunk_limit();
+        if !(-limit..limit).contains(&p.0[0])
+            || !(-limit..limit).contains(&p.0[2])
+            || !(-1..2).contains(&p.0[1])
+        {
+            return None;
+        }
+        let mut c = Chunk::default();
+        for y in 0..16 {
+            for z in 0..16 {
+                for x in 0..16 {
+                    let local = LocalPos::new([x, y, z]).unwrap();
+                    c.set(local, self.block(p.block_position(local).unwrap()));
+                }
+            }
+        }
+        Some(c)
+    }
+}

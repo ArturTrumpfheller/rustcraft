@@ -2,7 +2,9 @@
 //! resident authoritative chunks, entities and GPU asset lifetime.
 use crate::{
     player::PlayerState,
-    scene::{ChunkRenders, DirtyChunks, TerrainMaterial, VoxelWorld, upsert_stream_mesh},
+    scene::{
+        ChunkRenders, DirtyChunks, RenderOrigin, TerrainMaterial, VoxelWorld, upsert_stream_mesh,
+    },
 };
 use bevy::{ecs::system::SystemParam, prelude::*, window::PrimaryWindow};
 use std::{
@@ -15,6 +17,8 @@ use std::{
 };
 use voxel_core::{
     ChunkPos, World,
+    persistence::{SaveError, SaveStore},
+    regions::{EditSnapshot, needed_regions},
     streaming::{self, Column, ColumnResult, MeshBatchResult},
     worldgen::Generator,
 };
@@ -23,6 +27,7 @@ pub struct StreamingPlugin;
 impl Plugin for StreamingPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<StreamState>()
+            .init_resource::<StreamFailure>()
             .add_systems(Update, update_streaming);
     }
 }
@@ -67,19 +72,33 @@ impl WorkResult {
         }
     }
 }
+struct JobResult {
+    result: WorkResult,
+    overlays: EditSnapshot,
+}
+#[derive(Resource, Default)]
+pub(crate) struct StreamFailure(pub Option<String>);
 struct StreamJob {
-    handle: JoinHandle<WorkResult>,
+    handle: JoinHandle<Result<JobResult, SaveError>>,
     versions: BTreeMap<ChunkPos, u64>,
     work: Work,
 }
 impl StreamJob {
-    fn spawn(work: Work, world: &World, generator: Arc<Generator>) -> io::Result<Self> {
+    fn spawn(
+        work: Work,
+        world: &World,
+        generator: Arc<Generator>,
+        store: Option<Arc<SaveStore>>,
+    ) -> io::Result<Self> {
         let versions = work
             .targets()
             .into_iter()
             .map(|p| (p, world.mesh_revision(p)))
             .collect();
-        let edits = world.edits();
+        let mut edits = world.overlay_snapshot();
+        let regional = world.region_identity();
+        let needed = needed_regions(work.targets());
+        edits.retain_regions(&needed);
         let revision = world.revision();
         let request = work.clone();
         // Only cached target/face-neighbor chunks are copied, not the world.
@@ -89,16 +108,34 @@ impl StreamJob {
         };
         let handle = thread::Builder::new()
             .name("rustcraft-terrain".into())
-            .spawn(move || match request {
-                Work::Load(column) => {
-                    WorkResult::Load(streaming::build_column(&generator, edits, column, revision))
+            .spawn(move || {
+                if let Some(id) = regional {
+                    let store = store
+                        .ok_or_else(|| io::Error::other("regional world has no save store"))?;
+                    for p in needed {
+                        if !edits.contains_region(p) {
+                            edits.insert_region(p, store.read_region(id, p)?);
+                        }
+                    }
                 }
-                Work::Mesh(targets) => WorkResult::Mesh(streaming::remesh_cached(
-                    &generator,
-                    snapshot.unwrap(),
-                    edits,
-                    targets,
-                )),
+                let result = match request {
+                    Work::Load(column) => WorkResult::Load(streaming::build_column(
+                        &generator,
+                        edits.clone(),
+                        column,
+                        revision,
+                    )),
+                    Work::Mesh(targets) => WorkResult::Mesh(streaming::remesh_cached(
+                        &generator,
+                        snapshot.unwrap(),
+                        edits.clone(),
+                        targets,
+                    )),
+                };
+                Ok(JobResult {
+                    result,
+                    overlays: edits,
+                })
             })?;
         Ok(Self {
             handle,
@@ -115,9 +152,12 @@ pub(crate) struct StreamState {
     center: Option<Column>,
     desired: BTreeSet<Column>,
     queued: BTreeSet<Column>,
+    queued_at: BTreeMap<Column, Instant>,
+    pub max_load_latency: Duration,
     // First invalidation time is retained through coalescing/stale jobs.
     dirty: BTreeMap<ChunkPos, Instant>,
     job: Option<StreamJob>,
+    failures: BTreeMap<Column, (Instant, String)>,
     pub peak_chunks: usize,
     pub peak_pending: usize,
     pub completed: usize,
@@ -141,8 +181,11 @@ impl StreamState {
             center: None,
             desired: BTreeSet::new(),
             queued: BTreeSet::new(),
+            queued_at: BTreeMap::new(),
+            max_load_latency: Duration::ZERO,
             dirty: BTreeMap::new(),
             job: None,
+            failures: BTreeMap::new(),
             peak_chunks: 0,
             peak_pending: 0,
             completed: 0,
@@ -181,6 +224,7 @@ struct StreamScene<'w, 's> {
     meshes: ResMut<'w, Assets<Mesh>>,
     renders: ResMut<'w, ChunkRenders>,
     material: Res<'w, TerrainMaterial>,
+    origin: Res<'w, RenderOrigin>,
     windows: Query<'w, 's, &'static mut Window, With<PrimaryWindow>>,
 }
 
@@ -213,19 +257,26 @@ fn nearest_dirty(dirty: &BTreeMap<ChunkPos, Instant>, player: [f64; 3]) -> BTree
     result
 }
 
+#[derive(SystemParam)]
+struct StreamIo<'w> {
+    time: Option<Res<'w, Time<Real>>>,
+    save: Option<Res<'w, crate::persistence::SaveSession>>,
+    keyboard: Option<Res<'w, ButtonInput<KeyCode>>>,
+    failure: ResMut<'w, StreamFailure>,
+}
 fn update_streaming(
     mut state: ResMut<StreamState>,
     mut world: ResMut<VoxelWorld>,
     player: Res<PlayerState>,
     mut dirty: ResMut<DirtyChunks>,
     mut scene: StreamScene,
-    time: Option<Res<Time<Real>>>,
+    mut io: StreamIo,
 ) {
     let Some(generator) = state.generator.clone() else {
         return;
     };
     let update_start = Instant::now();
-    if let Some(time) = time
+    if let Some(time) = &io.time
         && !time.delta().is_zero()
     {
         if state.recent_frames.len() == 128 {
@@ -233,28 +284,41 @@ fn update_streaming(
         }
         state.recent_frames.push_back(time.delta());
     }
+    if io
+        .keyboard
+        .as_ref()
+        .is_some_and(|k| k.just_pressed(KeyCode::F5))
+    {
+        for (deadline, _) in state.failures.values_mut() {
+            *deadline = Instant::now();
+        }
+    }
+    let limit = world.0.bounds().1[0] / 16;
     let mut changed = false;
     let center = [
         (player.body.position[0].floor() as i32)
             .div_euclid(16)
-            .clamp(-4, 3),
+            .clamp(-limit, limit - 1),
         (player.body.position[2].floor() as i32)
             .div_euclid(16)
-            .clamp(-4, 3),
+            .clamp(-limit, limit - 1),
     ];
     if state.center != Some(center) {
         changed = true;
         let initial = state.center.is_none();
         state.center = Some(center);
-        state.desired = streaming::desired(center, state.radius);
+        state.desired = streaming::desired_with_limit(center, state.radius, limit);
         let desired = state.desired.clone();
         state.queued.retain(|c| desired.contains(c));
+        state.queued_at.retain(|c, _| desired.contains(c));
+        state.failures.retain(|c, _| desired.contains(c));
         state
             .dirty
             .retain(|p, _| desired.contains(&[p.0[0], p.0[2]]));
         for &c in &desired {
             if world.0.chunk(ChunkPos([c[0], 0, c[1]])).is_none() {
                 state.queued.insert(c);
+                state.queued_at.entry(c).or_insert_with(Instant::now);
             } else if initial {
                 // Startup meshes need a procedural halo, even before their
                 // neighbors become resident. Do not regenerate cached spawn.
@@ -276,7 +340,7 @@ fn update_streaming(
             info!(
                 "Stream evict: {} columns; {} edit records retained",
                 evict.len(),
-                world.0.edits().len()
+                world.0.edit_count()
             );
         }
         for column in evict {
@@ -316,12 +380,21 @@ fn update_streaming(
             .iter()
             .all(|(&p, &v)| world.0.mesh_revision(p) == v);
         match job.handle.join() {
-            Ok(result) => {
+            Ok(Ok(payload)) => {
+                let result = payload.result;
                 state.worker_time += result.elapsed();
                 state.max_job = state.max_job.max(result.elapsed());
                 if wanted && current {
                     let install_start = Instant::now();
                     changed = true;
+                    if world.0.region_identity().is_some() {
+                        for (p, m) in payload.overlays.regions() {
+                            world.0.install_region(p, m);
+                        }
+                    }
+                    for p in job.versions.keys() {
+                        state.failures.remove(&[p.0[0], p.0[2]]);
+                    }
                     state.completed += 1;
                     let meshes = match result {
                         WorkResult::Load(result) => {
@@ -329,6 +402,10 @@ fn update_streaming(
                             // in-flight column. Its valid install satisfies that
                             // request too; do not generate it a second time.
                             state.queued.remove(&result.column);
+                            if let Some(since) = state.queued_at.remove(&result.column) {
+                                state.max_load_latency =
+                                    state.max_load_latency.max(since.elapsed());
+                            }
                             result
                                 .chunks
                                 .into_iter()
@@ -353,6 +430,7 @@ fn update_streaming(
                             p,
                             surface,
                             &scene.material.0,
+                            &scene.origin,
                         );
                         if let Some(since) = state.dirty.remove(&p) {
                             state.max_dirty_latency = state.max_dirty_latency.max(since.elapsed());
@@ -365,6 +443,22 @@ fn update_streaming(
                     state.retry(&job.work);
                 }
             }
+            Ok(Err(e)) => {
+                error!("Terrain region load failed: {e}; data preserved; F5 retries");
+                for p in job
+                    .versions
+                    .keys()
+                    .filter(|p| state.desired.contains(&[p.0[0], p.0[2]]))
+                    .copied()
+                    .collect::<Vec<_>>()
+                {
+                    state.failures.insert(
+                        [p.0[0], p.0[2]],
+                        (Instant::now() + Duration::from_secs(1), e.to_string()),
+                    );
+                }
+                state.retry(&job.work);
+            }
             Err(_) => {
                 error!(
                     "Terrain worker stopped; pending terrain remains a safe barrier; retrying bounded requests"
@@ -374,14 +468,48 @@ fn update_streaming(
         }
     }
     if state.job.is_none() {
-        let targets = nearest_dirty(&state.dirty, player.body.position);
+        let now = Instant::now();
+        let blocked = |c: &Column| {
+            state
+                .failures
+                .get(c)
+                .is_some_and(|(deadline, _)| *deadline > now)
+        };
+        let mut eligible = state.dirty.clone();
+        let mut targets = BTreeSet::new();
+        while !eligible.is_empty() {
+            let group = nearest_dirty(&eligible, player.body.position);
+            if group.iter().all(|p| !blocked(&[p.0[0], p.0[2]])) {
+                targets = group;
+                break;
+            }
+            for p in group {
+                eligible.remove(&p);
+            }
+        }
         let work = if !targets.is_empty() {
             Some(Work::Mesh(targets))
         } else {
-            streaming::nearest(&state.queued, center).map(Work::Load)
+            let queued = state
+                .queued
+                .iter()
+                .filter(|c| !blocked(c))
+                .copied()
+                .collect();
+            streaming::nearest_ahead(
+                &queued,
+                center,
+                [player.body.velocity[0], player.body.velocity[2]],
+            )
+            .map(Work::Load)
         };
         if let Some(work) = work {
-            match StreamJob::spawn(work.clone(), &world.0, generator) {
+            match StreamJob::spawn(
+                work.clone(),
+                &world.0,
+                generator,
+                io.save.as_ref().map(|s| Arc::clone(&s.store)),
+            ) {
                 Ok(job) => {
                     match work {
                         Work::Load(c) => {
@@ -395,6 +523,19 @@ fn update_streaming(
                 Err(e) => error!("Could not start terrain worker: {e}"),
             }
         }
+    }
+    io.failure.0 = state
+        .failures
+        .values()
+        .next()
+        .map(|(_, message)| message.clone());
+    if changed && world.0.region_identity().is_some() {
+        let targets = state.desired.iter().map(|c| ChunkPos([c[0], 0, c[1]]));
+        let mut keep = needed_regions(targets);
+        if let Some(job) = &state.job {
+            keep.extend(needed_regions(job.work.targets()));
+        }
+        world.0.retain_regions(&keep);
     }
     state.peak_pending = state
         .peak_pending
@@ -416,6 +557,28 @@ fn update_streaming(
             .get(frames.len() * 95 / 100)
             .copied()
             .unwrap_or_default();
+        let frame_p50 = frames.get(frames.len() / 2).copied().unwrap_or_default();
+        let frame_p99 = frames
+            .get(frames.len() * 99 / 100)
+            .copied()
+            .unwrap_or_default();
+        let seconds = frames.iter().map(Duration::as_secs_f64).sum::<f64>();
+        let fps = if seconds > 0. {
+            frames.len() as f64 / seconds
+        } else {
+            0.
+        };
+        info!(
+            "Stream metrics: regions {} edits {} dirty regions {}, load queue-to-install max {:?}, frames p50 {:?} p95 {:?} p99 {:?}, mean fps {:.1}",
+            world.0.cached_regions(),
+            world.0.edit_count(),
+            world.0.dirty_regions(),
+            state.max_load_latency,
+            frame_p50,
+            frame_p95,
+            frame_p99,
+            fps
+        );
         info!(
             "Stream idle: {} resident chunks, {} meshes, {} block bytes, {} terrain buffer bytes, peak {}, queue peak {}, jobs load {} mesh chunks {} discarded {}, worker total {:?} max {:?}, install max {:?}, stream update max {:?}, dirty latency max {:?}, recent frame p95 {:?} ({} samples)",
             world.0.chunks().count(),
@@ -443,12 +606,16 @@ fn update_streaming(
             .next()
             .unwrap_or("RustCraft");
         let title = format!(
-            "{prefix} | Chunks: {} pending {} dirty {} | Seed {} gen2 radius {}",
+            "{prefix} | Chunks: {} pending {} dirty {} | Seed {} gen{} radius {} | Pos {:.1} {:.1} {:.1}",
             world.0.chunks().count(),
             state.queued.len() + usize::from(state.job.is_some()),
             state.dirty.len(),
             world.0.identity().unwrap().seed,
-            state.radius
+            world.0.identity().unwrap().generator,
+            state.radius,
+            player.body.position[0],
+            player.body.position[1],
+            player.body.position[2]
         );
         if window.title != title {
             window.title = title;

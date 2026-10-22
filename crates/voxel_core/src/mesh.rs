@@ -61,10 +61,21 @@ pub fn mesh_chunk(world: &World, position: ChunkPos) -> ChunkMesh {
                     continue;
                 };
                 for face in &FACES {
-                    if block_position
-                        .offset(face.normal)
-                        .is_some_and(|neighbor: BlockPos| world.block(neighbor).is_solid())
-                    {
+                    let n = [
+                        x as i32 + face.normal[0],
+                        y as i32 + face.normal[1],
+                        z as i32 + face.normal[2],
+                    ];
+                    let solid = if n.iter().all(|v| (0..16).contains(v)) {
+                        chunk
+                            .get(LocalPos::new(n.map(|v| v as usize)).unwrap())
+                            .is_solid()
+                    } else {
+                        block_position
+                            .offset(face.normal)
+                            .is_some_and(|neighbor: BlockPos| world.block(neighbor).is_solid())
+                    };
+                    if solid {
                         continue;
                     }
                     let start = mesh.positions.len() as u32;

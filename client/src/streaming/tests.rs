@@ -57,7 +57,7 @@ fn edit(app: &mut App, p: BlockPos, b: Block) {
 
 fn blocked_column(app: &mut App, column: Column) -> std::sync::mpsc::Sender<()> {
     let world = &app.world().resource::<VoxelWorld>().0;
-    let edits = world.edits();
+    let edits = world.overlay_snapshot();
     let revision = world.revision();
     let work = Work::Load(column);
     let versions = work
@@ -74,7 +74,15 @@ fn blocked_column(app: &mut App, column: Column) -> std::sync::mpsc::Sender<()> 
     let (tx, rx) = std::sync::mpsc::channel();
     let handle = thread::spawn(move || {
         rx.recv().unwrap();
-        WorkResult::Load(streaming::build_column(&generator, edits, column, revision))
+        Ok(JobResult {
+            result: WorkResult::Load(streaming::build_column(
+                &generator,
+                edits.clone(),
+                column,
+                revision,
+            )),
+            overlays: edits,
+        })
     });
     app.world_mut().resource_mut::<StreamState>().job = Some(StreamJob {
         handle,
@@ -325,7 +333,7 @@ fn assert_geometry(app: &App, targets: &BTreeSet<ChunkPos>) {
     {
         let reference = streaming::build_column(
             state.generator.as_ref().unwrap(),
-            world.edits(),
+            world.overlay_snapshot(),
             column,
             world.revision(),
         );
@@ -391,7 +399,7 @@ fn newer_seam_edits_reject_the_entire_mesh_batch_then_publish_both_current_faces
     edit(&mut app, BlockPos([16, 25, 8]), Block::Wood);
     let world = &app.world().resource::<VoxelWorld>().0;
     let snapshot = streaming::mesh_snapshot(world, &targets);
-    let edits = world.edits();
+    let edits = world.overlay_snapshot();
     let versions = targets
         .iter()
         .map(|&p| (p, world.mesh_revision(p)))
@@ -407,12 +415,15 @@ fn newer_seam_edits_reject_the_entire_mesh_batch_then_publish_both_current_faces
     let (tx, rx) = std::sync::mpsc::channel();
     let handle = thread::spawn(move || {
         rx.recv().unwrap();
-        WorkResult::Mesh(streaming::remesh_cached(
-            &generator,
-            snapshot,
-            edits,
-            output_targets,
-        ))
+        Ok(JobResult {
+            overlays: EditSnapshot::default(),
+            result: WorkResult::Mesh(streaming::remesh_cached(
+                &generator,
+                snapshot,
+                edits,
+                output_targets,
+            )),
+        })
     });
     app.world_mut().resource_mut::<StreamState>().job = Some(StreamJob {
         handle,
@@ -659,12 +670,13 @@ fn surface_seam_mining_metrics() {
     frames.sort_unstable();
     let s = app.world().resource::<StreamState>();
     println!(
-        "SURFACE_MINING elapsed={elapsed:?} installed={} discarded={} max_worker={:?} frame_p50={:?} frame_p95={:?} frame_max={:?} samples={} mesh_bytes={}",
+        "SURFACE_MINING elapsed={elapsed:?} installed={} discarded={} max_worker={:?} frame_p50={:?} frame_p95={:?} frame_p99={:?} frame_max={:?} samples={} mesh_bytes={}",
         s.completed - before,
         s.discarded - discarded,
         s.max_job,
         frames[frames.len() / 2],
         frames[frames.len() * 95 / 100],
+        frames[frames.len() * 99 / 100],
         frames.last().unwrap(),
         frames.len(),
         s.mesh_bytes
@@ -699,4 +711,301 @@ fn moving_center_during_a_load_does_not_generate_the_same_column_twice() {
         Work::Load([2, 0])
     ));
     drain(&mut app);
+}
+
+struct RegionalDir(std::path::PathBuf);
+impl RegionalDir {
+    fn new() -> Self {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        let p = std::env::temp_dir().join(format!(
+            "rustcraft-large-ecs-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        std::fs::create_dir_all(&p).unwrap();
+        Self(p)
+    }
+}
+impl Drop for RegionalDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+fn large_app(path: &std::path::Path) -> App {
+    let (store, mut world, source) =
+        SaveStore::open_with(path, || Ok(streaming::new_large_world(42))).unwrap();
+    store.prepare_regional_spawn(&mut world).unwrap();
+    let generator = streaming::prepare_spawn(&mut world).unwrap();
+    let session = crate::persistence::SaveSession::new(store, &world, source);
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO))
+        .insert_resource(VoxelWorld(world))
+        .insert_resource(session)
+        .insert_resource(StreamState::new(generator, 1))
+        .init_resource::<Assets<Mesh>>()
+        .init_resource::<Assets<StandardMaterial>>()
+        .init_resource::<ButtonInput<KeyCode>>()
+        .add_plugins((
+            VoxelScenePlugin,
+            PlayerPlugin,
+            StreamingPlugin,
+            crate::persistence::PersistencePlugin,
+        ));
+    app.world_mut().spawn((
+        Window {
+            focused: true,
+            ..default()
+        },
+        PrimaryWindow,
+    ));
+    app.update();
+    drain(&mut app);
+    app
+}
+fn save_large(app: &mut App) {
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::F5);
+    app.update();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    let end = Instant::now() + Duration::from_secs(30);
+    loop {
+        app.update();
+        if app.world().resource::<VoxelWorld>().0.dirty_regions() == 0
+            && app
+                .world()
+                .resource::<crate::persistence::SaveFeedback>()
+                .label
+                == "Saved"
+        {
+            break;
+        }
+        assert!(Instant::now() < end, "save timed out");
+        thread::sleep(Duration::from_millis(1));
+    }
+}
+#[test]
+fn large_world_travel_bounds_cpu_gpu_overlays_and_keeps_far_edits_across_restart() {
+    let dir = RegionalDir::new();
+    let mut app = large_app(&dir.0);
+    save_large(&mut app);
+    let start = Instant::now();
+    let mut timings = Vec::new();
+    for (center, p) in [
+        ([1000, -1000], BlockPos([16000, -15, -16000])),
+        ([-1000, 1000], BlockPos([-16000, 25, 16000])),
+    ] {
+        go(&mut app, center);
+        edit(
+            &mut app,
+            p,
+            if p.0[1] < 0 { Block::Air } else { Block::Wood },
+        );
+        drain(&mut app);
+    }
+    for center in [
+        [2047, 2047],
+        [-2048, -2048],
+        [1500, -1500],
+        [-1500, 1500],
+        [0, 0],
+        [1000, -1000],
+        [-1000, 1000],
+    ] {
+        let t = Instant::now();
+        go(&mut app, center);
+        timings.push(t.elapsed());
+        let w = app.world_mut();
+        let chunks = w.resource::<VoxelWorld>().0.chunks().count();
+        let renders = w.resource::<ChunkRenders>().0.len();
+        assert!(chunks <= 27);
+        assert!(w.resource::<VoxelWorld>().0.cached_regions() <= 16);
+        assert_eq!(w.resource::<Assets<Mesh>>().len(), renders);
+        assert_eq!(w.query::<&Mesh3d>().iter(w).count(), renders);
+        assert!(w.resource::<StreamState>().queued.len() <= 9);
+    }
+    assert_eq!(app.world().resource::<VoxelWorld>().0.dirty_regions(), 2);
+    save_large(&mut app);
+    go(&mut app, [0, 0]);
+    assert_eq!(
+        app.world().resource::<VoxelWorld>().0.edit_count(),
+        0,
+        "clean far overlays must be evicted"
+    );
+    timings.sort_unstable();
+    let s = app.world().resource::<StreamState>();
+    println!(
+        "LARGE_TRAVEL elapsed={:?} visit_p50={:?} visit_p95={:?} peak_chunks={} worker_max={:?} worker_total={:?} queue_peak={} overlays={} buffers={}",
+        start.elapsed(),
+        timings[timings.len() / 2],
+        timings[timings.len() * 95 / 100],
+        s.peak_chunks,
+        s.max_job,
+        s.worker_time,
+        s.peak_pending,
+        app.world().resource::<VoxelWorld>().0.cached_regions(),
+        s.mesh_bytes
+    );
+    drop(app);
+    let mut app = large_app(&dir.0);
+    go(&mut app, [1000, -1000]);
+    assert_eq!(
+        app.world()
+            .resource::<VoxelWorld>()
+            .0
+            .block(BlockPos([16000, -15, -16000])),
+        Block::Air
+    );
+    go(&mut app, [-1000, 1000]);
+    assert_eq!(
+        app.world()
+            .resource::<VoxelWorld>()
+            .0
+            .block(BlockPos([-16000, 25, 16000])),
+        Block::Wood
+    );
+}
+#[test]
+fn regional_fast_seam_edits_coalesce_without_regeneration_and_recover_failed_saves() {
+    let dir = RegionalDir::new();
+    let mut app = large_app(&dir.0);
+    save_large(&mut app);
+    go(&mut app, [3, 0]);
+    let before = app.world().resource::<StreamState>().generated_columns;
+    let targets = BTreeSet::from([ChunkPos([3, 1, 0]), ChunkPos([4, 1, 0])]);
+    for _ in 0..16 {
+        for b in [Block::Wood, Block::Air] {
+            for x in 62..66 {
+                edit(&mut app, BlockPos([x, 25, 8]), b);
+            }
+            drain(&mut app);
+        }
+    }
+    assert_eq!(
+        app.world().resource::<StreamState>().generated_columns,
+        before
+    );
+    assert_geometry(&app, &targets);
+    save_large(&mut app);
+    let store = Arc::clone(
+        &app.world()
+            .resource::<crate::persistence::SaveSession>()
+            .store,
+    );
+    let path = store.region_path(voxel_core::regions::RegionPos([1, 0]));
+    let prior = std::fs::read(&path).unwrap();
+    let backup = path.with_extension("rcw.bak");
+    std::fs::create_dir(&backup).unwrap();
+    edit(&mut app, BlockPos([64, 25, 8]), Block::Leaves);
+    drain(&mut app);
+    go(&mut app, [1000, 1000]);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::F5);
+    app.update();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    let end = Instant::now() + Duration::from_secs(30);
+    while app
+        .world()
+        .resource::<crate::persistence::SaveFeedback>()
+        .label
+        != "ERROR / DIRTY"
+    {
+        app.update();
+        assert!(Instant::now() < end);
+        thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(std::fs::read(&path).unwrap(), prior);
+    assert_eq!(app.world().resource::<VoxelWorld>().0.dirty_regions(), 1);
+    std::fs::remove_dir(&backup).unwrap();
+    save_large(&mut app);
+    go(&mut app, [3, 0]);
+    assert_eq!(
+        app.world()
+            .resource::<VoxelWorld>()
+            .0
+            .block(BlockPos([64, 25, 8])),
+        Block::Leaves
+    );
+    assert_geometry(&app, &targets);
+}
+#[test]
+fn corrupt_far_region_is_a_visible_safe_barrier_and_explicit_retry_recovers() {
+    let dir = RegionalDir::new();
+    let mut app = large_app(&dir.0);
+    save_large(&mut app);
+    let store = Arc::clone(
+        &app.world()
+            .resource::<crate::persistence::SaveSession>()
+            .store,
+    );
+    let r = voxel_core::regions::RegionPos([25, -25]);
+    let path = store.region_path(r);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(&path, b"corrupt").unwrap();
+    app.world_mut().resource_mut::<PlayerState>().body.position = [1600.5, 24., -1599.5];
+    let end = Instant::now() + Duration::from_secs(30);
+    while app.world().resource::<StreamFailure>().0.is_none() {
+        app.update();
+        assert!(Instant::now() < end);
+        thread::sleep(Duration::from_millis(1));
+    }
+    app.update();
+    assert_eq!(
+        app.world()
+            .resource::<crate::persistence::SaveFeedback>()
+            .label,
+        "ERROR / LOAD"
+    );
+    let w = &app.world().resource::<VoxelWorld>().0;
+    let p = BlockPos([1600, 24, -1600]);
+    assert!(!w.ready(p));
+    assert_eq!(w.block(p), Block::Stone);
+    assert_eq!(std::fs::read(&path).unwrap(), b"corrupt");
+    // This deliberately-created corrupt disposable file had no saved edits.
+    // Remove it explicitly to retry as a never-edited region.
+    std::fs::remove_file(&path).unwrap();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::F5);
+    app.update();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    drain(&mut app);
+    app.update();
+    assert!(app.world().resource::<StreamFailure>().0.is_none());
+    assert!(app.world().resource::<VoxelWorld>().0.ready(p));
+}
+
+#[test]
+fn unrelated_regional_edit_survives_accepted_worker_overlay_and_voxel_install() {
+    let dir = RegionalDir::new();
+    let mut app = large_app(&dir.0);
+    save_large(&mut app);
+    go(&mut app, [3, 0]);
+    let before = app.world().resource::<StreamState>().discarded;
+    let tx = blocked_column(&mut app, [2, 0]);
+    let p = BlockPos([72, 25, 8]);
+    edit(&mut app, p, Block::Leaves);
+    app.update();
+    tx.send(()).unwrap();
+    drain(&mut app);
+    assert_eq!(app.world().resource::<StreamState>().discarded, before);
+    let w = &app.world().resource::<VoxelWorld>().0;
+    assert_eq!(w.block(p), Block::Leaves);
+    assert_eq!(w.overlay_snapshot().get(&p), Some(&Block::Leaves));
+    save_large(&mut app);
+    go(&mut app, [1000, 1000]);
+    go(&mut app, [3, 0]);
+    assert_eq!(
+        app.world().resource::<VoxelWorld>().0.block(p),
+        Block::Leaves
+    );
 }

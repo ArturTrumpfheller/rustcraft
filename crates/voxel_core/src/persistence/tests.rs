@@ -388,7 +388,7 @@ fn v1_never_accepts_new_ids_and_unknown_formats_never_call_new_world_factory() {
     }
     let dir = TestDir::new();
     let mut bytes = wood;
-    bytes[8..12].copy_from_slice(&4_u32.to_le_bytes());
+    bytes[8..12].copy_from_slice(&5_u32.to_le_bytes());
     repair_checksum(&mut bytes);
     fs::write(dir.0.join("world.rcw"), &bytes).unwrap();
     assert!(SaveStore::open_with(&dir.0, || panic!("not a missing save")).is_err());

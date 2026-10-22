@@ -1,7 +1,9 @@
 //! Frame-rate input/view adapter. Player physics never reads a camera transform.
 
 use crate::player::{ControllerInput, PlayerSettings, PlayerState};
+use crate::scene::{ChunkRenders, RenderOrigin};
 use bevy::{
+    ecs::system::SystemParam,
     input::mouse::AccumulatedMouseMotion,
     prelude::*,
     render::view::Tonemapping,
@@ -15,6 +17,7 @@ pub struct FirstPersonPlugin;
 impl Plugin for FirstPersonPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ViewAngles>()
+            .init_resource::<RenderOrigin>()
             .init_resource::<ViewPose>()
             .add_systems(Startup, spawn_camera.in_set(CameraSetup))
             .add_systems(
@@ -25,7 +28,8 @@ impl Plugin for FirstPersonPlugin {
             )
             .add_systems(
                 RunFixedMainLoop,
-                sync_camera
+                (rebase_scene, sync_camera)
+                    .chain()
                     .in_set(RunFixedMainLoopSystems::AfterFixedMainLoop)
                     .in_set(ViewSync),
             );
@@ -137,14 +141,19 @@ fn read_input(
     input.jump_pending |= keyboard.just_pressed(KeyCode::Space);
 }
 
+#[derive(SystemParam)]
+struct CameraSpace<'w> {
+    settings: Res<'w, PlayerSettings>,
+    origin: Res<'w, RenderOrigin>,
+    pose: ResMut<'w, ViewPose>,
+}
 fn sync_camera(
     fixed_time: Res<Time<Fixed>>,
     player: Res<PlayerState>,
-    settings: Res<PlayerSettings>,
+    mut space: CameraSpace,
     input: Res<ControllerInput>,
     view: Res<ViewAngles>,
     mut cameras: Query<&mut Transform, With<FirstPersonCamera>>,
-    mut pose: ResMut<ViewPose>,
 ) {
     // A single fixed tick of interpolation latency smooths translation even at
     // render rates above/below 60 Hz; mouse rotation remains immediate.
@@ -156,18 +165,18 @@ fn sync_camera(
     let position: [f64; 3] = std::array::from_fn(|axis| {
         player.previous_position[axis] * (1.0 - alpha) + player.body.position[axis] * alpha
     });
-    pose.eye = [
+    space.pose.eye = [
         position[0],
-        position[1] + settings.0.eye_height,
+        position[1] + space.settings.0.eye_height,
         position[2],
     ];
     let rotation = Quat::from_euler(EulerRot::YXZ, view.yaw, view.pitch, 0.0);
-    pose.direction = (rotation * Vec3::NEG_Z).to_array().map(f64::from);
+    space.pose.direction = (rotation * Vec3::NEG_Z).to_array().map(f64::from);
     for mut transform in &mut cameras {
         transform.translation = Vec3::new(
-            position[0] as f32,
-            (position[1] + settings.0.eye_height) as f32,
-            position[2] as f32,
+            (position[0] - space.origin.0[0]) as f32,
+            (position[1] + space.settings.0.eye_height - space.origin.0[1]) as f32,
+            (position[2] - space.origin.0[2]) as f32,
         );
         transform.rotation = rotation;
     }
@@ -175,3 +184,26 @@ fn sync_camera(
 
 #[cfg(test)]
 mod tests;
+
+fn rebase_scene(
+    player: Res<PlayerState>,
+    mut origin: ResMut<RenderOrigin>,
+    renders: Option<Res<ChunkRenders>>,
+    mut transforms: Query<&mut Transform, With<Mesh3d>>,
+) {
+    let p = player.body.position;
+    let next = [(p[0] / 16.).floor() * 16., 0., (p[2] / 16.).floor() * 16.];
+    if origin.0 == next {
+        return;
+    }
+    origin.0 = next;
+    if let Some(renders) = renders {
+        for (p, r) in &renders.0 {
+            if let Ok(mut t) = transforms.get_mut(r.entity) {
+                t.translation = Vec3::from_array(std::array::from_fn(|a| {
+                    (f64::from(p.0[a]) * 16. - next[a]) as f32
+                }));
+            }
+        }
+    }
+}

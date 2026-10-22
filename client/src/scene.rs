@@ -6,6 +6,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use voxel_core::{CHUNK_SIZE, ChunkPos, World, demo_world, mesh_chunk};
 
 pub struct VoxelScenePlugin;
+/// World-space offset used only by presentation. Physics/rays remain f64 world coordinates.
+#[derive(Resource, Default)]
+pub(crate) struct RenderOrigin(pub [f64; 3]);
 
 #[derive(Resource)]
 pub(crate) struct VoxelWorld(pub World);
@@ -30,6 +33,7 @@ pub(crate) struct TerrainMaterial(pub Handle<StandardMaterial>);
 impl Plugin for VoxelScenePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<VoxelWorld>()
+            .init_resource::<RenderOrigin>()
             .init_resource::<DirtyChunks>()
             .init_resource::<ChunkRenders>()
             .add_systems(Startup, spawn_scene)
@@ -55,21 +59,6 @@ fn convert_mesh(surface: voxel_core::ChunkMesh) -> (Mesh, Visibility) {
     (mesh, visibility)
 }
 
-fn spawn_chunk(
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    renders: &mut ChunkRenders,
-    world: &World,
-    position: ChunkPos,
-    material: &Handle<StandardMaterial>,
-) {
-    let surface = mesh_chunk(world, position);
-    if world.identity().is_some() {
-        upsert_stream_mesh(commands, meshes, renders, position, surface, material);
-    } else {
-        upsert_chunk(commands, meshes, renders, position, surface, material);
-    }
-}
 pub(crate) fn upsert_stream_mesh(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
@@ -77,6 +66,7 @@ pub(crate) fn upsert_stream_mesh(
     position: ChunkPos,
     surface: voxel_core::ChunkMesh,
     material: &Handle<StandardMaterial>,
+    origin: &RenderOrigin,
 ) {
     if surface.indices.is_empty() {
         if let Some(render) = renders.0.remove(&position) {
@@ -84,7 +74,9 @@ pub(crate) fn upsert_stream_mesh(
             meshes.remove(&render.mesh);
         }
     } else {
-        upsert_chunk(commands, meshes, renders, position, surface, material);
+        upsert_chunk(
+            commands, meshes, renders, position, surface, material, origin,
+        );
     }
 }
 pub(crate) fn upsert_chunk(
@@ -94,6 +86,7 @@ pub(crate) fn upsert_chunk(
     position: ChunkPos,
     surface: voxel_core::ChunkMesh,
     material: &Handle<StandardMaterial>,
+    origin: &RenderOrigin,
 ) {
     let (mesh, visibility) = convert_mesh(surface);
     if let Some(render) = renders.0.get(&position) {
@@ -111,9 +104,9 @@ pub(crate) fn upsert_chunk(
             Mesh3d(handle.clone()),
             MeshMaterial3d(material.clone()),
             visibility,
-            Transform::from_translation(Vec3::from_array(
-                position.0.map(|axis| (axis * CHUNK_SIZE as i32) as f32),
-            )),
+            Transform::from_translation(Vec3::from_array(std::array::from_fn(|axis| {
+                (f64::from(position.0[axis]) * CHUNK_SIZE as f64 - origin.0[axis]) as f32
+            }))),
         ))
         .id();
     renders.0.insert(
@@ -131,6 +124,7 @@ fn spawn_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
     world: Res<VoxelWorld>,
     mut renders: ResMut<ChunkRenders>,
+    origin: Res<RenderOrigin>,
 ) {
     let started = std::time::Instant::now();
     let material = materials.add(StandardMaterial {
@@ -139,14 +133,28 @@ fn spawn_scene(
         ..default()
     });
     for (position, _) in world.0.chunks() {
-        spawn_chunk(
-            &mut commands,
-            &mut meshes,
-            &mut renders,
-            &world.0,
-            position,
-            &material,
-        );
+        let surface = mesh_chunk(&world.0, position);
+        if world.0.identity().is_some() {
+            upsert_stream_mesh(
+                &mut commands,
+                &mut meshes,
+                &mut renders,
+                position,
+                surface,
+                &material,
+                &origin,
+            );
+        } else {
+            upsert_chunk(
+                &mut commands,
+                &mut meshes,
+                &mut renders,
+                position,
+                surface,
+                &material,
+                &origin,
+            );
+        }
     }
     commands.insert_resource(TerrainMaterial(material));
     commands.insert_resource(GlobalAmbientLight {
@@ -162,7 +170,7 @@ fn spawn_scene(
         Transform::from_xyz(-12.0, 24.0, 12.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
     info!(
-        "RustCraft slice 6: {} restored/generated chunk meshes built in {:?}",
+        "RustCraft slice 7: {} restored/generated chunk meshes built in {:?}",
         world.0.chunks().count(),
         started.elapsed()
     );
@@ -175,6 +183,7 @@ fn rebuild_dirty_chunks(
     mut renders: ResMut<ChunkRenders>,
     mut meshes: ResMut<Assets<Mesh>>,
     material: Res<TerrainMaterial>,
+    origin: Res<RenderOrigin>,
 ) {
     if world.0.identity().is_some() {
         return;
@@ -188,6 +197,7 @@ fn rebuild_dirty_chunks(
                 position,
                 mesh_chunk(&world.0, position),
                 &material.0,
+                &origin,
             );
         }
     }

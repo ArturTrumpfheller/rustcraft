@@ -56,9 +56,9 @@ fn seed_from(value: Option<OsString>) -> io::Result<u64> {
 pub(crate) fn create_world() -> Result<World, SaveError> {
     let seed = seed_from(std::env::var_os("RUSTCRAFT_WORLD_SEED"))?;
     let start = std::time::Instant::now();
-    let world = voxel_core::streaming::new_world(seed);
+    let world = voxel_core::streaming::new_large_world(seed);
     eprintln!(
-        "RustCraft new streamed world: seed {seed}, generator v2, 128x128 blocks; identity created in {:?}",
+        "RustCraft new streamed world: seed {seed}, generator v3, regional 65536x65536 blocks; identity created in {:?}",
         start.elapsed()
     );
     Ok(world)
@@ -118,7 +118,7 @@ struct SaveJob {
 }
 #[derive(Resource)]
 pub(crate) struct SaveSession {
-    store: Arc<SaveStore>,
+    pub(crate) store: Arc<SaveStore>,
     saved_revision: u64,
     creation_pending: bool,
     observed_revision: u64,
@@ -174,7 +174,7 @@ impl SaveSession {
         self.last_error = Some(message);
         self.closing = false;
     }
-    fn poll(&mut self) {
+    fn poll(&mut self) -> Option<u64> {
         if self
             .job
             .as_ref()
@@ -192,11 +192,13 @@ impl SaveSession {
                         self.store.path().display(),
                         job.revision
                     );
+                    return Some(job.revision);
                 }
                 Ok(Err(error)) => self.failed(error.to_string()),
                 Err(_) => self.failed("background save worker stopped unexpectedly".into()),
             }
         }
+        None
     }
     fn label(&self, dirty: bool) -> &'static str {
         if self.job.is_some() {
@@ -231,16 +233,19 @@ struct SaveUi<'w, 's> {
     windows: Query<'w, 's, &'static mut Window, With<PrimaryWindow>>,
     close: MessageReader<'w, 's, WindowCloseRequested>,
     exit: MessageWriter<'w, AppExit>,
+    load_failure: Option<Res<'w, crate::streaming::StreamFailure>>,
 }
 fn update_saving(
     mut session: ResMut<SaveSession>,
     mut feedback: ResMut<SaveFeedback>,
-    world: Res<VoxelWorld>,
+    mut world: ResMut<VoxelWorld>,
     time: Res<Time<Real>>,
     keyboard: Res<ButtonInput<KeyCode>>,
     mut ui: SaveUi,
 ) {
-    session.poll();
+    if let Some(revision) = session.poll() {
+        world.0.mark_regions_saved(revision);
+    }
     let current = world.0.revision();
     if current != session.observed_revision {
         if session.observed_revision == session.saved_revision {
@@ -262,7 +267,13 @@ fn update_saving(
         }
     }
     let due = time.elapsed().saturating_sub(session.last_attempt) >= session.interval;
-    if session.job.is_none() && dirty && (session.manual_pending || session.closing || due) {
+    if session.job.is_none()
+        && dirty
+        && (session.manual_pending
+            || session.closing
+            || due
+            || (world.0.save_pressure() && session.last_error.is_none()))
+    {
         session.start(&world.0, time.elapsed());
     }
     if !dirty {
@@ -272,7 +283,13 @@ fn update_saving(
         ui.exit.write(AppExit::Success);
     }
     feedback.closing = session.closing;
-    feedback.label = session.label(dirty).to_owned();
+    feedback.label = if session.last_error.is_none()
+        && ui.load_failure.as_ref().is_some_and(|f| f.0.is_some())
+    {
+        "ERROR / LOAD".to_owned()
+    } else {
+        session.label(dirty).to_owned()
+    };
     for mut window in &mut ui.windows {
         let suffix = if window.title.starts_with("RustCraft [") {
             window

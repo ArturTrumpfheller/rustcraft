@@ -2,7 +2,7 @@
 
 Project-created code and documentation are **MIT OR Apache-2.0**, at the recipient's option. See the root LICENSE-MIT and LICENSE-APACHE files. This does not relicense dependencies or separately licensed artwork.
 
-## Direct dependencies (slice 6; unchanged from slice 4)
+## Direct dependencies (slice 7; unchanged from slice 4)
 
 | Component | Version | Upstream | SPDX license | Notices / use |
 | --- | --- | --- | --- | --- |
@@ -54,3 +54,10 @@ There are no downloaded textures, music, sounds, fonts, logos, models or Mojang/
 The intended aesthetic is classic, blocky **Minecraft-inspired** pixel art, but the repo must not include extracted Minecraft textures, edited proprietary originals, or packs whose authors do not explicitly permit the planned use.
 
 For an external texture pack, check its precise license/permission covers redistribution in this **public GitHub repository**, game distribution, editing/derivative use and intended commercial use if applicable. Save its name, author, direct source URL, license text/version, modification notes and required credit. A free download, a fan-made pack, or "Minecraft-style" alone is **not** sufficient permission. Avoid assets with incompatible usage conditions. Prefer original art or clearly licensed works such as CC0/appropriately attributed CC BY assets when their terms fit. Never assume code's MIT OR Apache-2.0 license applies to the artwork.
+
+## Slice 7 additions
+
+Local generator-v3 planning, regional formats/storage, cache/scheduling changes,
+floating-origin presentation and tests/benchmarks are original project-authored
+MIT OR Apache-2.0 Rust/documentation. No new crate, lockfile, Bevy feature,
+toolchain, texture, font, third-party source or imported asset was added.
