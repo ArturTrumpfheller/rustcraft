@@ -2,7 +2,30 @@
 
 Status: **v0.1 / slice 6 bounded streaming implemented**. Later gameplay systems remain proposals.
 
-## Slice 6 design note (written before implementation)
+## PR #12 native-review correction design (recorded before implementation)
+
+Remove the unconditional spawn pin from normal residency. R/void recovery moves to
+the spawn request, pauses simulation while that column is pending, then resolves
+safe ground and resets interpolation from actual edited blocks. Distant spawn
+CPU/GPU resources follow the ordinary radius; persistence is still independent.
+
+Use one contact tolerance for collision and clearance/recovery. The pre-fix deterministic
+diagonal-edge trajectory backtracks at tick 26 because reconstructing
+the clipped x=2.3 AABB yields 1.9999999999999998 and triggers false recovery.
+
+Separate new-column generation from cached-chunk remeshing. Keep transient local
+mesh dependency versions (own chunk plus face changes), independent of the global
+save revision. Batch connected dirty meshes and publish them together only when
+their dependencies are current. Prioritize visible dirty geometry over new loads,
+reuse cached voxel data, and sample only missing face cells off-thread. Coalesce
+edits while a bounded job runs; never clear newer invalidations. Measure old/new
+seam workloads, discarded jobs, dispatch/install time, dirty latency and resource
+counts. Save bytes, generator identities, world extent and textures stay unchanged.
+
+## Initial Slice 6 design note (historical, before native review)
+
+The original pin/global-revision decisions below are superseded by the correction
+design above and the current lifecycle/meshing sections below.
 
 - **Modes and authority:** historical v1/v2 saves retain finite full-snapshot semantics and fully resident data. New worlds use generator v2, a bounded 128×128×48 volume and v3 identity (u64 seed + generator version) with a sparse authoritative edit overlay, including explicit Air. The resident chunk map is a disposable cache; eviction never deletes overlay entries, including unsaved ones. No automatic legacy migration.
 - **Lifecycle:** desired columns transition absent → pending → resident → evicted. A modest configurable radius plus a permanently resident spawn column bounds residency. One worker job generates a column plus a one-cell face halo and builds three engine-neutral meshes. The main thread polls completion, installs only still-desired results at the captured edit revision, and releases obsolete CPU/GPU data. A bounded desired set replaces an unbounded task queue. Obsolete in-flight work is discarded, not synchronously joined by frames.
@@ -39,9 +62,11 @@ Y is up; integer block positions identify unit cells spanning `[x, x+1]`, `[y, y
 
 The client retains authoritative `World` data in a `VoxelWorld` resource and converts these buffers into Bevy `Mesh` assets, with one entity per chunk and one shared rough white `StandardMaterial`. The original per-block colors come from vertex attributes. A directional sun, ambient light and sky background illuminate the scene. Reinhard tonemapping avoids lookup-table texture assets. No external texture, font or model files are needed.
 
-Legacy startup retains at most 48 chunks. Streamed startup prepares only the three chunks of a pinned spawn column; one background worker subsequently generates/meshes desired columns and the main thread installs at most one completed column per frame. Each successful `World::set_block` returns a `BlockChange` containing position and before/after values; equal assignments are no-ops. `Chunk::set` reports whether a validated local cell actually changed. Clearing absent air never creates storage. Solid edits create initially missing chunks lazily. Legacy edits remain **X/Z [-32,32), Y [-16,32)**. New streamed v3 worlds use **X/Z [-64,64), Y [-16,32)**. Missing cells in the streamed volume remain explicitly pending rather than editable air; trusted whole-chunk insertion is an initialization/import API, not a player edit.
+Legacy startup retains at most 48 chunks. Streamed startup prepares only three spawn chunks before the App. Those chunks later follow the ordinary radius, with no permanent CPU or render pin. One worker handles new-column generation or cached mesh batches, and the main thread installs at most one result per frame. Each successful `World::set_block` returns a `BlockChange`; equal assignments are no-ops. Legacy edits remain **X/Z [-32,32), Y [-16,32)**, streamed v3 edits **X/Z [-64,64), Y [-16,32)**. Streamed pending data is not editable; trusted whole-chunk insertion is initialization/cache import, not a player edit API.
 
-`BlockChange::affected_chunks` identifies the owning chunk plus face-sharing neighbors when local coordinates are 0 or 15. Diagonal neighbors are unnecessary. The client accumulates these positions in a `BTreeSet`. Legacy mode rebuilds only dirty resident chunks in Update. Streamed mode queues affected columns for the single generation/mesh worker; it uses the current immutable overlay snapshot and rejects stale revision results. A boundary-corner edit affects at most four meshes. Mesh construction remains synchronous for these small, bounded per-click jobs; streaming/larger batches will require a job budget or asynchronous snapshots.
+`BlockChange::affected_chunks` identifies the owner plus face-sharing neighbors at local coordinates 0/15; diagonal chunks are unnecessary. `World::mesh_revision` advances only those output dependencies for actual edits and survives cache eviction. These transient tokens do not enter saves; the existing global revision still governs persistence. Legacy dirty resident chunks rebuild synchronously as before. Streamed dirty chunks coalesce while a worker runs. The scheduler picks the nearest connected dirty component before new loads; all targets in that component are validated and published together in one Update. A newer edit affecting any target rejects that whole batch without clearing its newer dirty entries. Unrelated edits no longer invalidate useful jobs. No-longer-desired results cannot recreate evicted resources. A valid load also removes duplicate requests discovered during center movement.
+
+Cached remeshing snapshots only target and available face-neighbor chunks into engine-neutral data. The worker reuses these voxels and samples generator + captured edits only for missing face cells; it never regenerates complete columns for edits. New-column jobs retain the deterministic three-chunk + thin-halo generation path. Main frames poll without joining unfinished work. A large connected edit batch remains bounded by the finite resident set; no unbounded queue, busy-wait or synchronous world generation is introduced.
 
 `ChunkRenders` retains at most one entity/handle per rendered chunk. Streamed ready-empty chunks need no render asset; becoming empty releases the old entity/mesh. Eviction explicitly despawns terrain entities and removes their assets, while edit data stays in the core overlay. Legacy empty geometry keeps its retained handles as before. MAIN_WORLD and RENDER_WORLD usages retain CPU buffers, replaced under the same asset handle on edits. Empty geometry hides the entity; it can be filled again without new handle allocation. Bounds are removed on rebuild so Bevy recomputes culling bounds after expansion. Repeated-edit tests check bounded asset counts, empty geometry and neighboring faces; idle frames do not remesh.
 
@@ -63,7 +88,7 @@ Feedback uses original procedural mesh geometry and existing `StandardMaterial`:
 
 `worldgen::GenerationConfig` contains an explicit u64 seed and generator version. Version 1 stays frozen at 64×64; version 2 samples a bounded 128×128 area with additional deterministic tree anchors. A 16-KiB / 64-KiB finite height cache uses three scales of Q10 integer smoothstep value noise. Stable coordinate hashing replaces a shared random stream. Layering and a connected cave/ramp plan are sampled in world coordinates; deterministic spaced tree anchors are planned before chunks are emitted. Trees cross seams without mutating neighboring chunks. Chunk generation is immutable/order-independent, skips out-of-bounds requests and only stores nonempty chunks. Golden snapshots cover seeds 0, 1, 42, 2026 and u64::MAX on both CI platforms. See [the contract and tradeoffs](WORLDGEN.md).
 
-Legacy generation/meshing remains bounded at startup. New streamed worlds prepare one small spawn column before App construction; a single worker samples center chunks plus only the adjacent face cells needed by `mesh_chunk` (15 cached chunks at most, ~60 KiB of block payload, rather than 27 complete neighbors). This avoids redundant neighbor generation. Worker results carry the captured edit revision and desired-column identity; stale/obsolete results are discarded. There is no regeneration, chunk meshing or whole-world clone each frame. Future streaming needs regional planning/halos and asynchronous generation/meshing budgets; this finite cache is intentionally not an infinite-world abstraction.
+Legacy generation/meshing remains bounded at startup. New-column workers sample center chunks plus adjacent face cells (15 vectors at most, ~60 KiB block payload), returning three chunks and meshes. Cached mesh jobs use the separate snapshot path above. Desired membership and local output tokens are checked before any install, independently of the global save revision. There is no idle-frame generation/meshing, whole-world copy for a normal click, or frame-loop disk I/O. This remains a finite prototype, not an infinite-world abstraction.
 
 `client::save_hud` renders original 5×7 bitmap lettering as camera-relative colored quads on a dark panel. It updates an existing mesh only when status changes, remains visible without mouse capture, scales using logical screen pixels and reuses one material/handle. Saving is yellow, success green and persistent errors red with F5 retry. No UI/font subsystem, external assets or dependency/feature changes are needed.
 
@@ -86,13 +111,13 @@ The player's AABB is 0.6 blocks wide/deep and 1.8 high, with eye height 1.62. Po
 
 Horizontal input is normalized, with acceleration toward the target velocity and fast grounded braking. In air, releasing input retains horizontal momentum; directional input supplies bounded air control. Ground support is checked before jumping and after movement. The tiny support probe is 0.000001 blocks; it does not snap to lower terraces or give a gameplay-sized coyote interval. Jump commands are ignored in air.
 
-Collision sweeps the complete AABB movement on Y, X, then Z against `World::block`, clipping each displacement to the nearest solid face. Swept ranges include intermediate blocks, preventing destination-only tunneling. Other axes use open overlap intervals with a 1e-8 contact tolerance, allowing contact with floors/walls without snagging parallel motion. The fixed axis order gives wall sliding and repeatable resolution; it can bias exact corner contacts. There are no per-tick allocations, mesh collision structures or whole-world scans: only the nearby swept voxel ranges are queried. Legacy missing chunks and positions outside the finite world are Air. Streamed pending in-volume chunks behave as solid barriers. `cache_ready` checks occupied player cells; pending teleports pause simulation, then recover a clear position before ticking if loaded terrain overlaps the body.
+Collision sweeps the complete AABB movement on Y, X, then Z against `World::block`, clipping each displacement to the nearest solid face. Swept ranges include intermediate blocks, preventing destination-only tunneling. Other axes use open overlap intervals with a 1e-8 contact tolerance, allowing contact with floors/walls without snagging parallel motion. The fixed axis order gives wall sliding and repeatable resolution; it can bias exact corner contacts. There are no per-tick allocations, mesh collision structures or whole-world scans: only the nearby swept voxel ranges are queried. Legacy missing chunks and positions outside the finite world are Air. Streamed pending in-volume chunks behave as solid barriers. `fits_in_world` and `cache_ready` use the same open intervals/contact tolerance as the sweep, preventing ULP-sized face contact from triggering clearance recovery; meaningful penetration still fails. `cache_ready` checks occupied player cells; pending teleports pause simulation, then recover a clear position before ticking if loaded terrain overlaps the body.
 
 Contracts: configuration values and player state must be finite, dimensions/speeds positive, and spawn/reset must not intersect solids. This is a static-voxel kinematic controller, not a general rigid-body/depenetration solver. Player placement now rejects edits intersecting the player; `fits_in_world` also supports spawn clearance checks. Replaying the same commands is regression-tested, but cross-platform bitwise floating-point lockstep is not promised.
 
 ## Fixed simulation, input and camera adapters
 
-`client/player.rs` retains `PlayerState` (current body plus previous fixed position), `PlayerSettings` and `ControllerInput` as resources. Physics runs in `FixedUpdate` at 60 Hz. Bevy's normal bounded time catch-up handles slow render frames; excess wall time after a long stall is not treated as a single large physics step.
+`client/player.rs` retains `PlayerState` (current body, previous fixed position and pending-respawn flag), `PlayerSettings` and `ControllerInput` as resources. Physics runs in `FixedUpdate` at 60 Hz. Bevy's normal bounded time catch-up handles slow render frames; excess wall time after a long stall is not treated as a single large physics step.
 
 `client/camera.rs` samples buttons and relative mouse motion **before** the fixed loop, after Bevy updates input. Jump/reset edges are latched across render frames without a physics tick, consumed once, and cleared when controls pause. Holding Space never repeats a jump. Mouse sensitivity is independent of delta time; pitch is clamped and movement follows yaw only. Hover motion on the capture frame is ignored to prevent a view jump.
 
@@ -100,7 +125,7 @@ After the fixed loop, the camera interpolates previous/current feet positions us
 
 Capture starts on click; Escape or focus loss releases it. Re-focusing requires another click. In this local single-player prototype, release pauses the player simulation (including falling), preserving velocity until resumed; pending edges are cleared. A future authoritative multiplayer/server simulation must not inherit this local pause policy.
 
-The preferred spawn column is near (0,10), facing -Z. `physics::spawn_position` scans nearby known resident sky-exposed ground, skips tree tops and checks the actual player AABB. The streamed spawn column remains pinned, so R/void recovery never waits on unbounded loading. Initialization, R and void recovery all use restored/generated blocks, never a fixed demo Y. A fully empty snapshot has no supported spawn; it is preserved and uses a clear-air fallback rather than creating terrain. R resets body, previous position, velocity, pending jump and view; falling below Y=-32 resets the body automatically. Resetting both positions prevents interpolation across the map. There is no debug-flying mode, automatic step-up or collision crouch. Block editing is handled by the separate interaction adapter and never reads mesh geometry for gameplay.
+The preferred spawn column is near (0,10), facing -Z. `physics::spawn_position` scans nearby known resident sky-exposed ground, skips tree tops and checks the actual player AABB. The spawn column is disposable like all other columns. If absent, R/void moves the request above its finite volume, freezes physics and blocks targeting/editing while the ordinary scheduler loads it. Ground selection runs only after readiness; current/previous positions reset together, so there is no interpolated flight or search over unrelated remote terrain. Initialization, R and void recovery all use restored/generated blocks, never a fixed demo Y. A fully empty snapshot has no supported spawn; it is preserved and uses a clear-air fallback rather than creating terrain. R resets body, previous position, velocity, pending jump and view; falling below Y=-32 resets the body automatically. Resetting both positions prevents interpolation across the map. There is no debug-flying mode, automatic step-up or collision crouch. Block editing is handled by the separate interaction adapter and never reads mesh geometry for gameplay.
 
 ## Persistence (`voxel_core::persistence`, `client::persistence`)
 
@@ -121,3 +146,24 @@ Only the Bevy subsystems needed for 3D rendering, desktop windows and keyboard/m
 ## Next boundaries
 
 Extend generation and gameplay on the existing worldgen/ray/edit/physics/persistence boundaries. Keep existing snapshots independent of new terrain defaults, and implement explicit migration before accepting a new format. Do not persist ECS entities or derive simulation state from mesh geometry. Networking, server authority, mods and a general item registry remain deferred.
+
+## Streaming bounds and diagnostics after native review
+
+Radius 2 retains at most 75 chunks / 307,200 block payload bytes; radius 3 at
+most 147 / 602,112 bytes, with no extra spawn pin. Desired and dirty sets are
+bounded by the finite column/chunk set and only one worker result is in flight.
+Ordinary mesh snapshots copy a target and available face neighbors. In the worst
+large connected batch the worker may materialize up to the finite 192 chunks
+(786,432 payload bytes, plus one transient border copy), excluding mesh buffers.
+New-column jobs retain the smaller 15+3-vector peak. Snapshot work runs before
+dispatch on the main thread and is explicitly measured; generation/meshing stays
+off-thread. Native dense-overlay copy-on-write and large bulk-edit latency still
+need profiling before extending world bounds.
+
+Idle-transition logs include resident/mesh/buffer counts, peak queued work, load
+attempts, mesh targets, discarded jobs, summed worker wall time and worker/install/
+stream-update/dirty-latency maxima. A fixed 128-sample ring records frame intervals;
+p95 is computed only when logging an idle transition. Frame intervals include
+rendering and driver scheduling, not measured GPU execution. Tests assert bounded
+assets/entities and buffers across repeated edits and travel. See VALIDATION for
+reproducible before/after CPU and graphical measurements.

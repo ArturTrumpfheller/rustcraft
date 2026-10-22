@@ -12,7 +12,7 @@ Project-created code and documentation are **MIT OR Apache-2.0**, at the recipie
 
 `Cargo.lock` records exact transitive versions and checksums. No third-party source is copied or vendored. Slices 2 and 3 added only project-authored physics/controller/interaction code. Slice 4 adds `crc32fast` (Cargo metadata declares MIT OR Apache-2.0); its `cfg-if` dependency already existed in the graph. No asset or Bevy feature changes are required. Bevy's native renderer selection remains enabled; application features omit audio, gamepad, UI and external scene/texture import. All project-authored persistence code remains MIT OR Apache-2.0. Slice 5 adds only original Rust code/colors/bitmap glyphs; no crates, Bevy features, lockfile changes, downloaded fonts or art are added.
 
-Slice 6 adds only project-authored Rust streaming/persistence/adapter code and generator-v2 composition, still MIT OR Apache-2.0. No crate, lockfile, engine feature, texture, font or asset additions.
+Slice 6 adds only project-authored Rust streaming/persistence/adapter code and generator-v2 composition, still MIT OR Apache-2.0. No crate, lockfile, engine feature, texture, font or asset additions. The PR #12 native-review corrections add only project-authored contact, lifecycle, local invalidation, cached remeshing, metrics and regression-test code under the same license.
 
 ## Dependency license review
 

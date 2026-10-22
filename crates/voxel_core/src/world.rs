@@ -55,6 +55,9 @@ pub struct StreamIdentity {
 pub struct World {
     chunks: BTreeMap<ChunkPos, Chunk>,
     revision: u64,
+    // Transient output dependencies, not persisted and retained across eviction.
+    // Only the owner and face-sharing meshes advance for an actual edit.
+    mesh_revisions: BTreeMap<ChunkPos, u64>,
     identity: Option<StreamIdentity>,
     edits: Arc<BTreeMap<BlockPos, Block>>,
 }
@@ -112,6 +115,7 @@ impl World {
         Self {
             chunks: BTreeMap::new(),
             revision: self.revision,
+            mesh_revisions: BTreeMap::new(),
             identity: self.identity,
             edits: Arc::clone(&self.edits),
         }
@@ -119,6 +123,12 @@ impl World {
     /// Process-local change generation; never part of the save format.
     pub fn revision(&self) -> u64 {
         self.revision
+    }
+
+    /// Streamed-world mesh dependency token. Unrelated edits and residency do
+    /// not invalidate a worker; save revisions remain global and unchanged.
+    pub fn mesh_revision(&self, position: ChunkPos) -> u64 {
+        self.mesh_revisions.get(&position).copied().unwrap_or(0)
     }
 
     /// Raw bounded mutation for trusted world-edit operations. Placement rules
@@ -144,15 +154,21 @@ impl World {
             Arc::make_mut(&mut self.edits).insert(position, block);
         }
         self.revision = self.revision.wrapping_add(1);
-        Ok(Some(BlockChange {
+        let change = BlockChange {
             position,
             before,
             after: block,
-        }))
+        };
+        if self.identity.is_some() {
+            for p in change.affected_chunks() {
+                self.mesh_revisions.insert(p, self.revision);
+            }
+        }
+        Ok(Some(change))
     }
 
     /// Trusted import/cache install, not an edit API. Stream workers must apply
-    /// the overlay and validate its revision before installing this data.
+    /// the overlay and validate local dependencies before installing this data.
     pub fn insert_chunk(&mut self, position: ChunkPos, chunk: Chunk) {
         if self.chunks.get(&position) != Some(&chunk) {
             self.chunks.insert(position, chunk);

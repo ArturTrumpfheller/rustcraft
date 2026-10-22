@@ -4,7 +4,7 @@ This document tracks intended milestones, not promised delivery dates. Implement
 
 ## v0.1 — Classic-style prototype
 
-Slice 6 adds bounded dynamic chunk caching/rendering, expanded 128×128 new worlds and v3 seed/version/edit-overlay persistence. Legacy snapshots remain exact finite worlds. Full v0.1 is not complete. The owner tested slices 1–5 on Void and their Linux/Windows CI passed. Current coverage is recorded in `docs/VALIDATION.md`; new native play-tests are still needed. Serialization/recovery and deterministic generation tests exist; infinite streaming and richer gameplay remain deferred.
+Slice 6 adds bounded dynamic chunk caching/rendering, expanded 128×128 new worlds and v3 seed/version/edit-overlay persistence. Legacy snapshots remain exact finite worlds. Full v0.1 is not complete. The owner tested slices 1–5 on Void and their Linux/Windows CI passed. The owner also verified Slice 6 streaming and edit durability on Void; PR #12 addresses the reported spawn visibility, diagonal contact and rapid mining problems. Current coverage and before/after measurements are recorded in `docs/VALIDATION.md`; native retesting of these corrections is still needed. Serialization/recovery and deterministic generation tests exist; infinite streaming and richer gameplay remain deferred.
 
 - [x] Cargo workspace and pinned Bevy dependency
 - [x] Launch client with a first-person walking player and interpolated camera

@@ -2,7 +2,8 @@
 //!
 //! Y is up. Positions are feet-center coordinates in block units (metres).
 //! Call `Player::tick` once per simulated tick with an input command. Missing
-//! chunks are air, exactly as in `World::block`. No mesh queries or allocations
+//! chunks follow `World::block` (pending streamed cells are solid barriers).
+//! No mesh queries or allocations
 //! are needed in the simulation. A non-intersecting initial position is required.
 
 use crate::{BlockPos, World};
@@ -101,12 +102,20 @@ impl Player {
         })
     }
 
-    /// Clearance query for validated spawn/recovery, using the same AABB.
+    /// Clearance query with the same open contact intervals as collision.
+    /// A clipped face may reconstruct a few ULPs inside a block in f64; this
+    /// must not trigger teleport recovery while the sweep permits contact.
     pub fn fits_in_world(&self, world: &World, config: &PhysicsConfig) -> bool {
         let (min, max) = self.bounds(config);
-        for x in min[0].floor() as i32..max[0].ceil() as i32 {
-            for y in min[1].floor() as i32..max[1].ceil() as i32 {
-                for z in min[2].floor() as i32..max[2].ceil() as i32 {
+        for x in
+            (min[0] + CONTACT_EPSILON).floor() as i32..=(max[0] - CONTACT_EPSILON).floor() as i32
+        {
+            for y in (min[1] + CONTACT_EPSILON).floor() as i32
+                ..=(max[1] - CONTACT_EPSILON).floor() as i32
+            {
+                for z in (min[2] + CONTACT_EPSILON).floor() as i32
+                    ..=(max[2] - CONTACT_EPSILON).floor() as i32
+                {
                     if world.block(BlockPos([x, y, z])).is_solid() {
                         return false;
                     }

@@ -350,3 +350,56 @@ fn generated_startup_reset_and_void_recovery_use_actual_ground_not_legacy_spawn_
         &PhysicsConfig::default()
     ));
 }
+
+#[test]
+fn diagonal_contact_does_not_trigger_clearance_recovery_or_camera_backtracking() {
+    use voxel_core::{Block, BlockPos, Chunk, ChunkPos};
+    let mut world = voxel_core::streaming::new_world(42);
+    for x in -1..=1 {
+        for z in -1..=1 {
+            for y in -1..=1 {
+                world.insert_chunk(ChunkPos([x, y, z]), Chunk::default());
+            }
+        }
+    }
+    for x in -8..=8 {
+        for z in -8..=8 {
+            world.set_block(BlockPos([x, 0, z]), Block::Stone).unwrap();
+        }
+    }
+    // The two blocks share only an edge. Clipping leaves x=2.3, whose
+    // reconstructed minimum is 1.9999999999999998 in f64.
+    for p in [[1, 1, 0], [2, 1, 1]] {
+        world.set_block(BlockPos(p), Block::Stone).unwrap();
+    }
+    let mut app = test_app_with_world(world);
+    let p = [3.5, 1., 0.5];
+    *app.world_mut().resource_mut::<PlayerState>() = PlayerState {
+        body: Player::new(p),
+        previous_position: p,
+        awaiting_spawn: false,
+    };
+    capture(&mut app);
+    key(&mut app, KeyCode::KeyA);
+    key(&mut app, KeyCode::KeyS);
+    let mut previous = p;
+    let mut eye = camera(&mut app).translation;
+    for n in 0..180 {
+        tick(&mut app);
+        let position = body(&app).position;
+        assert!(
+            position[0] <= previous[0] + 1e-8,
+            "tick {n}: {previous:?} -> {position:?}"
+        );
+        assert!(
+            position[2] >= previous[2] - 1e-8,
+            "tick {n}: {previous:?} -> {position:?}"
+        );
+        let next_eye = camera(&mut app).translation;
+        assert!(next_eye.x <= eye.x + 1e-6 && next_eye.z >= eye.z - 1e-6);
+        previous = position;
+        eye = next_eye;
+    }
+    assert!((previous[0] - 2.3).abs() < 1e-8);
+    assert!((previous[2] - 0.7).abs() < 1e-8);
+}

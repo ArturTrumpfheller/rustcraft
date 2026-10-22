@@ -169,7 +169,34 @@ Keep this shell/path for restarts. Windows PowerShell can use `$env:RUSTCRAFT_DA
 1. Confirm streamed mode, saved identity seed/gen2, an initial three-chunk spawn column and subsequent pending count dropping. The world spans 128×128 blocks. The title shows resident chunks/pending columns/seed/version/radius; the in-game panel still reports saving/success/error. Unedited v3 creation writes one 40-byte identity file, then remains clean while exploring.
 2. Capture/look, walk/sprint/jump across x/z chunk boundaries and beyond the former ±32 limits. Old columns should unload and new columns load without unbounded mesh/asset growth. Try returning along the same route. Newly sampled terrain/trees/caves must match and seams must have consistent faces. A pending frontier blocks movement/editing safely until ready; do not expect infinite terrain beyond ±64.
 3. Place Wood/Leaves and break generated blocks in several columns, including negative coordinates. Travel far enough to evict those columns, then return **before saving**: edits must still exist in the in-memory overlay. F5, wait for green `SAVED`, close/restart with the same data directory and verify all edits again. Repeat with autosave and with normal close without F5.
-4. Change the environment seed for that same v3 path: it must use the stored identity. R/void recovery must use the pinned safe spawn. Check mouse release/focus/resize, slots 1–5, rejected player-body placement and collision on placed blocks. Pending/overlap teleport edge cases are covered by headless ECS tests; there is no public teleport command.
+4. Change the environment seed for that same v3 path: it must use the stored identity. Move far enough that the origin column leaves the radius: no distant spawn island should remain visible. R/void recovery must request that evicted column, pause safely until it is ready and resolve edited spawn ground without an interpolated flight. Check mouse release/focus/resize, slots 1–5, rejected player-body placement and collision on placed blocks. Pending/overlap teleport edge cases are covered by headless ECS tests; there is no public teleport command.
 5. In a disposable copy of a historical v1/v2 directory, confirm `Legacy finite 64x64`. Explore its exact saved terrain and empty space; no generation fills missing chunks. Idle/F5 without edits must not change primary bytes. There is no legacy-to-v3 migration in this slice. Keep external backups before deliberate legacy edits if older-client rollback matters.
 6. Test failures only in disposable directories. On an unwritable/obstructed backup path, edits must remain dirty, including after eviction; normal close stays open and F5 can retry after fixing the problem. Corrupt/new-version data must stop startup without regeneration/replacement. Follow README's preserve/copy recovery instructions. A forced kill can lose unsaved changes since the last completed save; it is not the save/eviction test protocol.
 7. Repeat on native Void X11/Wayland and Windows. Record GPU/driver/backend, actual frame feel, loading stalls/frontier behavior and memory. Cloud software-rendered timings are not desktop GPU guarantees. The world is bounded, edits stay in a bounded central RAM overlay, and there is no per-chunk disk cache or per-edit crash journal yet.
+
+### PR #12 native-review retest
+
+Continue on `feat/slice-6-chunk-streaming` and use a fresh test directory (or an
+external copy of a previous test world with all instances closed). Keep the same
+absolute `RUSTCRAFT_DATA_DIR` for restarting; choose another directory for another
+seed. Never diagnose by deleting a real save or its lock while running.
+
+- At radius 1, walk several columns away and look back: spawn meshes must disappear.
+  Return normally and then repeat using R and a fall below Y=-32. Blocks built or
+  removed near spawn must remain, and respawn must choose clear edited ground.
+- Place two blocks that touch diagonally and push diagonally into the shared
+  corner on level ground and terraces. Repeat near x/z=0 and ±16, slide away along
+  a wall, then jump. Check both the body and camera for repeated backtracking.
+- Mine and rebuild quickly along a positive and negative chunk seam. Check both
+  faces, collision, slots 1–5 and rejected body-overlap placement. Repeat many
+  cycles, leave until eviction, return before F5, then save/close/restart.
+- Logs at `RUST_LOG=info` expose load jobs, mesh targets, discards, peak queue,
+  resident/mesh counts, logical buffer bytes, worker/install/update maxima,
+  dirty latency and a rolling 128-frame p95. Frame intervals include rendering/
+  driver scheduling and are not GPU timestamps. Idle frames should do no new
+  terrain work; resource counts should return to the same values after cycles.
+
+Record resolution, radius, GPU/driver, debug versus release build and X11/Wayland.
+The cloud software-rendering comparison in VALIDATION does not predict native GPU
+performance. No world extent, generator identity, save format or texture changes
+are introduced by this correction.

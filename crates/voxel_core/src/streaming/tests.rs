@@ -15,14 +15,14 @@ fn install(world: &mut World, result: ColumnResult) {
 }
 
 #[test]
-fn radius_policy_caps_pending_and_handles_extreme_fast_travel_with_spawn_pin() {
+fn radius_policy_caps_pending_and_handles_extreme_fast_travel_without_spawn_pin() {
     for r in 1..=3 {
         for x in -4..4 {
             for z in -4..4 {
                 let wanted = desired([x, z], r);
-                assert!(wanted.contains(&[0, 0]));
+                assert_eq!(wanted.contains(&[0, 0]), x.abs().max(z.abs()) <= r);
                 assert!(wanted.contains(&[x, z]));
-                assert!(wanted.len() <= ((2 * r + 1).pow(2) + 1) as usize);
+                assert!(wanted.len() <= (2 * r + 1).pow(2) as usize);
                 assert!(wanted.iter().all(|p| p.iter().all(|v| (-4..4).contains(v))));
                 assert_eq!(nearest(&wanted, [x, z]), Some([x, z]));
             }
@@ -30,7 +30,7 @@ fn radius_policy_caps_pending_and_handles_extreme_fast_travel_with_spawn_pin() {
     }
     for center in [[i32::MAX; 2], [i32::MIN; 2]] {
         let wanted = desired(center, 99);
-        assert!(wanted.len() <= 50);
+        assert!(wanted.len() <= 49);
         assert!(nearest(&wanted, center).is_some());
     }
 }
@@ -222,5 +222,83 @@ fn generator_v2_column_golden_contract_includes_expanded_negative_and_positive_t
             golden,
             "generator v2 contract changed for seed {seed}"
         );
+    }
+}
+
+#[test]
+fn local_mesh_dependencies_track_faces_not_unrelated_edits_or_residency() {
+    let mut world = new_world(42);
+    prepare_spawn(&mut world).unwrap();
+    world.set_block(BlockPos([8, 25, 8]), Block::Wood).unwrap();
+    let owner = ChunkPos([0, 1, 0]);
+    let revision = world.mesh_revision(owner);
+    assert!(revision > 0);
+    assert_eq!(world.mesh_revision(ChunkPos([1, 1, 0])), 0);
+    world
+        .set_block(BlockPos([15, 31, 15]), Block::Leaves)
+        .unwrap();
+    assert_eq!(world.mesh_revision(ChunkPos([1, 1, 0])), world.revision());
+    assert_eq!(world.mesh_revision(ChunkPos([0, 1, 1])), world.revision());
+    assert_eq!(world.mesh_revision(ChunkPos([1, 1, 1])), 0);
+    let latest = world.mesh_revision(owner);
+    assert!(latest > revision);
+    world
+        .set_block(BlockPos([15, 31, 15]), Block::Leaves)
+        .unwrap();
+    assert_eq!(world.mesh_revision(owner), latest);
+    let bytes = encode(&world).unwrap();
+    world.evict_column([0, 0]);
+    assert_eq!(world.mesh_revision(owner), latest);
+    assert_eq!(encode(&world).unwrap(), bytes);
+    assert_eq!(decode(&bytes).unwrap().mesh_revision(owner), 0);
+}
+
+#[test]
+fn cached_remeshing_matches_full_neighbors_at_pending_faces_and_all_axis_seams() {
+    let generator = gen2(42);
+    let mut reference = World::default();
+    for x in -4..4 {
+        for z in -4..4 {
+            for y in -1..2 {
+                let p = ChunkPos([x, y, z]);
+                reference.insert_chunk(p, generator.chunk(p).unwrap());
+            }
+        }
+    }
+    let edits = Arc::new(BTreeMap::from([
+        (BlockPos([-16, 0, -16]), Block::Air),
+        (BlockPos([-17, 0, -16]), Block::Wood),
+        (BlockPos([-16, -1, -16]), Block::Air),
+        (BlockPos([32, 16, 32]), Block::Leaves),
+        (BlockPos([31, 16, 32]), Block::Wood),
+    ]));
+    for (&p, &b) in edits.iter() {
+        reference.apply_cached_edit(p, b);
+    }
+    let targets = BTreeSet::from([
+        ChunkPos([-1, 0, -1]),
+        ChunkPos([-2, 0, -1]),
+        ChunkPos([-1, -1, -1]),
+        ChunkPos([2, 1, 2]),
+    ]);
+    let mut cached = new_world(42);
+    for &p in &targets {
+        cached.insert_chunk(p, reference.chunk(p).unwrap().clone());
+    }
+    let snapshot = mesh_snapshot(&cached, &targets);
+    assert_eq!(snapshot.chunks().count(), targets.len());
+    let batch = remesh_cached(&generator, snapshot, Arc::clone(&edits), targets.clone());
+    assert!(batch.sampled_border_cells > 0);
+    for (p, mesh) in batch.meshes {
+        assert_eq!(mesh, mesh_chunk(&reference, p), "pending halo {p:?}");
+    }
+    let full = mesh_snapshot(&reference, &targets);
+    let batch = remesh_cached(&generator, full, edits, targets);
+    assert_eq!(
+        batch.sampled_border_cells, 0,
+        "resident neighbors must not invoke worldgen"
+    );
+    for (p, mesh) in batch.meshes {
+        assert_eq!(mesh, mesh_chunk(&reference, p));
     }
 }

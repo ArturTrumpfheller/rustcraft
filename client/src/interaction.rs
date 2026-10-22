@@ -69,7 +69,7 @@ fn edit_and_target(
     mut ctx: EditContext,
 ) {
     let old_selection = ctx.editor.selected;
-    let active = ctx.control.active && ctx.cameras.single().is_ok();
+    let active = ctx.control.active && !ctx.player.awaiting_spawn && ctx.cameras.single().is_ok();
     if active {
         for (key, slot) in [
             (KeyCode::Digit1, 1),

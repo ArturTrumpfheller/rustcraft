@@ -1,6 +1,136 @@
 # RustCraft validation
 
-## Slice 6 — safe bounded streaming, expanded worlds and edit persistence
+## Slice 6 — PR #12 native-review corrections
+
+The owner's first native Void test confirmed streaming, timely terrain loading,
+edit retention on revisit and F5/autosave/restart. Three reported problems were
+reproduced against `061469f`, then corrected on the existing
+`feat/slice-6-chunk-streaming` branch. No generator, extent, texture, dependency,
+lockfile, engine feature or save-byte contract changed. Issue #13 remains separate.
+
+### Reproductions and causes
+
+1. **Distant spawn island:** `desired` unconditionally inserted [0,0], and the same
+   set controlled CPU and render residency. A regression that moves to [3,3] at
+   radius 1 failed because the origin chunk and meshes remained. The origin now
+   uses ordinary eviction. R/void requests it again, waits above the finite world
+   with physics/interaction disabled, then searches actual edited spawn ground.
+   Both interpolation positions reset together. No persistent pin or clipping fix.
+2. **Diagonal jitter:** collision clips with 1e-8 open contact intervals, but
+   `fits_in_world` previously tested exact overlap. At x=2.3 the reconstructed
+   AABB minimum is 1.9999999999999998. The streamed player adapter misclassified
+   legal face contact as penetration and ran clearance recovery every few ticks.
+   The actual ECS/camera reproduction backtracked at tick 26 from [2.3,1,0.7] to
+   [2.4891969797,1,0.5108030203]. Clearance now uses the same contact tolerance.
+   Camera interpolation was exposing the corrective teleports; its interpolation
+   algorithm and Y/X/Z sweep order did not need changing. Meaningful penetration,
+   wall sliding, jumping, ceilings and high-speed sweeps remain tested.
+3. **Mining load and incorrect transient faces:** dirty chunks became whole-column
+   regeneration jobs; any global world edit rejected every running result, and
+   opposite dirty sides of a seam could install in separate frames. New loads
+   still generate deterministic columns, but edits snapshot cached targets/face
+   neighbors and remesh only dirty chunks. Missing halo cells alone are sampled.
+   Local mesh tokens cover owner and affected face-neighbors, survive eviction and
+   are independent of global save revisions. Connected dirty targets coalesce and
+   publish together after whole-batch validation; stale batches preserve newer
+   invalidations. Nearest dirty components precede new loads. Center movement can
+   no longer cause a second generation of a just-installed in-flight column.
+
+### Checks and targeted coverage
+
+`cargo fmt --all -- --check`,
+`cargo clippy --locked --workspace --all-targets -- -D warnings`,
+`cargo test --locked --workspace`, and `cargo build --locked --workspace`.
+
+**132 tests passed (79 core + 53 client), none failed or ignored.** New regressions
+cover the failing camera trajectory, 48 signed/oriented/elevated diagonal corner
+arrangements with prolonged rest and jumps, real versus numerical penetration,
+origin CPU/mesh/asset eviction, R and void reload of edited spawn, frozen waiting
+and suppressed editing, local versus unrelated invalidation, all-axis cached
+versus full-neighbor meshes at pending seams, channel-controlled stale batch
+rejection, coalescing 256 edits into one two-chunk batch, dirty/load priority,
+center-change duplicate loads, surface mining and resource stability. Historical
+v1/v2 fixtures, v3 overlays, generation goldens, corruption/failure injection,
+save/evict/restart and previous gameplay tests all remain passing.
+
+### Reproducible before/after CPU measurements
+
+Debian 13 glibc, Rust 1.99.1, Bevy 0.20.0, **debug builds**, seed 42, radius 1.
+The old version was built from an isolated source copy of `061469f`, with the same
+`surface_seam_mining_metrics` test function added solely as a measurement harness.
+Local packages were cleaned between source trees to prevent shared-target mtime
+cache reuse. Measurements exclude Cargo compilation and initial cache loading;
+these are single paired observations, not statistical/native GPU guarantees.
+
+Run current harnesses separately (without competing builds/graphics):
+
+```sh
+cargo test --locked -p rustcraft surface_seam_mining_metrics -- --nocapture
+cargo test --locked -p rustcraft repeated_seam_mining_workload -- --nocapture
+cargo test --locked -p rustcraft moving_radius_releases -- --nocapture
+```
+
+| Workload / metric | Before | After |
+| --- | --- | --- |
+| 128 surface changes: 16 break/restore cycles of x=14..17, z=8 at each column's surface; drain after each group of four edits | 1.932 s; 64 regenerated/meshed columns | 0.239 s; 32 atomic mesh batches; no complete chunk regeneration |
+| Slowest worker in that surface workload, startup excluded | 57.59 ms | 7.66 ms |
+| Main-thread headless `App::update` p50 / p95 / maximum, including dispatch and install polls | 0.178 / 0.268 / 1.100 ms (1,564 samples) | 0.237 / 0.391 / 0.628 ms (205 samples) |
+| Final terrain buffer bytes, same surface workload | 1,909,736 | 1,909,736 |
+| 128 sparse Wood/Air changes at y=25, same seam/groups | 1.845 s; 64 regenerated columns | 0.053 s; 32 batches / 64 mesh targets; zero regenerated columns |
+| Radius-1 seven-center tour / two edits (historical initial comparison) | 2.92 s; peak 30 chunks including spawn pin | 1.59 s; peak 27 chunks; 55 accepted results, zero discards |
+
+The small main-thread p95 increase reflects neighborhood snapshots instead of
+only an overlay Arc; expensive generation/meshing remains off-thread. The sparse
+workload samples just one pending outer face (256 cells) per batch; a fully cached
+neighborhood samples zero generator cells. No absolute timing assertions gate CI.
+
+### Graphical stress and memory observations
+
+Actual client on Xvfb X11 / Mesa 25.0.7 llvmpipe Vulkan, backend selected only for
+the test process. Both comparison runs used 640×360 windows, `LP_NUM_THREADS=4`,
+radius 1 and the same original disposable v3 platform/wall fixture. XTest issued
+64 alternating break/place cycles at a chunk seam (128 operations). Two preliminary
+operations validated the ray/save, then logs confirmed save revision 2 → 130,
+so all 128 stress operations were applied. Both final files exactly matched the
+original fixture bytes, and settled before/after screenshots were pixel-identical.
+The current version also passed another 128-operation run with changing mouse aim
+across multiple wall blocks; inspected hole screenshots showed the exposed faces.
+Capture, look, F5/HUD, release and normal close worked. A separate edited-bridge travel fixture confirmed distant residency dropping to 18 chunks with no spawn pin, R returning to 27 chunks, then automatic void recovery after walking off the finite edge. Its save bytes stayed unchanged; screenshots of distant origin eviction and edited-spawn return were inspected. Test screenshots, fixtures,
+source copies, logs and scripts are outside the repository and are not committed.
+
+- Current fixed-target run: eight initial generated columns, then **no regenerated
+  columns**, 256 mesh targets for 128 edits, **zero discarded jobs**. Summed worker
+  wall time for the stress segment was ~183 ms. The resource set stayed at 27
+  chunks / 23 terrain meshes; voxel payload 110,592 bytes and restored logical
+  terrain buffers 1,971,192 bytes. Headless tests separately assert exact mesh
+  asset/entity counts through empty/refill and travel cycles.
+- Current rolling frame-interval p95 at the end: ~24.1 ms (128 samples). Lifetime
+  install maximum ~0.097 ms, streaming-system maximum ~0.305 ms; the changing-aim
+  run had a ~4.45 ms system maximum and ~26.8 ms final frame p95. Lifetime dirty
+  latency maxima (~100/120 ms) include cold startup. These are software-renderer
+  frame intervals, not GPU execution timestamps or a desktop FPS promise.
+- Process CPU during the fixed-target sequence: **24.79 CPU-seconds / 10.34 wall
+  seconds before**, **25.94 / 10.33 after** (~240% / 251% of one core). Overall
+  software-renderer CPU did **not** decrease; rendering/driver work and frame
+  throughput dominate this measurement. The worker savings do not establish a
+  native GPU/fan-load improvement. No GPU-only profiler was available.
+- Sampled RSS before → after the sequence: old 410,628 → 411,112 KiB; new
+  415,000 → 415,276 KiB. The additional changing-aim run stayed 416,464 → 416,468
+  KiB. Counts/buffers return to their initial state and sampled memory plateaus;
+  this is evidence against a per-edit resource leak, not proof of all driver/VRAM
+  behavior. Values include Bevy, Mesa/LLVM and shader caches, not only voxels.
+
+### Limits and safe native retest
+
+Use the [isolated Void procedure](PLATFORMS.md#pr-12-native-review-retest), retaining
+one absolute `RUSTCRAFT_DATA_DIR` for restarts and a fresh directory per seed.
+Native Void X11/Wayland and Windows GUI retesting, physical GPU profiling, dense
+edit-overlay copy-on-write and very large connected bulk edits remain unverified.
+Legacy v1/v2 semantics and save replacement/backup/lock guarantees are unchanged.
+This still is finite streaming, with no new textures, automatic migration, region
+files, infinite extent or per-click crash journal.
+
+## Initial Slice 6 — before native-review corrections
 
 Validated locally on 2026-10-22, starting from latest `main` at `49023f7` after PR #10. Debian 13 glibc x86-64, Rust 1.99.1 / Bevy 0.20.0. The owner confirmed slices 1–5 on Void. This is a bounded streaming implementation, not an infinite-world claim or a native Void/Windows benchmark.
 

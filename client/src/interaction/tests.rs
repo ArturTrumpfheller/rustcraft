@@ -120,6 +120,22 @@ fn capture_click_does_not_edit_then_repeated_clicks_break_and_place_selected_blo
 }
 
 #[test]
+fn pending_respawn_suppresses_targeting_and_edits_until_clearance_is_resolved() {
+    let mut app = app();
+    prepare_target(&mut app);
+    click(&mut app, MouseButton::Left);
+    let before = world(&app).clone();
+    app.world_mut().resource_mut::<PlayerState>().awaiting_spawn = true;
+    click(&mut app, MouseButton::Left);
+    click(&mut app, MouseButton::Right);
+    assert_eq!(world(&app), &before);
+    assert!(app.world().resource::<Editor>().target.is_none());
+    app.world_mut().resource_mut::<PlayerState>().awaiting_spawn = false;
+    click(&mut app, MouseButton::Left);
+    assert_eq!(world(&app).block(aim_block()), Block::Air);
+}
+
+#[test]
 fn focus_release_missing_camera_and_reset_frames_never_edit() {
     let mut app = app();
     prepare_target(&mut app);
