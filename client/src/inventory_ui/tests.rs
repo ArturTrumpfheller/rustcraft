@@ -351,10 +351,17 @@ fn retained_ui_reuses_four_meshes_one_atlas_and_two_materials_across_idle_and_mo
         key(&mut app, KeyCode::KeyE);
         key(&mut app, KeyCode::KeyE);
     }
+    let modal = t.elapsed();
+    let closed = ui_bytes(&app);
+    key(&mut app, KeyCode::KeyE);
+    let open = ui_bytes(&app);
+    let mut full = Inventory::empty();
+    full.insert(Item::Dirt, 36 * 64);
+    app.world_mut().resource_mut::<GameInventory>().contents = full;
+    frame(&mut app);
+    let full_bytes = ui_bytes(&app);
     println!(
-        "INVENTORY_UI idle_1000={idle:?} modal_60={:?} mesh_assets={m} materials={materials} images={image} rebuilds={}",
-        t.elapsed(),
-        app.world().resource::<UiAssets>().rebuilds - rebuilds
+        "INVENTORY_UI idle_1000={idle:?} modal_60={modal:?} mesh_assets={m} materials={materials} images={image} closed_bytes={closed} open_bytes={open} full_bytes={full_bytes}"
     );
     assert_eq!(app.world().resource::<Assets<Mesh>>().len(), m);
     assert_eq!(
@@ -489,4 +496,47 @@ fn moving_a_held_stack_changes_only_its_transform_not_mesh_or_image_assets() {
         *app.world().get::<Visibility>(cursor).unwrap(),
         Visibility::Hidden
     );
+}
+
+fn ui_bytes(app: &App) -> usize {
+    let w = app.world();
+    w.resource::<UiAssets>()
+        .meshes
+        .iter()
+        .map(|h| {
+            let m = w.resource::<Assets<Mesh>>().get(h).unwrap();
+            m.count_vertices()
+                * if m.attribute(Mesh::ATTRIBUTE_COLOR).is_some() {
+                    40
+                } else {
+                    32
+                }
+                + m.indices().map_or(0, |i| i.len() * 4)
+        })
+        .sum()
+}
+
+#[test]
+fn repeated_real_input_break_place_cycles_conserve_items_and_reuse_render_assets() {
+    let (_dir, mut app) = app();
+    click(&mut app, MouseButton::Left);
+    key(&mut app, KeyCode::Digit3);
+    let items = total(&app, Item::Stone);
+    let meshes = app.world().resource::<Assets<Mesh>>().len();
+    for _ in 0..64 {
+        click(&mut app, MouseButton::Left);
+        assert_eq!(total(&app, Item::Stone), items + 1);
+        click(&mut app, MouseButton::Right);
+        assert_eq!(total(&app, Item::Stone), items);
+        assert_eq!(
+            app.world()
+                .resource::<VoxelWorld>()
+                .0
+                .block(BlockPos([0, 5, 7])),
+            Block::Stone
+        );
+    }
+    save(&mut app);
+    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), meshes);
+    assert_eq!(app.world().resource::<Assets<Image>>().len(), 1);
 }

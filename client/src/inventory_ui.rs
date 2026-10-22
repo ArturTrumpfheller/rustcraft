@@ -303,6 +303,7 @@ struct CursorRoot;
 #[derive(Resource)]
 struct UiAssets {
     meshes: [Handle<Mesh>; 4],
+    entities: [Entity; 4],
     root: Entity,
     cursor: Entity,
     last: Option<(u64, bool, [u32; 2], &'static str)>,
@@ -332,8 +333,15 @@ fn setup(
         unlit: true,
         ..default()
     });
-    let handles: [Handle<Mesh>; 4] =
-        std::array::from_fn(|i| meshes.add(Batch::default().mesh(i % 2 == 1)));
+    let handles: [Handle<Mesh>; 4] = std::array::from_fn(|i| {
+        let mut b = Batch::default();
+        if i % 2 == 1 {
+            b.icon(Vec2::ZERO, Item::Stone);
+        } else {
+            b.rect(Vec2::ZERO, Vec2::ONE, 0., [1.; 4]);
+        }
+        meshes.add(b.mesh(i % 2 == 1))
+    });
     let root = commands
         .spawn((
             UiRoot,
@@ -346,6 +354,7 @@ fn setup(
         .id();
     commands.entity(camera).add_child(root);
     commands.entity(root).add_child(cursor);
+    let mut entities = Vec::new();
     for (i, h) in handles.iter().enumerate() {
         let e = commands
             .spawn((
@@ -356,14 +365,17 @@ fn setup(
                     icon.clone()
                 }),
                 NoFrustumCulling,
+                Visibility::Hidden,
             ))
             .id();
+        entities.push(e);
         commands
             .entity(if i < 2 { root } else { cursor })
             .add_child(e);
     }
     commands.insert_resource(UiAssets {
         meshes: handles,
+        entities: entities.try_into().unwrap(),
         root,
         cursor,
         last: None,
@@ -506,7 +518,19 @@ fn draw(
         held_text.count(Vec2::ZERO, s.count());
     }
     for (i, b) in [flat, icons, held_text, held_icon].into_iter().enumerate() {
-        *meshes.get_mut(&assets.meshes[i]).unwrap() = b.mesh(i % 2 == 1);
+        let empty = b.positions.is_empty();
+        if let Ok(mut v) = visibility.get_mut(assets.entities[i]) {
+            *v = if empty {
+                Visibility::Hidden
+            } else {
+                Visibility::Inherited
+            };
+        }
+        // Keep a bounded valid cached buffer while hidden; never upload empty
+        // meshes (the renderer otherwise repeatedly warns during UI transitions).
+        if !empty {
+            *meshes.get_mut(&assets.meshes[i]).unwrap() = b.mesh(i % 2 == 1);
+        }
     }
 }
 
