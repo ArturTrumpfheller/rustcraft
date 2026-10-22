@@ -163,28 +163,17 @@ fn spawn_scene(
             continue;
         };
         let surface = voxel_core::mesh_chunk_lit(&world.0, position, light);
-        if world.0.identity().is_some() {
-            upsert_stream_mesh(
-                &mut commands,
-                &mut meshes,
-                &mut renders,
-                position,
-                surface,
-                &material,
-                &origin,
-            );
-        } else {
-            upsert_chunk(
-                &mut commands,
-                &mut meshes,
-                &mut renders,
-                position,
-                surface,
-                &material,
-                &origin,
-            );
-        }
+        upsert_chunk(
+            &mut commands,
+            &mut meshes,
+            &mut renders,
+            position,
+            surface,
+            &material,
+            &origin,
+        );
     }
+
     commands.insert_resource(TerrainMaterial(material));
     commands.insert_resource(GlobalAmbientLight {
         color: Color::WHITE,
@@ -192,8 +181,9 @@ fn spawn_scene(
         ..default()
     });
     info!(
-        "RustCraft slice 10: {} restored/generated chunk meshes built in {:?}",
+        "RustCraft slice 10: {} prepared chunks, {} initial meshes in {:?}",
         world.0.chunks().count(),
+        renders.0.len(),
         started.elapsed()
     );
 }

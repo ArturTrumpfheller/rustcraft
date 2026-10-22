@@ -33,7 +33,8 @@ I/O failure leaves old visuals/pending barriers and exposes the existing error.
 
 The existing single terrain worker owns streamed generation, light and meshing.
 A process-local cache reuses pristine generated columns for missing neighbors;
-each request applies its captured overlay to disposable copies. This cache never
+each request applies its captured overlay to disposable copies. Cache identity
+includes seed and generator version; reuse with another generator resets it. This cache never
 contains player edits and can safely survive a stale result. It is pruned to the
 current desired footprint plus one-column halo, at most 81 columns at radius3.
 Resident authoritative blocks are copied rather than regenerated during editing.

@@ -44,6 +44,7 @@ pub struct LightMetrics {
 }
 #[derive(Default)]
 pub struct TerrainCache {
+    identity: Option<GenerationConfig>,
     columns: BTreeMap<Column, [Chunk; 3]>,
 }
 impl TerrainCache {
@@ -197,6 +198,10 @@ fn lit_source(
     targets: &BTreeSet<ChunkPos>,
     cache: &mut TerrainCache,
 ) -> (World, usize) {
+    if cache.identity != Some(generator.config()) {
+        cache.columns.clear();
+        cache.identity = Some(generator.config());
+    }
     let mut generated = 0;
     let limit = generator.chunk_limit();
     for c in crate::lighting::source_columns(targets) {

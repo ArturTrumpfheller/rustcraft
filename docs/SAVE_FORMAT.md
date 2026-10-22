@@ -280,3 +280,13 @@ Windows directory-sync and filesystem/hardware limits described above still appl
 checksums/nonce are validation, not cryptographic authenticity. Dense captures can
 require tens of MiB of bounded temporary encoding and journal disk I/O. See
 INVENTORY and VALIDATION for behavior, injected-failure tests and measurements.
+
+## Derived skylight (Slice 10)
+
+Skylight/face colors, pristine generation cache, chunk light samples and dependency
+tokens are reconstructed from authoritative blocks and overlays. They are never
+serialized into world v1–v4, regions, player/identity or session journal files.
+Initial inventory, paired saving/replay, checksums and recovery rules above remain
+unchanged. Lighting cannot grant/consume items or change blocks. Tests compare
+legacy/v3/v4 bytes and reconstruct identical edited-world lighting after paired
+v1/v2/v3/v4 save/restart, including distant regional edits. See LIGHTING/VALIDATION.

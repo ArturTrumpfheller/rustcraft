@@ -264,6 +264,25 @@ fn light_batches_skip_unchanged_meshes_and_reuse_pristine_halo_generation() {
     assert!(second.meshes.is_empty());
     assert_eq!(second.lighting.generated_columns, 0);
     assert_eq!(cache.columns(), 9);
+    let other = Generator::new(GenerationConfig {
+        seed: 43,
+        version: 3,
+    })
+    .unwrap();
+    let rebuilt = build_column_cached(
+        &other,
+        World::default(),
+        Default::default(),
+        [0, 0],
+        0,
+        &mut cache,
+    );
+    let reference = build_column(&other, crate::regions::EditSnapshot::default(), [0, 0], 0);
+    assert_eq!(
+        rebuilt.lighting.generated_columns, 9,
+        "changing seed must invalidate pristine cache"
+    );
+    assert_eq!(rebuilt.chunks, reference.chunks);
     cache.retain(&BTreeSet::from([[1000, -1000]]));
     assert_eq!(cache.columns(), 0);
 }

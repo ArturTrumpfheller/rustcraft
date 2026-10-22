@@ -2,7 +2,7 @@
 
 Project-created code and documentation are **MIT OR Apache-2.0**, at the recipient's option. See the root LICENSE-MIT and LICENSE-APACHE files. This does not relicense dependencies or separately licensed artwork.
 
-## Direct dependencies (slice 9; unchanged from slice 4)
+## Direct dependencies (slice 10; unchanged from slice 4)
 
 | Component | Version | Upstream | SPDX license | Notices / use |
 | --- | --- | --- | --- | --- |
@@ -88,3 +88,12 @@ crate, dependency graph, toolchain or engine-feature changes were introduced.
 `docs/images/slice9-inventory.png` is an actual X11/software-rendered screenshot
 of this original code/art, under the same project licenses. Platform decorations
 and engine shaders retain their upstream licenses. No proprietary UI assets used.
+
+## Slice 10 skylight
+
+Light solver, worker/cache/invalidation, modulation factors, tests and documents
+are original RustCraft code, MIT OR Apache-2.0. Screenshots
+`docs/images/slice10-cave-closed.png` and `slice10-cave-open.png` show an original
+software-rendered test tunnel using our existing atlas/UI under the same license.
+No new images used by the game, external assets, fonts, shaders, dependencies or
+feature/toolchain changes. Bitmap UI and terrain art retain Slice8/9 provenance.

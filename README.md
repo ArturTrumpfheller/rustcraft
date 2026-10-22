@@ -9,6 +9,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Deterministic seeded terrain, rolling hills/valleys, a walkable cave network with surface entrance, and blocky trees.
 - 16³ chunks streamed in a **65,536×65,536×48** new-world rollout with local generation and regional saves; configurable load radius, bounded background generation/meshing and cache eviction.
 - Seven original 16×16 pixel textures for grass, dirt, stone, bark, end-grain and opaque leaves, using one shared nearest-filtered atlas.
+- Derived 0–15 voxel skylight: dark roofs/caves, gradual entrance falloff and background updates after edits.
 - At most one surface mesh per rendered chunk; faces shared by solid blocks are removed, including at chunk boundaries.
 - Mouse look, yaw-relative WASD walking, sprinting, grounded jumping and safe respawn.
 - Fixed 60-Hz engine-independent AABB physics, wall sliding and interpolated camera movement.
@@ -19,7 +20,28 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 9**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 10**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+
+## Voxel skylight
+
+Open vertical sky supplies level15; solid blocks, including leaves, occlude it.
+Scattered light loses one per step. Roofs and caves are darker; mining openings
+lets light enter and sealing them removes it again. A small cave brightness floor
+keeps textures recognizable. Flat face shading retains the retro look; there is
+no AO, day/night cycle, torch/block light or modern shadow-map effect yet.
+
+![Closed original test tunnel](docs/images/slice10-cave-closed.png)
+
+![Same tunnel with one roof block removed](docs/images/slice10-cave-open.png)
+
+Lighting is derived from actual blocks in a bounded full-height neighborhood,
+computed with meshing on a worker. Unknown regional data never becomes luminous
+Air. Cached exact light samples avoid rebuilding unchanged meshes; old complete
+meshes remain until a coherent replacement is ready. World/player save formats
+and frozen generators are unchanged. See [lighting contract](docs/LIGHTING.md)
+and [CPU, RAM, mesh and frame measurements](docs/VALIDATION.md). Lighting adds
+CPU work and 42.1% terrain vertex/index payload; the unlit material removes the
+old global light washout. Native GPU performance still needs acceptance.
 
 ## Inventory and hotbar
 
@@ -46,8 +68,8 @@ standard-library generator are **MIT OR Apache-2.0**: [asset provenance](assets/
 
 A single embedded 128×64 sRGB atlas/material serves all chunks, with eight texels
 of extruded padding per tile, nearest sampling and one mip. Chunk meshes retain
-face culling and async updates; UVs replace terrain vertex colors (32 instead of
-40 bytes/vertex). Inventory icons share that image. Intentional distant pixel shimmer is
+face culling and async updates; UVs retain their original layout and derived
+RGBA light modulation uses a 48-byte terrain vertex. Inventory icons share that image. Intentional distant pixel shimmer is
 a consequence of nearest LOD0 sampling. See [texture contract](docs/TEXTURES.md)
 and [measurements/limits](docs/VALIDATION.md).
 
@@ -116,7 +138,7 @@ Movement speed is independent of diagonal input. Mouse sensitivity does not depe
 
 `RUSTCRAFT_WORLD_SEED` accepts a decimal unsigned 64-bit integer (0 through 18446744073709551615). The deterministic default is **2026**. New regional worlds use **generator version 3**, saved as part of their identity. Generators v1/v2 remain frozen for existing identities; existing worlds never select a new generator. It is read **only when no primary or backup exists**; changing it never changes a loaded world. Invalid seeds stop creation with a clear error. To explore another seed, use a different, preferably fresh absolute `RUSTCRAFT_DATA_DIR`; never delete your real save to switch seeds.
 
-Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, transparency, water, biomes, ore distribution or lighting propagation. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
+Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, transparency, water, biomes, ore distribution or emitted block light. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
 
 New v4 worlds save **seed + generator version + world identity** in a manifest and all edits in regional overlays, including explicit Air. Unmodified chunks reproduce locally from that identity. Loaded chunks and clean region maps are disposable caches; unsaved region maps remain pinned in RAM until successfully saved. v1/v2 saves remain full snapshots with no seed metadata and never gain generated terrain. The [generation contract](docs/WORLDGEN.md) explains deterministic arithmetic, limits and future extension.
 
@@ -199,8 +221,8 @@ Use a fresh directory and keep this shell/path for restarts:
 
 ```fish
 git fetch origin
-git switch feat/slice-9-inventory-hotbar
-set test_dir (mktemp -d /tmp/rustcraft-slice9.XXXXXX)
+git switch feat/slice-10-voxel-lighting
+set test_dir (mktemp -d /tmp/rustcraft-slice10.XXXXXX)
 env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_WORLD_SEED=42 RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
 ```
 
@@ -209,6 +231,10 @@ After normal close, reuse that same directory at a distant position:
 ```fish
 env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_START_CHUNK="1000,-1000" RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
 ```
+
+Explore a cave (entrance near X=-10/Z=20), compare open sky with tree canopies
+and a closed roof, then mine/replace roof blocks. Check gradual falloff and
+lighting across chunk seams. E/inventory, hotbar and save feedback remain bright.
 
 Before restarting, try E, left/right/Shift-click transfers, 1–9 and the wheel.
 Save with F5, wait for SAVED, then close normally. Check the same stacks and
@@ -220,7 +246,7 @@ chunk and region seams, travel away and return before saving, then F5 and wait f
 `SAVED`. Close and repeat the same distant-start command to check restoration.
 R returns to origin; repeat with `-1000,1000` and a different **fresh directory**
 for another seed. Existing saves ignore seed overrides. These explicit test paths
-do not touch normal saves. See [native acceptance](docs/PLATFORMS.md#slice-9-inventory-test-fish).
+do not touch normal saves. See [native acceptance](docs/PLATFORMS.md#slice-10-lighting-test-fish).
 
 ## Development checks
 
@@ -235,7 +261,7 @@ Run only the engine-independent voxel and physics tests with `cargo test --locke
 
 The [validation report](docs/VALIDATION.md) records the executed checks and remaining platform coverage.
 
-[Manual acceptance checks](docs/PLATFORMS.md#slice-9-inventory-test-fish) cover save/restart, inventory, the visible scene, pointer capture/release, focus changes and platform behavior. CI checks Linux and Windows compilation, formatting, Clippy and unit tests; it does not establish GUI compatibility on Void or Windows.
+[Manual acceptance checks](docs/PLATFORMS.md#slice-10-lighting-test-fish) cover save/restart, inventory, the visible scene, pointer capture/release, focus changes and platform behavior. CI checks Linux and Windows compilation, formatting, Clippy and unit tests; it does not establish GUI compatibility on Void or Windows.
 
 ## Licensing and development policy
 

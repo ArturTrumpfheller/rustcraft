@@ -32,7 +32,7 @@ rather than regenerating. An absent region without a backup means unedited terra
 Rendering uses a floating origin; physics and targeting keep f64 world positions.
 The supported 65,536-block extent is a deliberate rollout, not literal infinity.
 The 48-block vertical range and modest radius remain unchanged. There are no new
-textures, biomes, water, ore systems, growing trees or new lighting features.
+textures, biomes, water, ore systems, growing trees or generator-owned lighting fields. Derived Slice-10 skylight is reconstructed separately (LIGHTING).
 
 ## Historical frozen generators
 
