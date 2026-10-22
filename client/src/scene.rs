@@ -1,9 +1,9 @@
 use bevy::{
-    asset::RenderAssetUsages, camera::primitives::Aabb, mesh::Indices, prelude::*,
-    render::render_resource::PrimitiveTopology,
+    asset::RenderAssetUsages, camera::primitives::Aabb, ecs::system::SystemParam, mesh::Indices,
+    prelude::*, render::render_resource::PrimitiveTopology,
 };
 use std::collections::{BTreeMap, BTreeSet};
-use voxel_core::{CHUNK_SIZE, ChunkPos, World, demo_world, mesh_chunk};
+use voxel_core::{CHUNK_SIZE, ChunkPos, World, demo_world};
 
 pub struct VoxelScenePlugin;
 #[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -21,7 +21,14 @@ impl Default for VoxelWorld {
 }
 
 #[derive(Resource, Default)]
-pub(crate) struct DirtyChunks(pub BTreeSet<ChunkPos>);
+pub(crate) struct DirtyChunks(pub BTreeSet<ChunkPos>, pub BTreeSet<ChunkPos>);
+impl DirtyChunks {
+    pub fn mark(&mut self, change: voxel_core::BlockChange) {
+        self.0.extend(change.affected_chunks());
+        self.1
+            .extend(voxel_core::lighting::affected(change.position));
+    }
+}
 
 #[derive(Resource, Default)]
 pub(crate) struct ChunkRenders(pub BTreeMap<ChunkPos, ChunkRender>);
@@ -38,6 +45,7 @@ impl Plugin for VoxelScenePlugin {
             .init_resource::<Assets<Image>>()
             .init_resource::<RenderOrigin>()
             .init_resource::<DirtyChunks>()
+            .init_resource::<LegacyMeshing>()
             .init_resource::<ChunkRenders>()
             .add_systems(Startup, spawn_scene.in_set(SceneSetup))
             .add_systems(Update, rebuild_dirty_chunks);
@@ -58,6 +66,7 @@ fn convert_mesh(surface: voxel_core::ChunkMesh) -> (Mesh, Visibility) {
     .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, surface.positions)
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, surface.normals)
     .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, surface.uvs)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, surface.colors)
     .with_inserted_indices(Indices::U32(surface.indices));
     (mesh, visibility)
 }
@@ -135,10 +144,25 @@ fn spawn_scene(
         base_color: Color::WHITE,
         base_color_texture: Some(images.add(crate::terrain_texture::atlas_image())),
         perceptual_roughness: 1.0,
+        unlit: true,
         ..default()
     });
+    let initial_targets: BTreeSet<_> = world.0.chunks().map(|(p, _)| p).collect();
+    let initial_light = if world.0.identity().is_none() && !initial_targets.is_empty() {
+        Some(voxel_core::lighting::Skylight::for_chunks(
+            &world.0,
+            &initial_targets,
+        ))
+    } else {
+        None
+    };
     for (position, _) in world.0.chunks() {
-        let surface = mesh_chunk(&world.0, position);
+        // Streamed startup is published only after an authoritative lit halo is
+        // available from the worker, avoiding a temporary pending-data light pass.
+        let Some(light) = &initial_light else {
+            continue;
+        };
+        let surface = voxel_core::mesh_chunk_lit(&world.0, position, light);
         if world.0.identity().is_some() {
             upsert_stream_mesh(
                 &mut commands,
@@ -164,46 +188,107 @@ fn spawn_scene(
     commands.insert_resource(TerrainMaterial(material));
     commands.insert_resource(GlobalAmbientLight {
         color: Color::WHITE,
-        brightness: 400.0,
+        brightness: 0.0,
         ..default()
     });
-    commands.spawn((
-        DirectionalLight {
-            illuminance: 12_000.0,
-            ..default()
-        },
-        Transform::from_xyz(-12.0, 24.0, 12.0).looking_at(Vec3::ZERO, Vec3::Y),
-    ));
     info!(
-        "RustCraft slice 9: {} restored/generated chunk meshes built in {:?}",
+        "RustCraft slice 10: {} restored/generated chunk meshes built in {:?}",
         world.0.chunks().count(),
         started.elapsed()
     );
 }
 
+struct LegacyJob {
+    revision: u64,
+    handle: std::thread::JoinHandle<Vec<(ChunkPos, voxel_core::ChunkMesh)>>,
+}
+#[derive(Resource, Default)]
+pub(crate) struct LegacyMeshing {
+    job: Option<LegacyJob>,
+}
+impl LegacyMeshing {
+    #[cfg(test)]
+    pub(crate) fn pending(&self) -> bool {
+        self.job.is_some()
+    }
+}
+impl Drop for LegacyMeshing {
+    fn drop(&mut self) {
+        if let Some(job) = self.job.take() {
+            let _ = job.handle.join();
+        }
+    }
+}
+#[derive(SystemParam)]
+struct TerrainWrites<'w, 's> {
+    commands: Commands<'w, 's>,
+    renders: ResMut<'w, ChunkRenders>,
+    meshes: ResMut<'w, Assets<Mesh>>,
+    material: Res<'w, TerrainMaterial>,
+    origin: Res<'w, RenderOrigin>,
+}
 fn rebuild_dirty_chunks(
-    mut commands: Commands,
     world: Res<VoxelWorld>,
     mut dirty: ResMut<DirtyChunks>,
-    mut renders: ResMut<ChunkRenders>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    material: Res<TerrainMaterial>,
-    origin: Res<RenderOrigin>,
+    mut scene: TerrainWrites,
+    mut legacy: ResMut<LegacyMeshing>,
 ) {
     if world.0.identity().is_some() {
         return;
-    } // Stream worker owns generation/meshing.
-    while let Some(position) = dirty.0.pop_first() {
-        if world.0.chunk(position).is_some() {
-            upsert_chunk(
-                &mut commands,
-                &mut meshes,
-                &mut renders,
-                position,
-                mesh_chunk(&world.0, position),
-                &material.0,
-                &origin,
-            );
+    }
+    if legacy.job.as_ref().is_some_and(|j| j.handle.is_finished()) {
+        let job = legacy.job.take().unwrap();
+        let revision = job.revision;
+        match job.handle.join() {
+            Ok(batch) if world.0.revision() == revision => {
+                for (p, m) in batch {
+                    upsert_chunk(
+                        &mut scene.commands,
+                        &mut scene.meshes,
+                        &mut scene.renders,
+                        p,
+                        m,
+                        &scene.material.0,
+                        &scene.origin,
+                    );
+                }
+                dirty.0.clear();
+                dirty.1.clear();
+            }
+            Ok(_) => {}
+            Err(_) => warn!("Legacy lighting worker stopped; retaining dirty meshes for retry"),
+        }
+    }
+    if legacy.job.is_none() && (!dirty.0.is_empty() || !dirty.1.is_empty()) {
+        let targets: BTreeSet<_> = dirty
+            .0
+            .union(&dirty.1)
+            .filter(|p| world.0.chunk(**p).is_some())
+            .copied()
+            .collect();
+        if targets.is_empty() {
+            dirty.0.clear();
+            dirty.1.clear();
+            return;
+        }
+        let snapshot = world.0.clone();
+        let revision = world.0.revision();
+        match std::thread::Builder::new()
+            .name("rustcraft-legacy-light".into())
+            .spawn(move || {
+                let light = voxel_core::lighting::Skylight::for_chunks(&snapshot, &targets);
+                targets
+                    .into_iter()
+                    .map(|p| (p, voxel_core::mesh_chunk_lit(&snapshot, p, &light)))
+                    .collect()
+            }) {
+            Ok(job) => {
+                legacy.job = Some(LegacyJob {
+                    revision,
+                    handle: job,
+                })
+            }
+            Err(e) => warn!("Could not start legacy lighting worker: {e}"),
         }
     }
 }

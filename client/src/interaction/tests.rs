@@ -19,6 +19,16 @@ fn frame(app: &mut App) {
     app.world_mut()
         .resource_mut::<AccumulatedMouseMotion>()
         .delta = Vec2::ZERO;
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    while app
+        .world()
+        .resource::<crate::scene::LegacyMeshing>()
+        .pending()
+    {
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(1));
+        app.update();
+    }
 }
 fn click(app: &mut App, button: MouseButton) {
     app.world_mut()
@@ -73,10 +83,7 @@ fn prepare_target(app: &mut App) {
         .set_block(aim_block(), Block::Stone)
         .unwrap()
         .unwrap();
-    app.world_mut()
-        .resource_mut::<DirtyChunks>()
-        .0
-        .extend(change.affected_chunks());
+    app.world_mut().resource_mut::<DirtyChunks>().mark(change);
     frame(app);
 }
 fn window(app: &mut App) -> Entity {

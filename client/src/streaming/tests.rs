@@ -49,10 +49,7 @@ fn edit(app: &mut App, p: BlockPos, b: Block) {
         .set_block(p, b)
         .unwrap()
         .unwrap();
-    app.world_mut()
-        .resource_mut::<DirtyChunks>()
-        .0
-        .extend(change.affected_chunks());
+    app.world_mut().resource_mut::<DirtyChunks>().mark(change);
 }
 
 fn blocked_column(app: &mut App, column: Column) -> std::sync::mpsc::Sender<()> {
@@ -82,6 +79,7 @@ fn blocked_column(app: &mut App, column: Column) -> std::sync::mpsc::Sender<()> 
                 revision,
             )),
             overlays: edits,
+            cache: streaming::TerrainCache::default(),
         })
     });
     app.world_mut().resource_mut::<StreamState>().job = Some(StreamJob {
@@ -302,11 +300,15 @@ fn repeated_seam_mining_workload() {
         state.generated_columns, generated,
         "mining cached blocks must not regenerate columns"
     );
-    assert_eq!(state.remeshed_chunks - remeshed, 64);
+    assert_eq!(
+        state.remeshed_chunks - remeshed,
+        128,
+        "geometry plus affected shadowed terrain changes"
+    );
     assert_eq!(
         state.sampled_border_cells - sampled,
-        32 * 256,
-        "only one pending outer face per batch needs sampling"
+        0,
+        "warm halo cache must not regenerate full columns during edits"
     );
     assert_eq!(state.mesh_bytes, initial_mesh_bytes);
     assert_eq!(app.world().resource::<Assets<Mesh>>().len(), initial_assets);
@@ -417,6 +419,7 @@ fn newer_seam_edits_reject_the_entire_mesh_batch_then_publish_both_current_faces
         rx.recv().unwrap();
         Ok(JobResult {
             overlays: EditSnapshot::default(),
+            cache: streaming::TerrainCache::default(),
             result: WorkResult::Mesh(streaming::remesh_cached(
                 &generator,
                 snapshot,
@@ -447,8 +450,8 @@ fn newer_seam_edits_reject_the_entire_mesh_batch_then_publish_both_current_faces
     );
     assert_eq!(
         state.dirty.len(),
-        2,
-        "newer invalidations must survive rejection"
+        18,
+        "newer geometry and lighting invalidations must survive rejection"
     );
     drain(&mut app);
     assert_geometry(&app, &targets);
@@ -470,25 +473,25 @@ fn newer_seam_edits_reject_the_entire_mesh_batch_then_publish_both_current_faces
 
 #[test]
 fn dirty_components_coalesce_and_take_priority_over_loads_without_global_invalidation() {
-    let mut app = app(1);
+    let mut app = app(2);
     drain(&mut app);
     let generated = app.world().resource::<StreamState>().generated_columns;
     let discarded = app.world().resource::<StreamState>().discarded;
     let remeshed = app.world().resource::<StreamState>().remeshed_chunks;
-    let tx = blocked_column(&mut app, [-1, -1]);
+    let tx = blocked_column(&mut app, [-2, -2]);
     for n in 0..64 {
         let b = if n % 2 == 0 { Block::Wood } else { Block::Air };
         for x in 14..18 {
             edit(&mut app, BlockPos([x, 25, 8]), b);
         }
         app.update();
-        assert_eq!(app.world().resource::<StreamState>().dirty.len(), 2);
+        assert_eq!(app.world().resource::<StreamState>().dirty.len(), 36);
     }
     tx.send(()).unwrap();
     wait_finished(&app);
     app.update();
     assert!(
-        matches!(&app.world().resource::<StreamState>().job.as_ref().unwrap().work, Work::Mesh(targets) if targets.len() == 2)
+        matches!(&app.world().resource::<StreamState>().job.as_ref().unwrap().work, Work::Mesh(targets) if targets.len() == 36)
     );
     drain(&mut app);
     let state = app.world().resource::<StreamState>();
@@ -1024,7 +1027,10 @@ fn assert_textured_residency(app: &mut App) {
             m.attribute(Mesh::ATTRIBUTE_UV_0).unwrap().len(),
             m.count_vertices()
         );
-        assert!(m.attribute(Mesh::ATTRIBUTE_COLOR).is_none());
+        assert_eq!(
+            m.attribute(Mesh::ATTRIBUTE_COLOR).unwrap().len(),
+            m.count_vertices()
+        );
         assert_eq!(
             w.get::<MeshMaterial3d<StandardMaterial>>(render.entity)
                 .unwrap()

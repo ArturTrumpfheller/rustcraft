@@ -3,6 +3,7 @@
 mod chunk;
 pub mod interaction;
 pub mod inventory;
+pub mod lighting;
 mod mesh;
 pub mod persistence;
 pub mod physics;
@@ -14,5 +15,5 @@ mod world;
 pub mod worldgen;
 
 pub use chunk::{Block, BlockPos, CHUNK_SIZE, Chunk, ChunkPos, LocalPos};
-pub use mesh::{ChunkMesh, mesh_chunk};
+pub use mesh::{ChunkMesh, mesh_chunk, mesh_chunk_lit};
 pub use world::{BlockChange, EDIT_MAX, EDIT_MIN, StreamIdentity, World, demo_world};
