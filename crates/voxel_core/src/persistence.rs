@@ -11,11 +11,15 @@ use std::{
 };
 
 pub const MAGIC: &[u8; 8] = b"RUSTWRLD";
+/// Current legacy full-snapshot writer. Streamed identity/overlays use v3.
 pub const FORMAT_VERSION: u32 = 2;
+pub const STREAM_FORMAT_VERSION: u32 = 3;
 pub const HEADER_SIZE: usize = 24;
 pub const RECORD_SIZE: usize = 14;
 pub const MAX_RECORDS: usize = 64 * 48 * 64;
-pub const MAX_FILE_SIZE: usize = HEADER_SIZE + MAX_RECORDS * RECORD_SIZE;
+pub const MAX_STREAM_RECORDS: usize = 128 * 48 * 128;
+pub const STREAM_HEADER_SIZE: usize = 40;
+pub const MAX_FILE_SIZE: usize = STREAM_HEADER_SIZE + MAX_STREAM_RECORDS * RECORD_SIZE;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FormatError {
@@ -26,6 +30,7 @@ pub enum FormatError {
     Checksum,
     BlockId(u16),
     Coordinates,
+    Identity,
     UnsortedOrDuplicate,
 }
 impl fmt::Display for FormatError {
@@ -50,6 +55,7 @@ fn block_id(block: Block) -> u16 {
 }
 fn stored_block(id: u16, version: u32) -> Result<Block, FormatError> {
     match id {
+        0 if version == STREAM_FORMAT_VERSION => Ok(Block::Air),
         1 => Ok(Block::Grass),
         2 => Ok(Block::Dirt),
         3 => Ok(Block::Stone),
@@ -65,9 +71,37 @@ fn checksum(bytes: &[u8]) -> u32 {
     hash.finalize()
 }
 
-/// Canonical sparse non-air records representing a FULL world, not an overlay.
-/// Missing records mean Air even where the original demo used to have solids.
+/// Canonical mode-specific save: legacy full non-Air snapshot, or v3 identity
+/// and complete edit overlay (including Air). Resident cache data is never a
+/// substitute for a streamed world's authoritative edit map.
 pub fn encode(world: &World) -> Result<Vec<u8>, FormatError> {
+    if let Some(identity) = world.identity() {
+        if identity.generator != 2 || world.edits().len() > MAX_STREAM_RECORDS {
+            return Err(FormatError::Identity);
+        }
+        let edits = world.edits();
+        let mut bytes = Vec::with_capacity(STREAM_HEADER_SIZE + edits.len() * RECORD_SIZE);
+        bytes.extend(MAGIC);
+        bytes.extend(STREAM_FORMAT_VERSION.to_le_bytes());
+        bytes.extend((edits.len() as u32).to_le_bytes());
+        bytes.extend((edits.len() as u32 * RECORD_SIZE as u32).to_le_bytes());
+        bytes.extend(0_u32.to_le_bytes());
+        bytes.extend(identity.seed.to_le_bytes());
+        bytes.extend(identity.generator.to_le_bytes());
+        bytes.extend(0_u32.to_le_bytes());
+        for (&p, &block) in edits.iter() {
+            if !world.in_bounds(p) {
+                return Err(FormatError::Coordinates);
+            }
+            for c in p.0 {
+                bytes.extend(c.to_le_bytes());
+            }
+            bytes.extend(block_id(block).to_le_bytes());
+        }
+        let crc = checksum(&bytes);
+        bytes[20..24].copy_from_slice(&crc.to_le_bytes());
+        return Ok(bytes);
+    }
     let mut records = Vec::new();
     if world.chunks().count() > MAX_RECORDS / (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE) {
         return Err(FormatError::TooLarge);
@@ -129,23 +163,43 @@ pub fn decode(bytes: &[u8]) -> Result<World, FormatError> {
         )
     };
     let version = u32_at(8);
-    if ![1, FORMAT_VERSION].contains(&version) {
+    if ![1, FORMAT_VERSION, STREAM_FORMAT_VERSION].contains(&version) {
         return Err(FormatError::Version(version));
     }
     let count = u32_at(12) as usize;
-    if count > MAX_RECORDS {
+    if count
+        > if version == STREAM_FORMAT_VERSION {
+            MAX_STREAM_RECORDS
+        } else {
+            MAX_RECORDS
+        }
+    {
         return Err(FormatError::TooLarge);
     }
     let length = u32_at(16) as usize;
-    if length != count * RECORD_SIZE || bytes.len() != HEADER_SIZE + length {
+    let header = if version == STREAM_FORMAT_VERSION {
+        STREAM_HEADER_SIZE
+    } else {
+        HEADER_SIZE
+    };
+    if length != count * RECORD_SIZE || bytes.len() != header + length {
         return Err(FormatError::Length);
     }
     if u32_at(20) != checksum(bytes) {
         return Err(FormatError::Checksum);
     }
-    let mut world = World::default();
+    let mut world = if version == STREAM_FORMAT_VERSION {
+        let seed = u64::from_le_bytes(bytes[24..32].try_into().unwrap());
+        let generator = u32_at(32);
+        if generator != 2 || u32_at(36) != 0 {
+            return Err(FormatError::Identity);
+        }
+        World::streaming(crate::StreamIdentity { seed, generator })
+    } else {
+        World::default()
+    };
     let mut previous = None;
-    for record in bytes[HEADER_SIZE..].as_chunks::<RECORD_SIZE>().0 {
+    for record in bytes[header..].as_chunks::<RECORD_SIZE>().0 {
         let p: [i32; 3] = std::array::from_fn(|axis| {
             i32::from_le_bytes(
                 record[axis * 4..axis * 4 + 4]
@@ -153,7 +207,7 @@ pub fn decode(bytes: &[u8]) -> Result<World, FormatError> {
                     .expect("fixed record size"),
             )
         });
-        if !in_bounds(p) {
+        if !world.in_bounds(BlockPos(p)) {
             return Err(FormatError::Coordinates);
         }
         if previous.is_some_and(|old| p <= old) {
@@ -164,9 +218,13 @@ pub fn decode(bytes: &[u8]) -> Result<World, FormatError> {
             u16::from_le_bytes(record[12..14].try_into().expect("fixed record size")),
             version,
         )?;
-        world
-            .set_block(BlockPos(p), block)
-            .map_err(|_| FormatError::Coordinates)?;
+        if version == STREAM_FORMAT_VERSION {
+            world.restore_edit(BlockPos(p), block);
+        } else {
+            world
+                .set_block(BlockPos(p), block)
+                .map_err(|_| FormatError::Coordinates)?;
+        }
     }
     Ok(world)
 }
@@ -282,7 +340,12 @@ impl SaveStore {
         let bytes = encode(world)?;
         match read_save(&self.path())? {
             Some(previous) => {
-                decode(&previous)?; // Never replace a corrupt/unknown primary.
+                let prior = decode(&previous)?; // Never replace corrupt/unknown data.
+                if prior.identity() != world.identity() {
+                    return Err(SaveError::RecoveryRequired(
+                        "world identity/mode changed; refusing implicit migration".into(),
+                    ));
+                }
                 atomic_replace(&self.backup_path(), &previous, false, &mut hook)?;
                 hook(SaveStage::BackupCommitted)?;
             }

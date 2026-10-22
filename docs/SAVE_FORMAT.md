@@ -1,15 +1,15 @@
-# RustCraft world snapshots — versions 1 and 2
+# RustCraft saves — legacy snapshots v1/v2 and streamed overlays v3
 
 Project-authored specification: MIT OR Apache-2.0. Implemented by `voxel_core::persistence`, independent of Bevy. One local world is stored in `world.rcw`; `world.rcw.bak` is its previous valid generation. Paths and recovery commands are in [README](../README.md#saving-loading-and-recovery).
 
-## Byte contract
+## Legacy byte contract (v1/v2)
 
 All integers are little-endian, with no padding. Coordinates are signed two's-complement i32. This format does not use Rust struct, enum, chunk-vector or ECS memory layouts.
 
 | Offset | Size | Field |
 | --- | --- | --- |
 | 0 | 8 | ASCII magic `RUSTWRLD` |
-| 8 | 4 | u32 format version: 1 (legacy read) or 2 (current write) |
+| 8 | 4 | u32 format version: 1 (legacy read) or 2 (legacy write) |
 | 12 | 4 | u32 record count N |
 | 16 | 4 | u32 payload length, exactly 14 × N |
 | 20 | 4 | u32 CRC-32/ISO-HDLC (the standard zlib/IEEE CRC-32) |
@@ -30,24 +30,43 @@ IDs 1 and 2 also retain their exact v1 meaning. Version 1 strictly rejects IDs 4
 
 Every record must be within X/Z [-32,32), Y [-16,32). Duplicate/unsorted coordinates, ID 0 or unknown IDs, invalid magic/version, inconsistent counts/lengths, checksum errors, truncation and trailing bytes are rejected. The maximum is 196,608 records and **2,752,536 bytes**, enforced before disk reads allocate an unbounded buffer. This finite-volume limit is part of both versions. Trusted imports outside the volume cannot be saved, including out-of-bounds empty chunks.
 
-A snapshot is the entire world, sparsely encoded by non-air content. Missing coordinates are Air, not a reference to demo terrain. This preserves both removed and replaced original terrain, negative/boundary blocks and new chunks. Empty chunks need not be stored. A valid 24-byte empty snapshot decodes to an empty world. Only absence of both primary and backup invokes the new-world factory. The client creates seeded terrain; the library’s legacy `open` helper retains the historical demo factory. Neither factory is called for a loaded/corrupt/unsupported file. There is no persisted player state, seed, inventory or presentation data. New terrain is saved in full; no generator is needed to restore it.
+A snapshot is the entire world, sparsely encoded by non-air content. Missing coordinates are Air, not a reference to demo terrain. This preserves both removed and replaced original terrain, negative/boundary blocks and new chunks. Empty chunks need not be stored. A valid 24-byte empty snapshot decodes to an empty world. Only absence of both primary and backup invokes the new-world factory. The client now creates v3 streamed identity/overlay worlds; the library’s legacy `open` helper retains the historical demo factory. Neither factory is called for a loaded/corrupt/unsupported file. There is no persisted player state, seed, inventory or presentation data. Legacy terrain is saved in full; no generator is used to restore it. This paragraph describes v1/v2 only.
 
 Independent v1 golden fixtures (one Stone and mixed materials/negative coordinates) are pinned in tests; re-encoding uses v2 while retaining exact block semantics. Encoding is canonical: repeating a load/encode produces identical bytes regardless of transient revisions or insertion order. CRC detects accidental damage, not malicious alteration or authenticity.
 
-## Upgrade policy
+## Legacy upgrade / mode policy
 
-v1 and v2 share the header/record/CRC layout and full-snapshot semantics. **Loading never writes or migrates a file.** A valid v1 primary (including removed terrain or a completely empty world) is authoritative. The seed override is not even parsed for existing saves. Loaded worlds start clean; idle autosave and F5 with no changes leave the original bytes untouched.
+v1 and v2 share the header/record/CRC layout and full-snapshot semantics. **Loading never writes or migrates a file.** A valid v1 primary (including removed terrain or a completely empty world) is authoritative. The seed override is not parsed for any existing save. v1/v2 stays in explicitly labelled legacy finite mode. Loaded worlds start clean; idle autosave and F5 with no changes leave the original bytes untouched.
 
 After meaningful edits, the normal F5/autosave/final-save protocol validates the old v1 primary, backs its exact bytes up, and commits a complete v2 snapshot. Even if only old materials remain, current saves use v2. A failed upgrade follows the same recovery policy as any save and never truncates the old primary. The ordinary backup retains only one generation: a subsequent save may replace that legacy backup with v2. Keep an external directory copy if rollback to an older client is important. Older v1-only clients safely reject v2; there is no automatic downgrade.
 
-Version 2 adds only explicit IDs 4/5, not metadata, larger bounds or changed terrain defaults. IDs must never be reassigned. Future dimensions, bounds or material semantics require another version and an explicit migration policy. Unknown versions/IDs stop loading without rewriting files. Seeded generation changes only truly new worlds, never existing snapshots.
+Version 2 adds only explicit IDs 4/5, not metadata, larger bounds or changed terrain defaults. There is **no implicit v1/v2-to-v3 migration**. The store refuses changing identity/mode/seed when replacing an existing primary. IDs must never be reassigned. Future dimensions, bounds or material semantics require another version and an explicit migration policy. Unknown versions/IDs stop loading without rewriting files. Seeded generation changes only truly new worlds, never existing snapshots.
+
+## Streamed overlay byte contract (v3)
+
+v3 is a separate procedural world mode; the resident cache is never serialized as if it were a full snapshot. All integers remain little-endian. It reuses the first 24 bytes (magic, version=3, record count, payload length=14×N and CRC). Additional metadata:
+
+| Offset | Size | Field |
+| --- | --- | --- |
+| 24 | 8 | u64 world seed |
+| 32 | 4 | u32 generator version, currently exactly 2 |
+| 36 | 4 | u32 reserved, must be 0 |
+| 40 | 14 × N | Sorted unique i32 X/Y/Z + u16 block-ID overlay records |
+
+CRC-32 covers bytes `[0,20)` and `[24,end)`, including seed/version/reserved metadata and payload. Supported IDs are 0=Air, 1=Grass, 2=Dirt, 3=Stone, 4=Wood, 5=Leaves. **ID 0 is explicit and valid only in v3**, retaining removed generated terrain. All records must be within X/Z [-64,64), Y [-16,32). At most 786,432 records / **11,010,088 bytes** are allowed. Bounded disk reads reject files larger than the largest supported mode; each decoder additionally applies its own mode-specific limits.
+
+Absent overlay entries mean the frozen generator-v2 block at that coordinate; an explicit Air entry means removed terrain. No ECS data, meshes, resident/visited set, player state or queue is stored. An unedited v3 world is exactly 40 bytes (identity + zero records). Loading creates an empty resident cache plus the complete authoritative overlay. The spawn cache is prepared from the persisted identity; other columns generate on demand. An environment seed never replaces the stored seed.
+
+Serialization includes **all overlay entries**, including edits in evicted chunks, not only resident cells. Cache installs/evictions do not change edit revision. Immutable snapshots share the edit map; subsequent edits use copy-on-write. A successful older revision cannot mark newer edits clean. Reverting a cell can leave an explicit redundant entry; compaction is intentionally deferred.
+
+Unknown save/generator versions, nonzero reserved fields, bad CRC/count/length/order/IDs/coordinates stop loading before generation or replacement. Version 3 requires generator v2; generator v1 is retained as a reference but is not a streamed identity. Generator-v2 output is pinned by golden fixtures and must not be retuned in place. Future larger bounds/identities require an explicit format/version decision.
 
 ## Commit and failure policy
 
 `SaveStore` holds an exclusive OS lock on `world.lock` until the session and its worker finish. Another cooperating RustCraft instance cannot open the same directory. Do not remove/replace the lock file while a process runs. Locks are released by the OS on process exit; the empty lock file may remain. This targets local desktop filesystems, not distributed/network-filesystem coordination.
 
-1. Encode a bounded immutable world snapshot on the save worker.
-2. Read and validate any existing primary. Refuse to replace corrupt/unknown data. If the primary vanished but a backup exists, refuse and request explicit recovery.
+1. Encode a bounded immutable full legacy snapshot or complete v3 identity/overlay on the save worker.
+2. Read and validate any existing primary. Refuse to replace corrupt/unknown data or change world identity/mode. If the primary vanished but a backup exists, refuse and request explicit recovery.
 3. If a valid primary exists, copy its bytes to an exclusively created temporary file beside `world.rcw.bak`, flush and `sync_all`, close it, then rename over the backup. On Unix, sync the directory as well. Do not advance to the new primary if backup creation fails.
 4. Write the new snapshot to an exclusively created same-directory temporary file beside `world.rcw`, flush and `sync_all`, close it, then rename over the primary. On Unix, sync the directory. Report success only after all required operations return successfully.
 
@@ -55,7 +74,7 @@ The implementation uses Rust `std::fs::rename` with replacement semantics on Lin
 
 | Failure / state | Behavior |
 | --- | --- |
-| Missing primary and backup | Create seeded world, then explicitly save it once in the background even without edits |
+| Missing primary and backup | Create v3 identity, then explicitly save the initial empty overlay once, even without edits |
 | Missing primary with existing backup | Stop; explicit backup recovery required |
 | Corrupt, truncated, unknown version/ID or unreadable primary | Stop before the game starts; preserve all files |
 | Lock or directory unavailable | Actionable startup error; no fallback to another save location |
@@ -73,6 +92,8 @@ This protocol protects the known good primary against ordinary partial writes an
 
 F5 while focused requests saving if dirty. Every 30 seconds of real application time, autosave checks for meaningful changes, including while player simulation is paused or unfocused. Clean frames, failed/no-op edits and unchanged loaded worlds do not write. New generated worlds have a separate first-creation pending flag: the first Update requests a background save, even if the world has never been edited. Failure retains this flag and dirty status; successful completion clears it once. Later edits during that job remain dirty through revision tracking. A change followed by a revert still counts as changed; revisions intentionally do not hash the whole world every frame.
 
-Only the small bounded world clone happens on the main thread; all format and filesystem work is on one save thread. Edits may continue while it runs. Success marks only the captured revision clean; newer changes remain dirty. Manual requests queue behind a current job. A native close pauses controls, waits for a current job and saves any newer changes, then exits. Failures keep dirty data available for retry and are logged. The in-game bitmap panel shows loaded/unsaved state, yellow `SAVING...`, green `SAVED`, or persistent red `SAVE ERROR - F5 RETRY`, even with the cursor released. Title/logs retain status too. Startup logs always show the actual save path and source.
+Legacy saves clone bounded resident data; v3 snapshots capture only identity/revision and the immutable overlay Arc, excluding resident chunk vectors; all format and filesystem work is on one save thread. Edits may continue while it runs. Success marks only the captured revision clean; newer changes remain dirty. Manual requests queue behind a current job. A native close pauses controls, waits for a current job and saves any newer changes, then exits. Failures keep dirty data available for retry and are logged. Unsaved v3 edits survive cache eviction in memory but are durable only after a successful F5/autosave/final save. There is no per-click crash journal; a forced kill can lose edits since the last completed save. Failed saves retain the complete dirty overlay even while cache eviction continues.
+
+The in-game bitmap panel shows loaded/unsaved state, yellow `SAVING...`, green `SAVED`, or persistent red `SAVE ERROR - F5 RETRY`, even with the cursor released. Title/logs retain status too. Startup logs always show the actual save path and source.
 
 Tests use isolated temporary directories, independent format fixtures, injected partial-write/commit failures, real backup-path errors, restart tests and actual ECS scheduling. See [validation](VALIDATION.md) for executed platform and GUI coverage.

@@ -388,9 +388,123 @@ fn v1_never_accepts_new_ids_and_unknown_formats_never_call_new_world_factory() {
     }
     let dir = TestDir::new();
     let mut bytes = wood;
-    bytes[8..12].copy_from_slice(&3_u32.to_le_bytes());
+    bytes[8..12].copy_from_slice(&4_u32.to_le_bytes());
     repair_checksum(&mut bytes);
     fs::write(dir.0.join("world.rcw"), &bytes).unwrap();
     assert!(SaveStore::open_with(&dir.0, || panic!("not a missing save")).is_err());
     assert_eq!(fs::read(dir.0.join("world.rcw")).unwrap(), bytes);
+}
+
+#[test]
+fn v3_identity_empty_overlay_golden_fixture_and_strict_metadata_validation() {
+    let mut world = crate::streaming::new_world(42);
+    let bytes = encode(&world).unwrap();
+    let hex = "5255535457524c44030000000000000000000000d0795dd72a000000000000000200000000000000";
+    let fixture: Vec<_> = hex
+        .as_bytes()
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|p| u8::from_str_radix(std::str::from_utf8(p).unwrap(), 16).unwrap())
+        .collect();
+    assert_eq!(bytes, fixture);
+    assert_eq!(decode(&bytes).unwrap().identity(), world.identity());
+    for end in 0..bytes.len() {
+        assert!(decode(&bytes[..end]).is_err());
+    }
+    for (offset, value) in [(32, 99_u32), (36, 1)] {
+        let mut bad = bytes.clone();
+        bad[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+        repair_checksum(&mut bad);
+        assert_eq!(decode(&bad), Err(FormatError::Identity));
+    }
+    crate::streaming::prepare_spawn(&mut world).unwrap();
+    world.set_block(BlockPos([0, -15, 0]), Block::Air).unwrap();
+    let air = encode(&world).unwrap();
+    assert_eq!(
+        decode(&air).unwrap().edits()[&BlockPos([0, -15, 0])],
+        Block::Air
+    );
+    for id in [6_u16, 65535] {
+        let mut bad = air.clone();
+        bad[52..54].copy_from_slice(&id.to_le_bytes());
+        repair_checksum(&mut bad);
+        assert_eq!(decode(&bad), Err(FormatError::BlockId(id)));
+    }
+    let mut bad = air.clone();
+    bad[40..44].copy_from_slice(&64_i32.to_le_bytes());
+    repair_checksum(&mut bad);
+    assert_eq!(decode(&bad), Err(FormatError::Coordinates));
+    let mut bad = air;
+    bad[24] ^= 1;
+    assert_eq!(decode(&bad), Err(FormatError::Checksum));
+}
+
+#[test]
+fn failed_stream_saves_preserve_dirty_evicted_overlay_and_prior_durable_generation() {
+    let dir = TestDir::new();
+    let (store, mut world, _) =
+        SaveStore::open_with(&dir.0, || Ok(crate::streaming::new_world(7))).unwrap();
+    crate::streaming::prepare_spawn(&mut world).unwrap();
+    store.save(&world).unwrap();
+    let prior = fs::read(store.path()).unwrap();
+    world.set_block(BlockPos([0, -15, 0]), Block::Air).unwrap();
+    world.set_block(BlockPos([0, 25, 0]), Block::Wood).unwrap();
+    let revision = world.revision();
+    world.evict_column([0, 0]);
+    for stage in [
+        SaveStage::PartialTemp,
+        SaveStage::TempSynced,
+        SaveStage::BackupCommitted,
+        SaveStage::BeforePrimaryRename,
+    ] {
+        assert!(
+            store
+                .save_with(&world, |current| if current == stage {
+                    Err(io::Error::other("injected stream disk failure"))
+                } else {
+                    Ok(())
+                })
+                .is_err()
+        );
+        assert_eq!(fs::read(store.path()).unwrap(), prior);
+        assert_eq!(world.edits().len(), 2);
+        assert_eq!(world.revision(), revision);
+    }
+    store.save(&world).unwrap();
+    assert_eq!(fs::read(store.backup_path()).unwrap(), prior);
+    drop(store);
+    let (_, mut loaded, _) =
+        SaveStore::open_with(&dir.0, || panic!("never recreate on restart")).unwrap();
+    assert_eq!(loaded.chunks().count(), 0);
+    crate::streaming::prepare_spawn(&mut loaded).unwrap();
+    assert_eq!(loaded.block(BlockPos([0, -15, 0])), Block::Air);
+    assert_eq!(loaded.block(BlockPos([0, 25, 0])), Block::Wood);
+}
+
+#[test]
+fn save_store_refuses_implicit_identity_mode_or_seed_migration() {
+    for legacy in [false, true] {
+        let dir = TestDir::new();
+        let original = if legacy {
+            demo_world()
+        } else {
+            crate::streaming::new_world(1)
+        };
+        let (store, _, _) = SaveStore::open(&dir.0).unwrap();
+        store.save(&original).unwrap();
+        let bytes = fs::read(store.path()).unwrap();
+        for other in [
+            crate::streaming::new_world(2),
+            if legacy {
+                crate::streaming::new_world(1)
+            } else {
+                demo_world()
+            },
+        ] {
+            assert!(store.save(&other).is_err());
+            assert_eq!(fs::read(store.path()).unwrap(), bytes);
+            assert!(!store.backup_path().exists());
+        }
+    }
 }

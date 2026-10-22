@@ -56,16 +56,9 @@ fn seed_from(value: Option<OsString>) -> io::Result<u64> {
 pub(crate) fn create_world() -> Result<World, SaveError> {
     let seed = seed_from(std::env::var_os("RUSTCRAFT_WORLD_SEED"))?;
     let start = std::time::Instant::now();
-    let generator = voxel_core::worldgen::Generator::new(voxel_core::worldgen::GenerationConfig {
-        seed,
-        ..default()
-    })
-    .map_err(|e| io::Error::other(e.to_string()))?;
-    let world = generator.generate();
+    let world = voxel_core::streaming::new_world(seed);
     eprintln!(
-        "RustCraft new world: seed {seed}, generator v{}, {} chunks, generated in {:?}",
-        voxel_core::worldgen::GENERATOR_VERSION,
-        world.chunks().count(),
+        "RustCraft new streamed world: seed {seed}, generator v2, 128x128 blocks; identity created in {:?}",
         start.elapsed()
     );
     Ok(world)
@@ -156,7 +149,7 @@ impl SaveSession {
         }
     }
     fn start(&mut self, world: &World, now: Duration) {
-        let snapshot = world.clone(); // At most 48 small chunk vectors; no I/O.
+        let snapshot = world.save_snapshot(); // Stream saves share only identity/edits, no resident chunks.
         let store = Arc::clone(&self.store);
         self.last_attempt = now;
         self.manual_pending = false;
@@ -292,7 +285,12 @@ fn update_saving(
                 .strip_prefix("RustCraft")
                 .unwrap_or(&window.title)
         };
-        let title = format!("RustCraft [{}]{suffix}", feedback.label);
+        let legacy = if world.0.identity().is_none() {
+            " / LEGACY 64x64"
+        } else {
+            ""
+        };
+        let title = format!("RustCraft [{}{legacy}]{suffix}", feedback.label);
         if window.title != title {
             window.title = title;
         }

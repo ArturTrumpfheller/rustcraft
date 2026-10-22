@@ -19,13 +19,13 @@ impl Default for VoxelWorld {
 pub(crate) struct DirtyChunks(pub BTreeSet<ChunkPos>);
 
 #[derive(Resource, Default)]
-struct ChunkRenders(BTreeMap<ChunkPos, ChunkRender>);
-struct ChunkRender {
-    entity: Entity,
-    mesh: Handle<Mesh>,
+pub(crate) struct ChunkRenders(pub BTreeMap<ChunkPos, ChunkRender>);
+pub(crate) struct ChunkRender {
+    pub entity: Entity,
+    pub mesh: Handle<Mesh>,
 }
 #[derive(Resource)]
-struct TerrainMaterial(Handle<StandardMaterial>);
+pub(crate) struct TerrainMaterial(pub Handle<StandardMaterial>);
 
 impl Plugin for VoxelScenePlugin {
     fn build(&self, app: &mut App) {
@@ -37,8 +37,7 @@ impl Plugin for VoxelScenePlugin {
     }
 }
 
-fn render_mesh(world: &World, position: ChunkPos) -> (Mesh, Visibility) {
-    let surface = mesh_chunk(world, position);
+fn convert_mesh(surface: voxel_core::ChunkMesh) -> (Mesh, Visibility) {
     let visibility = if surface.indices.is_empty() {
         Visibility::Hidden
     } else {
@@ -64,7 +63,47 @@ fn spawn_chunk(
     position: ChunkPos,
     material: &Handle<StandardMaterial>,
 ) {
-    let (mesh, visibility) = render_mesh(world, position);
+    let surface = mesh_chunk(world, position);
+    if world.identity().is_some() {
+        upsert_stream_mesh(commands, meshes, renders, position, surface, material);
+    } else {
+        upsert_chunk(commands, meshes, renders, position, surface, material);
+    }
+}
+pub(crate) fn upsert_stream_mesh(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    renders: &mut ChunkRenders,
+    position: ChunkPos,
+    surface: voxel_core::ChunkMesh,
+    material: &Handle<StandardMaterial>,
+) {
+    if surface.indices.is_empty() {
+        if let Some(render) = renders.0.remove(&position) {
+            commands.entity(render.entity).despawn();
+            meshes.remove(&render.mesh);
+        }
+    } else {
+        upsert_chunk(commands, meshes, renders, position, surface, material);
+    }
+}
+pub(crate) fn upsert_chunk(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    renders: &mut ChunkRenders,
+    position: ChunkPos,
+    surface: voxel_core::ChunkMesh,
+    material: &Handle<StandardMaterial>,
+) {
+    let (mesh, visibility) = convert_mesh(surface);
+    if let Some(render) = renders.0.get(&position) {
+        *meshes.get_mut(&render.mesh).expect("retained terrain mesh") = mesh;
+        commands
+            .entity(render.entity)
+            .insert(visibility)
+            .remove::<Aabb>();
+        return;
+    }
     let handle = meshes.add(mesh);
     let entity = commands
         .spawn((
@@ -123,7 +162,7 @@ fn spawn_scene(
         Transform::from_xyz(-12.0, 24.0, 12.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
     info!(
-        "RustCraft slice 5: {} restored/generated chunk meshes built in {:?}",
+        "RustCraft slice 6: {} restored/generated chunk meshes built in {:?}",
         world.0.chunks().count(),
         started.elapsed()
     );
@@ -137,28 +176,17 @@ fn rebuild_dirty_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     material: Res<TerrainMaterial>,
 ) {
+    if world.0.identity().is_some() {
+        return;
+    } // Stream worker owns generation/meshing.
     while let Some(position) = dirty.0.pop_first() {
-        if world.0.chunk(position).is_none() {
-            continue;
-        }
-        if let Some(render) = renders.0.get(&position) {
-            let (mesh, visibility) = render_mesh(&world.0, position);
-            *meshes
-                .get_mut(&render.mesh)
-                .expect("chunk mesh retained in MAIN_WORLD") = mesh;
-            // Bevy computes a fresh bound after geometry changes. Otherwise a
-            // newly expanded chunk could retain its old frustum-culling box.
-            commands
-                .entity(render.entity)
-                .insert(visibility)
-                .remove::<Aabb>();
-        } else {
-            spawn_chunk(
+        if world.0.chunk(position).is_some() {
+            upsert_chunk(
                 &mut commands,
                 &mut meshes,
                 &mut renders,
-                &world.0,
                 position,
+                mesh_chunk(&world.0, position),
                 &material.0,
             );
         }

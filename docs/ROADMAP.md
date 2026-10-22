@@ -4,7 +4,7 @@ This document tracks intended milestones, not promised delivery dates. Implement
 
 ## v0.1 — Classic-style prototype
 
-Slice 5 adds deterministic finite terrain, connected caves, trees, Wood/Leaves, backward-compatible v2 saves and visible save feedback. Full v0.1 is not complete. The owner tested slices 1–4 on Void and their Linux/Windows CI passed. Current coverage is recorded in `docs/VALIDATION.md`; new native play-tests are still needed. Serialization/recovery and deterministic generation tests exist; infinite streaming and richer gameplay remain deferred.
+Slice 6 adds bounded dynamic chunk caching/rendering, expanded 128×128 new worlds and v3 seed/version/edit-overlay persistence. Legacy snapshots remain exact finite worlds. Full v0.1 is not complete. The owner tested slices 1–5 on Void and their Linux/Windows CI passed. Current coverage is recorded in `docs/VALIDATION.md`; new native play-tests are still needed. Serialization/recovery and deterministic generation tests exist; infinite streaming and richer gameplay remain deferred.
 
 - [x] Cargo workspace and pinned Bevy dependency
 - [x] Launch client with a first-person walking player and interpolated camera
@@ -21,7 +21,8 @@ Slice 5 adds deterministic finite terrain, connected caves, trees, Wood/Leaves, 
 **Exit criterion:** Start a world, walk around, place and break blocks, save, restart, and recover changes.
 
 ## v0.2 — Indev / Infdev-inspired foundations
-- [ ] Streaming and loading/unloading chunks
+- [x] First bounded streaming: configurable radius, one worker, cache/GPU eviction, safe pending barriers and persistent edits
+- [ ] Infinite/region-based streaming and per-chunk disk storage
 - [ ] More interesting terrain and caves
 - [ ] Basic light propagation and chunk remeshing
 - [ ] Inventory and reusable item/block registry

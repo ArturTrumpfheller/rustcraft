@@ -136,7 +136,7 @@ fn edit_and_target(
             ctx.dirty.0.extend(change.affected_chunks());
         }
     }
-    ctx.editor.target = raycast(&ctx.world.0, ray);
+    ctx.editor.target = raycast(&ctx.world.0, ray).filter(|hit| ctx.world.0.ready(hit.position));
 }
 
 #[derive(Component)]

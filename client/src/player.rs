@@ -69,6 +69,20 @@ fn simulate_player(
         input.jump_pending = false;
         return;
     }
+    if world.0.identity().is_some() {
+        let ready = player.body.cache_ready(&world.0, &config.0);
+        if !ready {
+            input.jump_pending = false;
+            return;
+        }
+        // Recovery after a teleport into a column that finished loading.
+        if !player.body.fits_in_world(&world.0, &config.0) {
+            let p = voxel_core::physics::spawn_position(&world.0, &config.0, player.body.position);
+            player.body = Player::new(p);
+            player.previous_position = p;
+            input.jump_pending = false;
+        }
+    }
     let mut command = input.command;
     command.jump = std::mem::take(&mut input.jump_pending);
     player.body.tick(&world.0, command, &config.0);

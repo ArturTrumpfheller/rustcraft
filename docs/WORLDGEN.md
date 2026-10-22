@@ -1,8 +1,8 @@
-# Finite world generation — version 1
+# World generation — frozen finite v1 and streamed v2
 
 The implementation is original RustCraft code, MIT OR Apache-2.0, in `voxel_core::worldgen`. No Bevy, shared RNG, noise library or copied game assets are used. This is a finite first generator, not an infinite-world/biome system.
 
-## Reproducibility contract
+## Frozen generator-v1 contract
 
 `GenerationConfig { seed: u64, version: 1 }` selects the entire current algorithm. Default seed: **2026**. Unsupported versions return an error. Changes to the generated output require a new generator version and updated fixtures; tuning is not silently changed under version 1.
 
@@ -21,10 +21,18 @@ Coordinate hashing uses explicit wrapping u64 operations and fixed mixing consta
 
 The client prefers a column near (0,10), but computes feet height from **actual authoritative blocks** using `physics::spawn_position`. It searches nearby sky-exposed ground, skips tree tops, checks player clearance and uses the same routine at startup, R and void recovery. It does not reset generated worlds to the old demo Y. Edits may relocate the safe column; no blocks are created/removed for spawn. A valid all-air snapshot remains all-air, with a clear-air fallback because supported ground is impossible.
 
-The seed environment variable is consulted only by the lazy new-world factory after confirming that neither primary nor backup exists. A loaded v1/v2 snapshot never invokes the generator or parses a seed override. New worlds are saved once even without edits. Actual generated blocks are authoritative thereafter; v2 does not store seed/generator metadata or reconstruct terrain. See [the save/upgrade contract](SAVE_FORMAT.md).
+The seed environment variable is consulted only by the lazy new-world factory after confirming neither primary nor backup exists. Loaded v1/v2 full snapshots never invoke a generator or parse a seed override. They retain finite missing-cell-is-Air semantics. New streamed worlds select generator v2 and persist its identity in v3, rather than storing a dense generated world. See [the save/upgrade contract](SAVE_FORMAT.md).
+
+## Generator v2 and bounded streaming
+
+New v3 worlds select `GenerationConfig { seed, version: 2 }`. This extends the sampling volume to X/Z [-64,64), Y [-16,32), with a 128×128 height cache (~64 KiB) and additional deterministic eight-block tree-grid anchors. It deliberately preserves the original height/noise/cave arithmetic while selecting a new version contract for the expanded bounds/tree plan. Generator v1 remains unchanged and its five golden full-snapshot fixtures still pass. Generator v2 has independent golden column fixtures for seeds 0, 42 and u64::MAX, including expanded negative/positive coordinates. Do not retune either version in place.
+
+Chunk generation is immutable and independent of request order or loaded neighbors. A worker materializes only a center column (three chunks) plus thin face borders for meshing, applies the captured edit overlay, and emits three engine-neutral meshes. Border generation samples just the cells `mesh_chunk` actually reads; it avoids generating eight full neighboring columns. Full-neighbor reference mesh tests verify the thin halo is equivalent, including edits at seams and trees/caves. Rendering a column does not depend on GPU neighbor residency, so loading/unloading neighbors does not change its correct faces.
+
+A pinned (0,0) spawn column is prepared before the App. Remaining desired columns load on one bounded worker, with main-thread install only if the column is still desired and the edit revision still matches. Cache eviction frees block vectors and GPU entities/assets, but never removes edit-map entries. In-volume pending data is a temporary solid collision/ray barrier and is not editable; outside the finite bounds is known Air. New chunks apply edits before becoming ready. See [architecture](ARCHITECTURE.md) for lifecycle/ownership and [v3 persistence](SAVE_FORMAT.md) for crash/recovery limits.
 
 ## Performance and next boundary
 
-Generation runs once before App/window creation and logs seed, version, resident chunk count and elapsed time. Initial mesh construction runs once at Startup and logs elapsed time; normal frames only rebuild edited chunk faces as before. Generation allocates at most ~192 KiB of chunk block payload plus the height/tree plan, not a second full volume. Meshing, renderer buffers and save encoding have separate transient allocations. The save worker clones only when a save is requested; no generation or disk I/O runs in the render loop.
+Legacy worlds retain bounded full startup loading. Streamed worlds prepare only one small spawn column before App/window creation; generation/meshing runs off-thread in bounded column jobs. The main thread polls without waiting, installs at most one result per frame, discards obsolete work and frees evicted assets. It never performs full-world generation or disk I/O in the frame loop. Default radius 2 retains at most 75 vertical chunks (307,200 block payload bytes); the configured conservative ceiling is 150 chunks / 614,400 bytes. The thin worker halo holds at most 15 chunk vectors / 61,440 block payload bytes plus mesh buffers. These counts exclude edit-map allocations, renderer/driver buffers and Bevy overhead. Meshing, renderer buffers and save encoding have separate transient allocations. v3 save snapshots share the immutable overlay without copying the resident cache; no generation or disk I/O runs in the render loop.
 
 Measured debug/cloud timings and functional coverage are recorded in [VALIDATION.md](VALIDATION.md); they are not desktop GPU benchmarks. Larger worlds will need region/halo planning (especially trees), worker scheduling for generation/meshing, memory budgets and streaming. Keep global coordinate sampling deterministic when introducing those systems. Do not extend this finite cache or synchronous mesh startup into unbounded work.

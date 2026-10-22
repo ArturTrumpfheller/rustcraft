@@ -2,7 +2,7 @@
 
 Project-created code and documentation are **MIT OR Apache-2.0**, at the recipient's option. See the root LICENSE-MIT and LICENSE-APACHE files. This does not relicense dependencies or separately licensed artwork.
 
-## Direct dependencies (slice 5; unchanged from slice 4)
+## Direct dependencies (slice 6; unchanged from slice 4)
 
 | Component | Version | Upstream | SPDX license | Notices / use |
 | --- | --- | --- | --- | --- |
@@ -11,6 +11,8 @@ Project-created code and documentation are **MIT OR Apache-2.0**, at the recipie
 | voxel_core | 0.1.0 (workspace) | This repository | MIT OR Apache-2.0 | Project-authored engine-independent library, not vendored third-party code. |
 
 `Cargo.lock` records exact transitive versions and checksums. No third-party source is copied or vendored. Slices 2 and 3 added only project-authored physics/controller/interaction code. Slice 4 adds `crc32fast` (Cargo metadata declares MIT OR Apache-2.0); its `cfg-if` dependency already existed in the graph. No asset or Bevy feature changes are required. Bevy's native renderer selection remains enabled; application features omit audio, gamepad, UI and external scene/texture import. All project-authored persistence code remains MIT OR Apache-2.0. Slice 5 adds only original Rust code/colors/bitmap glyphs; no crates, Bevy features, lockfile changes, downloaded fonts or art are added.
+
+Slice 6 adds only project-authored Rust streaming/persistence/adapter code and generator-v2 composition, still MIT OR Apache-2.0. No crate, lockfile, engine feature, texture, font or asset additions.
 
 ## Dependency license review
 
