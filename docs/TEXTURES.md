@@ -70,3 +70,11 @@ distinct tiles, actual 32-byte Bevy layout, shared Image/material residency duri
 empty/refill/edit/eviction, far rebase UV stability and existing save/restart paths.
 CI verifies JSON → PNG/RGBA reproduction on both desktop platforms. Measurements
 and actual software/native coverage are recorded in [VALIDATION](VALIDATION.md).
+
+## Slice 9 inventory icons
+
+Inventory samples grass-side, dirt, stone, bark and leaves directly from the same
+embedded atlas with nearest sampling. No terrain tiles, UV contracts, world IDs,
+meshing or image assets change. Two retained unlit UI materials (flat and atlas)
+serve four batches; no per-item materials or per-frame images are allocated.
+Original UI geometry/glyph tables and counts are specified in INVENTORY.

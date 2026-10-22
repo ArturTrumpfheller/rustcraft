@@ -77,7 +77,8 @@ fn checksum(bytes: &[u8]) -> u32 {
 
 /// Canonical mode-specific save: legacy full non-Air snapshot, or v3 identity
 /// and complete edit overlay (including Air). For v4 this encodes ONLY the
-/// identity manifest: use `SaveStore::save` to persist regional edits as well.
+/// identity manifest: use `SaveStore::save_player_session` for player-enabled
+/// sessions, or `SaveStore::save` for world-only storage, to persist regions too.
 /// Resident cache data never substitutes for authoritative edits.
 pub fn encode(world: &World) -> Result<Vec<u8>, FormatError> {
     if let Some(id) = world.region_identity() {

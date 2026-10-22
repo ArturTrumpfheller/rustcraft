@@ -29,7 +29,7 @@ fn main() -> std::process::ExitCode {
         Ok(loaded) => loaded,
         Err(error) => {
             eprintln!(
-                "RustCraft could not load world: {error}. No world file was overwritten. If available, preserve the damaged primary and recover world.rcw.bak explicitly (see README)."
+                "RustCraft could not load world: {error}. Preserve the whole data directory and recover a complete consistent backup (see README); do not restore an individual world/player file."
             );
             return std::process::ExitCode::FAILURE;
         }

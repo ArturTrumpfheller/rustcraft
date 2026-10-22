@@ -4,7 +4,12 @@ This document tracks intended milestones, not promised delivery dates. Implement
 
 ## v0.1 — Classic-style prototype
 
-Slice 8 adds original 16×16 art and one shared atlas/material with compact UV-bearing meshes. The owner accepted Slice 7 on Void. Slice 7 added local generator v3, a large 65,536×65,536×48 rollout, bounded regional edit caching/persistence and floating-origin rendering. Slices 1–7, including the native Void corrections, are accepted. Existing v1/v2/v3 worlds stay in their original modes; no automatic migration. Full v0.1 is not complete. Current measurements and remaining native Slice-8 acceptance are in VALIDATION.
+Slice 9 implements a persistent 9-slot hotbar + 27-slot inventory, bounded stacks,
+original pixel UI and inventory-backed block edits, with save-level world/player
+redo. Slices 1–8 are merged and accepted; Slice 8 was tested by the owner on Void.
+The existing 65,536×65,536×48 local-generator/regional-save rollout is unchanged.
+World formats v1–v4, old generators and IDs are preserved without migration.
+See VALIDATION for Slice-9 checks and remaining native acceptance.
 
 - [x] Cargo workspace and pinned Bevy dependency
 - [x] Launch client with a first-person walking player and interpolated camera
@@ -14,7 +19,7 @@ Slice 8 adds original 16×16 art and one shared atlas/material with compact UV-b
 - [x] Solid block collision, gravity and jumping (fixed 60-Hz AABB controller; boundary and tunneling regression tests)
 - [x] Block targeting, breaking and placement (five-block DDA, validated player-safe edits and dirty neighbor remeshing)
 - [x] Persistent world saves (versioned full snapshots, F5, dirty-only autosave, safe close and recoverable replacement)
-- [ ] Full inventory/hotbar (five unlimited block-selection slots exist)
+- [x] 9-slot hotbar + 27-slot inventory, stacks 64, transfers, block collection/consumption and paired persistence
 - [x] Tests for indexing and serialization, corruption and save-failure recovery
 - [x] Tests for deterministic seeded generation, bounds, cave access, tree seams and spawn
 
@@ -26,7 +31,8 @@ Slice 8 adds original 16×16 art and one shared atlas/material with compact UV-b
 - [ ] Further coordinate expansion and opt-in legacy migration
 - [ ] More interesting terrain and caves
 - [ ] Basic light propagation and chunk remeshing
-- [ ] Inventory and reusable item/block registry
+- [x] Initial fixed inventory/item model
+- [ ] General reusable item/block registry, tools and crafting
 - [x] Initial profiling, matched baseline comparisons and explicit active/dirty memory budgets
 - [ ] Dense-region/bulk-edit profiling and further native GPU optimization
 

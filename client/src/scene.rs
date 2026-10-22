@@ -175,7 +175,7 @@ fn spawn_scene(
         Transform::from_xyz(-12.0, 24.0, 12.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
     info!(
-        "RustCraft slice 8: {} restored/generated chunk meshes built in {:?}",
+        "RustCraft slice 9: {} restored/generated chunk meshes built in {:?}",
         world.0.chunks().count(),
         started.elapsed()
     );

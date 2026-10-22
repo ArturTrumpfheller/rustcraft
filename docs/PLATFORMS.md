@@ -1,6 +1,6 @@
 # RustCraft platform support and development setup
 
-Status: **Slice 8 texture acceptance**. The owner accepted Slices 1–7 on Void. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
+Status: **Slice 9 inventory acceptance**. The owner accepted Slices 1–8 on Void. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
 
 ## Supported platforms and targets
 
@@ -294,3 +294,46 @@ survive `/tmp` cleanup/reboot. Keep/record its path. Back up the **whole closed
 world directory**, including `regions/`; a v4 manifest alone is not a backup.
 No save format, generator, world extent, block ID or physics change is part of
 this visual slice. Exact measurements and test limitations: VALIDATION.
+
+## Slice 9 inventory test (Fish)
+
+Use an X11 or Wayland desktop on Void **glibc**, normal supported drivers and a
+fresh separate directory. No renderer override is required. Keep this shell/path
+for restarts; do not reuse an existing save for first acceptance.
+
+```fish
+git fetch origin
+git switch feat/slice-9-inventory-hotbar
+set test_dir (mktemp -d /tmp/rustcraft-slice9.XXXXXX)
+echo $test_dir
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_WORLD_SEED=42 RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
+# After normal close, same directory and persisted inventory:
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
+# After another normal close, same world at distant coordinates:
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_START_CHUNK="1000,-1000" RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
+```
+
+1. Check nine visible bottom slots, icons/counts and selection 1–9/wheel wrap.
+   Slots 1–5 initially contain 64/64/64/32/32; remaining slots are empty.
+2. E releases cursor and pauses look/walking/jump/edit/respawn. Check three rows
+   of nine plus hotbar, left pick/merge/swap, right half/single, Shift-left quick
+   transfer in both directions and retained remainders. Outside clicks lose nothing.
+3. Close E or Escape; captured gameplay resumes if it was captured before open.
+   Escape again releases. Resize and test focus loss/return, high DPI and wheel.
+   Closing with a held stack returns it only if it all fits, otherwise NO ROOM.
+4. Mine/place and check exact +1/-1 counts, empty-slot refusal and body overlap.
+   Fill slots by splitting/collecting: full mining must preserve block and count.
+   Rapidly alternate mine/place at a chunk seam; verify geometry and movement.
+5. F5 while open, wait for SAVED, normal close and restart. Verify all 36 slots,
+   selected slot, world edits and held stack (modal auto-opens). Repeat autosave
+   after >30 seconds and normal close without F5. R must not reset inventory.
+6. At far start, test streaming eviction/return and floating-origin UI alignment.
+   Walk/slide/jump at diagonal edges and ensure spawn meshes unload normally.
+
+Native Void/Wayland/Windows GUI, physical GPU and high-DPI results still require
+owner testing; cloud Xvfb software-rendering and Windows CI do not establish them.
+For legacy compatibility use a **complete closed-directory copy** in another
+absolute path. First inventory initialization adds sidecars without changing world
+bytes. Never run older clients on an inventory-enabled directory. Back up/restore
+whole directories including player/identity/journal/regions; an individual `.bak`
+is not a consistent session rollback. See INVENTORY for conservative recovery.
