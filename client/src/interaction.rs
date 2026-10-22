@@ -75,6 +75,8 @@ fn edit_and_target(
             (KeyCode::Digit1, 1),
             (KeyCode::Digit2, 2),
             (KeyCode::Digit3, 3),
+            (KeyCode::Digit4, 4),
+            (KeyCode::Digit5, 5),
         ] {
             if keyboard.just_pressed(key) {
                 ctx.editor.selected = BuildBlock::from_slot(slot).expect("valid selection slot");
@@ -85,7 +87,7 @@ fn edit_and_target(
         && let Ok(mut window) = ctx.windows.single_mut()
     {
         window.title = format!(
-            "RustCraft | Block: {} {} | 1/2/3 select | LMB break | RMB place | F5 save | Esc release | R respawn",
+            "RustCraft | Block: {} {} | 1–5 select | LMB break | RMB place | F5 save | Esc release | R respawn",
             ctx.editor.selected.slot(),
             ctx.editor.selected.name()
         );
@@ -216,9 +218,9 @@ fn setup_visuals(
             SelectionMarker,
             Mesh3d(marker),
             MeshMaterial3d(white),
-            Transform::from_xyz(-20.0, -24.0, -0.1),
+            Transform::from_xyz(-40.0, -24.0, -0.1),
         ));
-        for slot in 1..=3 {
+        for slot in 1..=5 {
             let color = BuildBlock::from_slot(slot).unwrap().block().color();
             let material = materials.add(StandardMaterial {
                 base_color: Color::linear_rgba(color[0], color[1], color[2], color[3]),
@@ -228,7 +230,7 @@ fn setup_visuals(
             parent.spawn((
                 Mesh3d(square.clone()),
                 MeshMaterial3d(material),
-                Transform::from_xyz((f32::from(slot) - 2.0) * 20.0, -24.0, 0.0),
+                Transform::from_xyz((f32::from(slot) - 3.0) * 20.0, -24.0, 0.0),
             ));
         }
     });
@@ -275,7 +277,7 @@ fn update_visuals(
         }
     }
     for mut transform in &mut markers {
-        transform.translation.x = (f32::from(editor.selected.slot()) - 2.0) * 20.0;
+        transform.translation.x = (f32::from(editor.selected.slot()) - 3.0) * 20.0;
     }
 }
 

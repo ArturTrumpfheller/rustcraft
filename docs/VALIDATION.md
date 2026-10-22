@@ -1,5 +1,42 @@
 # RustCraft validation
 
+## Slice 5 — seeded finite terrain, caves, trees and compatible saves
+
+Validated locally on 2026-10-21, starting from latest `main` at `353daac` after PR #8. Environment: Debian 13 glibc x86-64, Rust 1.99.1, Bevy 0.20.0. The owner confirmed slices 1–4 on Void; native slice-5 Void/Windows play-testing is separate.
+
+### Passed development checks
+
+```sh
+cargo fmt --all -- --check
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo test --locked --workspace
+cargo build --locked --workspace
+```
+
+**101 tests passed, none failed or ignored** (66 core + 35 client; no doctests defined). All 86 previous tests remain passing, with legacy expectations extended for five selection slots and v2 writing. No new crates, Bevy features, toolchain changes, lockfile changes or downloaded assets were needed. The existing Ubuntu/Windows CI matrix runs these checks and the same golden fixtures; the PR records remote outcomes.
+
+- Determinism: full-snapshot golden CRCs for seeds 0, 1, 42, 2026 and u64::MAX; repeat generation, reversed chunk order, distinct seeds and unsupported generator versions. Terrain tests cover coherent height range/slopes/layers, connected bottom foundation, finite bounds, empty/out-of-bounds chunk handling and extreme coordinate reads.
+- Caves/trees/spawn: continuous headroom along the stair-stepped entrance and cross-world cave; supported trunks, clear crowns, spacing and cross-chunk foliage; 24 seeds with actual player physics settling on clear supported ground. ECS startup/R/void recovery use generated terrain instead of the old demo Y. Wood/Leaves cull neighboring faces across positive/negative seams and are physically solid.
+- Compatibility: independent historical v1 fixtures (mixed materials, negative coordinates and removed terrain) load without byte changes or factory calls; a changed save upgrades to v2 and retains exact v1 bytes in the backup. v1 rejects new IDs, v2 round-trips Wood/Leaves, unknown formats abort without regeneration/overwrite. Existing CRC/truncation/invalid data, injected atomic-write failures, locking and recovery tests remain passing.
+- Lifecycle/gameplay: a newly generated unedited world saves once, survives restart, ignores a different override seed and skips idle rewrites. Edits/removals/new materials persist after restart. First-creation failure remains dirty and prevents silent close; F5 retries. Strict seed parsing is tested without mutating process environment. Existing input/capture/physics/edit/remesh regressions remain passing; keys 4/5 place/break the expected materials.
+- Save HUD: all used glyphs and status/color mappings, actual ECS updates while uncaptured, repeated saving/error/success transitions and resize with one retained mesh/material. No per-frame text mesh allocation when status is unchanged.
+
+### Graphical and executable checks
+
+Used the real client on Xvfb X11 + Mesa 25.0.7 llvmpipe Vulkan software rendering. All runs used explicit isolated absolute data directories outside the repository; actual player saves were never read or modified. Inspected screenshots of terrain/trees, five selection swatches, yellow `SAVING...`, green `SAVED` and persistent red `SAVE ERROR - F5 RETRY`.
+
+The XTest procedure exercised initial generation and saving **without edits**, capture/look, Wood placement through autosave, breaking, F5, Leaves placement saved by normal native close, Escape release and visible feedback while paused. Independent Python `struct`/`zlib` checks verified v2 records/CRC and material-count changes. A real backup-path I/O error left the primary byte-for-byte intact, displayed the error, and successfully retried with F5 after removing the obstruction. Previous-generation backup bytes were checked. Native close exited successfully.
+
+Restarting with an intentionally invalid seed override loaded the final saved world unchanged; it did not invoke seed validation/generation. Walking changed the rendered view after load; jump/reset/cursor inputs were also exercised, with detailed movement invariants covered by ECS/core tests. A second fresh world with seed 42 matched its golden snapshot and differed from the seed-2026 world. The real executable rejected an overflowing seed for a missing world without writing a primary/backup.
+
+Measured debug/cloud startup: seed 2026 generated 34 resident chunks in ~126 ms and built initial meshes in ~233 ms; seed 42 generated 36 chunks in ~151 ms and meshed in ~230 ms. Files were ~1.29 MB and ~1.21 MB respectively. These are bounded startup observations, not benchmarks of the owner's GPU, release builds or peak renderer memory. Only expected software-adapter/Xvfb warnings and intentionally induced save errors occurred.
+
+### Remaining acceptance and deliberate limits
+
+Native Void glibc X11/Wayland and Windows GUI tests, physical GPU/frame performance, compositor/pointer behavior and hands-on cave traversal remain outstanding. Follow [the isolated manual procedure](PLATFORMS.md#slice-5-manual-test). Software rendering and headless CI do not establish these outcomes.
+
+The volume remains finite; caves use a simple connected tunnel/ramp plan, trees have no growth/decay and leaves are solid/opaque. No streaming, biomes, water, seed metadata, player/inventory persistence or new lighting system. Loaded snapshots are authoritative and v1 upgrades only on changed saves. Backups retain one generation; old clients cannot read v2. Power-loss/forced-termination limitations from slice 4 remain documented in [SAVE_FORMAT.md](SAVE_FORMAT.md).
+
 ## Slice 4 — versioned save/load and autosave
 
 Validated locally on 2026-10-21, starting from `main` at `6026f74` after PR #6. Environment: Debian 13 glibc x86-64, Rust 1.99.1, Bevy 0.20.0. The owner confirmed slices 1–3 on Void; this report does not claim a native slice-4 Void or Windows play-test.

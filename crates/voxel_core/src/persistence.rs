@@ -11,7 +11,7 @@ use std::{
 };
 
 pub const MAGIC: &[u8; 8] = b"RUSTWRLD";
-pub const FORMAT_VERSION: u32 = 1;
+pub const FORMAT_VERSION: u32 = 2;
 pub const HEADER_SIZE: usize = 24;
 pub const RECORD_SIZE: usize = 14;
 pub const MAX_RECORDS: usize = 64 * 48 * 64;
@@ -44,13 +44,17 @@ fn block_id(block: Block) -> u16 {
         Block::Grass => 1,
         Block::Dirt => 2,
         Block::Stone => 3,
+        Block::Wood => 4,
+        Block::Leaves => 5,
     }
 }
-fn stored_block(id: u16) -> Result<Block, FormatError> {
+fn stored_block(id: u16, version: u32) -> Result<Block, FormatError> {
     match id {
         1 => Ok(Block::Grass),
         2 => Ok(Block::Dirt),
         3 => Ok(Block::Stone),
+        4 if version >= 2 => Ok(Block::Wood),
+        5 if version >= 2 => Ok(Block::Leaves),
         _ => Err(FormatError::BlockId(id)),
     }
 }
@@ -125,7 +129,7 @@ pub fn decode(bytes: &[u8]) -> Result<World, FormatError> {
         )
     };
     let version = u32_at(8);
-    if version != FORMAT_VERSION {
+    if ![1, FORMAT_VERSION].contains(&version) {
         return Err(FormatError::Version(version));
     }
     let count = u32_at(12) as usize;
@@ -156,9 +160,10 @@ pub fn decode(bytes: &[u8]) -> Result<World, FormatError> {
             return Err(FormatError::UnsortedOrDuplicate);
         }
         previous = Some(p);
-        let block = stored_block(u16::from_le_bytes(
-            record[12..14].try_into().expect("fixed record size"),
-        ))?;
+        let block = stored_block(
+            u16::from_le_bytes(record[12..14].try_into().expect("fixed record size")),
+            version,
+        )?;
         world
             .set_block(BlockPos(p), block)
             .map_err(|_| FormatError::Coordinates)?;
@@ -196,6 +201,7 @@ impl From<FormatError> for SaveError {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LoadSource {
     NewDemo,
+    NewWorld,
     Saved,
 }
 
@@ -207,6 +213,22 @@ pub struct SaveStore {
 }
 impl SaveStore {
     pub fn open(directory: impl AsRef<Path>) -> Result<(Self, World, LoadSource), SaveError> {
+        Self::open_using(directory, || Ok((demo_world(), LoadSource::NewDemo)))
+    }
+    /// The factory is evaluated ONLY when neither primary nor backup exists.
+    /// Loaded worlds never consult seeds or a generator, and are never rewritten.
+    pub fn open_with(
+        directory: impl AsRef<Path>,
+        create: impl FnOnce() -> Result<World, SaveError>,
+    ) -> Result<(Self, World, LoadSource), SaveError> {
+        Self::open_using(directory, || {
+            create().map(|world| (world, LoadSource::NewWorld))
+        })
+    }
+    fn open_using(
+        directory: impl AsRef<Path>,
+        create: impl FnOnce() -> Result<(World, LoadSource), SaveError>,
+    ) -> Result<(Self, World, LoadSource), SaveError> {
         let directory = directory.as_ref().to_path_buf();
         if !directory.is_absolute() {
             return Err(io::Error::new(
@@ -237,7 +259,7 @@ impl SaveStore {
                     store.backup_path().display()
                 )));
             }
-            Ok(None) => (demo_world(), LoadSource::NewDemo),
+            Ok(None) => create()?,
             Err(error) => return Err(error),
         };
         Ok((store, world, source))

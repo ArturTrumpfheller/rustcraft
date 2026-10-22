@@ -32,6 +32,44 @@ impl Plugin for PersistencePlugin {
 pub(crate) fn data_directory() -> io::Result<PathBuf> {
     directory_from(cfg!(windows), |name| std::env::var_os(name))
 }
+
+fn seed_from(value: Option<OsString>) -> io::Result<u64> {
+    match value {
+        None => Ok(voxel_core::worldgen::DEFAULT_SEED),
+        Some(value) => value
+            .to_str()
+            .and_then(|s| {
+                (!s.is_empty() && s.bytes().all(|c| c.is_ascii_digit()))
+                    .then(|| s.parse().ok())
+                    .flatten()
+            })
+            .ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "RUSTCRAFT_WORLD_SEED must be a decimal u64",
+                )
+            }),
+    }
+}
+/// Called lazily by SaveStore only for a genuinely absent world. An invalid
+/// override cannot interfere with loading an existing snapshot.
+pub(crate) fn create_world() -> Result<World, SaveError> {
+    let seed = seed_from(std::env::var_os("RUSTCRAFT_WORLD_SEED"))?;
+    let start = std::time::Instant::now();
+    let generator = voxel_core::worldgen::Generator::new(voxel_core::worldgen::GenerationConfig {
+        seed,
+        ..default()
+    })
+    .map_err(|e| io::Error::other(e.to_string()))?;
+    let world = generator.generate();
+    eprintln!(
+        "RustCraft new world: seed {seed}, generator v{}, {} chunks, generated in {:?}",
+        voxel_core::worldgen::GENERATOR_VERSION,
+        world.chunks().count(),
+        start.elapsed()
+    );
+    Ok(world)
+}
 fn directory_from(windows: bool, get: impl Fn(&str) -> Option<OsString>) -> io::Result<PathBuf> {
     if let Some(value) = get("RUSTCRAFT_DATA_DIR") {
         let path = PathBuf::from(value);
@@ -89,6 +127,7 @@ struct SaveJob {
 pub(crate) struct SaveSession {
     store: Arc<SaveStore>,
     saved_revision: u64,
+    creation_pending: bool,
     observed_revision: u64,
     job: Option<SaveJob>,
     manual_pending: bool,
@@ -104,9 +143,10 @@ impl SaveSession {
         Self {
             store: Arc::new(store),
             saved_revision: world.revision(),
+            creation_pending: source == LoadSource::NewWorld,
             observed_revision: world.revision(),
             job: None,
-            manual_pending: false,
+            manual_pending: source == LoadSource::NewWorld,
             closing: false,
             last_attempt: Duration::ZERO,
             interval: Duration::from_secs(30),
@@ -151,6 +191,7 @@ impl SaveSession {
             match job.handle.join() {
                 Ok(Ok(())) => {
                     self.saved_revision = job.revision;
+                    self.creation_pending = false;
                     self.saved_once = true;
                     self.last_error = None;
                     info!(
@@ -175,6 +216,8 @@ impl SaveSession {
             "Saved"
         } else if self.initial_source == LoadSource::Saved {
             "Loaded"
+        } else if self.initial_source == LoadSource::NewWorld {
+            "New world"
         } else {
             "New demo"
         }
@@ -212,7 +255,7 @@ fn update_saving(
         }
         session.observed_revision = current;
     }
-    let dirty = current != session.saved_revision;
+    let dirty = session.creation_pending || current != session.saved_revision;
     if ui.close.read().count() > 0 {
         session.closing = true;
     }

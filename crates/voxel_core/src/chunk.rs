@@ -9,6 +9,8 @@ pub enum Block {
     Grass,
     Dirt,
     Stone,
+    Wood,
+    Leaves,
 }
 
 impl Block {
@@ -23,6 +25,8 @@ impl Block {
             Self::Grass => [0.18, 0.42, 0.07, 1.0],
             Self::Dirt => [0.28, 0.13, 0.06, 1.0],
             Self::Stone => [0.32, 0.35, 0.38, 1.0],
+            Self::Wood => [0.24, 0.12, 0.035, 1.0],
+            Self::Leaves => [0.075, 0.29, 0.045, 1.0],
         }
     }
 }

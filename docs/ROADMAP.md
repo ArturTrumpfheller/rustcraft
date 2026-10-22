@@ -4,19 +4,19 @@ This document tracks intended milestones, not promised delivery dates. Implement
 
 ## v0.1 — Classic-style prototype
 
-Slice 4 adds versioned world save/load, manual/background autosave and safe final saving to the editable walking scene. Full v0.1 is not complete. The owner tested slices 1–3 on Void and their Linux/Windows CI passed. Current coverage is recorded in `docs/VALIDATION.md`; new native play-tests are still needed. Serialization/recovery tests now exist; seeded generation is still absent.
+Slice 5 adds deterministic finite terrain, connected caves, trees, Wood/Leaves, backward-compatible v2 saves and visible save feedback. Full v0.1 is not complete. The owner tested slices 1–4 on Void and their Linux/Windows CI passed. Current coverage is recorded in `docs/VALIDATION.md`; new native play-tests are still needed. Serialization/recovery and deterministic generation tests exist; infinite streaming and richer gameplay remain deferred.
 
 - [x] Cargo workspace and pinned Bevy dependency
 - [x] Launch client with a first-person walking player and interpolated camera
 - [x] Initial closed block-ID enum and simple voxel materials (extensible registry deferred)
 - [x] Chunk storage and visible-face meshing, including chunk-boundary culling
-- [ ] Terrain generation from deterministic seed
+- [x] Terrain generation from deterministic seed (versioned finite hills/valleys, connected caves and simple trees)
 - [x] Solid block collision, gravity and jumping (fixed 60-Hz AABB controller; boundary and tunneling regression tests)
 - [x] Block targeting, breaking and placement (five-block DDA, validated player-safe edits and dirty neighbor remeshing)
 - [x] Persistent world saves (versioned full snapshots, F5, dirty-only autosave, safe close and recoverable replacement)
-- [ ] Full inventory/hotbar (three unlimited block-selection slots exist)
+- [ ] Full inventory/hotbar (five unlimited block-selection slots exist)
 - [x] Tests for indexing and serialization, corruption and save-failure recovery
-- [ ] Tests for deterministic seeded generation
+- [x] Tests for deterministic seeded generation, bounds, cave access, tree seams and spawn
 
 **Exit criterion:** Start a world, walk around, place and break blocks, save, restart, and recover changes.
 

@@ -75,12 +75,7 @@ fn simulate_player(
 }
 
 fn safe_spawn(world: &voxel_core::World, config: &PhysicsConfig) -> PlayerState {
-    let mut body = Player::new(SPAWN);
-    while !body.fits_in_world(world, config)
-        && body.position[1] < f64::from(voxel_core::EDIT_MAX[1])
-    {
-        body.position[1] += 1.0;
-    }
+    let body = Player::new(voxel_core::physics::spawn_position(world, config, SPAWN));
     PlayerState {
         previous_position: body.position,
         body,

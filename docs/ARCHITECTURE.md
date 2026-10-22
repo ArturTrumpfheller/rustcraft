@@ -1,6 +1,6 @@
 # RustCraft architecture
 
-Status: **v0.1 / slice 4 implemented**. Later gameplay systems remain proposals.
+Status: **v0.1 / slice 5 implemented**. Later gameplay systems remain proposals.
 
 ## Current workspace
 
@@ -8,7 +8,7 @@ Status: **v0.1 / slice 4 implemented**. Later gameplay systems remain proposals.
 Cargo.toml             workspace and pinned Bevy dependency
 Cargo.lock             committed application dependency graph
 rust-toolchain.toml    Rust 1.99.1, rustfmt and Clippy
-crates/voxel_core/      storage, coordinates, fixed world, surface buffers, physics, targeting and validated edits
+crates/voxel_core/      storage, coordinates, finite worldgen, surface buffers, physics, targeting, edits and persistence
 client/                Bevy application, rendering, fixed-step player adapter, camera/input and interaction feedback
 ```
 
@@ -20,9 +20,9 @@ Y is up; integer block positions identify unit cells spanning `[x, x+1]`, `[y, y
 
 `BlockPos::split` uses Euclidean division/remainders: block -1 belongs to chunk -1 at local 15. Conversion back to block coordinates and neighbor offsets use checked arithmetic. The supported block-coordinate space is signed 32-bit; unrepresentable positions are rejected rather than wrapping.
 
-`Block` is a small closed enum (air, grass, dirt, stone), serving as the first block-ID/material definition. A separate `BuildBlock` selection enum only allows grass/dirt/stone in slots 1/2/3. Persistence maps materials explicitly to stable IDs (Air=0, Grass=1, Dirt=2, Stone=3); enum representation is not a save format. An extensible registry remains deferred.
+`Block` is a small closed enum (air, grass, dirt, stone, wood, leaves), serving as the first block-ID/material definition. A separate `BuildBlock` selection enum only allows Grass/Dirt/Stone/Wood/Leaves in slots 1–5. Persistence maps materials explicitly to stable IDs (Air=0, Grass=1, Dirt=2, Stone=3, Wood=4, Leaves=5); enum representation is not a save format. An extensible registry remains deferred.
 
-`World` owns chunks in a `BTreeMap`, giving repeatable iteration. Missing chunks are air. `demo_world` creates four adjacent chunks with a fixed terraced layout and a stone landmark. It is not a seeded terrain algorithm.
+`World` owns chunks in a `BTreeMap`, giving repeatable iteration. Missing chunks are air. `demo_world` creates four adjacent chunks with a fixed terraced layout and a stone landmark. It remains a legacy/test fixture. New client worlds use `worldgen::Generator` with an explicit u64 seed and versioned configuration.
 
 ## Mesh and rendering boundary
 
@@ -30,7 +30,7 @@ Y is up; integer block positions identify unit cells spanning `[x, x+1]`, `[y, y
 
 The client retains authoritative `World` data in a `VoxelWorld` resource and converts these buffers into Bevy `Mesh` assets, with one entity per chunk and one shared rough white `StandardMaterial`. The original per-block colors come from vertex attributes. A directional sun, ambient light and sky background illuminate the scene. Reinhard tonemapping avoids lookup-table texture assets. No external texture, font or model files are needed.
 
-Initial construction remains bounded to four 16³ chunks. Each successful `World::set_block` returns a `BlockChange` containing position and before/after values; equal assignments are no-ops. `Chunk::set` reports whether a validated local cell actually changed. Clearing absent air never creates storage. Solid edits create initially missing chunks lazily. Mutable-world edits are deliberately bounded to **X/Z [-32,32), Y [-16,32)** (at most 48 resident chunks). Reads outside stored chunks remain air; trusted whole-chunk insertion is an initialization/import API, not a player edit.
+Initial construction is bounded to the existing finite volume (at most 48 chunks), measured/logged once at startup. Each successful `World::set_block` returns a `BlockChange` containing position and before/after values; equal assignments are no-ops. `Chunk::set` reports whether a validated local cell actually changed. Clearing absent air never creates storage. Solid edits create initially missing chunks lazily. Mutable-world edits are deliberately bounded to **X/Z [-32,32), Y [-16,32)** (at most 48 resident chunks). Reads outside stored chunks remain air; trusted whole-chunk insertion is an initialization/import API, not a player edit.
 
 `BlockChange::affected_chunks` identifies the owning chunk plus face-sharing neighbors when local coordinates are 0 or 15. Diagonal neighbors are unnecessary. The client accumulates these positions in a `BTreeSet` and rebuilds only dirty resident chunks in `Update`, after interaction in the fixed-loop schedule. A boundary-corner edit affects at most four meshes. Mesh construction remains synchronous for these small, bounded per-click jobs; streaming/larger batches will require a job budget or asynchronous snapshots.
 
@@ -48,7 +48,15 @@ The client publishes `ViewPose` while synchronizing the camera, before f64-to-f3
 
 Only captured, focused, active-camera input can edit. A new capture suppresses both buttons for that frame; subsequent left clicks do not suppress mouse look. R/reset frames also suppress edits. Mouse edges trigger one operation per click, with breaking taking priority if both buttons arrive together. There are no hold-to-mine timers, inventory consumption or sounds.
 
-Feedback uses original procedural mesh geometry and existing `StandardMaterial`: center crosshair, three color swatches with a selected frame, and a slightly expanded target wire cube. The title names the selected slot/material. Camera-relative feedback is sized in logical screen pixels using the current perspective FOV/window height. No UI/font/shader asset import or new Bevy features are required.
+Feedback uses original procedural mesh geometry and existing `StandardMaterial`: center crosshair, five color swatches with a selected frame, and a slightly expanded target wire cube. The title names the selected slot/material. Camera-relative feedback is sized in logical screen pixels using the current perspective FOV/window height. No UI/font/shader asset import or new Bevy features are required.
+
+## Seeded generation and save feedback
+
+`worldgen::GenerationConfig` contains an explicit u64 seed and generator version 1. A 16-KiB finite height cache uses three scales of Q10 integer smoothstep value noise. Stable coordinate hashing replaces a shared random stream. Layering and a connected cave/ramp plan are sampled in world coordinates; deterministic spaced tree anchors are planned before chunks are emitted. Trees cross seams without mutating neighboring chunks. Chunk generation is immutable/order-independent, skips out-of-bounds requests and only stores nonempty chunks. Golden snapshots cover seeds 0, 1, 42, 2026 and u64::MAX on both CI platforms. See [the contract and tradeoffs](WORLDGEN.md).
+
+Generation happens before App/window creation; bounded meshing happens once at Startup and reports elapsed time. There is no regeneration, chunk meshing or whole-world clone each frame. Future streaming needs regional planning/halos and asynchronous generation/meshing budgets; this finite cache is intentionally not an infinite-world abstraction.
+
+`client::save_hud` renders original 5×7 bitmap lettering as camera-relative colored quads on a dark panel. It updates an existing mesh only when status changes, remains visible without mouse capture, scales using logical screen pixels and reuses one material/handle. Saving is yellow, success green and persistent errors red with F5 retry. No UI/font subsystem, external assets or dependency/feature changes are needed.
 
 ## Player physics (`voxel_core::physics`)
 
@@ -83,15 +91,15 @@ After the fixed loop, the camera interpolates previous/current feet positions us
 
 Capture starts on click; Escape or focus loss releases it. Re-focusing requires another click. In this local single-player prototype, release pauses the player simulation (including falling), preserving velocity until resumed; pending edges are cleared. A future authoritative multiplayer/server simulation must not inherit this local pause policy.
 
-Spawn is feet `[0.5, 4.0, 10.5]`, above the low terrace and facing -Z toward the island. Initialization, R and void recovery search upward through the bounded edit volume for clear space if loaded/edited blocks obstruct the original spawn. R resets body, previous position, velocity, pending jump and view; falling below Y=-32 resets the body automatically. Resetting both positions prevents interpolation across the map. There is no debug-flying mode, automatic step-up or collision crouch. Block editing is handled by the separate interaction adapter and never reads mesh geometry for gameplay.
+The preferred spawn column is near (0,10), facing -Z. `physics::spawn_position` scans nearby sky-exposed ground, skips tree tops and checks the actual player AABB. Initialization, R and void recovery all use restored/generated blocks, never a fixed demo Y. A fully empty snapshot has no supported spawn; it is preserved and uses a clear-air fallback rather than creating terrain. R resets body, previous position, velocity, pending jump and view; falling below Y=-32 resets the body automatically. Resetting both positions prevents interpolation across the map. There is no debug-flying mode, automatic step-up or collision crouch. Block editing is handled by the separate interaction adapter and never reads mesh geometry for gameplay.
 
 ## Persistence (`voxel_core::persistence`, `client::persistence`)
 
-Version 1 is a **full world snapshot**, encoded as canonical, sorted non-air records. Absence means Air, including removed terrain: decoding starts from an empty `World`, never from the demo. A missing file alone creates the clean demo; a valid empty world remains empty. Full snapshots use more space than an edit overlay but avoid coupling saves to a particular generator or demo revision. The bounded volume has at most 196,608 records / 2,752,536 bytes. Future seeded generation can create new worlds without changing saved worlds. Streaming, larger bounds or new record semantics need an explicit new format version/migration, not reinterpretation of version 1.
+Versions 1 and 2 are **full world snapshots**, encoded as canonical, sorted non-air records. Absence means Air, including removed terrain: decoding starts from an empty `World`, never from the demo. Only absence of both primary and backup invokes the client’s lazy creation factory; a valid empty world remains empty. Seed parsing and generation never run for an existing world. Full snapshots use more space than an edit overlay but avoid coupling saves to a particular generator or demo revision. The bounded volume has at most 196,608 records / 2,752,536 bytes. Seeded generation creates new worlds without changing saved worlds. v2 adds Wood/Leaves while keeping all v1 IDs and snapshot semantics; valid v1 files load byte-for-byte unchanged until a successful changed save writes v2 with the old primary backed up. Streaming, larger bounds or new record semantics need an explicit new format version/migration, not reinterpretation of version 1.
 
-The core owns format validation, stable block IDs, checksums, bounded reads, exclusive session locking and filesystem commit/recovery rules, without Bevy or environment lookup. `SaveStore::open` accepts an absolute directory. The client resolves per-user Linux/Windows paths or `RUSTCRAFT_DATA_DIR`, loads before constructing the App, and injects authoritative `VoxelWorld` before startup meshes, collision and safe player initialization. Player position and presentation state are intentionally transient.
+The core owns format validation, stable block IDs, checksums, bounded reads, exclusive session locking and filesystem commit/recovery rules, without Bevy or environment lookup. `SaveStore::open_with` accepts an absolute directory and a lazy new-world factory. `open` retains the old demo factory as a library/legacy-test convenience. The client resolves per-user Linux/Windows paths or `RUSTCRAFT_DATA_DIR`, loads before constructing the App, and injects authoritative `VoxelWorld` before startup meshes, collision and safe player initialization. Player position and presentation state are intentionally transient.
 
-`World` maintains a process-local revision that advances only on actual mutations (and changed chunk imports). Revisions are never serialized. The loaded/demo revision starts clean. The client captures a bounded clone (at most 48 chunk vectors, ~192 KiB of block payload) only when a save is needed; encoding, sorting, reading, syncing and replacing files run on one background thread. Frames poll completion and never join an unfinished job. A completed older revision cannot mark newer edits clean. F5 requests can queue behind a running job; autosave uses real time, even when local player simulation is paused. At most one save is in flight, so no jobs race the backup/primary.
+`World` maintains a process-local revision that advances only on actual mutations (and changed chunk imports). Revisions are never serialized. Loaded revisions start clean. A generated world has an explicit first-creation pending flag: one background save is requested even without edits, and only a completed commit clears it. Failure keeps the new world dirty and blocks normal close until retry succeeds. The client captures a bounded clone (at most 48 chunk vectors, ~192 KiB of block payload) only when a save is needed; encoding, sorting, reading, syncing and replacing files run on one background thread. Frames poll completion and never join an unfinished job. A completed older revision cannot mark newer edits clean. F5 requests can queue behind a running job; autosave uses real time, even when local player simulation is paused. At most one save is in flight, so no jobs race the backup/primary.
 
 The native close request is handled explicitly instead of Bevy's automatic window deletion. Controls pause, in-flight work completes, any newer dirty revision is saved, and only then is `AppExit` sent. Failures remain dirty and cancel closing so the user can retry. Forced process termination is outside that protocol. A Drop guard only drains an already-running worker if the App is destroyed by another runner. Feedback never reports success before the synced commit returns.
 
@@ -103,4 +111,4 @@ Only the Bevy subsystems needed for 3D rendering, desktop windows and keyboard/m
 
 ## Next boundaries
 
-Add seeded generation and richer gameplay on the existing ray/edit/physics/persistence boundaries. Keep existing snapshots independent of new terrain defaults, and implement explicit migration before accepting a new format. Do not persist ECS entities or derive simulation state from mesh geometry. Networking, server authority, mods and a general item registry remain deferred.
+Extend generation and gameplay on the existing worldgen/ray/edit/physics/persistence boundaries. Keep existing snapshots independent of new terrain defaults, and implement explicit migration before accepting a new format. Do not persist ECS entities or derive simulation state from mesh geometry. Networking, server authority, mods and a general item registry remain deferred.
