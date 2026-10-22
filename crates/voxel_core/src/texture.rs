@@ -62,3 +62,65 @@ pub(crate) fn face_uv(normal: [i32; 3], corner: [u8; 3]) -> [u8; 2] {
         _ => unreachable!("axis-aligned face"),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn block_faces_select_distinct_top_side_bottom_without_storage_ids() {
+        for n in [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]] {
+            assert_eq!(face_tile(Block::Grass, n), Some(Tile::GrassSide));
+            assert_eq!(face_tile(Block::Wood, n), Some(Tile::Bark));
+        }
+        assert_eq!(face_tile(Block::Grass, [0, 1, 0]), Some(Tile::GrassTop));
+        assert_eq!(face_tile(Block::Grass, [0, -1, 0]), Some(Tile::Dirt));
+        for n in [
+            [1, 0, 0],
+            [-1, 0, 0],
+            [0, 1, 0],
+            [0, -1, 0],
+            [0, 0, 1],
+            [0, 0, -1],
+        ] {
+            assert_eq!(face_tile(Block::Air, n), None);
+            assert_eq!(face_tile(Block::Dirt, n), Some(Tile::Dirt));
+            assert_eq!(face_tile(Block::Stone, n), Some(Tile::Stone));
+            assert_eq!(face_tile(Block::Leaves, n), Some(Tile::Leaves));
+        }
+        assert_eq!(face_tile(Block::Wood, [0, 1, 0]), Some(Tile::EndGrain));
+        assert_eq!(face_tile(Block::Wood, [0, -1, 0]), Some(Tile::EndGrain));
+    }
+
+    #[test]
+    fn atlas_corners_cover_exactly_sixteen_texels_with_guard_bands() {
+        for (i, tile) in [
+            Tile::GrassTop,
+            Tile::GrassSide,
+            Tile::Dirt,
+            Tile::Stone,
+            Tile::Bark,
+            Tile::EndGrain,
+            Tile::Leaves,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let min = tile.uv([0, 0]);
+            let max = tile.uv([1, 1]);
+            assert_eq!(
+                min,
+                [
+                    ((i % 4) * 32 + 8) as f32 / 128.,
+                    ((i / 4) * 32 + 8) as f32 / 64.
+                ]
+            );
+            for a in 0..2 {
+                assert!(min[a] > 0. && max[a] < 1.);
+                assert_eq!((max[a] - min[a]) * ATLAS_SIZE[a] as f32, 16.);
+            }
+            assert_eq!(tile.uv([0, 1]), [min[0], max[1]]);
+            assert_eq!(tile.uv([1, 0]), [max[0], min[1]]);
+        }
+    }
+}

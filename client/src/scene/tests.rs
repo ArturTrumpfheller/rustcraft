@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn scene_plugin_builds_four_renderable_chunk_entities_without_external_assets() {
+fn scene_plugin_builds_four_renderable_chunk_entities_with_one_embedded_atlas() {
     let mut app = App::new();
     app.init_resource::<Assets<Mesh>>()
         .init_resource::<Assets<StandardMaterial>>()
@@ -92,6 +92,8 @@ fn repeated_boundary_edits_update_neighbors_and_reuse_assets_even_when_empty() {
         );
         edit_cell(&mut app, [16, 1, 1], voxel_core::Block::Stone);
     }
+    assert_eq!(app.world().resource::<Assets<Image>>().len(), 1);
+    assert_eq!(app.world().resource::<Assets<StandardMaterial>>().len(), 1);
     assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
     assert_eq!(app.world().resource::<ChunkRenders>().0.len(), 2);
     assert_eq!(
@@ -134,5 +136,52 @@ fn idle_frames_do_not_remesh_and_negative_seams_refresh_both_chunks() {
             .unwrap()
             .len(),
         36
+    );
+}
+
+#[test]
+fn all_materials_share_one_opaque_texture_and_mesh_layout_is_compact() {
+    let mut app = terrain_app();
+    for (i, b) in [
+        voxel_core::Block::Grass,
+        voxel_core::Block::Dirt,
+        voxel_core::Block::Stone,
+        voxel_core::Block::Wood,
+        voxel_core::Block::Leaves,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        edit_cell(&mut app, [i as i32 * 3, 1, 1], b);
+    }
+    let world = app.world_mut();
+    assert_eq!(world.resource::<Assets<Image>>().len(), 1);
+    assert_eq!(world.resource::<Assets<StandardMaterial>>().len(), 1);
+    let terrain = &world.resource::<TerrainMaterial>().0;
+    let material = world
+        .resource::<Assets<StandardMaterial>>()
+        .get(terrain)
+        .unwrap();
+    assert_eq!(material.base_color, Color::WHITE);
+    assert_eq!(material.alpha_mode, AlphaMode::Opaque);
+    assert!(
+        world
+            .resource::<Assets<Image>>()
+            .get(material.base_color_texture.as_ref().unwrap())
+            .is_some()
+    );
+    let h = world.resource::<ChunkRenders>().0[&ChunkPos([0, 0, 0])]
+        .mesh
+        .clone();
+    let m = world.resource::<Assets<Mesh>>().get(&h).unwrap();
+    assert!(m.attribute(Mesh::ATTRIBUTE_COLOR).is_none());
+    assert_eq!(m.count_vertices(), 120);
+    assert_eq!(m.attribute(Mesh::ATTRIBUTE_UV_0).unwrap().len(), 120);
+    assert_eq!(
+        m.get_mesh_vertex_buffer_layout(&mut bevy::mesh::MeshVertexBufferLayouts::default())
+            .0
+            .layout()
+            .array_stride,
+        32
     );
 }
