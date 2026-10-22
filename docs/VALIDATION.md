@@ -1,5 +1,146 @@
 # RustCraft validation
 
+## Slice 8 — original 16×16 art and shared terrain atlas
+
+Started from accepted `main` **c1186df** (PR #14). The owner confirmed Slices 1–7
+on native Void; older sections below describe historical development measurements.
+Rust 1.99.1 / Bevy 0.20.0 and the complete dependency/feature graph are unchanged.
+No save format, block ID, worldgen output, physics or streaming policy changed.
+
+### Checks and coverage
+
+Passed on Debian 13 glibc x86-64, debug profiles:
+
+```sh
+python3 tools/generate_textures.py --check
+cargo fmt --all -- --check
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo test --locked --workspace
+cargo build --locked --workspace
+```
+
+**162 tests passed (99 core + 63 client), none failed or ignored**. All 154
+accepted Slice-7 tests remain. New/extended tests cover every block/face selection,
+full atlas footprints and upright/mirrored UV orientation, unchanged CCW vertices,
+normals/indices, mixed-material culling at signed X/Y/Z chunk seams, explicit
+sRGB/nearest/LOD0 sampler, opacity, every extruded gutter/corner, distinct tiles,
+actual Bevy vertex stride and one shared Image/material across mining, empty/
+refill, travel/eviction, far rebase and regional save/restart. Existing diagonal
+contact, spawn unloading, dirty seam batches, corruption and v1/v2/v3/v4 goldens
+still pass. CI additionally checks JSON → committed PNG/RGBA regeneration on both
+Ubuntu and Windows. See the PR for current-commit remote results.
+
+Asset provenance, explicit dual license, editable grids/palettes, PNG previews
+and standard-library generator are in `assets/terrain/README.md`. Runtime embeds
+raw pixels once, needing no image decoder, Python or working-directory lookup.
+A screenshot of actual original terrain/UI is in `docs/images/slice8-terrain.png`.
+All other test fixtures, logs, binaries and control scripts remain outside Git.
+
+### Matched headless measurements versus Slice 7
+
+Same host, Rust debug builds, seed 42, radius 1; **three separate trials per
+version**, medians below. Baseline binary/test harness was preserved from the
+accepted Slice-7 production tree (c1186df, same production source as 5853f27).
+Runs directly execute compiled binaries, exclude compilation and do not overlap
+GUI workloads. Mesh geometry, seed, camera-independent test inputs and output
+face counts match; the only terrain attribute change is color → UV. Process CPU
+and RSS include initial loading/runtime; workload elapsed excludes initial load.
+Cloud scheduling remains noisy; small differences are not statistical guarantees.
+
+| Workload / metric | Slice 7 | Slice 8 |
+| --- | --- | --- |
+| Terrain vertex stride / logical total mesh bytes per quad | 40 / 184 bytes | 32 / 152 bytes |
+| 128 surface changes, 32 coalesced batches: elapsed | 264.63 ms | 272.61 ms (~3% more) |
+| Same: median longest worker | 7.84 ms | 7.02 ms |
+| Same: headless update P50 / P95 / P99 | 0.589 / 0.794 / 0.862 ms | 0.574 / 0.690 / 0.836 ms |
+| Same: whole-process CPU | 0.901 CPU s | 0.901 CPU s |
+| Same: peak process RSS across trials | 36,924–37,428 KiB | 34,832–35,712 KiB |
+| Same: restored mesh buffers / discarded results | 1,909,736 bytes / 0 | 1,577,608 bytes / 0 |
+| Regional far tour, edits/eviction/save/restart: elapsed | 1.207 s | 1.183 s |
+| Same: visit P50 / P95 | 131.35 / 139.17 ms | 127.14 / 137.84 ms |
+| Same: whole-process CPU | 2.233 CPU s | 2.175 CPU s |
+| Same: peak RSS across trials | 36,972–37,104 KiB | 35,320–35,652 KiB |
+| Same: peak chunks / final cached regions / logical buffers | 27 / 4 / 1,986,832 bytes | 27 / 4 / 1,641,296 bytes |
+
+The first straightforward per-vertex UV implementation measured 300.97 ms median
+for the surface workload. Replacing repeated atlas divisions/normal matches with
+a **448-byte compile-time quad table** reduced that median to 272.61 ms. Geometry
+and UVs are tested unchanged. The final headless difference is small, not a claim
+that texturing makes all jobs faster. GPU/CPU terrain vertex payload shrinks 20%;
+with identical u32 indices, total logical terrain buffers shrink **17.39%**.
+The shared atlas adds **32,768 pixel bytes each on CPU/GPU**, excluding driver
+alignment, bind groups and allocator overhead. No extra terrain materials/draw
+calls are introduced. Values describe logical buffers, not measured driver VRAM.
+
+Reproduce CPU workloads separately without compiling/rendering simultaneously:
+
+```sh
+cargo test --locked -p rustcraft surface_seam_mining_metrics -- --nocapture
+cargo test --locked -p rustcraft large_world_travel -- --nocapture
+cargo test --locked -p rustcraft streaming_reuses_one_atlas -- --nocapture
+```
+
+### Matched graphical stress and visual checks
+
+Xvfb X11, Mesa 25.0.7 llvmpipe Vulkan, 640×360, debug, `LP_NUM_THREADS=4`, radius 1.
+Backend/driver overrides were confined to the test process. Both versions used the
+same original disposable v3 wall/platform save, view and timing: eight-second
+warmup, then **32 break/restore cycles (64 applied edits)**, 400-ms click intervals.
+Two preliminary edits validate capture/raycast/save, then save revision **2 → 66**
+proves all stress operations occurred. Both final saves equal the original bytes;
+each version's own initial/restored screenshots are pixel-identical. Cross-version
+screenshots intentionally differ because terrain is now textured.
+
+| Graphical metric | Slice 7 | Slice 8 |
+| --- | --- | --- |
+| Stress wall time / process CPU | 25.654 s / 67.21 CPU s | 25.658 s / 67.33 CPU s |
+| CPU percentage (sum of threads, one core=100%) | 262.0% | 262.4% |
+| Sampled RSS start → end | 418,100 → 418,632 KiB | 415,656 → 415,668 KiB |
+| Final rolling frame P50 / P95 / P99 | 38.46 / 43.03 / 44.15 ms | 41.58 / 53.37 / 59.15 ms |
+| Mean FPS in final 128-frame window | 25.7 | 23.1 |
+| Lifetime streaming-system maximum | 0.433 ms | 0.373 ms |
+| Final chunks / meshes / logical buffer bytes | 27 / 23 / 1,971,192 | 27 / 23 / 1,628,376 |
+
+Texturing **did not improve software-renderer FPS**: the observed mean fell about
+10%, with a higher P95/P99, while total CPU during the fixed-duration input sequence
+was essentially equal. There is one additional nearest atlas sample per terrain
+fragment. This single paired software run does not identify physical AMD/DX12 GPU
+cost or guarantee FPS on Void/Windows. No GPU-only profiler was available. Stale
+job discards were zero on both runs; initial eight column loads stayed eight,
+with no per-edit full-column generation. Resource counts returned to their initial
+values; sampled memory plateaued. This supports ownership correctness, not proof
+against every driver/VRAM leak.
+
+Inspected graphical screenshots show sharp pixel edges, distinct grass top/side,
+dirt, stone, upright bark, end-grain on both ends and opaque leaves. A fresh gen3
+world exercised capture/look, selection, jumping, HUD, release and normal close.
+An isolated legacy-v2 showcase exercised actual Wood removal/placement and F5;
+the placement landed on the aimed adjacent wall cell, not the harness's initially
+assumed top cell, so that showcase's automatic exact-restoration assertion was
+inapplicable. The matched stress fixture above supplies verified exact restoration.
+An initial new-run capture attempt required focus after resize; it was excluded
+and the successful complete paired sequence was repeated with correct focus.
+
+A graphical **v4 far-load compatibility** run used a copy of the accepted Slice-7
+seed-42 world near `[16008.5,6,-15991.5]`. Existing Air `(16008,5,-15993)` and Wood
+`(16008,4,-15993)` rendered with the new atlas and retained their exact regional
+records. A seed override did not alter the loaded world. R evicted all nine distant
+columns and reloaded origin (27 chunks/four region maps), with correct target/UI
+alignment. Manifest, regional primaries and backups remained byte-identical after
+close. Far startup queue-to-install maximum was 948 ms including renderer startup;
+longest terrain job 20.34 ms. Screenshots of the textured hole/end-grain and origin
+were inspected. Tests launched the embedded-asset executable outside the repo root.
+
+### Remaining native acceptance
+
+Use the [isolated Fish procedure](PLATFORMS.md#slice-8-texture-test-fish), never
+fault-inject or overwrite real saves. Back up the whole closed regional world.
+Native Void X11/Wayland + AMD, Windows GUI, actual GPU timings/VRAM endurance and
+long exploration remain manual acceptance. Nearest LOD0 deliberately permits
+distant minification shimmer; no global mip chain that could bleed atlas tiles
+is enabled. Lighting, save formats, generators and finite supported extent are
+unchanged. Per-tile mipmaps, texture arrays and dynamic lighting are future work.
+
 ## Slice 7 — local large-world generation and regional persistence
 
 Started from accepted `main` **d2acca8** (Slice 6 and native corrections). This

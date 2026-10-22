@@ -4,7 +4,7 @@ This document tracks intended milestones, not promised delivery dates. Implement
 
 ## v0.1 — Classic-style prototype
 
-Slice 8 adds original 16×16 art and one shared atlas/material with compact UV-bearing meshes. The owner accepted Slice 7 on Void. Slice 7 added local generator v3, a large 65,536×65,536×48 rollout, bounded regional edit caching/persistence and floating-origin rendering. The owner accepted slices 1–6 including the native Void corrections. Existing v1/v2/v3 worlds stay in their original modes; no automatic migration. Full v0.1 is not complete. Current measurements and remaining native Slice-8 acceptance are in VALIDATION.
+Slice 8 adds original 16×16 art and one shared atlas/material with compact UV-bearing meshes. The owner accepted Slice 7 on Void. Slice 7 added local generator v3, a large 65,536×65,536×48 rollout, bounded regional edit caching/persistence and floating-origin rendering. Slices 1–7, including the native Void corrections, are accepted. Existing v1/v2/v3 worlds stay in their original modes; no automatic migration. Full v0.1 is not complete. Current measurements and remaining native Slice-8 acceptance are in VALIDATION.
 
 - [x] Cargo workspace and pinned Bevy dependency
 - [x] Launch client with a first-person walking player and interpolated camera
