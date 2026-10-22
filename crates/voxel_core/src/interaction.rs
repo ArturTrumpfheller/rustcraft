@@ -65,6 +65,7 @@ pub enum EditAction {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EditError {
     OutOfBounds,
+    NotLoaded,
     Occupied,
     IntersectsPlayer,
     NoPlacementFace,
@@ -82,10 +83,16 @@ pub fn edit(
     let Some(hit) = raycast(world, ray) else {
         return Ok(None);
     };
+    if !world.ready(hit.position) {
+        return Err(EditError::NotLoaded);
+    }
     match action {
         EditAction::Break => world.set_block(hit.position, Block::Air),
         EditAction::Place(selection) => {
             let position = hit.adjacent.ok_or(EditError::NoPlacementFace)?;
+            if !world.ready(position) {
+                return Err(EditError::NotLoaded);
+            }
             if world.block(position).is_solid() {
                 return Err(EditError::Occupied);
             }

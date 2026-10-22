@@ -489,3 +489,85 @@ fn seed_parser_has_defined_default_and_strict_u64_validation() {
         assert!(seed_from(Some(s.into())).is_err(), "{s}");
     }
 }
+
+#[test]
+fn streamed_dirty_eviction_failed_save_retry_and_restart_retain_complete_overlay() {
+    let dir = TestDir::new();
+    let (store, mut world, source) =
+        SaveStore::open_with(&dir.0, || Ok(voxel_core::streaming::new_world(42))).unwrap();
+    let generator = voxel_core::streaming::prepare_spawn(&mut world).unwrap();
+    let mut app = app_from(store, world, source);
+    drain(&mut app);
+    assert_eq!(fs::read(dir.0.join("world.rcw")).unwrap().len(), 40);
+    let removed = BlockPos([0, -15, 0]);
+    edit(&mut app, removed.0, Block::Air);
+    let data = voxel_core::streaming::build_column(
+        &generator,
+        app.world().resource::<VoxelWorld>().0.edits(),
+        [-3, 2],
+        1,
+    );
+    for (p, c, _) in data.chunks {
+        app.world_mut()
+            .resource_mut::<VoxelWorld>()
+            .0
+            .insert_chunk(p, c);
+    }
+    let added = BlockPos([-40, 25, 40]);
+    edit(&mut app, added.0, Block::Leaves);
+    {
+        let mut w = app.world_mut().resource_mut::<VoxelWorld>();
+        w.0.evict_column([0, 0]);
+        w.0.evict_column([-3, 2]);
+        assert_eq!(w.0.chunks().count(), 0);
+    }
+    fs::create_dir(dir.0.join("world.rcw.bak")).unwrap();
+    f5(&mut app);
+    drain(&mut app);
+    assert_eq!(
+        app.world().resource::<SaveFeedback>().label,
+        "ERROR / DIRTY"
+    );
+    assert_eq!(app.world().resource::<VoxelWorld>().0.edits().len(), 2);
+    close(&mut app);
+    drain(&mut app);
+    assert!(app.should_exit().is_none());
+    fs::remove_dir(dir.0.join("world.rcw.bak")).unwrap();
+    f5(&mut app);
+    drain(&mut app);
+    assert_eq!(app.world().resource::<SaveFeedback>().label, "Saved");
+    assert_eq!(fs::read(dir.0.join("world.rcw")).unwrap().len(), 68);
+    drop(app);
+    let (_, mut restored, source) =
+        SaveStore::open_with(&dir.0, || panic!("no override seed on load")).unwrap();
+    assert_eq!(source, LoadSource::Saved);
+    voxel_core::streaming::prepare_spawn(&mut restored).unwrap();
+    assert_eq!(restored.block(removed), Block::Air);
+    let data = voxel_core::streaming::build_column(&generator, restored.edits(), [-3, 2], 0);
+    for (p, c, _) in data.chunks {
+        restored.insert_chunk(p, c);
+    }
+    assert_eq!(restored.block(added), Block::Leaves);
+}
+
+#[test]
+fn historical_v1_stays_byte_identical_through_loaded_idle_f5_and_close() {
+    let dir = TestDir::new();
+    let hex = "5255535457524c4401000000010000000e000000b2d255a90000000000000000000000000300";
+    let bytes: Vec<_> = hex
+        .as_bytes()
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|p| u8::from_str_radix(std::str::from_utf8(p).unwrap(), 16).unwrap())
+        .collect();
+    fs::write(dir.0.join("world.rcw"), &bytes).unwrap();
+    let mut app = app_at(&dir);
+    frame(&mut app, Duration::from_secs(120));
+    f5(&mut app);
+    close(&mut app);
+    assert!(app.should_exit().is_some());
+    assert_eq!(fs::read(dir.0.join("world.rcw")).unwrap(), bytes);
+    assert!(!dir.0.join("world.rcw.bak").exists());
+    assert!(app.world().resource::<VoxelWorld>().0.identity().is_none());
+}

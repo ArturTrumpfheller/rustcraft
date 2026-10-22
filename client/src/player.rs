@@ -32,6 +32,7 @@ pub(crate) struct PlayerSettings(pub PhysicsConfig);
 pub(crate) struct PlayerState {
     pub body: Player,
     pub previous_position: [f64; 3],
+    pub awaiting_spawn: bool,
 }
 
 impl Default for PlayerState {
@@ -39,6 +40,7 @@ impl Default for PlayerState {
         Self {
             body: Player::new(SPAWN),
             previous_position: SPAWN,
+            awaiting_spawn: false,
         }
     }
 }
@@ -69,16 +71,47 @@ fn simulate_player(
         input.jump_pending = false;
         return;
     }
+    if player.awaiting_spawn {
+        // The requested position drives streaming back to the starting area.
+        // Never search remote resident ground or simulate pending spawn cells.
+        if !world.0.ready(voxel_core::BlockPos([0, 0, 10])) {
+            input.jump_pending = false;
+            return;
+        }
+        *player = safe_spawn(&world.0, &config.0);
+        input.jump_pending = false;
+        return;
+    }
+    if world.0.identity().is_some() {
+        let ready = player.body.cache_ready(&world.0, &config.0);
+        if !ready {
+            input.jump_pending = false;
+            return;
+        }
+        // Recovery after a teleport into a column that finished loading.
+        if !player.body.fits_in_world(&world.0, &config.0) {
+            let p = voxel_core::physics::spawn_position(&world.0, &config.0, player.body.position);
+            player.body = Player::new(p);
+            player.previous_position = p;
+            input.jump_pending = false;
+        }
+    }
     let mut command = input.command;
     command.jump = std::mem::take(&mut input.jump_pending);
     player.body.tick(&world.0, command, &config.0);
 }
 
 fn safe_spawn(world: &voxel_core::World, config: &PhysicsConfig) -> PlayerState {
-    let body = Player::new(voxel_core::physics::spawn_position(world, config, SPAWN));
+    let awaiting_spawn = !world.ready(voxel_core::BlockPos([0, 0, 10]));
+    let body = Player::new(if awaiting_spawn {
+        [SPAWN[0], f64::from(world.bounds().1[1]), SPAWN[2]]
+    } else {
+        voxel_core::physics::spawn_position(world, config, SPAWN)
+    });
     PlayerState {
         previous_position: body.position,
         body,
+        awaiting_spawn,
     }
 }
 fn initialize_player(

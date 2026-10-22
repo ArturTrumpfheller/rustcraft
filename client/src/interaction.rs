@@ -69,7 +69,7 @@ fn edit_and_target(
     mut ctx: EditContext,
 ) {
     let old_selection = ctx.editor.selected;
-    let active = ctx.control.active && ctx.cameras.single().is_ok();
+    let active = ctx.control.active && !ctx.player.awaiting_spawn && ctx.cameras.single().is_ok();
     if active {
         for (key, slot) in [
             (KeyCode::Digit1, 1),
@@ -136,7 +136,7 @@ fn edit_and_target(
             ctx.dirty.0.extend(change.affected_chunks());
         }
     }
-    ctx.editor.target = raycast(&ctx.world.0, ray);
+    ctx.editor.target = raycast(&ctx.world.0, ray).filter(|hit| ctx.world.0.ready(hit.position));
 }
 
 #[derive(Component)]

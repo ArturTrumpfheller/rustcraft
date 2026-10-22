@@ -40,6 +40,7 @@ pub struct Generator {
     heights: Vec<i32>,
     trees: Vec<Tree>,
     entrance_height: i32,
+    extent: i32,
 }
 fn hash(seed: u64, x: i32, z: i32, salt: u64) -> u64 {
     let mut v = seed
@@ -70,12 +71,13 @@ fn noise(seed: u64, x: i32, z: i32, scale: i32, salt: u64) -> i32 {
 }
 impl Generator {
     pub fn new(config: GenerationConfig) -> Result<Self, UnsupportedGenerator> {
-        if config.version != GENERATOR_VERSION {
+        if ![GENERATOR_VERSION, 2].contains(&config.version) {
             return Err(UnsupportedGenerator(config.version));
         }
-        let mut heights = Vec::with_capacity(4096);
-        for z in -32..32 {
-            for x in -32..32 {
+        let extent = if config.version == 1 { 32 } else { 64 };
+        let mut heights = Vec::with_capacity((extent * extent * 4) as usize);
+        for z in -extent..extent {
+            for x in -extent..extent {
                 let broad = noise(config.seed, x, z, 32, 11);
                 let hills = noise(config.seed, x, z, 16, 23);
                 let detail = noise(config.seed, x, z, 8, 37);
@@ -87,10 +89,12 @@ impl Generator {
             heights,
             trees: Vec::new(),
             entrance_height: 0,
+            extent,
         };
         generator.entrance_height = generator.height(-10, 20).unwrap() + 1;
-        for gz in -3..=3 {
-            for gx in -3..=3 {
+        let trees = extent / 8 - 1;
+        for gz in -trees..=trees {
+            for gx in -trees..=trees {
                 let h = hash(config.seed, gx, gz, 71);
                 if h.is_multiple_of(5) {
                     continue;
@@ -129,10 +133,10 @@ impl Generator {
     }
     /// Surface block Y before caves/trees; None outside the finite plan.
     pub fn height(&self, x: i32, z: i32) -> Option<i32> {
-        if !(-32..32).contains(&x) || !(-32..32).contains(&z) {
+        if !(-self.extent..self.extent).contains(&x) || !(-self.extent..self.extent).contains(&z) {
             return None;
         }
-        Some(self.heights[((z + 32) * 64 + x + 32) as usize])
+        Some(self.heights[((z + self.extent) * self.extent * 2 + x + self.extent) as usize])
     }
     fn cave(&self, x: i32, y: i32, z: i32) -> bool {
         if y <= -14 || (x.abs() <= 3 && (8..=13).contains(&z)) {
@@ -199,9 +203,9 @@ impl Generator {
         Block::Air
     }
     pub fn chunk(&self, pos: ChunkPos) -> Option<Chunk> {
-        if !(-2..2).contains(&pos.0[0])
+        if !(-self.extent / 16..self.extent / 16).contains(&pos.0[0])
             || !(-1..2).contains(&pos.0[1])
-            || !(-2..2).contains(&pos.0[2])
+            || !(-self.extent / 16..self.extent / 16).contains(&pos.0[2])
         {
             return None;
         }
@@ -217,10 +221,17 @@ impl Generator {
         Some(chunk)
     }
     pub fn generate(&self) -> World {
-        let mut world = World::default();
+        let mut world = if self.config.version == 1 {
+            World::default()
+        } else {
+            World::streaming(crate::StreamIdentity {
+                seed: self.config.seed,
+                generator: 2,
+            })
+        };
         for y in -1..2 {
-            for z in -2..2 {
-                for x in -2..2 {
+            for z in -self.extent / 16..self.extent / 16 {
+                for x in -self.extent / 16..self.extent / 16 {
                     let pos = ChunkPos([x, y, z]);
                     let chunk = self.chunk(pos).unwrap();
                     if (0..16).any(|ly| {

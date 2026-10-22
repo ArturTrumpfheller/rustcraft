@@ -2,7 +2,8 @@
 //!
 //! Y is up. Positions are feet-center coordinates in block units (metres).
 //! Call `Player::tick` once per simulated tick with an input command. Missing
-//! chunks are air, exactly as in `World::block`. No mesh queries or allocations
+//! chunks follow `World::block` (pending streamed cells are solid barriers).
+//! No mesh queries or allocations
 //! are needed in the simulation. A non-intersecting initial position is required.
 
 use crate::{BlockPos, World};
@@ -101,12 +102,20 @@ impl Player {
         })
     }
 
-    /// Clearance query for validated spawn/recovery, using the same AABB.
+    /// Clearance query with the same open contact intervals as collision.
+    /// A clipped face may reconstruct a few ULPs inside a block in f64; this
+    /// must not trigger teleport recovery while the sweep permits contact.
     pub fn fits_in_world(&self, world: &World, config: &PhysicsConfig) -> bool {
         let (min, max) = self.bounds(config);
-        for x in min[0].floor() as i32..max[0].ceil() as i32 {
-            for y in min[1].floor() as i32..max[1].ceil() as i32 {
-                for z in min[2].floor() as i32..max[2].ceil() as i32 {
+        for x in
+            (min[0] + CONTACT_EPSILON).floor() as i32..=(max[0] - CONTACT_EPSILON).floor() as i32
+        {
+            for y in (min[1] + CONTACT_EPSILON).floor() as i32
+                ..=(max[1] - CONTACT_EPSILON).floor() as i32
+            {
+                for z in (min[2] + CONTACT_EPSILON).floor() as i32
+                    ..=(max[2] - CONTACT_EPSILON).floor() as i32
+                {
                     if world.block(BlockPos([x, y, z])).is_solid() {
                         return false;
                     }
@@ -190,6 +199,27 @@ impl Player {
         )
     }
 
+    /// Pending streaming cells must not be entered by a teleported body.
+    pub fn cache_ready(&self, world: &World, config: &PhysicsConfig) -> bool {
+        let (min, max) = self.bounds(config);
+        for y in
+            (min[1] + CONTACT_EPSILON).floor() as i32..=(max[1] - CONTACT_EPSILON).floor() as i32
+        {
+            for z in (min[2] + CONTACT_EPSILON).floor() as i32
+                ..=(max[2] - CONTACT_EPSILON).floor() as i32
+            {
+                for x in (min[0] + CONTACT_EPSILON).floor() as i32
+                    ..=(max[0] - CONTACT_EPSILON).floor() as i32
+                {
+                    if !world.ready(BlockPos([x, y, z])) {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
+    }
+
     fn supported(&self, world: &World, config: &PhysicsConfig) -> bool {
         self.sweep_axis(world, config, 1, -SUPPORT_DISTANCE) > -SUPPORT_DISTANCE
     }
@@ -238,10 +268,10 @@ impl Player {
 /// world. Tree tops are skipped. Used at startup and respawn, never each tick.
 /// An intentionally empty world has no supported spawn; return clear space.
 pub fn spawn_position(world: &World, config: &PhysicsConfig, preferred: [f64; 3]) -> [f64; 3] {
-    let px = (preferred[0].floor() as i32).clamp(crate::EDIT_MIN[0], crate::EDIT_MAX[0] - 1);
-    let pz = (preferred[2].floor() as i32).clamp(crate::EDIT_MIN[2], crate::EDIT_MAX[2] - 1);
-    let extent =
-        (crate::EDIT_MAX[0] - crate::EDIT_MIN[0]).max(crate::EDIT_MAX[2] - crate::EDIT_MIN[2]);
+    let (world_min, world_max) = world.bounds();
+    let px = (preferred[0].floor() as i32).clamp(world_min[0], world_max[0] - 1);
+    let pz = (preferred[2].floor() as i32).clamp(world_min[2], world_max[2] - 1);
+    let extent = (world_max[0] - world_min[0]).max(world_max[2] - world_min[2]);
     for radius in 0_i32..extent {
         for dz in -radius..=radius {
             for dx in -radius..=radius {
@@ -250,12 +280,15 @@ pub fn spawn_position(world: &World, config: &PhysicsConfig, preferred: [f64; 3]
                 }
                 let x = px + dx;
                 let z = pz + dz;
-                if !(crate::EDIT_MIN[0]..crate::EDIT_MAX[0]).contains(&x)
-                    || !(crate::EDIT_MIN[2]..crate::EDIT_MAX[2]).contains(&z)
+                if !(world_min[0]..world_max[0]).contains(&x)
+                    || !(world_min[2]..world_max[2]).contains(&z)
                 {
                     continue;
                 }
-                for y in (crate::EDIT_MIN[1]..crate::EDIT_MAX[1]).rev() {
+                if !world.ready(BlockPos([x, 0, z])) {
+                    continue;
+                }
+                for y in (world_min[1]..world_max[1]).rev() {
                     let ground = world.block(BlockPos([x, y, z]));
                     if !ground.is_solid() {
                         continue;
@@ -280,7 +313,7 @@ pub fn spawn_position(world: &World, config: &PhysicsConfig, preferred: [f64; 3]
     }
     [
         f64::from(px) + 0.5,
-        f64::from(crate::EDIT_MAX[1]),
+        f64::from(world_max[1]),
         f64::from(pz) + 0.5,
     ]
 }

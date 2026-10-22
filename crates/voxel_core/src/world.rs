@@ -1,10 +1,13 @@
 use crate::interaction::EditError;
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::Arc,
+};
 
 use crate::{Block, BlockPos, CHUNK_SIZE, Chunk, ChunkPos, LocalPos};
 
-/// Editable prototype bounds, minimum inclusive and maximum exclusive.
-/// Reads/meshing retain the existing missing-chunk-is-air semantics.
+/// Legacy full-snapshot/edit bounds, minimum inclusive and maximum exclusive.
+/// Streamed worlds expose their expanded limits through World::bounds.
 pub const EDIT_MIN: [i32; 3] = [-32, -16, -32];
 pub const EDIT_MAX: [i32; 3] = [32, 32, 32];
 
@@ -38,17 +41,94 @@ impl BlockChange {
     }
 }
 
-/// Finite world. Missing chunks are air; this rule also applies at mesh boundaries.
+/// Versioned procedural identity, persisted only by v3. Generator v1 worlds
+/// are legacy snapshots; streamed worlds currently select generator v2.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct StreamIdentity {
+    pub seed: u64,
+    pub generator: u32,
+}
+
+/// Authoritative identity/edits plus a finite resident cache. Legacy missing
+/// chunks are Air; streamed in-volume missing chunks are pending solid barriers.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct World {
     chunks: BTreeMap<ChunkPos, Chunk>,
     revision: u64,
+    // Transient output dependencies, not persisted and retained across eviction.
+    // Only the owner and face-sharing meshes advance for an actual edit.
+    mesh_revisions: BTreeMap<ChunkPos, u64>,
+    identity: Option<StreamIdentity>,
+    edits: Arc<BTreeMap<BlockPos, Block>>,
 }
 
 impl World {
+    pub fn streaming(identity: StreamIdentity) -> Self {
+        Self {
+            identity: Some(identity),
+            ..Self::default()
+        }
+    }
+    pub fn identity(&self) -> Option<StreamIdentity> {
+        self.identity
+    }
+    pub fn bounds(&self) -> ([i32; 3], [i32; 3]) {
+        if self.identity.is_some() {
+            ([-64, -16, -64], [64, 32, 64])
+        } else {
+            (EDIT_MIN, EDIT_MAX)
+        }
+    }
+    pub fn in_bounds(&self, p: BlockPos) -> bool {
+        let (min, max) = self.bounds();
+        (0..3).all(|a| p.0[a] >= min[a] && p.0[a] < max[a])
+    }
+    /// Outside is known Air. Inside a streaming volume missing means pending,
+    /// distinct from a resident all-Air chunk.
+    pub fn ready(&self, p: BlockPos) -> bool {
+        self.identity.is_none() || !self.in_bounds(p) || self.chunks.contains_key(&p.split().0)
+    }
+    pub fn edits(&self) -> Arc<BTreeMap<BlockPos, Block>> {
+        Arc::clone(&self.edits)
+    }
+    pub(crate) fn restore_edit(&mut self, p: BlockPos, block: Block) {
+        // Validated persistence import; does not materialize chunks or dirty state.
+        Arc::make_mut(&mut self.edits).insert(p, block);
+    }
+    pub(crate) fn apply_cached_edit(&mut self, pos: BlockPos, block: Block) {
+        let (cp, lp) = pos.split();
+        if let Some(chunk) = self.chunks.get_mut(&cp) {
+            chunk.set(lp, block);
+        }
+    }
+    pub fn evict_column(&mut self, column: [i32; 2]) {
+        assert!(
+            self.identity.is_some(),
+            "legacy snapshots must not be evicted"
+        );
+        self.chunks.retain(|p, _| [p.0[0], p.0[2]] != column);
+    }
+    pub fn save_snapshot(&self) -> Self {
+        if self.identity.is_none() {
+            return self.clone();
+        }
+        Self {
+            chunks: BTreeMap::new(),
+            revision: self.revision,
+            mesh_revisions: BTreeMap::new(),
+            identity: self.identity,
+            edits: Arc::clone(&self.edits),
+        }
+    }
     /// Process-local change generation; never part of the save format.
     pub fn revision(&self) -> u64 {
         self.revision
+    }
+
+    /// Streamed-world mesh dependency token. Unrelated edits and residency do
+    /// not invalidate a worker; save revisions remain global and unchanged.
+    pub fn mesh_revision(&self, position: ChunkPos) -> u64 {
+        self.mesh_revisions.get(&position).copied().unwrap_or(0)
     }
 
     /// Raw bounded mutation for trusted world-edit operations. Placement rules
@@ -58,10 +138,11 @@ impl World {
         position: BlockPos,
         block: Block,
     ) -> Result<Option<BlockChange>, EditError> {
-        if !(0..3)
-            .all(|axis| position.0[axis] >= EDIT_MIN[axis] && position.0[axis] < EDIT_MAX[axis])
-        {
+        if !self.in_bounds(position) {
             return Err(EditError::OutOfBounds);
+        }
+        if !self.ready(position) {
+            return Err(EditError::NotLoaded);
         }
         let before = self.block(position);
         if before == block {
@@ -69,18 +150,31 @@ impl World {
         }
         let (chunk, local) = position.split();
         self.chunks.entry(chunk).or_default().set(local, block);
+        if self.identity.is_some() {
+            Arc::make_mut(&mut self.edits).insert(position, block);
+        }
         self.revision = self.revision.wrapping_add(1);
-        Ok(Some(BlockChange {
+        let change = BlockChange {
             position,
             before,
             after: block,
-        }))
+        };
+        if self.identity.is_some() {
+            for p in change.affected_chunks() {
+                self.mesh_revisions.insert(p, self.revision);
+            }
+        }
+        Ok(Some(change))
     }
 
+    /// Trusted import/cache install, not an edit API. Stream workers must apply
+    /// the overlay and validate local dependencies before installing this data.
     pub fn insert_chunk(&mut self, position: ChunkPos, chunk: Chunk) {
         if self.chunks.get(&position) != Some(&chunk) {
             self.chunks.insert(position, chunk);
-            self.revision = self.revision.wrapping_add(1);
+            if self.identity.is_none() {
+                self.revision = self.revision.wrapping_add(1);
+            }
         }
     }
 
@@ -96,9 +190,16 @@ impl World {
 
     pub fn block(&self, position: BlockPos) -> Block {
         let (chunk, local) = position.split();
-        self.chunks
-            .get(&chunk)
-            .map_or(Block::Air, |chunk| chunk.get(local))
+        self.chunks.get(&chunk).map_or_else(
+            || {
+                if self.identity.is_some() && self.in_bounds(position) {
+                    Block::Stone
+                } else {
+                    Block::Air
+                }
+            },
+            |chunk| chunk.get(local),
+        )
     }
 }
 

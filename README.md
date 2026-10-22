@@ -7,18 +7,18 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 ## Current prototype
 
 - Deterministic seeded terrain, rolling hills/valleys, a walkable cave network with surface entrance, and blocky trees.
-- 16³ chunks in the finite editable volume X/Z [-32,32), Y [-16,32); no streaming yet.
+- 16³ chunks streamed in a finite **128×128×48** new-world volume; configurable load radius, bounded background generation/meshing and cache eviction.
 - Grass, dirt, stone, wood and opaque solid leaves represented by original vertex colors; no downloaded game assets.
-- One surface mesh per chunk; faces shared by solid blocks are removed, including at chunk boundaries.
+- At most one surface mesh per rendered chunk; faces shared by solid blocks are removed, including at chunk boundaries.
 - Mouse look, yaw-relative WASD walking, sprinting, grounded jumping and safe respawn.
 - Fixed 60-Hz engine-independent AABB physics, wall sliding and interpolated camera movement.
 - Precise five-block targeting, visible target outline, click-to-break/place and 1–5 block selection.
 - Engine-independent raycasts and validated edits; changed chunks and boundary neighbors update immediately.
-- Versioned world snapshots, F5 saving, 30-second dirty-only autosave and final save on normal window close.
+- Versioned legacy snapshots / new-world identity and edit overlays, F5 saving, 30-second dirty-only autosave and final save on normal window close.
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 5**, not the complete v0.1 milestone. **World edits survive restart.** Infinite streaming, richer world generation and a full inventory/hotbar are still future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 6**, not the complete v0.1 milestone. **World edits survive restart.** Infinite streaming, richer world generation and a full inventory/hotbar are still future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## Build and run on Linux
 
@@ -74,21 +74,31 @@ The 0.6×1.8-block player spawns on or just above safe solid ground, with eyes 1
 
 The center crosshair aims at blocks within five blocks of the displayed eye. A black outline marks the current target; five colored swatches below the crosshair correspond to 1–5, with a white frame on the selected one. The window title also names the selected block. Empty clicks do nothing. Placement cannot replace solid blocks or intersect the current/displayed player body. Simultaneous buttons prioritize breaking.
 
-Edits may create neighboring chunk storage within **X/Z [-32, 32), Y [-16, 32)**. Outside that box, edits are rejected. R preserves your edits and finds clear sky-exposed ground near the starting area, avoiding tree tops and unsupported columns. Loading uses the same search; player position, velocity and selected slot are not saved.
+New streamed worlds permit edits within **X/Z [-64,64), Y [-16,32)**. Historical snapshots retain **X/Z [-32,32), Y [-16,32)**. Outside the corresponding box, edits are rejected. Pending chunks temporarily block collision/rays and reject edits until ready; they are never treated as a hole in the floor. R preserves your edits and finds clear sky-exposed ground near the starting area, avoiding tree tops and unsupported columns. Loading uses the same search; player position, velocity and selected slot are not saved.
 
 Movement speed is independent of diagonal input. Mouse sensitivity does not depend on frame time. The window title also lists the essential controls.
 
 ## New worlds and seeds
 
-`RUSTCRAFT_WORLD_SEED` accepts a decimal unsigned 64-bit integer (0 through 18446744073709551615). The deterministic default is **2026**, generator version **1**. It is read **only when no primary or backup exists**; changing it never changes a loaded world. Invalid seeds stop creation with a clear error. To explore another seed, use a different, preferably fresh absolute `RUSTCRAFT_DATA_DIR`; never delete your real save to switch seeds.
+`RUSTCRAFT_WORLD_SEED` accepts a decimal unsigned 64-bit integer (0 through 18446744073709551615). The deterministic default is **2026**. New streamed worlds use **generator version 2**, saved as part of their identity. Generator v1 remains frozen for historical references; existing snapshots never select a new generator. It is read **only when no primary or backup exists**; changing it never changes a loaded world. Invalid seeds stop creation with a clear error. To explore another seed, use a different, preferably fresh absolute `RUSTCRAFT_DATA_DIR`; never delete your real save to switch seeds.
 
 Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, transparency, water, biomes, ore distribution or lighting propagation. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
 
-New generated blocks are saved in full, so restarting never depends on regenerating from a seed. The seed is logged at creation; v2 deliberately does not store generator/seed metadata. The [generation contract](docs/WORLDGEN.md) explains deterministic arithmetic, limits and future extension.
+New v3 worlds save **seed + generator version + all edits**, including explicit Air; unvisited/unmodified chunks reproduce from that fixed identity. Loaded chunk data is a disposable cache. Unsaved edits remain in a separate central overlay when chunks are evicted. v1/v2 saves remain full snapshots with no seed metadata and never gain generated terrain. The [generation contract](docs/WORLDGEN.md) explains deterministic arithmetic, limits and future extension.
+
+## Streaming and legacy worlds
+
+**A new, fresh data directory creates a v3 streamed world.** Its finite bounds are X/Z [-64,64), Y [-16,32). `RUSTCRAFT_LOAD_RADIUS=1`, `2` (default) or `3` selects the square horizontal load radius at startup. The spawn column follows the same radius as other columns and releases its CPU/GPU resources when distant. R/void recovery requests it again, waits safely above the world while it loads, then finds clear ground from actual edited blocks. Only desired resident chunks occupy voxel cache/GPU resources; empty ready chunks need no mesh. The title shows resident chunk count, pending columns, dirty meshes, seed, generator and radius. Loading/eviction never dirties a world by itself.
+
+One background worker generates new columns with the face-cell halo needed for correct meshes. Editing instead reuses cached voxels and remeshes only affected chunks and face-neighbors; connected dirty chunks publish together. Repeated edits coalesce while a job runs, and nearby dirty geometry takes priority over new loads. Local mesh dependency tokens reject affected stale results while allowing unrelated work to finish; the global save revision is unchanged. The main frame loop never waits for an unfinished job. Terrain meshes can lag authoritative physics by a worker job. Unloaded terrain is a temporary solid barrier; targeting/edits reject it. At a load frontier, wait for pending work rather than falling through uninitialized cells. Fast pending teleports pause physics and check safe clearance once ready.
+
+**Existing v1/v2 saves run in labelled `Legacy finite 64x64` mode.** All saved blocks, deleted terrain and empty space remain exact; no generator fills missing chunks. Their meshes/data remain fully resident as before. There is no migration or expansion of existing constructions in this slice. Use a different fresh data directory to try streaming.
+
+The active cache is bounded (default at most 75 chunks; configurable upper bound 147 without a permanent spawn pin). Edits are stored separately and survive eviction even before saving; they become durable through F5, autosave or normal close. A forced kill can still lose changes since the last successful save. This is **bounded streaming**, not infinite terrain or a per-click durable journal. See [architecture](docs/ARCHITECTURE.md), [format](docs/SAVE_FORMAT.md) and [measured validation](docs/VALIDATION.md).
 
 ## Saving, loading and recovery
 
-RustCraft automatically loads **one local world** before creating graphics/physics. Only a missing save (and no backup) creates a seeded world. Existing saves are authoritative and never regenerated or rewritten on load, including historical v1 worlds. All solid materials, replacements, removals and newly created chunks are retained. A valid empty snapshot stays empty. The full snapshot is independent of future changes to the demo generator; see [format and failure policy](docs/SAVE_FORMAT.md).
+RustCraft automatically loads **one local world** before creating graphics/physics. Only a missing save (and no backup) creates a seeded world. Existing saves are authoritative and never regenerated or rewritten on load, including historical v1 worlds. All solid materials, replacements, removals and newly created chunks are retained. A valid empty snapshot stays empty. Legacy full snapshots are independent of generators; new v3 worlds pin generator v2; see [format and failure policy](docs/SAVE_FORMAT.md).
 
 - Linux: `$XDG_DATA_HOME/rustcraft/world.rcw`, or `$HOME/.local/share/rustcraft/world.rcw` when XDG_DATA_HOME is absent/empty/relative.
 - Windows: `%LOCALAPPDATA%\RustCraft\world.rcw`, falling back to `%APPDATA%\RustCraft\world.rcw`.
@@ -108,20 +118,20 @@ cp -- "$save_dir/world.rcw.bak" "$save_dir/world.rcw"
 cargo run --locked -p rustcraft
 ```
 
-Skip `mv` if the primary is already absent; do not overwrite an existing `.damaged` copy. Recovery loses edits newer than the backup. Without a valid backup, keep the files for diagnosis and choose a different data directory to start a new world. Windows follows the same copy/preserve procedure in Explorer or PowerShell. Both v1 and v2 snapshots load without modification. The next successful changed save writes v2, preserving the previous file in the ordinary one-generation backup. Wood/Leaves use new v2 IDs 4/5; IDs 1–3 retain their meaning. Older clients cannot read v2: keep an external copy before editing legacy worlds if you need rollback. Unknown versions are rejected safely.
+Skip `mv` if the primary is already absent; do not overwrite an existing `.damaged` copy. Recovery loses edits newer than the backup. Without a valid backup, keep the files for diagnosis and choose a different data directory to start a new world. Windows follows the same copy/preserve procedure in Explorer or PowerShell. v1/v2 snapshots and v3 streamed worlds load without modification. Legacy changed saves still write v2; streamed saves write v3. The previous file is preserved in the ordinary one-generation backup. Implicit mode/seed changes are refused; there is no automatic legacy-to-streamed migration. Wood/Leaves use new v2 IDs 4/5; IDs 1–3 retain their meaning. Older clients may not read newer formats: keep an external copy before editing legacy worlds if you need rollback. Unknown versions are rejected safely.
 
 For an isolated Void Linux acceptance test:
 
 ```sh
 git fetch origin
-git switch feat/slice-5-seeded-worldgen
-test_root="$(mktemp -d /tmp/rustcraft-slice5.XXXXXX)"
-RUSTCRAFT_DATA_DIR="$test_root/seed-42" RUSTCRAFT_WORLD_SEED=42 cargo run --locked -p rustcraft
+git switch feat/slice-6-chunk-streaming
+test_root="$(mktemp -d /tmp/rustcraft-slice6.XXXXXX)"
+RUSTCRAFT_DATA_DIR="$test_root/seed-42" RUSTCRAFT_WORLD_SEED=42 RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
 # A second, independent world:
 RUSTCRAFT_DATA_DIR="$test_root/seed-2026" RUSTCRAFT_WORLD_SEED=2026 cargo run --locked -p rustcraft
 ```
 
-Keep `test_root` in this shell, or record the printed save paths. These fresh directories isolate the tests from real worlds. Re-run the same seed/directory command to resume; a seed override (even an invalid one) is ignored once a valid world exists. Place several materials, remove some terrain and press F5. Wait for `Saved`, close and run the same command again: the title should say `Loaded` and the edits should remain visible and solid. Make another edit, wait at least 30 seconds to test autosave; then edit once more and close without F5 to test final saving. Restart after each case. Check mouse look, walking/jumping, placement rejection inside the body and edits around chunk boundaries. See [the complete manual checks](docs/PLATFORMS.md#slice-5-manual-test).
+Keep `test_root` in this shell, or record the printed save paths. These fresh directories isolate the tests from real worlds. Re-run the same seed/directory command to resume; a seed override (even an invalid one) is ignored once a valid world exists. Place several materials, remove some terrain and press F5. Wait for `Saved`, close and run the same command again: the title should say `Loaded` and the edits should remain visible and solid. Make another edit, wait at least 30 seconds to test autosave; then edit once more and close without F5 to test final saving. Restart after each case. Check mouse look, walking/jumping, placement rejection inside the body and edits around chunk boundaries. See [the complete manual checks](docs/PLATFORMS.md#slice-6-manual-test).
 
 ## Development checks
 
@@ -136,7 +146,7 @@ Run only the engine-independent voxel and physics tests with `cargo test --locke
 
 The [validation report](docs/VALIDATION.md) records the executed checks and remaining platform coverage.
 
-[Manual acceptance checks](docs/PLATFORMS.md#slice-5-manual-test) cover save/restart, the visible scene, pointer capture/release, focus changes and platform behavior. CI checks Linux and Windows compilation, formatting, Clippy and unit tests; it does not establish GUI compatibility on Void or Windows.
+[Manual acceptance checks](docs/PLATFORMS.md#slice-6-manual-test) cover save/restart, the visible scene, pointer capture/release, focus changes and platform behavior. CI checks Linux and Windows compilation, formatting, Clippy and unit tests; it does not establish GUI compatibility on Void or Windows.
 
 ## Licensing and development policy
 

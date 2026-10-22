@@ -393,3 +393,66 @@ fn air_control_preserves_momentum_without_input_and_gravity_does_not_exceed_term
     near(player.velocity[1], -55.0);
     assert!(!player.grounded);
 }
+
+#[test]
+fn diagonal_edge_contacts_are_clear_and_monotonic_at_signed_chunk_seams_and_heights() {
+    let config = PhysicsConfig::default();
+    for base in [-16, 0, 2, 16] {
+        for height in [1, 7, 17] {
+            for sx in [-1, 1] {
+                for sz in [-1, 1] {
+                    let cell = |v: i32, sign| base + if sign < 0 { -v - 1 } else { v };
+                    let ground = (-4..=4)
+                        .flat_map(|x| (-4..=4).map(move |z| [base + x, height - 1, base + z]));
+                    let world = world_with(ground.chain([
+                        [cell(-1, sx), height, cell(-1, sz)],
+                        [cell(0, sx), height, cell(0, sz)],
+                    ]));
+                    let mut p = Player::new([
+                        f64::from(base) + f64::from(sx) * 1.5,
+                        f64::from(height),
+                        f64::from(base) - f64::from(sz) * 0.5,
+                    ]);
+                    let input = MovementInput {
+                        direction: [-f64::from(sx), f64::from(sz)],
+                        ..Default::default()
+                    };
+                    for tick in 0..180 {
+                        let old = p.position;
+                        p.tick(&world, input, &config);
+                        assert!(
+                            p.fits_in_world(&world, &config),
+                            "base {base}, height {height}, signs {sx}/{sz}, tick {tick}: {p:?}"
+                        );
+                        assert!((p.position[0] - old[0]) * f64::from(sx) <= CONTACT_EPSILON);
+                        assert!((p.position[2] - old[2]) * f64::from(sz) >= -CONTACT_EPSILON);
+                        assert_clear(&p, &world);
+                    }
+                    near(p.position[0], f64::from(base) + f64::from(sx) * 0.3);
+                    near(p.position[2], f64::from(base) - f64::from(sz) * 0.3);
+                    assert!(p.grounded);
+                    let contact = p.position;
+                    run(&mut p, &world, input, 300);
+                    assert_eq!(p.position, contact);
+                    p.tick(
+                        &world,
+                        MovementInput {
+                            jump: true,
+                            ..input
+                        },
+                        &config,
+                    );
+                    assert!(p.position[1] > f64::from(height) && p.velocity[1] > 0.);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn clearance_tolerance_permits_roundoff_but_rejects_real_penetration() {
+    let world = world_with([[1, 1, 0]]);
+    let config = PhysicsConfig::default();
+    assert!(Player::new([2.3, 1., 0.5]).fits_in_world(&world, &config));
+    assert!(!Player::new([2.3 - 1e-5, 1., 0.5]).fits_in_world(&world, &config));
+}
