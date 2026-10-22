@@ -5,7 +5,7 @@ use crate::{BlockPos, CHUNK_SIZE, ChunkPos, LocalPos, World};
 pub struct ChunkMesh {
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
-    pub colors: Vec<[f32; 4]>,
+    pub uvs: Vec<[f32; 2]>,
     pub indices: Vec<u32>,
 }
 
@@ -79,6 +79,7 @@ pub fn mesh_chunk(world: &World, position: ChunkPos) -> ChunkMesh {
                         continue;
                     }
                     let start = mesh.positions.len() as u32;
+                    let tile = crate::texture::face_tile(block, face.normal).unwrap();
                     for corner in face.corners {
                         mesh.positions.push([
                             x as f32 + f32::from(corner[0]),
@@ -86,7 +87,8 @@ pub fn mesh_chunk(world: &World, position: ChunkPos) -> ChunkMesh {
                             z as f32 + f32::from(corner[2]),
                         ]);
                         mesh.normals.push(face.normal.map(|value| value as f32));
-                        mesh.colors.push(block.color());
+                        mesh.uvs
+                            .push(tile.uv(crate::texture::face_uv(face.normal, corner)));
                     }
                     mesh.indices
                         .extend([start, start + 1, start + 2, start, start + 2, start + 3]);
@@ -168,7 +170,7 @@ mod tests {
         let mesh = mesh_chunk(&world, ChunkPos([0; 3]));
         assert_eq!(mesh.positions.len(), 24);
         assert_eq!(mesh.normals.len(), 24);
-        assert_eq!(mesh.colors, vec![Block::Grass.color(); 24]);
+        assert_eq!(mesh.uvs.len(), 24);
         for triangle in mesh.indices.as_chunks::<3>().0 {
             let a = mesh.positions[triangle[0] as usize];
             let b = mesh.positions[triangle[1] as usize];

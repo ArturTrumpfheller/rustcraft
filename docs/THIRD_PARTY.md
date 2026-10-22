@@ -61,3 +61,16 @@ Local generator-v3 planning, regional formats/storage, cache/scheduling changes,
 floating-origin presentation and tests/benchmarks are original project-authored
 MIT OR Apache-2.0 Rust/documentation. No new crate, lockfile, Bevy feature,
 toolchain, texture, font, third-party source or imported asset was added.
+
+## Slice 8 original terrain textures
+
+The seven 16×16 tiles, editable `assets/terrain/source.json`, generated individual
+PNGs, `atlas.png`, `atlas.rgba`, and `tools/generate_textures.py` are **original
+RustCraft project artwork/code authored for Slice 8 through Codex-assisted
+development, MIT OR Apache-2.0**. This explicit license covers the artwork as well
+as code. No input/reference images, Minecraft files, third-party packs or external
+art were used. Root license/notice obligations apply to future redistribution.
+See [asset provenance and reproduction](../assets/terrain/README.md) for each tile,
+source grids/palettes, generator and output layout. No new game dependency, Bevy
+feature, image decoder or toolchain change is required. Python standard library
+is an optional authoring/check tool, not a game runtime/build requirement.

@@ -20,7 +20,7 @@ fn scene_plugin_builds_four_renderable_chunk_entities_without_external_assets() 
         let mesh = meshes.get(&handle).unwrap();
         assert!(mesh.count_vertices() > 0);
         assert!(mesh.attribute(Mesh::ATTRIBUTE_NORMAL).is_some());
-        assert!(mesh.attribute(Mesh::ATTRIBUTE_COLOR).is_some());
+        assert!(mesh.attribute(Mesh::ATTRIBUTE_UV_0).is_some());
         assert!(!mesh.indices().unwrap().is_empty());
     }
     assert_eq!(world.resource::<Assets<StandardMaterial>>().len(), 1);

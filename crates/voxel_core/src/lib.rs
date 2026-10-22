@@ -8,6 +8,7 @@ pub mod physics;
 pub mod raycast;
 pub mod regions;
 pub mod streaming;
+pub mod texture;
 mod world;
 pub mod worldgen;
 

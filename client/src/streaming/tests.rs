@@ -357,9 +357,9 @@ fn assert_geometry(app: &App, targets: &BTreeSet<ChunkPos>) {
                     "normals {p:?}"
                 );
                 assert_eq!(
-                    actual.attribute(Mesh::ATTRIBUTE_COLOR),
-                    Some(&VertexAttributeValues::Float32x4(mesh.colors)),
-                    "colors {p:?}"
+                    actual.attribute(Mesh::ATTRIBUTE_UV_0),
+                    Some(&VertexAttributeValues::Float32x2(mesh.uvs)),
+                    "UVs {p:?}"
                 );
                 assert_eq!(
                     actual.indices().unwrap().iter().collect::<Vec<_>>(),

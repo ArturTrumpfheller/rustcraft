@@ -5,6 +5,7 @@ mod player;
 mod save_hud;
 mod scene;
 mod streaming;
+mod terrain_texture;
 
 use bevy::prelude::*;
 

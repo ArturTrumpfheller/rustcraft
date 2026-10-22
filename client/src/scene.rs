@@ -33,6 +33,7 @@ pub(crate) struct TerrainMaterial(pub Handle<StandardMaterial>);
 impl Plugin for VoxelScenePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<VoxelWorld>()
+            .init_resource::<Assets<Image>>()
             .init_resource::<RenderOrigin>()
             .init_resource::<DirtyChunks>()
             .init_resource::<ChunkRenders>()
@@ -54,7 +55,7 @@ fn convert_mesh(surface: voxel_core::ChunkMesh) -> (Mesh, Visibility) {
     )
     .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, surface.positions)
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, surface.normals)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, surface.colors)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, surface.uvs)
     .with_inserted_indices(Indices::U32(surface.indices));
     (mesh, visibility)
 }
@@ -122,6 +123,7 @@ fn spawn_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>,
     world: Res<VoxelWorld>,
     mut renders: ResMut<ChunkRenders>,
     origin: Res<RenderOrigin>,
@@ -129,6 +131,7 @@ fn spawn_scene(
     let started = std::time::Instant::now();
     let material = materials.add(StandardMaterial {
         base_color: Color::WHITE,
+        base_color_texture: Some(images.add(crate::terrain_texture::atlas_image())),
         perceptual_roughness: 1.0,
         ..default()
     });
@@ -170,7 +173,7 @@ fn spawn_scene(
         Transform::from_xyz(-12.0, 24.0, 12.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
     info!(
-        "RustCraft slice 7: {} restored/generated chunk meshes built in {:?}",
+        "RustCraft slice 8: {} restored/generated chunk meshes built in {:?}",
         world.0.chunks().count(),
         started.elapsed()
     );
