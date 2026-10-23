@@ -11,6 +11,7 @@ use bevy::{
     render::{render_resource::PrimitiveTopology, view::Tonemapping},
     window::PrimaryWindow,
 };
+mod worlds;
 const LAYER: usize = 2;
 #[derive(Component)]
 struct MenuCamera;
@@ -53,7 +54,7 @@ fn entries(flow: &ClientFlow) -> Vec<(&'static str, Option<Action>)> {
         ],
         ClientState::Loading => vec![("Welt wird geladen...", None), ("Bitte warten", None)],
         ClientState::Saving => vec![("Wird gespeichert...", None), ("Bitte warten", None)],
-        ClientState::Playing => vec![],
+        ClientState::Playing | ClientState::Worlds => vec![],
     }
 }
 fn setup(
@@ -102,6 +103,10 @@ fn hit(window: &Window, count: usize) -> Option<usize> {
     (0..count).find(|&i| p.x.abs() <= 118. && (p.y - (-14. + i as f32 * 30.)).abs() <= 12.)
 }
 fn input(world: &mut World) {
+    if world.resource::<ClientFlow>().state == ClientState::Worlds {
+        worlds::input(world);
+        return;
+    }
     if world.resource::<ClientFlow>().playing() {
         return;
     }
@@ -164,7 +169,15 @@ fn input(world: &mut World) {
     if let Some(action) = action {
         world.resource_mut::<Navigation>().selected = 0;
         match action {
-            Action::Play => session::begin_loading(world),
+            Action::Play => {
+                if world.resource::<ClientFlow>().selected_world.is_some()
+                    && world.resource::<ClientFlow>().state == ClientState::RecoverableError
+                {
+                    session::begin_loading(world);
+                } else {
+                    worlds::open(world);
+                }
+            }
             Action::Resume => {
                 let mut f = world.resource_mut::<ClientFlow>();
                 f.state = ClientState::Playing;
@@ -249,6 +262,7 @@ impl Canvas {
 }
 fn draw(
     flow: Res<ClientFlow>,
+    browser: Res<worlds::Browser>,
     mut nav: ResMut<Navigation>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut camera: Query<(&mut Camera, &mut Projection), With<MenuCamera>>,
@@ -280,6 +294,7 @@ fn draw(
         window.height(),
         flow.error
     );
+    let stamp = format!("{stamp}/{:?}", browser.stamp());
     if nav.stamp == stamp {
         return;
     }
@@ -307,6 +322,13 @@ fn draw(
             [0.09, 0.13, 0.12, 1.],
         );
         c.rect(x, top, 16., 3., [0.15, 0.23, 0.18, 1.]);
+    }
+    if flow.state == ClientState::Worlds {
+        worlds::paint(&browser, &mut c);
+        if let Some(mut target) = meshes.get_mut(&mesh.0) {
+            *target = c.mesh();
+        }
+        return;
     }
     c.centered(77., "RUSTCRAFT", 3., [0.12, 0.08, 0.055, 1.]);
     c.centered(80., "RUSTCRAFT", 3., cream);
@@ -406,6 +428,15 @@ pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Navigation>()
+            .init_resource::<worlds::Browser>()
+            .add_message::<bevy::input::keyboard::KeyboardInput>()
+            .add_systems(Update, worlds::poll)
+            .add_systems(
+                RunFixedMainLoop,
+                worlds::text_input
+                    .before(input)
+                    .in_set(RunFixedMainLoopSystems::BeforeFixedMainLoop),
+            )
             .add_systems(Startup, setup)
             .add_systems(
                 RunFixedMainLoop,

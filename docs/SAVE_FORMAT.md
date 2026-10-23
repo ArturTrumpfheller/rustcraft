@@ -2,6 +2,15 @@
 
 Project-authored specification: MIT OR Apache-2.0. Implemented by `voxel_core::persistence`, independent of Bevy. The root `world.rcw` is a complete snapshot/overlay in v1–v3, or an immutable identity manifest in v4. Regional v4 data lives beside it under `regions/`. Backups retain one previous generation of each replaced data file. Paths and recovery commands are in [README](../README.md#saving-loading-and-recovery).
 
+## Slice14 catalog envelope
+
+The following binary world/player formats are unchanged. Their complete bundle
+now lives in `<data-root>/worlds/<catalog-ID>/`. Independent checksummed
+`world.meta` stores the display name and catalog creation/import date. Its exact
+layout, lock/staging/archive rules and non-destructive legacy import are specified
+in [WORLDS](WORLDS.md). A copied legacy identity is preserved, never rekeyed. Keep
+all regions, sidecars, journals and backups together when copying/restoring.
+
 ## Legacy byte contract (v1/v2)
 
 All integers are little-endian, with no padding. Coordinates are signed two's-complement i32. This format does not use Rust struct, enum, chunk-vector or ECS memory layouts.

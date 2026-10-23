@@ -2,9 +2,10 @@
 
 This document tracks intended milestones, not promised delivery dates. Implement and test one vertical slice at a time.
 
-Slice 13 adds title/pause menus, explicit client states, asynchronous loading and
-save-before-return with repeatable session teardown; see [MENUS](MENUS.md). World
-management and settings remain separate future slices.
+Slice14 adds paged world selection, named seeded creation, separate bundles,
+metadata rename, reversible archive and explicit validated legacy-copy import.
+It reuses Slice13's save/cleanup barrier; see [WORLDS](WORLDS.md) and [MENUS](MENUS.md).
+Settings remain Slice15.
 
 ## v0.1 — Classic-style prototype
 
@@ -13,6 +14,7 @@ subtle movement/click feedback. Slices1–11 are merged and accepted on Void.
 Existing large-world, save, lighting, inventory and movement contracts remain
 intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 
+- [x] Named multiple worlds, safe selection/creation/rename/archive and legacy-copy import
 - [x] Cargo workspace and pinned Bevy dependency
 - [x] Launch client with a first-person walking player and interpolated camera
 - [x] Initial closed block-ID enum and original 16×16 terrain atlas (extensible registry deferred)

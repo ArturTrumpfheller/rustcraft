@@ -112,3 +112,11 @@ can break consistency (v4 root alone cannot fingerprint every historical region)
 Do not use an older client on the same live inventory-enabled directory; use an
 isolated copy. There is no cryptographic authenticity, remote filesystem or
 absolute hardware/power-loss guarantee. Tests/measurements: VALIDATION.
+
+## Slice14 world selection
+
+Each selected `worlds/<ID>` owns its own player files, binding, journal and store
+lock. Creating another world grants only that world's initial starter; switching
+back loads the prior slots/selection/held cursor through the existing session
+barrier. Legacy import preserves whole bundles and their immutable player/world
+identity; it does not refill or remap inventories. See [WORLDS](WORLDS.md).

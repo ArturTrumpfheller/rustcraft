@@ -10,6 +10,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
+pub mod catalog;
 mod player;
 mod regional;
 pub use regional::REGIONAL_VERSION;
@@ -308,19 +309,7 @@ impl SaveStore {
             .into());
         }
         fs::create_dir_all(&directory)?;
-        let lock = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .truncate(false)
-            .open(directory.join("world.lock"))?;
-        lock.try_lock().map_err(|error| {
-            io::Error::other(format!("world already in use or lock unavailable: {error}"))
-        })?;
-        let store = Self {
-            directory,
-            _lock: lock,
-        };
+        let store = Self::lock_directory(&directory)?;
         let (world, source) = match read_save(&store.path()) {
             Ok(Some(bytes)) => (decode(&bytes)?, LoadSource::Saved),
             Ok(None) if store.backup_path().try_exists()? => {
@@ -351,6 +340,32 @@ impl SaveStore {
             Err(error) => return Err(error),
         };
         Ok((store, world, source))
+    }
+    /// Acquire a bundle lock without loading, replaying or initializing data.
+    pub(super) fn lock_directory(directory: &Path) -> Result<Self, SaveError> {
+        let lock = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(directory.join("world.lock"))?;
+        lock.try_lock().map_err(|e| {
+            io::Error::other(format!("world already in use or lock unavailable: {e}"))
+        })?;
+        Ok(Self {
+            directory: directory.to_path_buf(),
+            _lock: lock,
+        })
+    }
+    /// Open existing data only. Missing/corrupt data can never invoke a factory.
+    pub fn open_existing(
+        directory: impl AsRef<Path>,
+    ) -> Result<(Self, World, LoadSource), SaveError> {
+        Self::open_with(directory, || {
+            Err(SaveError::RecoveryRequired(
+                "existing world missing; creation refused".into(),
+            ))
+        })
     }
     pub fn path(&self) -> PathBuf {
         self.directory.join("world.rcw")

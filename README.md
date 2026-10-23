@@ -21,7 +21,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 13**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 14**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -40,13 +40,18 @@ and [validation](docs/VALIDATION.md).
 
 ## Main and pause menus
 
-RustCraft starts at its original pixel title screen. **Spielen** loads the single
-world (or creates one on first play); opening the title alone does not touch saves.
-Escape closes inventory first, then opens Pause. Resume, return to title and quit
-support mouse and arrow keys/Enter. Returning to title saves asynchronously,
-waits for workers and releases the world lock; the same world can be reopened in
-the same process. A save failure retains changes and offers retry.
-See [menu architecture, screenshots and Void Fish / Windows instructions](docs/MENUS.md).
+RustCraft starts at its original pixel title screen. **Spielen** opens world
+selection: create named worlds with numeric/random seeds, select/play, rename,
+inspect errors and confirm reversible archive. Every world has separate blocks,
+inventory, hotbar, journals and locks under `worlds/<ID>/`. Legacy single saves
+remain visible and require an explicitly confirmed complete-copy import.
+Opening the title alone does not touch saves.
+
+Escape closes inventory first, then opens Pause. Returning to title saves,
+drains workers, removes session resources and releases the lock before another
+world can load. A save failure retains changes and offers retry.
+See [world structure, migration, controls and Void Fish / Windows tests](docs/WORLDS.md)
+and [session architecture](docs/MENUS.md).
 
 ## Voxel skylight
 
@@ -163,7 +168,12 @@ Movement speed is independent of diagonal input. Mouse sensitivity does not depe
 
 ## New worlds and seeds
 
-`RUSTCRAFT_WORLD_SEED` accepts a decimal unsigned 64-bit integer (0 through 18446744073709551615). The deterministic default is **2026**. New regional worlds use **generator version 3**, saved as part of their identity. Generators v1/v2 remain frozen for existing identities; existing worlds never select a new generator. It is read **only when no primary or backup exists**; changing it never changes a loaded world. Invalid seeds stop creation with a clear error. To explore another seed, use a different, preferably fresh absolute `RUSTCRAFT_DATA_DIR`; never delete your real save to switch seeds.
+Create worlds in **Spielen → Neue Welt**. A decimal unsigned 64-bit seed is
+validated before creation; an empty field generates a fresh stored seed.
+`RUSTCRAFT_WORLD_SEED` optionally prefills that form and never changes an existing
+world. Generator v3 and generators v1/v2 for historical saves remain frozen.
+Display names can repeat; internal directory IDs are unique and never renamed.
+See [safe multi-world management](docs/WORLDS.md).
 
 Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, transparency, water, biomes, ore distribution or emitted block light. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
 
@@ -171,7 +181,7 @@ New v4 worlds save **seed + generator version + world identity** in a manifest a
 
 ## Streaming and compatibility
 
-A fresh data directory creates a **v4 regional world** with generator v3 and
+A confirmed new-world creation produces a **v4 regional world** with generator v3 and
 X/Z [-32768,32768), Y [-16,32). There is no map-sized startup allocation.
 `RUSTCRAFT_LOAD_RADIUS=1`, `2` (default) or `3` selects a radius independently of
 world extent: at most 75 chunks by default, 147 at radius 3. Distant voxel data,
@@ -201,7 +211,8 @@ to origin, and player position is not persisted.
 Data locations stay platform-specific: Linux uses an absolute XDG_DATA_HOME under
 `rustcraft`, otherwise `$HOME/.local/share/rustcraft`; Windows uses LOCALAPPDATA
 under `RustCraft`, falling back to APPDATA. Override either with an **absolute
-RUSTCRAFT_DATA_DIR directory**. The actual `world.rcw` path is logged at startup.
+RUSTCRAFT_DATA_DIR root**. Active worlds live under `worlds/<ID>/`; legacy
+root-level saves remain available through confirmed copy import. See [WORLDS](docs/WORLDS.md).
 
 F5, 30-second real-time autosave and normal-close saving remain available. New
 worlds save their identity even before edits. Four dirty regions request an early
@@ -242,38 +253,12 @@ than the captured save; this is save-level redo, not a per-click journal or an
 absolute power-loss guarantee. [Initialization and recovery limits](docs/INVENTORY.md#recovery-limits)
 describe the deliberately conservative failure behavior.
 
-## Safe Void Linux test with Fish
+## Safe Void Linux / Windows tests
 
-Use a fresh directory and keep this shell/path for restarts:
-
-```fish
-git fetch origin
-git switch feat/slice-10-voxel-lighting
-set test_dir (mktemp -d /tmp/rustcraft-slice10.XXXXXX)
-env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_WORLD_SEED=42 RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
-```
-
-After normal close, reuse that same directory at a distant position:
-
-```fish
-env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_START_CHUNK="1000,-1000" RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
-```
-
-Explore a cave (entrance near X=-10/Z=20), compare open sky with tree canopies
-and a closed roof, then mine/replace roof blocks. Check gradual falloff and
-lighting across chunk seams. E/inventory, hotbar and save feedback remain bright.
-
-Before restarting, try E, left/right/Shift-click transfers, 1–9 and the wheel.
-Save with F5, wait for SAVED, then close normally. Check the same stacks and
-selected slot after restart, including a deliberately held stack. These explicit
-paths do not touch normal saves; do not substitute your existing save directory.
-
-The distant command starts near X=16008, Z=-15992 on clear actual ground. Break/place across
-chunk and region seams, travel away and return before saving, then F5 and wait for
-`SAVED`. Close and repeat the same distant-start command to check restoration.
-R returns to origin; repeat with `-1000,1000` and a different **fresh directory**
-for another seed. Existing saves ignore seed overrides. These explicit test paths
-do not touch normal saves. See [native acceptance](docs/PLATFORMS.md#slice-10-lighting-test-fish).
+Use the [Slice14 Fish and PowerShell instructions](docs/WORLDS.md#void-linux-glibc--fish-acceptance).
+They use isolated roots and cover A/B/A without restarting, complete-copy legacy
+imports, naming, archives, paging and save/restart. Never delete a real save to
+switch worlds. Preserve full closed-directory backups including all sidecars.
 
 ## Development checks
 

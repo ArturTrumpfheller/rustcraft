@@ -364,3 +364,85 @@ fn close_during_loading_waits_for_load_and_final_save_before_releasing_lock() {
     let (store, mut world, _) = SaveStore::open(&dir.0).unwrap();
     assert!(store.load_player(&mut world).is_ok());
 }
+
+#[test]
+fn managed_world_a_b_a_without_restart_preserves_all_state_and_reclaims_assets() {
+    use voxel_core::persistence::catalog::WorldCatalog;
+    let dir = Directory::new();
+    let catalog = WorldCatalog::new(dir.0.clone()).unwrap();
+    let a = catalog.create("A", 42).unwrap();
+    let b = catalog.create("B", 43).unwrap();
+    let mut app = app();
+    let baseline = assets(&app);
+    let pos = BlockPos([1, 31, 1]);
+    for (round, id) in [&a, &b, &a, &b, &a, &b].into_iter().enumerate() {
+        let c = catalog.clone();
+        let selected = id.clone();
+        app.world_mut()
+            .insert_resource(Loading(thread::spawn(move || {
+                prepare(c.open(&selected).map_err(|e| e.to_string())?)
+            })));
+        app.world_mut().resource_mut::<ClientFlow>().state = ClientState::Loading;
+        until(&mut app, |a| state(a) != ClientState::Loading);
+        assert_eq!(state(&app), ClientState::Playing);
+        frame(&mut app);
+        let is_a = id == &a;
+        let block = if is_a { Block::Wood } else { Block::Leaves };
+        let slot = if is_a { 7 } else { 8 };
+        assert_eq!(
+            app.world()
+                .resource::<scene::VoxelWorld>()
+                .0
+                .identity()
+                .unwrap()
+                .seed,
+            if is_a { 42 } else { 43 }
+        );
+        if round >= 2 {
+            assert_eq!(
+                app.world().resource::<scene::VoxelWorld>().0.block(pos),
+                block
+            );
+            let inv = &app
+                .world()
+                .resource::<inventory_ui::GameInventory>()
+                .contents;
+            assert_eq!(inv.selected(), slot);
+            assert_eq!(inv.cursor().unwrap().count(), if is_a { 32 } else { 64 });
+            assert!(app.world().resource::<inventory_ui::GameInventory>().open);
+        } else {
+            assert_eq!(
+                app.world()
+                    .resource::<inventory_ui::GameInventory>()
+                    .contents
+                    .selected(),
+                0
+            );
+            assert!(
+                app.world()
+                    .resource::<inventory_ui::GameInventory>()
+                    .contents
+                    .cursor()
+                    .is_none()
+            );
+            app.world_mut()
+                .resource_mut::<scene::VoxelWorld>()
+                .0
+                .set_block(pos, block)
+                .unwrap();
+            let mut inv = app
+                .world_mut()
+                .resource_mut::<inventory_ui::GameInventory>();
+            inv.contents.select(slot);
+            inv.contents
+                .click(0, if is_a { Click::Right } else { Click::Left });
+        }
+        assert!(catalog.open(id).is_err());
+        assert!(catalog.archive(id).is_err());
+        leave(&mut app);
+        assert_eq!(assets(&app), baseline);
+        assert_eq!(camera_count(&mut app), 1);
+        assert!(!has_world(app.world()));
+        assert!(catalog.open(id).is_ok());
+    }
+}

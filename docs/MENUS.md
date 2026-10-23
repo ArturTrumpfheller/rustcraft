@@ -1,7 +1,8 @@
 # Slice 13: menus and session lifecycle
 
-RustCraft starts at an original pixel title screen. **Spielen** opens the existing
-single world, or creates one only when no valid/invalid save evidence exists.
+RustCraft starts at an original pixel title screen. Since Slice14, **Spielen**
+opens the [world catalog and creation/import pages](WORLDS.md). Only explicit
+creation/import publishes a world; Play opens the selected existing bundle.
 **Beenden** exits. Mouse hover/click and Up/Down + Enter work; activation happens
 on release with visible press feedback. Loading/saving entries are disabled.
 The centered 480×270 logical layout scales to the available window in either
@@ -34,7 +35,9 @@ at Startup.
 ```mermaid
 stateDiagram-v2
     [*] --> Title
-    Title --> Loading: Spielen
+    Title --> Worlds: Spielen
+    Worlds --> Loading: selected managed world
+    Worlds --> Worlds: create / rename / archive / import / inspect
     Loading --> Playing: store + recovery + spawn ready
     Loading --> RecoverableError: load failure
     Playing --> Paused: Escape / focus loss
@@ -47,7 +50,7 @@ stateDiagram-v2
     RecoverableError --> Loading: retry load
 ```
 
-`begin_loading` resolves the data path and spawns one load worker. The worker owns
+`begin_loading` resolves the data root and selected catalog ID and spawns one load worker. The worker owns
 SaveStore, journal replay, inventory validation, spawn-region reads and initial
 column generation. A failure drops the store/lock and exposes an error; no
 fallback world/directory or damaged-file replacement is attempted. Closing during
@@ -71,48 +74,17 @@ Input, view, player, inventory modal, gestures, hand actions, dirty/lighting/err
 state are reset. No worker join blocks a normal lifecycle frame. Destructor joins
 remain emergency protection if another runner drops the whole App.
 
-`Destination` currently selects Title/Quit. The menu's state-to-action entries and
-the load/install boundary are the extension points for Slice 14's selected world
-and Slice 15's settings. Neither feature is implemented in this slice.
+`Destination` selects Title/Quit. Slice14 adds `ClientState::Worlds` and pins
+`selected_world` before the load worker opens it through WorldCatalog. All setup,
+save barriers and cleanup below are reused. Catalog pages own one separate worker
+and no gameplay resources. Settings remain Slice15.
 
-## Native acceptance on Void Linux (Fish)
+## Current native acceptance
 
-Use the native dependencies listed in PLATFORMS.md and a fresh absolute test path:
-
-```fish
-git fetch origin
-git switch feat/slice-13-main-pause-menu
-set test_dir (mktemp -d /tmp/rustcraft-slice13.XXXXXX)
-echo $test_dir
-env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_WORLD_SEED=42 cargo run --locked -p rustcraft
-```
-
-Before Spielen, the directory must still be empty. Play, mine/place, change
-inventory/selection, open E, Escape twice, resume with mouse and keyboard, then
-return to title and play again **without restarting**. Verify the same edits and
-inventory. Repeat several times, F5/autosave, focus loss, held W/Space/mouse buttons,
-resize (720p/1080p/4:3/wide) and native close. A held inventory stack must never be
-discarded; if it cannot fit, Escape keeps inventory open. Repeat on X11/Wayland.
-
-For a safe final-save failure test, use only a disposable directory: after the
-first save, close inventory, change selected slot, and make `player.rcp.bak` a
-directory if that path is absent. Return to title; the error must retain the game.
-Remove only that deliberately created empty directory and retry. Never perform
-this injection in real saves, delete a journal, or remove a live lock.
-
-## Windows 11 (PowerShell)
-
-Install Rust via rustup, Visual Studio Build Tools with Desktop development with
-C++/Windows SDK and a supported GPU driver (see PLATFORMS.md). In a fresh clone:
-
-```powershell
-git fetch origin
-git switch feat/slice-13-main-pause-menu
-$env:RUSTCRAFT_DATA_DIR = Join-Path $env:TEMP ("rustcraft-slice13-" + [guid]::NewGuid())
-cargo run --locked -p rustcraft
-```
-
-The repository selects Rust 1.99.1. Keep that same absolute data path for later
-runs. No external assets/Python/runtime service or renderer override is required.
-Repeat the acceptance sequence above; cloud X11 and Windows CI do not verify
-Windows mouse capture, compositor, DPI or physical GPU behavior.
+See [Slice14 Void Fish and Windows11 PowerShell tests](WORLDS.md#void-linux-glibc--fish-acceptance),
+including separate A/B/A sessions and legacy-copy imports. The historical Slice13
+save-failure procedure still applies to an isolated **worlds/ID** directory:
+obstruct an absent player.rcp.bak with an empty directory, change selection and
+return to title. The session must remain locked on error until that deliberately
+created empty obstruction is removed and save retried. Never inject errors into
+real saves or delete journals/locks.
