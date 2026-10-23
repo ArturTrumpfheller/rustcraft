@@ -100,6 +100,7 @@ fn rename_archive_and_collision_preserve_bundle() {
 fn legacy_import_copies_complete_bundle_without_modifying_source_or_overwriting() {
     let t = Temp::new();
     let c = t.catalog();
+    fs::write(t.0.join("world.lock"), b"retained lock bookkeeping").unwrap();
     let (store, mut w, _) =
         SaveStore::open_with(&t.0, || Ok(crate::streaming::new_large_world(88))).unwrap();
     let mut inv = store.load_player(&mut w).unwrap();
@@ -119,6 +120,10 @@ fn legacy_import_copies_complete_bundle_without_modifying_source_or_overwriting(
     assert_eq!(
         fs::read(p.join("player.rcp.bak")).unwrap(),
         fs::read(t.0.join("player.rcp.bak")).unwrap()
+    );
+    assert_eq!(
+        fs::read(p.join("world.lock")).unwrap(),
+        b"retained lock bookkeeping"
     );
     let (store, mut w, _) = c.open(&id).unwrap();
     assert_eq!(store.load_player(&mut w).unwrap().selected(), 7);

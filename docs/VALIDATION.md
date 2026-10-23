@@ -1,5 +1,53 @@
 # RustCraft validation
 
+## Slice14 world management (2026-10-23)
+
+Based on main `50b2ae6`; no dependencies, renderer features, generator outputs or
+world/player/journal formats changed. Local final checks passed:
+
+- `cargo fmt --all -- --check`
+- `cargo clippy --locked --workspace --all-targets -- -D warnings`
+- `cargo test --locked --workspace` (119 client +154 core tests on Linux)
+- `cargo build --locked --workspace`
+- `python tools/generate_textures.py --check`
+
+Thirteen catalog regressions on Linux cover unique worlds/equal-seed generation,
+separate inventories/blocks, per-world locks, paired journals/foreign identities,
+valid pending intent with missing root, complete-copy legacy import with unchanged
+source bytes and backups/opaque sidecars, blocked source/metadata corruption,
+interrupted creation/partial copy, stale staging detection, collision/archive
+failures, real non-root permission denial, symlinks and dangling catalog-lock
+escape. Windows additionally tests junction rejection; Unix-only permission/link
+tests are platform-gated. Original format/journal/recovery suites still pass.
+Five UI tests cover Unicode input, numeric validation without a job, paging and
+pinned selection, default-cancel confirmations, error/Legacy visibility,
+720p/1080p/4:3 layout, dates and close waiting for a blocked catalog job. A full
+Bevy lifecycle regression alternates A/B six times without restarting, checks
+exact edits/selection/held stacks and inventory modal, releases locks and returns
+to baseline mesh/material/image/camera counts after every session. Existing
+save-failure/retry, newer-revision drain, physics, lighting, streaming, inventory,
+menus and viewmodel regressions are retained.
+
+Actual X11/Xvfb with Mesa25.0.7 llvmpipe/Vulkan used isolated external test roots.
+Mouse/keyboard created A/42 and B/43, played A→B→A, persisted independent hotbars,
+renamed A without changing its directory, canceled archive, resized to1280×720,
+1920×1080 and1024×768 and quit normally. A complete closed-bundle legacy-layout
+fixture exercised inspect → import confirmation → cancel, then confirmed import
+and confirmed archive. Source SHA256 hashes (including player/regions/lock and an
+opaque recovery sidecar) stayed identical through both operations. Inspected
+original screenshots are committed as `docs/images/slice14-world-*.png`.
+One harness assertion initially expected uppercase from unshifted XTest keys;
+the stored lowercase name was correct and the subsequent test verified rename.
+No game defect or source data loss occurred. This was a functional GUI check,
+not a performance benchmark.
+
+Ubuntu/Windows CI status is tracked in the PR. Native Void X11/Wayland, Windows11,
+physical GPU/DPI/IME and filesystem power-loss guarantees remain manual/platform
+limitations. No permanent delete, automatic staging recovery or GUI archive
+restore is provided. See [WORLDS](WORLDS.md) for exact storage/import guarantees,
+security assumptions and Fish/PowerShell acceptance instructions.
+
+
 ## Slice 13 menus and session lifecycle (2026-10-23)
 
 Based on main `cdb28f3`; no core/dependency/format/generator changes.

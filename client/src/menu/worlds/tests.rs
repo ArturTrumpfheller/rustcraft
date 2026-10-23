@@ -156,3 +156,24 @@ fn date_and_layout_fit_720p_1080p_and_four_three() {
         }
     }
 }
+#[test]
+fn native_quit_waits_for_catalog_worker_completion() {
+    let mut a = app(Page::List);
+    a.add_message::<AppExit>();
+    a.world_mut().resource_mut::<ClientFlow>().destination = Some(Destination::Quit);
+    let (tx, rx) = std::sync::mpsc::channel();
+    a.world_mut().resource_mut::<Browser>().job = Some(thread::spawn(move || {
+        rx.recv().unwrap();
+        Ok((vec![], None))
+    }));
+    poll(a.world_mut());
+    assert!(a.world().resource::<Messages<AppExit>>().is_empty());
+    tx.send(()).unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while a.world().resource::<Browser>().job.is_some() {
+        assert!(std::time::Instant::now() < deadline);
+        poll(a.world_mut());
+        std::thread::yield_now();
+    }
+    assert!(!a.world().resource::<Messages<AppExit>>().is_empty());
+}

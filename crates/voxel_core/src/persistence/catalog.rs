@@ -394,7 +394,7 @@ impl WorldCatalog {
     ) -> Result<String, SaveError> {
         validate_name(name)?;
         let _guard = self.transaction()?;
-        let (_source_lock, _) = validate(&self.root, true)?;
+        let (source_lock, _) = validate(&self.root, true)?;
         let (id, stage) = self.stage()?;
         for path in tree(&self.root, true)? {
             let dest = stage.join(
@@ -405,12 +405,17 @@ impl WorldCatalog {
                 fs::create_dir_all(&dest)?;
             } else {
                 fs::create_dir_all(dest.parent().unwrap())?;
-                let mut src = File::open(&path)?;
                 let mut dst = OpenOptions::new()
                     .write(true)
                     .create_new(true)
                     .open(&dest)?;
-                io::copy(&mut src, &mut dst)?;
+                if path == self.root.join("world.lock") {
+                    // Windows byte-range locks deny reads through a separately
+                    // opened handle. Copy via the handle that owns the lock.
+                    io::copy(&mut &source_lock._lock, &mut dst)?;
+                } else {
+                    io::copy(&mut File::open(&path)?, &mut dst)?;
+                }
                 dst.sync_all()?;
                 copied_file()?;
             }

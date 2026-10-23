@@ -201,7 +201,7 @@ an evicted origin and waits before finding clear ground from actual saved edits.
 
 **Existing v1/v2 worlds remain finite 64×64 full snapshots; existing v3 worlds
 remain 128×128 with generator v2.** They keep their exact blocks, removals and
-saved identities. No automatic migration/expansion exists. A fresh directory is
+saved identities. No automatic migration/expansion exists. A newly created world is
 required for the larger mode. `RUSTCRAFT_START_CHUNK=x,z` optionally starts a v4
 session in a distant chunk; it is ignored for historical modes. R still returns
 to origin, and player position is not persisted.

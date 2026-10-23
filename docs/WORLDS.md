@@ -35,6 +35,12 @@ creation, import, rename, archive and loading run on workers with a busy page.
 Native close waits for an in-flight catalog operation. There is no automatic retry
 of a failed mutation; refresh the list after filesystem errors.
 
+![World selection](images/slice14-world-selection.png)
+
+![World creation](images/slice14-world-create.png)
+
+![Archive confirmation](images/slice14-world-archive.png)
+
 ## Data root and layout
 
 `RUSTCRAFT_DATA_DIR` must remain an **absolute** path. It consistently selects
