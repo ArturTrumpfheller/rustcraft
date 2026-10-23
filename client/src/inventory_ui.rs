@@ -49,14 +49,26 @@ pub struct InventoryPlugin;
 impl Plugin for InventoryPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameInventory>()
-            .add_systems(Startup, setup.after(CameraSetup).after(SceneSetup))
+            .add_systems(
+                Startup,
+                (setup.after(CameraSetup).after(SceneSetup)).run_if(crate::session::has_world),
+            )
+            .add_systems(
+                crate::session::SessionSetup,
+                setup.after(CameraSetup).after(SceneSetup),
+            )
             .add_systems(
                 RunFixedMainLoop,
                 input
                     .in_set(InventoryInput)
+                    .run_if(crate::session::playing)
                     .in_set(RunFixedMainLoopSystems::BeforeFixedMainLoop),
             )
-            .add_systems(PostUpdate, draw.before(TransformSystems::Propagate));
+            .add_systems(
+                PostUpdate,
+                draw.before(TransformSystems::Propagate)
+                    .run_if(crate::session::has_world),
+            );
     }
 }
 #[derive(Clone, Copy)]
@@ -344,13 +356,19 @@ fn setup(
     });
     let root = commands
         .spawn((
+            crate::session::SessionEntity,
             UiRoot,
             Transform::from_xyz(0., 0., -0.2),
             Visibility::Inherited,
         ))
         .id();
     let cursor = commands
-        .spawn((CursorRoot, Transform::default(), Visibility::Hidden))
+        .spawn((
+            crate::session::SessionEntity,
+            CursorRoot,
+            Transform::default(),
+            Visibility::Hidden,
+        ))
         .id();
     commands.entity(camera).add_child(root);
     commands.entity(root).add_child(cursor);
@@ -358,6 +376,7 @@ fn setup(
     for (i, h) in handles.iter().enumerate() {
         let e = commands
             .spawn((
+                crate::session::SessionEntity,
                 bevy::camera::visibility::RenderLayers::layer(crate::viewmodel::OVERLAY_LAYER),
                 Mesh3d(h.clone()),
                 MeshMaterial3d(if i % 2 == 0 {
@@ -537,3 +556,7 @@ fn draw(
 
 #[cfg(test)]
 mod tests;
+
+pub(crate) fn cleanup(world: &mut World) {
+    world.remove_resource::<UiAssets>();
+}

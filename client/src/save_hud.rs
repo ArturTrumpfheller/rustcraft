@@ -13,6 +13,7 @@ pub struct SaveHudPlugin;
 impl Plugin for SaveHudPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup.after(CameraSetup))
+            .add_systems(crate::session::SessionSetup, setup.after(CameraSetup))
             .add_systems(PostUpdate, update);
     }
 }
@@ -20,8 +21,23 @@ impl Plugin for SaveHudPlugin {
 struct SaveHud {
     text: String,
 }
-fn glyph(c: char) -> [u8; 7] {
+pub(crate) fn glyph(c: char) -> [u8; 7] {
     match c {
+        'B' => [30, 17, 17, 30, 17, 17, 30],
+        'H' => [17, 17, 17, 31, 17, 17, 17],
+        'J' => [7, 2, 2, 2, 18, 18, 12],
+        'K' => [17, 18, 20, 24, 20, 18, 17],
+        'M' => [17, 27, 21, 21, 17, 17, 17],
+        'P' => [30, 17, 17, 30, 16, 16, 16],
+        'Q' => [14, 17, 17, 17, 21, 18, 13],
+        'X' => [17, 17, 10, 4, 10, 17, 17],
+        'Z' => [31, 1, 2, 4, 8, 16, 31],
+        'Ä' => [10, 0, 14, 17, 31, 17, 17],
+        'Ü' => [10, 0, 17, 17, 17, 17, 14],
+        'Ö' => [10, 0, 14, 17, 17, 17, 14],
+        '/' => [1, 2, 2, 4, 8, 8, 16],
+        ':' => [0, 6, 6, 0, 6, 6, 0],
+        '>' => [16, 8, 4, 2, 4, 8, 16],
         'A' => [14, 17, 17, 31, 17, 17, 17],
         'C' => [14, 17, 16, 16, 16, 17, 14],
         'D' => [30, 17, 17, 17, 17, 17, 30],
@@ -111,6 +127,7 @@ fn setup(
     };
     let child = commands
         .spawn((
+            crate::session::SessionEntity,
             SaveHud {
                 text: String::new(),
             },

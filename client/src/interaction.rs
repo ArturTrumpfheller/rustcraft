@@ -23,13 +23,21 @@ impl Plugin for BlockInteractionPlugin {
         app.init_resource::<Editor>()
             .init_resource::<crate::viewmodel::HandAction>()
             .init_resource::<crate::inventory_ui::GameInventory>()
-            .add_systems(Startup, setup_visuals.after(CameraSetup))
+            .add_systems(
+                Startup,
+                (setup_visuals.after(CameraSetup)).run_if(crate::session::has_world),
+            )
+            .add_systems(
+                crate::session::SessionSetup,
+                setup_visuals.after(CameraSetup),
+            )
             .add_systems(
                 RunFixedMainLoop,
                 (edit_and_target, update_visuals)
                     .chain()
                     .after(ViewSync)
                     .in_set(InteractionUpdate)
+                    .run_if(crate::session::has_world)
                     .in_set(RunFixedMainLoopSystems::AfterFixedMainLoop),
             );
     }
@@ -229,6 +237,7 @@ fn setup_visuals(
         ..default()
     });
     commands.spawn((
+        crate::session::SessionEntity,
         TargetHighlight,
         Mesh3d(meshes.add(outline_mesh())),
         MeshMaterial3d(black),
@@ -237,6 +246,7 @@ fn setup_visuals(
     let crosshair = meshes.add(Rectangle::new(12.0, 2.0));
     let overlay = commands
         .spawn((
+            crate::session::SessionEntity,
             OverlayRoot,
             Transform::from_xyz(0.0, 0.0, -0.2),
             Visibility::Hidden,
@@ -245,11 +255,13 @@ fn setup_visuals(
     commands.entity(camera).add_child(overlay);
     commands.entity(overlay).with_children(|parent| {
         parent.spawn((
+            crate::session::SessionEntity,
             Mesh3d(crosshair.clone()),
             MeshMaterial3d(white.clone()),
             bevy::camera::visibility::RenderLayers::layer(crate::viewmodel::OVERLAY_LAYER),
         ));
         parent.spawn((
+            crate::session::SessionEntity,
             bevy::camera::visibility::RenderLayers::layer(crate::viewmodel::OVERLAY_LAYER),
             Mesh3d(crosshair),
             MeshMaterial3d(white.clone()),
@@ -300,3 +312,7 @@ fn update_visuals(
 
 #[cfg(test)]
 mod tests;
+
+pub(crate) fn reset(world: &mut World) {
+    world.insert_resource(Editor::default());
+}

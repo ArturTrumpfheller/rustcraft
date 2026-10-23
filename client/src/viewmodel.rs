@@ -41,11 +41,19 @@ pub struct ViewmodelPlugin;
 impl Plugin for ViewmodelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<HandAction>()
-            .add_systems(Startup, setup.after(CameraSetup).after(SceneSetup))
+            .add_systems(
+                Startup,
+                (setup.after(CameraSetup).after(SceneSetup)).run_if(crate::session::has_world),
+            )
+            .add_systems(
+                crate::session::SessionSetup,
+                setup.after(CameraSetup).after(SceneSetup),
+            )
             .add_systems(
                 RunFixedMainLoop,
                 update
                     .after(ViewSync)
+                    .run_if(crate::session::has_world)
                     .after(crate::interaction::InteractionUpdate)
                     .in_set(RunFixedMainLoopSystems::AfterFixedMainLoop),
             );
@@ -212,6 +220,7 @@ fn setup(
     };
     let overlay = commands
         .spawn((
+            crate::session::SessionEntity,
             OverlayCamera,
             Camera3d {
                 depth_load_op: Camera3dDepthLoadOp::Clear(0.),
@@ -252,11 +261,17 @@ fn setup(
     ]
     .map(|b| meshes.add(cube(Some(b))));
     let root = commands
-        .spawn((HandRoot, Transform::default(), Visibility::Hidden))
+        .spawn((
+            crate::session::SessionEntity,
+            HandRoot,
+            Transform::default(),
+            Visibility::Hidden,
+        ))
         .id();
     commands.entity(overlay).add_child(root);
     let arm = commands
         .spawn((
+            crate::session::SessionEntity,
             Arm,
             Mesh3d(meshes.add(arm_mesh())),
             MeshMaterial3d(skin),
@@ -266,6 +281,7 @@ fn setup(
         .id();
     let block = commands
         .spawn((
+            crate::session::SessionEntity,
             HeldBlock,
             Visibility::Hidden,
             Mesh3d(blocks[0].clone()),
@@ -539,3 +555,7 @@ fn update(
 
 #[cfg(test)]
 mod tests;
+
+pub(crate) fn cleanup(world: &mut World) {
+    world.remove_resource::<Models>();
+}

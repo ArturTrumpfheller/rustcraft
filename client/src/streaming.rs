@@ -28,7 +28,7 @@ impl Plugin for StreamingPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<StreamState>()
             .init_resource::<StreamFailure>()
-            .add_systems(Update, update_streaming);
+            .add_systems(Update, update_streaming.run_if(crate::session::has_world));
     }
 }
 pub(crate) fn radius_from(value: Option<OsString>) -> io::Result<i32> {
@@ -187,6 +187,12 @@ pub(crate) struct StreamState {
     recent_frames: VecDeque<Duration>,
 }
 impl StreamState {
+    pub(crate) fn drain(&mut self) -> bool {
+        if self.job.as_ref().is_some_and(|j| j.handle.is_finished()) {
+            let _ = self.job.take().unwrap().handle.join();
+        }
+        self.job.is_none()
+    }
     pub fn new(generator: Arc<Generator>, radius: i32) -> Self {
         Self {
             generator: Some(generator),
@@ -245,6 +251,7 @@ struct StreamScene<'w, 's> {
     material: Res<'w, TerrainMaterial>,
     origin: Res<'w, RenderOrigin>,
     windows: Query<'w, 's, &'static mut Window, With<PrimaryWindow>>,
+    flow: Option<Res<'w, crate::session::ClientFlow>>,
 }
 
 // A connected dirty component is one publication unit: splitting shared dirty
@@ -291,6 +298,9 @@ fn update_streaming(
     mut scene: StreamScene,
     mut io: StreamIo,
 ) {
+    if scene.flow.as_ref().is_some_and(|f| f.leaving()) {
+        return;
+    }
     let Some(generator) = state.generator.clone() else {
         return;
     };
