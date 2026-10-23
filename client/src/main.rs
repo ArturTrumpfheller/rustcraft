@@ -8,6 +8,7 @@ mod save_hud;
 mod scene;
 mod streaming;
 mod terrain_texture;
+mod viewmodel;
 
 use bevy::prelude::*;
 
@@ -125,7 +126,7 @@ fn main() -> std::process::ExitCode {
             }),
             ..default()
         }))
-        .add_plugins((scene::VoxelScenePlugin, inventory_ui::InventoryPlugin, player::PlayerPlugin, camera::FirstPersonPlugin, interaction::BlockInteractionPlugin, persistence::PersistencePlugin, save_hud::SaveHudPlugin, streaming::StreamingPlugin))
+        .add_plugins((scene::VoxelScenePlugin, inventory_ui::InventoryPlugin, player::PlayerPlugin, camera::FirstPersonPlugin, interaction::BlockInteractionPlugin, persistence::PersistencePlugin, save_hud::SaveHudPlugin, streaming::StreamingPlugin, viewmodel::ViewmodelPlugin))
         .run();
     std::process::ExitCode::SUCCESS
 }
