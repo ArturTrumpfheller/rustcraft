@@ -379,3 +379,62 @@ Release builds can be tested by adding `--release` to Cargo; published compariso
 numbers are debug/cloud software rendering, not native GPU measurements. Record
 GPU/driver/backend, radius, resolution and P50/P95/P99 diagnostics for comparison.
 Native Void/Wayland/Windows, high-DPI and physical GPU acceptance remain manual.
+
+## Slice 11 movement test (Fish)
+
+Use Void glibc with normal supported drivers and X11 or Wayland. Keep the new
+absolute path for restarts; existing saves remain separate:
+
+```fish
+git fetch origin
+git switch feat/slice-11-movement-sneaking
+set test_dir (mktemp -d /tmp/rustcraft-slice11.XXXXXX)
+echo $test_dir
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_WORLD_SEED=42 RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
+# After normal close, same isolated world and inventory:
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
+```
+
+1. On flat ground, compare WASD, held **Left Ctrl** and held **Left Shift**.
+   Targets are 5.0/8.0/1.8 blocks/s; diagonals must not be faster. Double-tap W
+   within250 ms, keep the second hold, then release it: sprint should latch/stop.
+   Holding W alone or slow taps must not activate sprint. Try releasing,
+   reversing and turning without releasing movement. Ctrl+Shift must sneak.
+2. Sneak onto cardinal and diagonal edges of a raised single-block platform.
+   Partial foot support is intentional: the body may overhang, but must remain
+   supported without jitter. Slide sideways along an edge. Repeat around title
+   coordinates X/Z 0, ±16, ±64 and at a distant start. Release Shift to walk off.
+3. Hold Space on flat ground: every landing should allow another jump, never
+   a midair jump. Add Ctrl or double-W: continuous sprint hops gain a modest
+   advantage (cap9.2), while standing/sneak/low-roof/wall starts gain no bonus.
+   Release Space to stop repeating. Sneak near an edge, then press Space: jumping deliberately bypasses the edge
+   guard. Sneaking after leaving the floor must not stop falling. Mine the block
+   below your feet while sneaking: fall immediately. Try rapid sprint-to-sneak.
+4. Watch sprint smoothly widen FOV and ease back on stopping, sneaking or E.
+   Ctrl without movement should not change FOV. Check resizing and readable,
+   stable-sized hotbar/crosshair/save HUD. Watch the crouched camera lower/rise. Jump crouched under a low roof and release Shift:
+   standing waits until headroom exists. The current full-block set has no slabs;
+   a one-block-high opening remains impassable. Place near feet/head and across
+   chunk seams: placement must still reject actual/displayed body overlap.
+5. Push diagonally into two touching blocks, slide, jump and repeat crouched.
+   Test faster travel across streaming frontiers: pending chunks remain barriers.
+   R/void recovery must restore standing posture and safe edited spawn ground.
+6. E must pause gravity, movement, looking and posture while freeing the cursor.
+   Check Shift-click transfers, 1–9/wheel, reopen/close, Escape, focus loss, capture
+   click and F5. Hold Space/W across opening/closing or focus loss: no phantom
+   jump/double-tap latch. Release Space and press again to rearm; double-W should
+   require a fresh pair after a transition. Mouse recapture must not replay
+   jump/respawn input edges.
+7. Make edits/inventory transfers, F5, wait SAVED, close and restart. Repeat far
+   travel if desired using `RUSTCRAFT_START_CHUNK="1000,-1000"` in the same isolated
+   directory after closing. World formats/generators and the save journal are
+   unchanged; position and posture are session-only, not saved.
+
+The owner accepted the initial Slice11 movement/sneak/fastbridging on native Void.
+The additional FOV/double-W/held-jump/bonus changes still need native acceptance
+on Void X11/Wayland and Windows.
+Record driver/backend, build mode and frame behavior. Cloud software-rendered X11
+checks cannot establish physical GPU or compositor behavior. For old saves use
+complete closed-directory **copies**; back up every regional/player/session file.
+Use a persistent separate path under your home if the test world should survive
+`/tmp` cleanup. Full tuning and deterministic comparisons: [MOVEMENT](MOVEMENT.md).

@@ -1,5 +1,6 @@
 //! Frame-rate input/view adapter. Player physics never reads a camera transform.
 
+use crate::controls::{MovementBindings, MovementGestures};
 use crate::player::{ControllerInput, PlayerSettings, PlayerState};
 use crate::scene::{ChunkRenders, RenderOrigin};
 use bevy::{
@@ -10,13 +11,14 @@ use bevy::{
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 use std::f32::consts::FRAC_PI_2;
-use voxel_core::physics::MovementInput;
 
 pub struct FirstPersonPlugin;
 
 impl Plugin for FirstPersonPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<ViewAngles>()
+        app.init_resource::<MovementBindings>()
+            .init_resource::<MovementGestures>()
+            .init_resource::<ViewAngles>()
             .init_resource::<RenderOrigin>()
             .init_resource::<ViewPose>()
             .add_systems(Startup, spawn_camera.in_set(CameraSetup))
@@ -29,7 +31,7 @@ impl Plugin for FirstPersonPlugin {
             )
             .add_systems(
                 RunFixedMainLoop,
-                (rebase_scene, sync_camera)
+                (rebase_scene, sync_camera, sync_sprint_fov)
                     .chain()
                     .in_set(RunFixedMainLoopSystems::AfterFixedMainLoop)
                     .in_set(ViewSync),
@@ -50,6 +52,8 @@ pub(crate) struct CameraSetup;
 pub(crate) struct ViewPose {
     pub eye: [f64; 3],
     pub direction: [f64; 3],
+    pub feet: [f64; 3],
+    pub crouched: bool,
 }
 
 #[derive(Resource)]
@@ -70,6 +74,7 @@ impl Default for ViewAngles {
 fn spawn_camera(mut commands: Commands, player: Res<PlayerState>, settings: Res<PlayerSettings>) {
     commands.spawn((
         FirstPersonCamera,
+        SprintFov::default(),
         Camera3d::default(),
         Tonemapping::Reinhard,
         Transform::from_translation(Vec3::from_array(
@@ -117,8 +122,17 @@ fn manage_cursor(
     }
 }
 
+#[derive(SystemParam)]
+struct KeyboardCommands<'w> {
+    keys: Res<'w, ButtonInput<KeyCode>>,
+    bindings: Res<'w, MovementBindings>,
+    gestures: ResMut<'w, MovementGestures>,
+    time: Res<'w, Time<Real>>,
+    player: Res<'w, PlayerState>,
+}
+
 fn read_input(
-    keyboard: Res<ButtonInput<KeyCode>>,
+    mut commands: KeyboardCommands,
     motion: Res<AccumulatedMouseMotion>,
     windows: Query<(&Window, &CursorOptions), With<PrimaryWindow>>,
     mut view: ResMut<ViewAngles>,
@@ -126,6 +140,8 @@ fn read_input(
     save: Option<Res<crate::persistence::SaveFeedback>>,
     inventory: Option<Res<crate::inventory_ui::GameInventory>>,
 ) {
+    let keyboard = &commands.keys;
+    let bindings = &commands.bindings;
     input.active = windows
         .single()
         .is_ok_and(|(window, cursor)| window.focused && cursor.grab_mode != CursorGrabMode::None);
@@ -135,6 +151,9 @@ fn read_input(
         input.active = false;
     }
     if !input.active {
+        commands
+            .gestures
+            .update(keyboard, bindings, commands.time.elapsed(), false);
         *input = ControllerInput::default();
         return;
     }
@@ -144,23 +163,25 @@ fn read_input(
             (view.pitch - motion.delta.y * 0.002).clamp(-FRAC_PI_2 + 0.01, FRAC_PI_2 - 0.01);
         view.yaw = (view.yaw - motion.delta.x * 0.002) % std::f32::consts::TAU;
     }
-    if keyboard.just_pressed(KeyCode::KeyR) {
+    if !input.captured_this_frame && keyboard.just_pressed(bindings.respawn) {
         *view = ViewAngles::default();
         input.reset_pending = true;
     }
-    let axis = |positive, negative| {
-        f64::from(keyboard.pressed(positive)) - f64::from(keyboard.pressed(negative))
-    };
-    input.command = MovementInput::from_yaw(
-        [
-            axis(KeyCode::KeyD, KeyCode::KeyA),
-            axis(KeyCode::KeyS, KeyCode::KeyW),
-        ],
-        f64::from(view.yaw),
-        keyboard.pressed(KeyCode::ShiftLeft),
-        false,
-    );
-    input.jump_pending |= keyboard.just_pressed(KeyCode::Space);
+    let enabled = !input.captured_this_frame
+        && !input.reset_pending
+        && !commands.player.awaiting_spawn
+        && commands.player.body.position[1] >= crate::player::RECOVERY_Y;
+    commands
+        .gestures
+        .update(keyboard, bindings, commands.time.elapsed(), enabled);
+    input.command = bindings.command(keyboard, f64::from(view.yaw));
+    input.command.sprint |= commands.gestures.double_tap_sprint;
+    input.command.jump = enabled && commands.gestures.jump_ready && keyboard.pressed(bindings.jump);
+    if enabled && commands.gestures.jump_ready {
+        input.jump_pending |= keyboard.just_pressed(bindings.jump);
+    } else {
+        input.jump_pending = false;
+    }
 }
 
 #[derive(SystemParam)]
@@ -187,20 +208,72 @@ fn sync_camera(
     let position: [f64; 3] = std::array::from_fn(|axis| {
         player.previous_position[axis] * (1.0 - alpha) + player.body.position[axis] * alpha
     });
-    space.pose.eye = [
-        position[0],
-        position[1] + space.settings.0.eye_height,
-        position[2],
-    ];
+    let mut previous_body = player.body;
+    previous_body.crouched = player.previous_crouched;
+    let eye_height = previous_body.eye_height(&space.settings.0) * (1.0 - alpha)
+        + player.body.eye_height(&space.settings.0) * alpha;
+    space.pose.feet = position;
+    // Protect the union of the old/new posture during the single interpolated tick.
+    space.pose.crouched = player.body.crouched && (player.previous_crouched || alpha == 1.0);
+    space.pose.eye = [position[0], position[1] + eye_height, position[2]];
     let rotation = Quat::from_euler(EulerRot::YXZ, view.yaw, view.pitch, 0.0);
     space.pose.direction = (rotation * Vec3::NEG_Z).to_array().map(f64::from);
     for mut transform in &mut cameras {
         transform.translation = Vec3::new(
             (position[0] - space.origin.0[0]) as f32,
-            (position[1] + space.settings.0.eye_height - space.origin.0[1]) as f32,
+            (position[1] + eye_height - space.origin.0[1]) as f32,
             (position[2] - space.origin.0[2]) as f32,
         );
         transform.rotation = rotation;
+    }
+}
+
+// Relative to the perspective projection's base, including future settings edits.
+const SPRINT_FOV_GAIN: f32 = 0.09;
+const SPRINT_FOV_RESPONSE: f32 = 10.0;
+#[derive(Component, Default)]
+struct SprintFov {
+    base: Option<f32>,
+    amount: f32,
+    applied: Option<f32>,
+}
+
+fn sync_sprint_fov(
+    time: Res<Time<Real>>,
+    input: Res<ControllerInput>,
+    player: Res<PlayerState>,
+    settings: Res<PlayerSettings>,
+    mut cameras: Query<(&mut Projection, &mut SprintFov), With<FirstPersonCamera>>,
+) {
+    let sprinting = input.active
+        && !input.reset_pending
+        && !player.awaiting_spawn
+        && input.command.sprint
+        && !input.command.sneak
+        && !player.body.crouched
+        && player.body.velocity[0].hypot(player.body.velocity[2]) > settings.0.walk_speed + 0.2
+        && input.command.direction[0].hypot(input.command.direction[1]) > 0.0;
+    let target = if sprinting { 1.0 } else { 0.0 };
+    // Smooth return even in menus; limit the first step after a long OS stall.
+    let blend = 1.0 - (-SPRINT_FOV_RESPONSE * time.delta_secs().min(0.05)).exp();
+    for (mut projection, mut fov) in &mut cameras {
+        let Projection::Perspective(p) = &*projection else {
+            continue;
+        };
+        if fov.applied != Some(p.fov) {
+            fov.base = Some(p.fov);
+        }
+        fov.amount += (target - fov.amount) * blend;
+        if (target - fov.amount).abs() < 1e-5 {
+            fov.amount = target;
+        }
+        let next = fov.base.unwrap_or(p.fov) * (1.0 + SPRINT_FOV_GAIN * fov.amount);
+        fov.applied = Some(next);
+        if next != p.fov
+            && let Projection::Perspective(p) = &mut *projection
+        {
+            p.fov = next;
+        }
     }
 }
 

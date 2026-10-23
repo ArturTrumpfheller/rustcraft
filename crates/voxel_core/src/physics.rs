@@ -20,8 +20,12 @@ pub struct PhysicsConfig {
     pub half_width: f64,
     pub height: f64,
     pub eye_height: f64,
+    pub crouch_height: f64,
+    pub crouch_eye_height: f64,
+    pub sneak_speed: f64,
     pub walk_speed: f64,
     pub sprint_speed: f64,
+    pub sprint_jump_boost: f64,
     pub ground_acceleration: f64,
     pub ground_braking: f64,
     pub air_acceleration: f64,
@@ -36,10 +40,14 @@ impl Default for PhysicsConfig {
             half_width: 0.3,
             height: 1.8,
             eye_height: 1.62,
-            walk_speed: 4.3,
-            sprint_speed: 5.6,
-            ground_acceleration: 55.0,
-            ground_braking: 60.0,
+            crouch_height: 1.5,
+            crouch_eye_height: 1.32,
+            sneak_speed: 1.8,
+            walk_speed: 5.0,
+            sprint_speed: 8.0,
+            sprint_jump_boost: 1.2,
+            ground_acceleration: 65.0,
+            ground_braking: 75.0,
             air_acceleration: 12.0,
             gravity: 24.0,
             jump_speed: 8.5,
@@ -48,12 +56,13 @@ impl Default for PhysicsConfig {
     }
 }
 
-/// One tick's world-space X/Z movement command. Jump is an edge/request, not a
-/// held key: callers must not repeat it unless the player actually presses again.
+/// One tick's world-space X/Z movement command. Jump may remain requested while
+/// held: only actual support permits a launch, never a second airborne jump.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MovementInput {
     pub direction: [f64; 2],
     pub sprint: bool,
+    pub sneak: bool,
     pub jump: bool,
 }
 
@@ -67,6 +76,7 @@ impl MovementInput {
                 -sin * local[0] + cos * local[1],
             ],
             sprint,
+            sneak: false,
             jump,
         }
     }
@@ -77,6 +87,7 @@ pub struct Player {
     pub position: [f64; 3],
     pub velocity: [f64; 3],
     pub grounded: bool,
+    pub crouched: bool,
 }
 
 impl Player {
@@ -85,12 +96,29 @@ impl Player {
             position,
             velocity: [0.0; 3],
             grounded: false,
+            crouched: false,
         }
     }
 
     pub fn eye_position(&self, config: &PhysicsConfig) -> [f64; 3] {
         let [x, y, z] = self.position;
-        [x, y + config.eye_height, z]
+        [x, y + self.eye_height(config), z]
+    }
+
+    pub fn eye_height(&self, config: &PhysicsConfig) -> f64 {
+        if self.crouched {
+            config.crouch_eye_height
+        } else {
+            config.eye_height
+        }
+    }
+
+    pub fn height(&self, config: &PhysicsConfig) -> f64 {
+        if self.crouched {
+            config.crouch_height
+        } else {
+            config.height
+        }
     }
 
     /// Strict positive-volume overlap: face contact alone is allowed. This
@@ -126,13 +154,33 @@ impl Player {
     }
 
     pub fn tick(&mut self, world: &World, input: MovementInput, config: &PhysicsConfig) {
+        if input.sneak {
+            self.crouched = true;
+        } else if self.crouched {
+            let standing = Self {
+                crouched: false,
+                ..*self
+            };
+            if standing.fits_in_world(world, config) {
+                self.crouched = false;
+            }
+        }
         // Never trust last tick's support after walking off a ledge or a world edit.
         self.grounded = self.velocity[1] <= 0.0 && self.supported(world, config);
         self.accelerate(input, config);
+        if self.crouched && self.grounded {
+            let speed = self.velocity[0].hypot(self.velocity[2]);
+            if speed > config.sneak_speed {
+                self.velocity[0] *= config.sneak_speed / speed;
+                self.velocity[2] *= config.sneak_speed / speed;
+            }
+        }
         if input.jump && self.grounded {
+            self.boost_sprint_jump(world, input, config);
             self.velocity[1] = config.jump_speed;
             self.grounded = false;
         }
+        let guard_ledge = self.crouched && self.grounded;
         self.velocity[1] =
             (self.velocity[1] - config.gravity * PHYSICS_DT).max(-config.terminal_speed);
 
@@ -140,7 +188,10 @@ impl Player {
         // sliding. The fixed axis order is deliberate and repeatable.
         for axis in [1, 0, 2] {
             let requested = self.velocity[axis] * PHYSICS_DT;
-            let allowed = self.sweep_axis(world, config, axis, requested);
+            let mut allowed = self.sweep_axis(world, config, axis, requested);
+            if guard_ledge && axis != 1 {
+                allowed = self.guard_ledge(world, config, axis, allowed);
+            }
             self.position[axis] += allowed;
             if allowed != requested {
                 self.velocity[axis] = 0.0;
@@ -165,8 +216,19 @@ impl Player {
         if !self.grounded && length == 0.0 {
             return;
         }
-        let speed = if input.sprint {
-            config.sprint_speed
+        let speed = if self.crouched {
+            config.sneak_speed
+        } else if input.sprint {
+            if self.grounded {
+                config.sprint_speed
+            } else {
+                // Retain earned launch momentum through bounded vector air
+                // control; turning cannot accumulate speed above this target.
+                self.velocity[0]
+                    .hypot(self.velocity[2])
+                    .max(config.sprint_speed)
+                    .min(config.sprint_speed + config.sprint_jump_boost)
+            }
         } else {
             config.walk_speed
         };
@@ -187,13 +249,47 @@ impl Player {
         }
     }
 
+    fn boost_sprint_jump(&mut self, world: &World, input: MovementInput, config: &PhysicsConfig) {
+        let speed = self.velocity[0].hypot(self.velocity[2]);
+        let alignment =
+            self.velocity[0] * input.direction[0] + self.velocity[2] * input.direction[1];
+        // A run-up and real vertical clearance prevent standing/ceiling or
+        // wall-pushing launches from earning horizontal speed.
+        if !input.sprint
+            || self.crouched
+            || speed < config.walk_speed
+            || !alignment.is_finite()
+            || alignment <= 0.0
+            || self.sweep_axis(world, config, 1, 0.5) < 0.5
+        {
+            return;
+        }
+        let boosted =
+            (speed + config.sprint_jump_boost).min(config.sprint_speed + config.sprint_jump_boost);
+        let velocity = [
+            self.velocity[0] * boosted / speed,
+            self.velocity[2] * boosted / speed,
+        ];
+        let mut probe = *self;
+        for (axis, v) in [(0, velocity[0]), (2, velocity[1])] {
+            let delta = v * PHYSICS_DT;
+            let allowed = probe.sweep_axis(world, config, axis, delta);
+            if (allowed - delta).abs() > CONTACT_EPSILON {
+                return;
+            }
+            probe.position[axis] += allowed;
+        }
+        self.velocity[0] = velocity[0];
+        self.velocity[2] = velocity[1];
+    }
+
     fn bounds(&self, config: &PhysicsConfig) -> ([f64; 3], [f64; 3]) {
         let [x, y, z] = self.position;
         (
             [x - config.half_width, y, z - config.half_width],
             [
                 x + config.half_width,
-                y + config.height,
+                y + self.height(config),
                 z + config.half_width,
             ],
         )
@@ -218,6 +314,41 @@ impl Player {
             }
         }
         true
+    }
+
+    /// Only called for supported, non-jumping movement. Probe the resolved
+    /// X/Z path separately to preserve ledge sliding and diagonal partial support.
+    /// Never snap down, fabricate support, or cancel vertical momentum.
+    fn guard_ledge(&self, world: &World, config: &PhysicsConfig, axis: usize, delta: f64) -> f64 {
+        if delta == 0.0 {
+            return delta;
+        }
+        let supported_at = |distance| {
+            let mut candidate = *self;
+            candidate.position[axis] += distance;
+            candidate.supported(world, config)
+        };
+        // Scan a bounded normal tick path before bisection so even externally
+        // supplied large velocities cannot skip a gap and land on another ledge.
+        let steps = (delta.abs() / 0.025).ceil().clamp(1.0, 64.0) as u32;
+        let mut safe = 0.0;
+        for step in 1..=steps {
+            let mut unsafe_distance = delta * f64::from(step) / f64::from(steps);
+            if supported_at(unsafe_distance) {
+                safe = unsafe_distance;
+                continue;
+            }
+            for _ in 0..20 {
+                let middle = (safe + unsafe_distance) * 0.5;
+                if supported_at(middle) {
+                    safe = middle;
+                } else {
+                    unsafe_distance = middle;
+                }
+            }
+            return safe;
+        }
+        delta
     }
 
     fn supported(&self, world: &World, config: &PhysicsConfig) -> bool {

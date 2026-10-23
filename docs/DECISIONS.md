@@ -170,3 +170,34 @@ Resolve these incrementally while preserving backward-compatible migration paths
 - This is incremental bounded batch rebuilding, not a fully persistent cell-level
   removal solver. Record additional CPU/load latency honestly; prioritize correct
   seams, capped caches, save compatibility and stable main-thread work first.
+
+## Slice 11 movement decisions
+
+- Tune ground movement to 5.0 walk /8.0 sprint /1.8 sneak blocks/s, acceleration65
+  and braking75. Keep existing air control, gravity, jumping and contact epsilon.
+- Left Ctrl sprints, Left Shift sneaks; a focused client bindings resource maps
+  locomotion to engine-independent commands. Existing modal UI shortcuts stay.
+- Crouch shrinks height1.8→1.5 and eye1.62→1.32, feet unchanged. Keep crouching
+  until standing clearance exists. Actual posture controls all physics/edits.
+- Restrict supported non-jumping crouch movement using ordinary support probes;
+  partial support suffices, no step-down snap or airborne protection. Grounded
+  stance entry caps speed immediately; air retains momentum and bounded control.
+- Interpolate posture with feet and protect taller displayed transition bodies.
+  Initial PR omitted optional FOV/head-bob effects; the owner-requested polish
+  below adds FOV only. Formats, generators,
+  dependencies and GPU resources stay unchanged; native feel needs owner testing.
+
+### Slice 11 owner polish, same PR #28
+
+- Owner accepted movement/sneak/fastbridging on native Void before these additions.
+- Relative sprint FOV gain9%, exponential response10/s, max50-ms visual step.
+  Respect current perspective base and return smoothly during local pauses; no bob.
+- Default double-W uses configured forward,250-ms inclusive distinct edges and
+  second-hold latch. Cancel gestures on conflicts, pauses, capture, reset/rebinding.
+- Supersede Slice2's press-again-only jump policy: hold requests repeat only after
+  actual landing, with pending short taps retained. Gate held jump until release
+  across modal/focus/capture/reset/binding transitions, preventing phantom launches.
+- Earn +1.2 horizontal speed at eligible sprint launches, max9.2; require run-up,
+  positive directional alignment, overhead clearance and an unblocked step. Retain
+  earned sprint momentum with bounded vector air control. No stacking, sneak,
+  stationary, low-ceiling or pending-barrier boosts; core stays Bevy-independent.

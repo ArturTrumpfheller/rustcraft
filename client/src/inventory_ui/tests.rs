@@ -214,7 +214,13 @@ fn modal_open_pauses_camera_motion_mining_jump_reset_and_escape_closes_first() {
     let body = app.world().resource::<PlayerState>().body;
     let direction = app.world().resource::<crate::camera::ViewPose>().direction;
     let world = app.world().resource::<VoxelWorld>().0.clone();
-    for k in [KeyCode::KeyW, KeyCode::Space, KeyCode::KeyR] {
+    for k in [
+        KeyCode::KeyW,
+        KeyCode::Space,
+        KeyCode::KeyR,
+        KeyCode::ControlLeft,
+        KeyCode::ShiftLeft,
+    ] {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
             .press(k);
@@ -539,4 +545,65 @@ fn repeated_real_input_break_place_cycles_conserve_items_and_reuse_render_assets
     save(&mut app);
     assert_eq!(app.world().resource::<Assets<Mesh>>().len(), meshes);
     assert_eq!(app.world().resource::<Assets<Image>>().len(), 1);
+}
+
+#[test]
+fn sprint_fov_keeps_inventory_meshes_and_assets_retained_and_modal_blocks_held_jump() {
+    let (_dir, mut app) = app();
+    click(&mut app, MouseButton::Left);
+    let rebuilds = app.world().resource::<UiAssets>().rebuilds;
+    let meshes = app.world().resource::<Assets<Mesh>>().len();
+    let materials = app.world().resource::<Assets<StandardMaterial>>().len();
+    let images = app.world().resource::<Assets<Image>>().len();
+    let root = app.world().resource::<UiAssets>().root;
+    let scale = app.world().get::<Transform>(root).unwrap().scale;
+    for k in [KeyCode::KeyD, KeyCode::ControlLeft] {
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(k);
+    }
+    for _ in 0..30 {
+        frame(&mut app);
+    }
+    assert_ne!(app.world().get::<Transform>(root).unwrap().scale, scale);
+    assert_eq!(app.world().resource::<UiAssets>().rebuilds, rebuilds);
+    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), meshes);
+    assert_eq!(
+        app.world().resource::<Assets<StandardMaterial>>().len(),
+        materials
+    );
+    assert_eq!(app.world().resource::<Assets<Image>>().len(), images);
+    key(&mut app, KeyCode::KeyE);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::Space);
+    for _ in 0..3 {
+        frame(&mut app);
+    }
+    let before = app.world().resource::<PlayerState>().body;
+    key(&mut app, KeyCode::KeyE);
+    assert!(
+        !app.world()
+            .resource::<crate::player::ControllerInput>()
+            .command
+            .jump
+    );
+    assert!(
+        !app.world()
+            .resource::<crate::player::ControllerInput>()
+            .jump_pending
+    );
+    assert_eq!(
+        app.world().resource::<PlayerState>().body.position[1],
+        before.position[1]
+    );
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .release(KeyCode::Space);
+    frame(&mut app);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::Space);
+    frame(&mut app);
+    assert!(app.world().resource::<PlayerState>().body.velocity[1] > 0.);
 }

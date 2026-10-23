@@ -4,17 +4,18 @@ This document tracks intended milestones, not promised delivery dates. Implement
 
 ## v0.1 — Classic-style prototype
 
-Slice 10 adds deterministic 0–15 skylight, bounded worker updates, dark caves and
-original atlas face modulation. Slices 1–9 are merged and accepted on Void.
-The 65,536×65,536×48 rollout, world v1–v4/player contracts, frozen generators,
-block IDs, inventory and physics remain intact. See LIGHTING and VALIDATION for
-current CPU/memory costs and native acceptance still required.
+Slice 11 improves walking/sprinting and adds collision-aware crouching with
+supported ledge protection, plus owner-requested eased sprint FOV, double-W and
+bounded held sprint-jumps. Slices 1–10 are merged. Existing large-world, save,
+lighting, texture and inventory contracts remain intact; see MOVEMENT and
+VALIDATION for tuning, regression coverage and native acceptance limits.
 
 - [x] Cargo workspace and pinned Bevy dependency
 - [x] Launch client with a first-person walking player and interpolated camera
 - [x] Initial closed block-ID enum and original 16×16 terrain atlas (extensible registry deferred)
 - [x] Chunk storage and visible-face meshing, including chunk-boundary culling
 - [x] Terrain generation from deterministic seed (versioned finite hills/valleys, connected caves and simple trees)
+- [x] Responsive walk/Ctrl sprint, Shift crouch, safe supported ledges and headroom checks
 - [x] Solid block collision, gravity and jumping (fixed 60-Hz AABB controller; boundary and tunneling regression tests)
 - [x] Block targeting, breaking and placement (five-block DDA, validated player-safe edits and dirty neighbor remeshing)
 - [x] Persistent world saves (versioned full snapshots, F5, dirty-only autosave, safe close and recoverable replacement)

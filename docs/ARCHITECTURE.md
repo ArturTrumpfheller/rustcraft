@@ -1,9 +1,9 @@
 # RustCraft architecture
 
-Status: **Slice 10 derived voxel skylight** from accepted Slice-9 main `bc34e76`
-(PR #19). World/player formats, IDs, generator output, texture UVs and physics are
-unchanged. Bounded worker light updates and unlit textured face modulation are
-specified in LIGHTING; measurements and native acceptance are in VALIDATION.
+Status: **Slice 11 movement and safe sneaking**, from merged Slice-10 main
+`3656020`. Engine-independent fixed-tick posture/ledge handling and the client
+command mapping are specified in [MOVEMENT](MOVEMENT.md). World/player formats,
+IDs, generators, rendering and streaming remain unchanged.
 
 ## Slice 7 design note (before implementation)
 
@@ -248,3 +248,22 @@ zero and the old directional light is removed. Fixed top/bottom/X/Z factors and
 a small cave floor replace global PBR washout. UI materials remain separately
 unlit/readable; UVs, culling, origins and resource ownership remain intact.
 LIGHTING describes attenuation, no-AO policy, limits and reconstruction.
+
+## Slice 11 controller integration
+
+`Player` owns actual crouched posture; `PhysicsConfig` owns both body/eye heights
+and all speed/acceleration constants. Support and standing clearance query actual
+world blocks. Grounded crouch caps momentum, clips horizontal travel to supported
+positions, and leaves jump/fall/gravity and swept collision order intact.
+
+`client::controls::MovementBindings` maps keys to core commands. The fixed adapter
+records previous posture alongside previous feet; camera interpolation uses both.
+`ViewPose` retains displayed feet plus conservative transition posture so edits
+protect actual and displayed bodies independently of eye-height changes. Existing
+modal/focus/save pauses remain in the same schedules. `MovementGestures` records
+forward press/release timing using real elapsed time and gates held jump across
+transitions. The fixed adapter ORs held requests with one consumed pending tap;
+core support alone decides when a launch is legal. Sprint launches add a bounded
+run-up bonus; sprint air control preserves it without increasing the cap.
+`SprintFov` tracks the perspective base, eases a9% relative gain and restores it
+without changing aspect/frustum settings or creating UI/GPU resources.
