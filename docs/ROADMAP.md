@@ -4,11 +4,10 @@ This document tracks intended milestones, not promised delivery dates. Implement
 
 ## v0.1 — Classic-style prototype
 
-Slice 11 improves walking/sprinting and adds collision-aware crouching with
-supported ledge protection, plus owner-requested eased sprint FOV, double-W and
-bounded held sprint-jumps. Slices 1–10 are merged. Existing large-world, save,
-lighting, texture and inventory contracts remain intact; see MOVEMENT and
-VALIDATION for tuning, regression coverage and native acceptance limits.
+Slice 12 adds an original first-person arm, atlas-textured selected block and
+subtle movement/click feedback. Slices1–11 are merged and accepted on Void.
+Existing large-world, save, lighting, inventory and movement contracts remain
+intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 
 - [x] Cargo workspace and pinned Bevy dependency
 - [x] Launch client with a first-person walking player and interpolated camera
@@ -18,6 +17,7 @@ VALIDATION for tuning, regression coverage and native acceptance limits.
 - [x] Responsive walk/Ctrl sprint, Shift crouch, safe supported ledges and headroom checks
 - [x] Solid block collision, gravity and jumping (fixed 60-Hz AABB controller; boundary and tunneling regression tests)
 - [x] Block targeting, breaking and placement (five-block DDA, validated player-safe edits and dirty neighbor remeshing)
+- [x] Original first-person hand/held hotbar block with retained models and bounded animation
 - [x] Persistent world saves (versioned full snapshots, F5, dirty-only autosave, safe close and recoverable replacement)
 - [x] 9-slot hotbar + 27-slot inventory, stacks 64, transfers, block collection/consumption and paired persistence
 - [x] Tests for indexing and serialization, corruption and save-failure recovery

@@ -1,5 +1,81 @@
 # RustCraft validation
 
+## Slice 12 — original first-person hand and held hotbar block
+
+Base: accepted Slice11 main `cfcf645`, branch
+`feat/slice-12-first-person-viewmodel`, Issue #24. See VIEWMODEL for rendering,
+animation, source/provenance and resource accounting. No voxel_core, physics,
+world/player format, generator, dependency, image-atlas or streaming changes.
+
+### Checks
+
+- `cargo fmt --all -- --check`
+- `cargo clippy --locked --workspace --all-targets -- -D warnings`
+- `cargo test --locked --workspace`: **242 tests,101 client +141 core**, none ignored.
+- `cargo build --locked --workspace`
+- `python3 tools/generate_textures.py --check`
+
+Eight new focused tests compare every held cube's per-vertex face UV against
+actual core terrain output; check overlay depth/color/layers and UI separation;
+exercise all five items, numbers/scroll/empty slots, loaded/quick-transferred and
+consumed/mined stacks in the same frame; perform a real player-session roundtrip;
+check capture/menu/focus/respawn action gating, actual-distance walk/sprint/sneak,
+vertical/landing reaction,30/60/144-FPS replay and1000 rapid retriggers; and run600
+selection/action/FOV/aspect/far-origin updates with invariant mesh/material/image
+counts and exact camera-child global transform/projection checks. Existing save,
+movement, inventory, lighting/meshing and streaming regressions remain intact.
+
+Early headless selection testing exposed that MinimalPlugins does not register
+render-plugin-required Visibility for bare Mesh3d. Explicit child visibility now
+makes both minimal and full rendering behavior unambiguous; no extra test tick or
+input timing workaround. Repeated swings use an explicit active flag so consuming
+a nonzero action serial while hidden cannot restart it after a pause.
+
+### Graphical smoke and measured cost
+
+Xvfb/X11, Mesa25.0.7 LLVM19 llvmpipe Vulkan, LP_NUM_THREADS4, debug,640×360,
+seed42/radius1, separate fresh save directories. The v4 test passed all five
+selected textured blocks and empty hand,24 rapid mine/place attempts, inventory
+open/close, sneak, save, cursor release and normal window close. Additional
+short runs verified contact with a wall at Z9.3 and a v3 original closed tunnel
+at Y21/Z-9.6: hand/Stone remain readable, with existing UI in front. Screenshots
+are in `docs/images/slice12-viewmodel.png` and `slice12-cave.png`. Ordinary Xvfb
+and software-adapter warnings only; no application errors in completed runs.
+
+Matched baseline `cfcf645` and Slice12 rendering code `4ae14a3` were built using
+the same toolchain/target cache (baseline in an isolated detached worktree), then
+run sequentially without compilation/other benchmarks. After identical capture/
+resize/warmup, one8-second idle sample per version gave:
+
+| Metric | Slice11 | Slice12 |
+| --- | --- | --- |
+| Process CPU (100%=one core) | 234.87% | 230.86% |
+| RSS start→end,KiB | 426884→426892 | 435312→435432 |
+| Resident chunks / terrain meshes | 27 /22 | 27 /22 |
+| Terrain vertex/index bytes | 2332368 | 2332368 |
+
+End RSS differs by8540 KiB (~8.34 MiB). CPU values are within this short software
+trial's variability: no speedup or hardware-FPS guarantee is claimed. No matched
+frame-percentile or physical-GPU/VRAM measurement was taken. A320×230 world-only
+crop outside hand/UI is byte-identical between the matched screenshots, verifying
+that the extra view did not retone/light the underlying world.
+
+Exact additional geometry: six retained meshes, two StandardMaterials, zero
+Images, four entities, at most two model geometry draws/60 triangles. Vertex/index
+payload11664 bytes on CPU/GPU before alignment; engine/driver view and pipeline
+memory is additional. One extra3D pass clears shared window/MSAA depth and loads
+existing color. Bevy's target/MSAA depth cache is shared by these views; attachment
+and GPU allocation details remain backend-owned. The242-test suite and600-update
+retained-handle stress cover bounded ownership, not multi-hour driver endurance.
+
+The successful Slice11 movement/fastbridging behavior is preserved; no need to
+repeat worldgen/meshing benchmarks for unchanged code. Native Void X11/Wayland,
+Windows GUI, custom driver/GPU/high-DPI and long GPU-memory runs remain owner
+acceptance. Custom FOV/aspect are tested in-process; no settings UI added.
+Full Ubuntu/Windows final-head CI is required and linked in the PR. Logs/binaries,
+GUI harnesses and disposable save directories are outside Git under
+`/workspace/.rustcraft-env/checks/slice12`; no real user save was opened.
+
 ## Slice 11 owner-requested polish — same PR #28
 
 The owner accepted initial Slice11 movement, safe sneak and fastbridging on Void.

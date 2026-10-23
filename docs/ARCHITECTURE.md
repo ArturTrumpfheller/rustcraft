@@ -1,9 +1,8 @@
 # RustCraft architecture
 
-Status: **Slice 11 movement and safe sneaking**, from merged Slice-10 main
-`3656020`. Engine-independent fixed-tick posture/ledge handling and the client
-command mapping are specified in [MOVEMENT](MOVEMENT.md). World/player formats,
-IDs, generators, rendering and streaming remain unchanged.
+Status: **Slice 12 first-person hand/held block**, based on accepted Slice11 main
+`cfcf645`. Presentation-only overlay/animation is specified in VIEWMODEL. Physics,
+world/player formats, IDs, generators, terrain lighting and streaming are unchanged.
 
 ## Slice 7 design note (before implementation)
 
@@ -267,3 +266,15 @@ core support alone decides when a launch is legal. Sprint launches add a bounded
 run-up bonus; sprint air control preserves it without increasing the cap.
 `SprintFov` tracks the perspective base, eases a9% relative gain and restores it
 without changing aspect/frustum settings or creating UI/GPU resources.
+
+## Slice 12 viewmodel
+
+`client::viewmodel` owns six immutable meshes, two materials and one overlay view.
+The main world camera remains authoritative for view/rays. An identity overlay
+child copies perspective projection, loads color and clears depth; layer1 draws
+the original arm/block behind existing near-camera UI. World/target stay layer0.
+Distance-driven animation reads displayed feet and actual vertical/ground/posture
+state. Interaction's existing accepted input gate increments a bounded-action
+serial; the viewmodel reads selection after edits, without parallel inventory
+or save state. Hidden/pause/capture/reset consumes animation history safely.
+No per-frame mesh/material generation; resource costs/limits are in VIEWMODEL.

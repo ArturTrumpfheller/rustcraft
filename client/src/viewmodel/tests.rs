@@ -10,8 +10,12 @@ use voxel_core::{
 };
 
 fn app() -> App {
+    app_with_inventory(Inventory::starter())
+}
+fn app_with_inventory(inventory: Inventory) -> App {
     let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
+    app.insert_resource(GameInventory::loaded(inventory));
+    app.add_plugins((MinimalPlugins, bevy::transform::TransformPlugin))
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO))
         .init_resource::<Assets<Mesh>>()
         .init_resource::<Assets<StandardMaterial>>()
@@ -349,6 +353,24 @@ fn repeated_selection_animation_fov_resize_and_rebase_keep_assets_bounded() {
         let t = app.world().get::<Transform>(models.root).unwrap();
         assert!(t.translation.is_finite() && t.translation.length() < 10.);
     }
+    {
+        let w = app.world_mut();
+        let mut source =
+            w.query_filtered::<(&GlobalTransform, &Projection), With<FirstPersonCamera>>();
+        let (camera, projection) = source.single(w).unwrap();
+        let camera = *camera;
+        let Projection::Perspective(p) = projection else {
+            panic!()
+        };
+        let (fov, aspect) = (p.fov, p.aspect_ratio);
+        let mut overlay =
+            w.query_filtered::<(&GlobalTransform, &Projection), With<OverlayCamera>>();
+        let (global, projection) = overlay.single(w).unwrap();
+        assert_eq!(*global, camera);
+        assert!(
+            matches!(projection, Projection::Perspective(p) if p.fov == fov && p.aspect_ratio == aspect && p.near == 0.01 && p.far == 10.)
+        );
+    }
     assert_eq!(
         counts,
         (
@@ -357,4 +379,75 @@ fn repeated_selection_animation_fov_resize_and_rebase_keep_assets_bounded() {
             app.world().resource::<Assets<Image>>().len()
         )
     );
+}
+
+#[test]
+fn actual_place_consumption_and_mining_change_the_visible_model_in_the_same_frame() {
+    let mut slots = [None; 36];
+    slots[0] = Stack::new(Item::Stone, 1);
+    let mut app = app_with_inventory(Inventory::from_parts(slots, None, 0).unwrap());
+    capture(&mut app);
+    app.world_mut()
+        .resource_mut::<crate::scene::VoxelWorld>()
+        .0
+        .set_block(voxel_core::BlockPos([0, 5, 7]), Block::Stone)
+        .unwrap();
+    app.world_mut()
+        .resource_mut::<ButtonInput<MouseButton>>()
+        .press(MouseButton::Right);
+    frame(&mut app, Duration::ZERO);
+    assert_eq!(
+        app.world()
+            .resource::<crate::scene::VoxelWorld>()
+            .0
+            .block(voxel_core::BlockPos([0, 5, 8])),
+        Block::Stone
+    );
+    assert_eq!(selection(&app), None);
+    assert!(app.world().resource::<HandAction>().place);
+    app.world_mut()
+        .resource_mut::<ButtonInput<MouseButton>>()
+        .press(MouseButton::Left);
+    frame(&mut app, Duration::ZERO);
+    assert_eq!(selection(&app), Some(Item::Stone));
+    assert!(!app.world().resource::<HandAction>().place);
+}
+
+#[test]
+fn saved_inventory_reopens_with_the_correct_selected_model_and_empty_hand() {
+    let path = std::env::temp_dir().join(format!(
+        "rustcraft-viewmodel-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    let (store, mut world, _) =
+        voxel_core::persistence::SaveStore::open_with(&path, || Ok(voxel_core::demo_world()))
+            .unwrap();
+    store.load_player(&mut world).unwrap();
+    let mut slots = [None; 36];
+    slots[7] = Stack::new(Item::Leaves, 64);
+    let inventory = Inventory::from_parts(slots, None, 7).unwrap();
+    store
+        .save_player_session(&world, &inventory, false)
+        .unwrap();
+    drop(store);
+    let (store, mut world, _) =
+        voxel_core::persistence::SaveStore::open_with(&path, || panic!("existing world must load"))
+            .unwrap();
+    let restored = store.load_player(&mut world).unwrap();
+    assert_eq!(restored.selected(), 7);
+    let mut app = app_with_inventory(restored);
+    capture(&mut app);
+    assert_eq!(selection(&app), Some(Item::Leaves));
+    app.world_mut()
+        .resource_mut::<GameInventory>()
+        .contents
+        .select(6);
+    frame(&mut app, Duration::ZERO);
+    assert_eq!(selection(&app), None);
+    drop(store);
+    std::fs::remove_dir_all(path).unwrap();
 }

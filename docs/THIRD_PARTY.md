@@ -97,3 +97,13 @@ are original RustCraft code, MIT OR Apache-2.0. Screenshots
 software-rendered test tunnel using our existing atlas/UI under the same license.
 No new images used by the game, external assets, fonts, shaders, dependencies or
 feature/toolchain changes. Bitmap UI and terrain art retain Slice8/9 provenance.
+
+## Slice 12 original hand and viewmodel
+
+Original forearm/cuff/palm/thumb composition, skin/slate palette, animations,
+render-layer glue, tests and documentation are authored RustCraft work,
+MIT OR Apache-2.0. Procedural Bevy cuboids are used via the normal dependency API;
+no model or proprietary animation source is imported/copied. Held blocks sample
+our already licensed original atlas, with no image changes or new game assets.
+The screenshots `docs/images/slice12-viewmodel.png` and `slice12-cave.png` show
+this original code/art and are covered by the same root licenses. Dependencies, features, shaders and distribution notices unchanged.

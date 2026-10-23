@@ -201,3 +201,18 @@ Resolve these incrementally while preserving backward-compatible migration paths
   positive directional alignment, overhead clearance and an unblocked step. Retain
   earned sprint momentum with bounded vector air control. No stacking, sneak,
   stationary, low-ceiling or pending-barrier boosts; core stays Bevy-independent.
+
+## Slice 12 viewmodel decisions
+
+- Start from accepted Slice11 `cfcf645`. No core/gameplay/save/generator changes.
+- Use one isolated overlay view because world-depth camera children can clip
+  at close walls/ceilings. Load scene color, clear depth; existing near-camera UI
+  shares the overlay layer and remains in front, avoiding a third camera.
+- Prebuild one original four-box arm and five cubes, reuse exact original atlas
+  UVs and muted unlit fill. Retain all handles and share the atlas Image.
+- Normalize anchor/scale to projection and aspect; parent to the camera for
+  floating origin. Animate displayed movement, never authoritative aim/body.
+- Gate action serials through existing interactions. One retriggerable bounded
+  swing, no queued click accumulation; hide/reset during pauses/modal/capture.
+- Document extra render-pass/per-view costs separately from mesh payload; native
+  driver/VRAM/endurance acceptance cannot be inferred from software X11 alone.
