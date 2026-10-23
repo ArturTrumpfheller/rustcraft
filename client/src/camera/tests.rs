@@ -220,6 +220,7 @@ fn reset_and_void_recovery_teleport_player_and_interpolation_together() {
     let mut app = test_app();
     settle(&mut app);
     app.world_mut().resource_mut::<PlayerState>().body.position = [12.0, 10.0, 12.0];
+    app.world_mut().resource_mut::<PlayerState>().body.crouched = true;
     key(&mut app, KeyCode::KeyR);
     tick(&mut app);
     assert_eq!(body(&app), Player::new(SPAWN));

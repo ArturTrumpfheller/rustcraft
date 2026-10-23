@@ -720,3 +720,53 @@ fn twenty_block_movement_profile_records_speed_and_time_comparisons() {
         assert!(p.grounded);
     }
 }
+
+#[test]
+fn crouched_diagonal_contacts_stay_clear_and_never_backtrack() {
+    let cfg = PhysicsConfig::default();
+    for base in [-16, 0, 16, 16000] {
+        let ground = (-4..=4).flat_map(|x| (-4..=4).map(move |z| [base + x, 0, base + z]));
+        let world = world_with(ground.chain([[base + 1, 1, base], [base + 2, 1, base + 1]]));
+        let mut p = Player::new([f64::from(base) + 3.5, 1., f64::from(base) + 0.5]);
+        let command = MovementInput {
+            direction: [-1., 1.],
+            sneak: true,
+            ..Default::default()
+        };
+        for _ in 0..300 {
+            let old = p.position;
+            p.tick(&world, command, &cfg);
+            assert!(p.fits_in_world(&world, &cfg) && p.grounded);
+            assert!(
+                p.position[0] <= old[0] + CONTACT_EPSILON
+                    && p.position[2] >= old[2] - CONTACT_EPSILON
+            );
+        }
+        near(p.position[0], f64::from(base) + 2.3);
+        near(p.position[2], f64::from(base) + 0.7);
+        p.tick(
+            &world,
+            MovementInput {
+                jump: true,
+                ..command
+            },
+            &cfg,
+        );
+        assert!(!p.grounded && p.velocity[1] > 0.);
+    }
+}
+
+#[test]
+fn pending_headroom_prevents_uncrouching_until_the_upper_chunk_is_loaded() {
+    let cfg = PhysicsConfig::default();
+    let mut world = crate::streaming::new_world(42);
+    world.insert_chunk(ChunkPos([0, 0, 0]), Chunk::default());
+    let mut p = Player::new([0.5, 14.5, 0.5]);
+    p.crouched = true;
+    assert!(p.cache_ready(&world, &cfg));
+    p.tick(&world, MovementInput::default(), &cfg);
+    assert!(p.crouched && p.fits_in_world(&world, &cfg));
+    world.insert_chunk(ChunkPos([0, 1, 0]), Chunk::default());
+    p.tick(&world, MovementInput::default(), &cfg);
+    assert!(!p.crouched && p.cache_ready(&world, &cfg));
+}

@@ -11,7 +11,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Seven original 16×16 pixel textures for grass, dirt, stone, bark, end-grain and opaque leaves, using one shared nearest-filtered atlas.
 - Derived 0–15 voxel skylight: dark roofs/caves, gradual entrance falloff and background updates after edits.
 - At most one surface mesh per rendered chunk; faces shared by solid blocks are removed, including at chunk boundaries.
-- Mouse look, yaw-relative WASD walking, sprinting, grounded jumping and safe respawn.
+- Mouse look, responsive yaw-relative WASD walking, Ctrl sprint, Shift crouch with safe ledges, grounded jumping and safe respawn.
 - Fixed 60-Hz engine-independent AABB physics, wall sliding and interpolated camera movement.
 - Precise five-block targeting, visible target outline and inventory-backed click-to-break/place.
 - Persistent nine-slot hotbar and 27-slot inventory, stacks up to 64, original pixel UI and atlas icons.
@@ -20,7 +20,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 10**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 11**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## Voxel skylight
 
@@ -122,11 +122,12 @@ In the prepared Codex cloud machine, first run `. /workspace/.rustcraft-env/acti
 | Mouse | Look around; pitch is clamped |
 | W / A / S / D | Walk relative to horizontal view direction |
 | Space | Jump when grounded (press again for another jump) |
-| Left Shift | Sprint |
+| Left Ctrl | Sprint (hold) |
+| Left Shift | Sneak/crouch and guard supported ledges (hold) |
 | R while captured | Respawn on safe ground near the starting area and reset view/velocity |
 | F5 while focused | Save world and inventory, including with inventory open or mouse released |
 
-The 0.6×1.8-block player spawns on or just above safe solid ground, with eyes 1.62 blocks above the feet. Walking accelerates toward 4.3 blocks/s; sprinting toward 5.6 blocks/s. Falling below Y=-32 automatically respawns the player. Escape or focus loss pauses the local simulation, including gravity; click again to continue.
+The 0.6×1.8-block player spawns on or just above safe solid ground, with eyes 1.62 blocks above the feet. Walking accelerates toward 5.0 blocks/s; sprinting toward 8.0 and sneaking toward 1.8 blocks/s. Shift lowers the body to 1.5 blocks and the eye to 1.32; standing requires headroom. Sneak guards supported ledges, but jumping or removing support still permits falling. See [movement tuning and limits](docs/MOVEMENT.md). Falling below Y=-32 automatically respawns the player. Escape or focus loss pauses the local simulation, including gravity; click again to continue.
 
 The center crosshair aims at blocks within five blocks of the displayed eye. A black outline marks the current target; the hotbar frames the selected slot and shows actual counts. Empty clicks and empty selected slots do nothing. Placement cannot replace solid blocks or intersect the current/displayed player body. Simultaneous buttons prioritize breaking. Closing inventory returns a held stack only if it all fits; otherwise NO ROOM keeps it open. Outside clicks never discard items. Normal application close saves a held stack and restores it with inventory open next time.
 

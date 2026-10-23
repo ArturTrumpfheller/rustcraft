@@ -1,5 +1,78 @@
 # RustCraft validation
 
+## Slice 11 — responsive walking, sprinting and safe sneaking
+
+Base: merged Slice-10 main `3656020`; branch
+`feat/slice-11-movement-sneaking`, Issue #23. Tuning, edge policy and reproducible
+simulation comparisons: [MOVEMENT](MOVEMENT.md). No dependency/feature, asset,
+world/player format, frozen generator, block ID, light/mesh or streaming changes.
+
+### Checks and regression coverage
+
+- `cargo fmt --all -- --check`
+- `cargo clippy --locked --workspace --all-targets -- -D warnings`
+- `cargo test --locked --workspace`: **222 tests, 138 core +84 client**, none ignored.
+- `cargo build --locked --workspace`
+- `python3 tools/generate_textures.py --check`
+
+Targeted physics/camera/edit/modal tests ran during implementation. Final full
+suite retains prior save v1–v4/player recovery, journal/failure/corruption,
+lighting, meshing, resource lifecycle, generation and inventory coverage. Added
+coverage includes speed/acceleration/braking/turning; cardinal/diagonal ledges at
+signed and distant seams; partial support, ledge sliding, sprint-to-sneak;
+unsupported/edited support and airborne momentum; jumping; crouch body/eye,
+blocked/pending headroom, crouched diagonal contact; Ctrl/Shift mapping/rebinding,
+capture edge suppression, camera posture interpolation, modal pause, respawn and
+30/60/144 render-FPS replay. Real input floor mining runs both standing/crouched.
+
+Both Ubuntu and Windows full workflows passed for checkpoint `1682534`
+([run 39975001709](https://github.com/ArturTrumpfheller/rustcraft/actions/runs/39975001709)).
+Final PR-head checks are recorded by GitHub; they remain required before review.
+Clippy initially caught eight adapter arguments; keyboard resources are grouped
+with the existing SystemParam pattern. No lint suppression or physics workaround.
+
+### Measured movement and graphical checks
+
+The committed `twenty_block_movement_profile_records_speed_and_time_comparisons`
+test replays actual physics, including acceleration, on the same flat floor:
+20 blocks from rest take **4.683→4.033 s walking**, **3.617→2.567 s sprinting**
+(Slice10→11), and **11.133 s sneaking**. Target speeds are 5.0/8.0/1.8 blocks/s.
+These are exact simulated ticks, independently of rendering or wall-clock load.
+
+Graphical smoke tests used Xvfb X11, 640×360, Mesa25.0.7 llvmpipe LLVM19 Vulkan,
+LP_NUM_THREADS4, debug build and isolated directories. A known v3/gen2 fixture
+with a flat raised platform showed warmed title-position samples of
+**5.00 /8.06 /1.80 blocks/s** over 1.5 s (coordinates quantized to0.1, not a
+precision benchmark). Verified Ctrl+Shift edge stopping at Z7.7 on floor starting
+Z8, stable Y1, sideways sliding, Shift+Space leaving the ledge, E pausing with
+Ctrl/Shift/direction/jump held, pointer capture/release, R, F5, restart and normal
+native window close. The v3 root stayed byte-identical after the clean session.
+
+A fresh v4/gen3 seed42/radius1 world traversed X0.5→22.1 using Ctrl and repeated
+jump presses, crossing a streamed column boundary. After returning with R it
+settled to **27 resident chunks, 22 meshes, 110592 block bytes**, 24 cached halo
+columns and zero discarded results. One rolling128-frame return sample was
+P50/P95/P99 **29.89/32.62/40.16 ms**, mean33.1 FPS; this is software-rendered smoke
+telemetry, not a matched Slice10 performance comparison. Inventory/crouch/cursor,
+F5 and normal close passed. No application errors in the completed runs.
+
+Harness setup was corrected for the cloud Mesa driver path, X11 capture retry,
+missing position text in finite-v2 mode, sampling an edge before it fully settled,
+and clean F5 correctly retaining LOADED rather than SAVED. Cold first-visible
+terrain made an early short speed sample unsuitable; the warmed run matched
+simulation targets. These caused no game-code/backend changes. Successful speed
+and edge checks were not repeated for the final close-only v3 rerun. Logs,
+screenshots and disposable fixtures are outside Git in
+`/workspace/.rustcraft-env/checks/slice11`; no real save directory was opened.
+
+No allocation or GPU-resource path was added to movement; support probes are
+bounded and reuse voxel collision queries. Expensive prior meshing/light stress
+benchmarks were not repeated because those paths did not change; their regression
+tests remain in the full suite. Native Void X11/Wayland, Windows GUI, physical GPU,
+compositor shortcuts and subjective game feel still require owner acceptance.
+No automatic step-up, one-block crawling, head bob, FOV animation or saved position/
+posture is introduced. Safe owner checklist: [PLATFORMS](PLATFORMS.md#slice-11-movement-test-fish).
+
 ## Slice 10 — bounded voxel skylight and retro atmospheric lighting
 
 Started from accepted `main` **bc34e76** (merged PR #19); the owner confirmed
