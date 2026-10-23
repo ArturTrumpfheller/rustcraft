@@ -121,13 +121,13 @@ In the prepared Codex cloud machine, first run `. /workspace/.rustcraft-env/acti
 | Window focus loss | Release mouse; click again after returning |
 | Mouse | Look around; pitch is clamped |
 | W / A / S / D | Walk relative to horizontal view direction |
-| Space | Jump when grounded (press again for another jump) |
-| Left Ctrl | Sprint (hold) |
+| Space | Jump; hold to jump again after each landing |
+| Left Ctrl / double-tap W | Sprint; Ctrl held, or second W held after two presses within 250 ms |
 | Left Shift | Sneak/crouch and guard supported ledges (hold) |
 | R while captured | Respawn on safe ground near the starting area and reset view/velocity |
 | F5 while focused | Save world and inventory, including with inventory open or mouse released |
 
-The 0.6×1.8-block player spawns on or just above safe solid ground, with eyes 1.62 blocks above the feet. Walking accelerates toward 5.0 blocks/s; sprinting toward 8.0 and sneaking toward 1.8 blocks/s. Shift lowers the body to 1.5 blocks and the eye to 1.32; standing requires headroom. Sneak guards supported ledges, but jumping or removing support still permits falling. See [movement tuning and limits](docs/MOVEMENT.md). Falling below Y=-32 automatically respawns the player. Escape or focus loss pauses the local simulation, including gravity; click again to continue.
+The 0.6×1.8-block player spawns on or just above safe solid ground, with eyes 1.62 blocks above the feet. Walking accelerates toward 5.0 blocks/s; sprinting toward 8.0 and sneaking toward 1.8 blocks/s. Continuous sprint-jumps gain a bounded run-up bonus up to 9.2 blocks/s. Sprinting smoothly widens the current base FOV by 9%. Shift lowers the body to 1.5 blocks and the eye to 1.32; standing requires headroom. Sneak guards supported ledges, but jumping or removing support still permits falling. See [movement tuning and limits](docs/MOVEMENT.md). Falling below Y=-32 automatically respawns the player. Escape or focus loss pauses the local simulation, including gravity; click again to continue. Inventory/focus/capture/respawn resets double-W detection, and a jump key held across such transitions must be released before it can jump again.
 
 The center crosshair aims at blocks within five blocks of the displayed eye. A black outline marks the current target; the hotbar frames the selected slot and shows actual counts. Empty clicks and empty selected slots do nothing. Placement cannot replace solid blocks or intersect the current/displayed player body. Simultaneous buttons prioritize breaking. Closing inventory returns a held stack only if it all fits; otherwise NO ROOM keeps it open. Outside clicks never discard items. Normal application close saves a held stack and restores it with inventory open next time.
 

@@ -260,4 +260,10 @@ positions, and leaves jump/fall/gravity and swept collision order intact.
 records previous posture alongside previous feet; camera interpolation uses both.
 `ViewPose` retains displayed feet plus conservative transition posture so edits
 protect actual and displayed bodies independently of eye-height changes. Existing
-modal/focus/save pauses and one-shot input edges remain in the same schedules.
+modal/focus/save pauses remain in the same schedules. `MovementGestures` records
+forward press/release timing using real elapsed time and gates held jump across
+transitions. The fixed adapter ORs held requests with one consumed pending tap;
+core support alone decides when a launch is legal. Sprint launches add a bounded
+run-up bonus; sprint air control preserves it without increasing the cap.
+`SprintFov` tracks the perspective base, eases a9% relative gain and restores it
+without changing aspect/frustum settings or creating UI/GPU resources.

@@ -5,7 +5,8 @@ This document tracks intended milestones, not promised delivery dates. Implement
 ## v0.1 — Classic-style prototype
 
 Slice 11 improves walking/sprinting and adds collision-aware crouching with
-supported ledge protection. Slices 1–10 are merged. Existing large-world, save,
+supported ledge protection, plus owner-requested eased sprint FOV, double-W and
+bounded held sprint-jumps. Slices 1–10 are merged. Existing large-world, save,
 lighting, texture and inventory contracts remain intact; see MOVEMENT and
 VALIDATION for tuning, regression coverage and native acceptance limits.
 

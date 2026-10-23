@@ -1,6 +1,46 @@
 # RustCraft validation
 
-## Slice 11 — responsive walking, sprinting and safe sneaking
+## Slice 11 owner-requested polish — same PR #28
+
+The owner accepted initial Slice11 movement, safe sneak and fastbridging on Void.
+This follow-up retains the branch/base and adds9% eased sprint FOV,250-ms configured
+forward double-tap, held jump with post-modal release gating, and a capped sprint
+launch bonus. No save/generator/ID/dependency/streaming/texture changes.
+
+- Final local fmt, locked workspace Clippy with `-D warnings`, **234 tests
+  (141 core +93 client)**, workspace build and texture artifact check passed.
+- New regressions: threshold249/250/251 ms, distinct/repeated/brief forward edges,
+  conflict/rebinding resets; pending-tap versus held jumps, landing-only cadence,
+  unsupported/ceiling behavior; stationary/sneak/wall/pending/roof bonus refusal,
+  cardinal/diagonal9.2 cap; actual input focus/cursor/inventory/save/respawn/void
+  resets; double-W+held-jump replay30/60/144 FPS; FOV easing, original/replaced
+  baseline restore, aspect preservation, pause/sneak return and matched normal-FPS
+  response; unchanged UI mesh/image/material counts during FOV animation.
+- The old press-only jump regression now releases its tap before physics; a
+  separate held test counts legal land/relaunch cycles. An initial cadence test
+  mistook the landing's negative→zero velocity for a launch; corrected to count
+  positive upward launches only. No physics exception was added for the test.
+- Same 100-block flat simulation from rest: walk20.033 s, Ctrl or pre-latched
+  double-W12.567 s, sprint+held-Space11.200 s (average4.992/7.958/8.929 blocks/s).
+  The cap is9.2; repeated sprint hops are about12.2% faster on this course.
+  20-block times:4.033 /2.567 /2.500 s. First hop from rest has no run-up bonus.
+  See MOVEMENT for exact eligibility and `flat_course_sprint_jumping` reproduction.
+- One targeted Xvfb/X11 Mesa25.0.7 llvmpipe debug GUI run,640×360/radius1,
+  passed on an isolated v3/gen2 flat fixture: double-W observed8.07 blocks/s;
+  three sampled jump arcs while holding Ctrl+direction+Space; E paused midair,
+  held Space stayed blocked after closing until release/repress; FOV/terrain,
+  retained readable HUD/target/crosshair, sneak, F5 and normal window close.
+  The saved root stayed byte-identical. Software-rendered screenshots/logs are
+  outside Git under the existing `slice11/polish-*` artifact paths. No application
+  errors; ordinary Xvfb/software-adapter warnings only. Exact FOV response is
+  verified by integration tests, not inferred photometrically from moving views.
+  Native Void/Wayland/Windows acceptance is still required for these additions.
+- Prior expensive meshing/lighting/large-world benchmarks were not rerun: those
+  paths did not change and their full regressions remain. No hardware FPS claim.
+- Full Ubuntu/Windows workflows at the final PR head are required; links/results
+  are kept in PR #28. The initial Slice11 report below remains historical.
+
+## Initial Slice 11 — responsive walking, sprinting and safe sneaking
 
 Base: merged Slice-10 main `3656020`; branch
 `feat/slice-11-movement-sneaking`, Issue #23. Tuning, edge policy and reproducible
