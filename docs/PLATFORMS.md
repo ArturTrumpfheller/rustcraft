@@ -1,6 +1,6 @@
 # RustCraft platform support and development setup
 
-Status: **Slice 9 inventory acceptance**. The owner accepted Slices 1–8 on Void. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
+Status: **Slice 10 lighting acceptance**. The owner accepted Slices 1–9 on Void. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
 
 ## Supported platforms and targets
 
@@ -337,3 +337,45 @@ absolute path. First inventory initialization adds sidecars without changing wor
 bytes. Never run older clients on an inventory-enabled directory. Back up/restore
 whole directories including player/identity/journal/regions; an individual `.bak`
 is not a consistent session rollback. See INVENTORY for conservative recovery.
+
+## Slice 10 lighting test (Fish)
+
+Use Void glibc with normal supported drivers and a desktop X11 or Wayland session.
+No backend override is needed. Start in a new isolated absolute directory; keep
+this Fish shell/path for restarts, or record the path for a later session.
+
+```fish
+git fetch origin
+git switch feat/slice-10-voxel-lighting
+set test_dir (mktemp -d /tmp/rustcraft-slice10.XXXXXX)
+echo $test_dir
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_WORLD_SEED=42 RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
+# After normal close, same isolated world:
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
+# After normal close, check far regional coordinates:
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_START_CHUNK="1000,-1000" RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
+```
+
+1. Compare open sky/grass with tree canopies, closed roofs and caves. Locate the
+   entrance near X=-10/Z=20 (position in title). Light should fall off into the
+   passage and remain low in closed areas, with faint readable textures.
+2. Build a roof/tunnel, mine a skylight, then seal it. Check light both inside
+   and below another vertical chunk. Repeat at X/Z 0, ±16 and ±64 seams and far
+   region positions. Nearby chunks must not retain permanent bright/dark strips.
+3. Rapidly alternate mining/placement at seams. Check complete geometry, correct
+   item counts, wall sliding/jumping/diagonal contacts and stable cursor input.
+   Travel out of radius and return; remote spawn meshes must remain unloaded.
+4. E opens the existing 3×9+9 UI. Icons/counts, selected frame, crosshair and save
+   HUD must stay readable in darkness. Transfers, wheel/1–9, capture/focus/resize
+   retain Slice9 behavior; no UI redesign is part of lighting.
+5. F5, wait SAVED, close normally, restart and compare exact blocks/inventory and
+   reconstructed lighting. Try autosave and normal close without F5. Keep the
+   whole directory when backing up; derived light is not an additional file.
+
+Use another fresh directory for a different seed/radius. For old formats use a
+complete closed-directory copy, never your real save for initial acceptance.
+World formats, generators, IDs and player journal protocol stay unchanged.
+Release builds can be tested by adding `--release` to Cargo; published comparison
+numbers are debug/cloud software rendering, not native GPU measurements. Record
+GPU/driver/backend, radius, resolution and P50/P95/P99 diagnostics for comparison.
+Native Void/Wayland/Windows, high-DPI and physical GPU acceptance remain manual.

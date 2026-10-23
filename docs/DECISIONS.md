@@ -145,3 +145,28 @@ Resolve these incrementally while preserving backward-compatible migration paths
 - Whole closed-directory backups only; no promise of per-click durability or
   cross-file atomicity. Initial identity-before-journal failure and old-client/
   external-region restoration limits are explicit in INVENTORY and SAVE_FORMAT.
+
+## Slice 10 implementation decisions
+
+- Keep direct vertical skylight at15; scatter through six-connected Air with -1
+  per step, opaque leaves, full 48-block vertical span, fixed finite edge policy.
+  Derived light is never serialized. No AO, emitters or dynamic sun in this slice.
+- Exact local solve uses a 15-block horizontal margin and full square source
+  columns. Fetch diagonal region inputs as well as face neighbors; unknown/corrupt
+  input fails safely instead of becoming Air or light. Cache pristine generated
+  halos, apply captured overlays and discard edited scratch after each job.
+- Geometry and conservative lighting targets are distinct. Compare exact cached
+  samples, not hashes, to skip unchanged meshes. Validate full-height local output
+  tokens and publish changed meshes/samples together; retain old complete visuals.
+- Use Bevy's built-in f32 RGBA COLOR path and one unlit atlas material, accepting
+  32→48-byte terrain stride /42.1% quad payload. Remove global directional light
+  and ambient brightness; fixed face factors and a small floor preserve retro
+  readability. Existing UI stays unlit. Packed attributes are a measured future
+  optimization, not an unreviewed shader rewrite.
+- Legacy finite edits move to a bounded background mesh/light worker. Tests wait
+  for rendering only when asserting meshes, preserving exact physics tick counts
+  independently of OS thread/timer scheduling. CI exposes bounded test failures
+  as annotations when full log storage cannot be accessed.
+- This is incremental bounded batch rebuilding, not a fully persistent cell-level
+  removal solver. Record additional CPU/load latency honestly; prioritize correct
+  seams, capped caches, save compatibility and stable main-thread work first.

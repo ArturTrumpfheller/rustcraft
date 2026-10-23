@@ -4,12 +4,11 @@ This document tracks intended milestones, not promised delivery dates. Implement
 
 ## v0.1 — Classic-style prototype
 
-Slice 9 implements a persistent 9-slot hotbar + 27-slot inventory, bounded stacks,
-original pixel UI and inventory-backed block edits, with save-level world/player
-redo. Slices 1–8 are merged and accepted; Slice 8 was tested by the owner on Void.
-The existing 65,536×65,536×48 local-generator/regional-save rollout is unchanged.
-World formats v1–v4, old generators and IDs are preserved without migration.
-See VALIDATION for Slice-9 checks and remaining native acceptance.
+Slice 10 adds deterministic 0–15 skylight, bounded worker updates, dark caves and
+original atlas face modulation. Slices 1–9 are merged and accepted on Void.
+The 65,536×65,536×48 rollout, world v1–v4/player contracts, frozen generators,
+block IDs, inventory and physics remain intact. See LIGHTING and VALIDATION for
+current CPU/memory costs and native acceptance still required.
 
 - [x] Cargo workspace and pinned Bevy dependency
 - [x] Launch client with a first-person walking player and interpolated camera
@@ -30,7 +29,8 @@ See VALIDATION for Slice-9 checks and remaining native acceptance.
 - [x] First local large-world rollout with versioned regional storage and bounded caches
 - [ ] Further coordinate expansion and opt-in legacy migration
 - [ ] More interesting terrain and caves
-- [ ] Basic light propagation and chunk remeshing
+- [x] Initial voxel skylight and bounded light/mesh updates
+- [ ] Emitted block light / torches
 - [x] Initial fixed inventory/item model
 - [ ] General reusable item/block registry, tools and crafting
 - [x] Initial profiling, matched baseline comparisons and explicit active/dirty memory budgets

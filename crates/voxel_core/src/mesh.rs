@@ -6,6 +6,7 @@ pub struct ChunkMesh {
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
     pub uvs: Vec<[f32; 2]>,
+    pub colors: Vec<[f32; 4]>,
     pub indices: Vec<u32>,
 }
 
@@ -45,6 +46,19 @@ const FACES: [Face; 6] = [
 /// Emits only faces adjacent to air, consulting neighboring chunks too.
 /// Missing chunks and coordinates beyond i32 space are treated as air.
 pub fn mesh_chunk(world: &World, position: ChunkPos) -> ChunkMesh {
+    if world.chunk(position).is_none() {
+        return ChunkMesh::default();
+    }
+    let light =
+        crate::lighting::Skylight::for_chunks(world, &std::collections::BTreeSet::from([position]));
+    mesh_chunk_lit(world, position, &light)
+}
+/// Mesh using a shared, authoritative light computation for an entire batch.
+pub fn mesh_chunk_lit(
+    world: &World,
+    position: ChunkPos,
+    light: &crate::lighting::Skylight,
+) -> ChunkMesh {
     let mut mesh = ChunkMesh::default();
     let Some(chunk) = world.chunk(position) else {
         return mesh;
@@ -82,6 +96,11 @@ pub fn mesh_chunk(world: &World, position: ChunkPos) -> ChunkMesh {
                     let tile = crate::texture::face_tile(block, face.normal).unwrap();
                     mesh.uvs
                         .extend_from_slice(crate::texture::face_uvs(tile, face.normal[1] != 0));
+                    let sample = block_position
+                        .offset(face.normal)
+                        .map_or(0, |p| light.level(p));
+                    mesh.colors
+                        .extend([crate::lighting::face_color(sample, face.normal); 4]);
                     for corner in face.corners {
                         mesh.positions.push([
                             x as f32 + f32::from(corner[0]),

@@ -60,7 +60,7 @@ pub struct World {
     chunks: BTreeMap<ChunkPos, Chunk>,
     revision: u64,
     // Transient output dependencies, not persisted and retained across eviction.
-    // Only the owner and face-sharing meshes advance for an actual edit.
+    // Geometry plus bounded full-height skylight dependencies advance on edits.
     mesh_revisions: BTreeMap<ChunkPos, u64>,
     identity: Option<StreamIdentity>,
     regional: Option<RegionIdentity>,
@@ -275,7 +275,10 @@ impl World {
             after: block,
         };
         if self.identity.is_some() {
-            for p in change.affected_chunks() {
+            for p in crate::lighting::affected(position)
+                .union(&change.affected_chunks())
+                .copied()
+            {
                 self.mesh_revisions.insert(p, self.revision);
             }
         }

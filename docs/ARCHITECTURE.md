@@ -1,9 +1,9 @@
 # RustCraft architecture
 
-Status: **Slice 9 inventory/hotbar** from accepted Slice-8 main `ee16009` (PR #16).
-World formats, IDs, generator output and terrain rendering remain unchanged.
-Player persistence adds a save-level redo protocol around existing world writes.
-See INVENTORY, SAVE_FORMAT and VALIDATION for contracts and measured coverage.
+Status: **Slice 10 derived voxel skylight** from accepted Slice-9 main `bc34e76`
+(PR #19). World/player formats, IDs, generator output, texture UVs and physics are
+unchanged. Bounded worker light updates and unlit textured face modulation are
+specified in LIGHTING; measurements and native acceptance are in VALIDATION.
 
 ## Slice 7 design note (before implementation)
 
@@ -75,7 +75,7 @@ disallowed for generator v3. See WORLDGEN for the frozen version contracts.
 historical immutable global overlay. v4 caches complete per-region overlays as
 independent Arcs. Dirty region snapshots share those Arcs; subsequent mutation
 copies only that region. A change updates the resident block, global save revision
-and local output tokens (owner plus face-neighbors). Equal assignments are no-ops.
+and local output tokens (geometry plus full-height bounded light dependencies). Equal assignments are no-ops.
 
 The radius remains 1–3 (default 2): at most 147 chunks, default 75, regardless of
 world extent. Desired/queued sets are bounded. One terrain job is in flight.
@@ -85,10 +85,13 @@ nearest rings and the direction of motion inside a ring. Unrelated edits do not
 invalidate useful work. Obsolete work cannot recreate evicted data/assets; valid
 installs satisfy duplicate requests discovered during movement.
 
-Mesh jobs copy only cached targets and available face-neighbors, and sample only
-missing border cells. They never regenerate complete columns for edits. Interior
-mesh-neighbor tests read the already-borrowed block vector; only chunk faces query
-the world map. Emission order/material/triangle semantics remain unchanged.
+Mesh jobs copy cached full-height source columns within the target rectangle plus
+one-column square halo. Missing sources come from immutable generated-column
+cache and captured edits, including diagonal regions. They compute bounded light,
+compare exact applied samples, and mesh only changed light or forced geometry.
+The cache is pristine generator output; it never substitutes for edited authority.
+No cached resident column is regenerated on edits, and missing halos are reused.
+All affected targets validate local light dependency tokens before any publication.
 
 Regional reads happen on the terrain worker. Each request captures only its
 required region footprint, preventing historical overlays from propagating from
@@ -105,18 +108,20 @@ continue; no silent backup fallback or procedural replacement of invalid data.
 
 ## Memory and lifetime bounds
 
-Default resident block payload is 307,200 bytes; radius 3 caps it at 602,112 bytes.
-New-column jobs retain the thin 15-chunk halo plus three returned copies (~72 KiB
-peak block payload). A maximal connected mesh batch is bounded by radius targets
-and face neighbors (up to 231 vectors at radius 3, plus one border copy), rather
-than the entire large world. Mesh buffers/driver allocations are separate and
-scale with visible surface complexity, not travel distance.
+Default resident block payload remains 307,200 bytes; radius3 caps it at 602,112.
+New light inputs require full-height square halos instead of Slice8's thin faces.
+The maximal worker source/cache footprint is 81 columns / 243 chunks / 995,328
+block bytes each (cache and scratch are separate). Main-thread snapshots copy
+only available source chunks. Applied exact light samples use 5,832 bytes per
+resident chunk, at most 857,304 payload bytes. Light/flood scratch is bounded to
+142×142×48 cells, not world extent; mesh/driver buffers remain separate.
 
-A conservative regional cache cap is 28 maps (desired halos, one running request,
-and eight dirty regions); each map has at most 196,608 records. Job snapshots refer
-only to their footprint. No visited-region list, global disk index scan or
-all-world edit map is retained in v4. Dense regional COW, map destruction and
-large connected bulk meshes are still bounded but require further native profiling.
+Regional retention covers current desired and running-job square footprints plus
+eight pinned dirty maps: conservative union cap40 maps (16+16+8), independent of
+travel. Each map still caps at 196,608 records. There is no global disk index or
+visited-region list. Dense regional COW, large light batches and mesh buffer
+allocation remain measured optimization boundaries; no automatic radius expansion.
+
 Bevy removes obsolete entities and Mesh assets; empty streamed chunks need no
 GPU mesh. Legacy empty-handle behavior remains unchanged. Idle frames do no disk
 I/O, generation or remeshing.
@@ -175,7 +180,7 @@ cleanup, multi-job budgets, further coordinate ranges and opt-in migrations need
 separate measured work. The original Slice-8 atlas is documented in TEXTURES; additional lighting, mipmap
 strategies and richer material systems remain separate work.
 
-## Slice 8 texture pipeline
+## Historical Slice 8 texture pipeline (lighting/stride superseded below)
 
 `voxel_core::texture` maps solid blocks and axis normals to seven atlas slots,
 without Bevy or persistence IDs. `ChunkMesh` carries local positions, normals,
@@ -220,3 +225,26 @@ This extends the historical per-file world write protocol above; it does not
 change any world byte format or generator, and does not make filesystem writes
 simultaneous. Full closed-directory backups are necessary; older clients must
 use isolated copies. See INVENTORY for initialization failure and recovery limits.
+
+## Slice 10 lighting integration
+
+`voxel_core::lighting` implements integer direct sky plus six-neighbor attenuation,
+including full vertical occlusion, exact disposable chunk samples and a bounded
+15-block lateral margin. Opaque leaves use ordinary solid rules. No saved derived
+fields or new IDs. The stream worker completes required region inputs before
+calculating light; failures retain old meshes or pending barriers and use existing
+visible retry feedback. Initial streamed meshes wait for that authoritative halo.
+
+Geometry and lighting dirtiness are separate. A successful batch updates exact
+applied light arrays and changed meshes together; stale results never install
+light arrays. Generated pristine halo cache can safely be reused even after a
+stale job, then prunes to current desired + halo. Legacy finite edits also use an
+asynchronous light/mesh worker with snapshot revision validation; initial legacy
+lighting is computed once before startup meshes. Full legacy bounds stay fixed.
+
+One shared unlit StandardMaterial modulates the original atlas using f32 RGBA
+face colors (48-byte vertex, 42.1% additional quad payload). Global ambient is
+zero and the old directional light is removed. Fixed top/bottom/X/Z factors and
+a small cave floor replace global PBR washout. UI materials remain separately
+unlit/readable; UVs, culling, origins and resource ownership remain intact.
+LIGHTING describes attenuation, no-AO policy, limits and reconstruction.

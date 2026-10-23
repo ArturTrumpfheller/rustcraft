@@ -18,7 +18,7 @@ use std::{
 use voxel_core::{
     ChunkPos, World,
     persistence::{SaveError, SaveStore},
-    regions::{EditSnapshot, needed_regions},
+    regions::EditSnapshot,
     streaming::{self, Column, ColumnResult, MeshBatchResult},
     worldgen::Generator,
 };
@@ -75,6 +75,7 @@ impl WorkResult {
 struct JobResult {
     result: WorkResult,
     overlays: EditSnapshot,
+    cache: streaming::TerrainCache,
 }
 #[derive(Resource, Default)]
 pub(crate) struct StreamFailure(pub Option<String>);
@@ -89,6 +90,9 @@ impl StreamJob {
         world: &World,
         generator: Arc<Generator>,
         store: Option<Arc<SaveStore>>,
+        mut cache: streaming::TerrainCache,
+        previous: BTreeMap<ChunkPos, voxel_core::lighting::ChunkLight>,
+        force: BTreeSet<ChunkPos>,
     ) -> io::Result<Self> {
         let versions = work
             .targets()
@@ -97,15 +101,11 @@ impl StreamJob {
             .collect();
         let mut edits = world.overlay_snapshot();
         let regional = world.region_identity();
-        let needed = needed_regions(work.targets());
+        let needed = streaming::lighting_regions(&work.targets());
         edits.retain_regions(&needed);
         let revision = world.revision();
         let request = work.clone();
-        // Only cached target/face-neighbor chunks are copied, not the world.
-        let snapshot = match &work {
-            Work::Mesh(targets) => Some(streaming::mesh_snapshot(world, targets)),
-            Work::Load(_) => None,
-        };
+        let snapshot = streaming::mesh_snapshot(world, &work.targets());
         let handle = thread::Builder::new()
             .name("rustcraft-terrain".into())
             .spawn(move || {
@@ -119,22 +119,28 @@ impl StreamJob {
                     }
                 }
                 let result = match request {
-                    Work::Load(column) => WorkResult::Load(streaming::build_column(
+                    Work::Load(column) => WorkResult::Load(streaming::build_column_cached(
                         &generator,
+                        snapshot,
                         edits.clone(),
                         column,
                         revision,
+                        &mut cache,
                     )),
-                    Work::Mesh(targets) => WorkResult::Mesh(streaming::remesh_cached(
+                    Work::Mesh(targets) => WorkResult::Mesh(streaming::remesh_lit(
                         &generator,
-                        snapshot.unwrap(),
+                        snapshot,
                         edits.clone(),
-                        targets,
+                        &targets,
+                        &mut cache,
+                        &previous,
+                        &force,
                     )),
                 };
                 Ok(JobResult {
                     result,
                     overlays: edits,
+                    cache,
                 })
             })?;
         Ok(Self {
@@ -148,6 +154,13 @@ impl StreamJob {
 #[derive(Resource, Default)]
 pub(crate) struct StreamState {
     generator: Option<Arc<Generator>>,
+    cache: streaming::TerrainCache,
+    lights: BTreeMap<ChunkPos, voxel_core::lighting::ChunkLight>,
+    geometry_dirty: BTreeSet<ChunkPos>,
+    pub light_cells: usize,
+    pub light_propagated: usize,
+    pub source_columns_generated: usize,
+
     radius: i32,
     center: Option<Column>,
     desired: BTreeSet<Column>,
@@ -177,6 +190,12 @@ impl StreamState {
     pub fn new(generator: Arc<Generator>, radius: i32) -> Self {
         Self {
             generator: Some(generator),
+            cache: streaming::TerrainCache::default(),
+            lights: BTreeMap::new(),
+            geometry_dirty: BTreeSet::new(),
+            light_cells: 0,
+            light_propagated: 0,
+            source_columns_generated: 0,
             radius: radius.clamp(1, streaming::MAX_RADIUS),
             center: None,
             desired: BTreeSet::new(),
@@ -309,6 +328,13 @@ fn update_streaming(
         state.center = Some(center);
         state.desired = streaming::desired_with_limit(center, state.radius, limit);
         let desired = state.desired.clone();
+        state
+            .lights
+            .retain(|p, _| desired.contains(&[p.0[0], p.0[2]]));
+        state
+            .geometry_dirty
+            .retain(|p| desired.contains(&[p.0[0], p.0[2]]));
+        state.cache.retain(&desired);
         state.queued.retain(|c| desired.contains(c));
         state.queued_at.retain(|c, _| desired.contains(c));
         state.failures.retain(|c, _| desired.contains(c));
@@ -362,6 +388,12 @@ fn update_streaming(
     }
     while let Some(p) = dirty.0.pop_first() {
         if state.desired.contains(&[p.0[0], p.0[2]]) && world.0.chunk(p).is_some() {
+            state.geometry_dirty.insert(p);
+            state.dirty.entry(p).or_insert_with(Instant::now);
+        }
+    }
+    while let Some(p) = dirty.1.pop_first() {
+        if state.desired.contains(&[p.0[0], p.0[2]]) && world.0.chunk(p).is_some() {
             state.dirty.entry(p).or_insert_with(Instant::now);
         }
     }
@@ -381,9 +413,19 @@ fn update_streaming(
             .all(|(&p, &v)| world.0.mesh_revision(p) == v);
         match job.handle.join() {
             Ok(Ok(payload)) => {
+                state.cache = payload.cache;
+                let desired = state.desired.clone();
+                state.cache.retain(&desired);
                 let result = payload.result;
                 state.worker_time += result.elapsed();
                 state.max_job = state.max_job.max(result.elapsed());
+                let metrics = match &result {
+                    WorkResult::Load(r) => &r.lighting,
+                    WorkResult::Mesh(r) => &r.lighting,
+                };
+                state.light_cells += metrics.cells;
+                state.light_propagated += metrics.propagated;
+                state.source_columns_generated += metrics.generated_columns;
                 if wanted && current {
                     let install_start = Instant::now();
                     changed = true;
@@ -396,6 +438,14 @@ fn update_streaming(
                         state.failures.remove(&[p.0[0], p.0[2]]);
                     }
                     state.completed += 1;
+                    let light_samples = match &result {
+                        WorkResult::Load(r) => &r.lights,
+                        WorkResult::Mesh(r) => &r.lights,
+                    };
+
+                    state
+                        .lights
+                        .extend(light_samples.iter().map(|(&p, l)| (p, l.clone())));
                     let meshes = match result {
                         WorkResult::Load(result) => {
                             // A center change may have rediscovered this pending
@@ -420,6 +470,15 @@ fn update_streaming(
                             result.meshes
                         }
                     };
+                    if matches!(job.work, Work::Mesh(_)) {
+                        state.remeshed_chunks += meshes.len();
+                    }
+                    for p in job.versions.keys() {
+                        state.geometry_dirty.remove(p);
+                        if let Some(since) = state.dirty.remove(p) {
+                            state.max_dirty_latency = state.max_dirty_latency.max(since.elapsed());
+                        }
+                    }
                     // All targets are validated first, then published in this
                     // single Update (including both sides of dirty seams).
                     for (p, surface) in meshes {
@@ -504,11 +563,21 @@ fn update_streaming(
             .map(Work::Load)
         };
         if let Some(work) = work {
+            let cache = std::mem::take(&mut state.cache);
+            let previous = work
+                .targets()
+                .into_iter()
+                .filter_map(|p| state.lights.get(&p).map(|l| (p, l.clone())))
+                .collect();
+            let force = state.geometry_dirty.clone();
             match StreamJob::spawn(
                 work.clone(),
                 &world.0,
                 generator,
                 io.save.as_ref().map(|s| Arc::clone(&s.store)),
+                cache,
+                previous,
+                force,
             ) {
                 Ok(job) => {
                     match work {
@@ -516,7 +585,7 @@ fn update_streaming(
                             state.queued.remove(&c);
                             state.generated_columns += 1;
                         }
-                        Work::Mesh(ref targets) => state.remeshed_chunks += targets.len(),
+                        Work::Mesh(_) => {}
                     }
                     state.job = Some(job);
                 }
@@ -531,9 +600,9 @@ fn update_streaming(
         .map(|(_, message)| message.clone());
     if changed && world.0.region_identity().is_some() {
         let targets = state.desired.iter().map(|c| ChunkPos([c[0], 0, c[1]]));
-        let mut keep = needed_regions(targets);
+        let mut keep = streaming::lighting_regions(&targets.collect());
         if let Some(job) = &state.job {
-            keep.extend(needed_regions(job.work.targets()));
+            keep.extend(streaming::lighting_regions(&job.work.targets()));
         }
         world.0.retain_regions(&keep);
     }
@@ -546,7 +615,7 @@ fn update_streaming(
             .0
             .values()
             .filter_map(|r| scene.meshes.get(&r.mesh))
-            .map(|m| m.count_vertices() * 32 + m.indices().map_or(0, |i| i.len() * 4))
+            .map(|m| m.count_vertices() * 48 + m.indices().map_or(0, |i| i.len() * 4))
             .sum();
     }
     state.max_update = state.max_update.max(update_start.elapsed());
@@ -568,6 +637,14 @@ fn update_streaming(
         } else {
             0.
         };
+        info!(
+            "Light work: {} cells, {} propagated, {} source columns generated, {} halo columns cached, {} applied chunk samples",
+            state.light_cells,
+            state.light_propagated,
+            state.source_columns_generated,
+            state.cache.columns(),
+            state.lights.len()
+        );
         info!(
             "Stream metrics: regions {} edits {} dirty regions {}, load queue-to-install max {:?}, frames p50 {:?} p95 {:?} p99 {:?}, mean fps {:.1}",
             world.0.cached_regions(),

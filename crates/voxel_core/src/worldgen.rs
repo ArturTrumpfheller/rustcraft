@@ -143,6 +143,11 @@ impl Generator {
         }
         Ok(generator)
     }
+    /// Immutable cache identity; exposing this does not change generator output.
+    pub fn config(&self) -> GenerationConfig {
+        self.config
+    }
+
     pub fn chunk_limit(&self) -> i32 {
         self.extent / 16
     }

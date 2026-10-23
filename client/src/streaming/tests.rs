@@ -49,10 +49,7 @@ fn edit(app: &mut App, p: BlockPos, b: Block) {
         .set_block(p, b)
         .unwrap()
         .unwrap();
-    app.world_mut()
-        .resource_mut::<DirtyChunks>()
-        .0
-        .extend(change.affected_chunks());
+    app.world_mut().resource_mut::<DirtyChunks>().mark(change);
 }
 
 fn blocked_column(app: &mut App, column: Column) -> std::sync::mpsc::Sender<()> {
@@ -82,6 +79,7 @@ fn blocked_column(app: &mut App, column: Column) -> std::sync::mpsc::Sender<()> 
                 revision,
             )),
             overlays: edits,
+            cache: streaming::TerrainCache::default(),
         })
     });
     app.world_mut().resource_mut::<StreamState>().job = Some(StreamJob {
@@ -302,11 +300,15 @@ fn repeated_seam_mining_workload() {
         state.generated_columns, generated,
         "mining cached blocks must not regenerate columns"
     );
-    assert_eq!(state.remeshed_chunks - remeshed, 64);
+    assert_eq!(
+        state.remeshed_chunks - remeshed,
+        128,
+        "geometry plus affected shadowed terrain changes"
+    );
     assert_eq!(
         state.sampled_border_cells - sampled,
-        32 * 256,
-        "only one pending outer face per batch needs sampling"
+        0,
+        "warm halo cache must not regenerate full columns during edits"
     );
     assert_eq!(state.mesh_bytes, initial_mesh_bytes);
     assert_eq!(app.world().resource::<Assets<Mesh>>().len(), initial_assets);
@@ -360,6 +362,11 @@ fn assert_geometry(app: &App, targets: &BTreeSet<ChunkPos>) {
                     actual.attribute(Mesh::ATTRIBUTE_UV_0),
                     Some(&VertexAttributeValues::Float32x2(mesh.uvs)),
                     "UVs {p:?}"
+                );
+                assert_eq!(
+                    actual.attribute(Mesh::ATTRIBUTE_COLOR),
+                    Some(&VertexAttributeValues::Float32x4(mesh.colors)),
+                    "lighting {p:?}"
                 );
                 assert_eq!(
                     actual.indices().unwrap().iter().collect::<Vec<_>>(),
@@ -417,6 +424,7 @@ fn newer_seam_edits_reject_the_entire_mesh_batch_then_publish_both_current_faces
         rx.recv().unwrap();
         Ok(JobResult {
             overlays: EditSnapshot::default(),
+            cache: streaming::TerrainCache::default(),
             result: WorkResult::Mesh(streaming::remesh_cached(
                 &generator,
                 snapshot,
@@ -447,8 +455,8 @@ fn newer_seam_edits_reject_the_entire_mesh_batch_then_publish_both_current_faces
     );
     assert_eq!(
         state.dirty.len(),
-        2,
-        "newer invalidations must survive rejection"
+        18,
+        "newer geometry and lighting invalidations must survive rejection"
     );
     drain(&mut app);
     assert_geometry(&app, &targets);
@@ -470,25 +478,25 @@ fn newer_seam_edits_reject_the_entire_mesh_batch_then_publish_both_current_faces
 
 #[test]
 fn dirty_components_coalesce_and_take_priority_over_loads_without_global_invalidation() {
-    let mut app = app(1);
+    let mut app = app(2);
     drain(&mut app);
     let generated = app.world().resource::<StreamState>().generated_columns;
     let discarded = app.world().resource::<StreamState>().discarded;
     let remeshed = app.world().resource::<StreamState>().remeshed_chunks;
-    let tx = blocked_column(&mut app, [-1, -1]);
+    let tx = blocked_column(&mut app, [-2, -2]);
     for n in 0..64 {
         let b = if n % 2 == 0 { Block::Wood } else { Block::Air };
         for x in 14..18 {
             edit(&mut app, BlockPos([x, 25, 8]), b);
         }
         app.update();
-        assert_eq!(app.world().resource::<StreamState>().dirty.len(), 2);
+        assert_eq!(app.world().resource::<StreamState>().dirty.len(), 36);
     }
     tx.send(()).unwrap();
     wait_finished(&app);
     app.update();
     assert!(
-        matches!(&app.world().resource::<StreamState>().job.as_ref().unwrap().work, Work::Mesh(targets) if targets.len() == 2)
+        matches!(&app.world().resource::<StreamState>().job.as_ref().unwrap().work, Work::Mesh(targets) if targets.len() == 36)
     );
     drain(&mut app);
     let state = app.world().resource::<StreamState>();
@@ -1016,6 +1024,9 @@ fn assert_textured_residency(app: &mut App) {
     let material = w.resource::<TerrainMaterial>().0.clone();
     assert_eq!(w.resource::<Assets<Image>>().len(), 1);
     assert_eq!(w.resource::<Assets<StandardMaterial>>().len(), 1);
+    let state = w.resource::<StreamState>();
+    assert!(state.lights.len() <= 147);
+    assert!(state.cache.columns() <= 81);
     let renders = w.resource::<ChunkRenders>();
     assert_eq!(w.resource::<Assets<Mesh>>().len(), renders.0.len());
     for render in renders.0.values() {
@@ -1024,7 +1035,10 @@ fn assert_textured_residency(app: &mut App) {
             m.attribute(Mesh::ATTRIBUTE_UV_0).unwrap().len(),
             m.count_vertices()
         );
-        assert!(m.attribute(Mesh::ATTRIBUTE_COLOR).is_none());
+        assert_eq!(
+            m.attribute(Mesh::ATTRIBUTE_COLOR).unwrap().len(),
+            m.count_vertices()
+        );
         assert_eq!(
             w.get::<MeshMaterial3d<StandardMaterial>>(render.entity)
                 .unwrap()
@@ -1067,5 +1081,106 @@ fn streaming_reuses_one_atlas_through_repeated_mesh_empty_refill_and_eviction() 
             .unwrap()
             .base_color_texture,
         image
+    );
+}
+
+fn light_at(app: &App, p: BlockPos) -> u8 {
+    let (cp, lp) = p.split();
+    let [x, y, z] = lp.coordinates();
+    app.world().resource::<StreamState>().lights[&cp].0[(y + 1) * 18 * 18 + (z + 1) * 18 + x + 1]
+}
+#[test]
+fn roof_open_close_relights_floor_in_other_vertical_chunk_and_reuses_mesh_handles() {
+    let mut app = app(1);
+    drain(&mut app);
+    for x in 4..=12 {
+        for y in 10..=20 {
+            for z in 4..=12 {
+                let b = if x == 4 || x == 12 || y == 10 || y == 20 || z == 4 || z == 12 {
+                    Block::Stone
+                } else {
+                    Block::Air
+                };
+                let p = BlockPos([x, y, z]);
+                if app.world().resource::<VoxelWorld>().0.block(p) != b {
+                    edit(&mut app, p, b);
+                }
+            }
+        }
+    }
+    drain(&mut app);
+    let floor = ChunkPos([0, 0, 0]);
+    assert_eq!(light_at(&app, BlockPos([8, 15, 8])), 0);
+    let handle = app.world().resource::<ChunkRenders>().0[&floor]
+        .mesh
+        .clone();
+    let original = app
+        .world()
+        .resource::<Assets<Mesh>>()
+        .get(&handle)
+        .unwrap()
+        .clone();
+    edit(&mut app, BlockPos([8, 20, 8]), Block::Air);
+    drain(&mut app);
+    assert_eq!(light_at(&app, BlockPos([8, 15, 8])), 15);
+    let lit = app.world().resource::<Assets<Mesh>>().get(&handle).unwrap();
+    assert_eq!(
+        original.attribute(Mesh::ATTRIBUTE_POSITION),
+        lit.attribute(Mesh::ATTRIBUTE_POSITION)
+    );
+    assert_ne!(
+        original.attribute(Mesh::ATTRIBUTE_COLOR),
+        lit.attribute(Mesh::ATTRIBUTE_COLOR)
+    );
+    edit(&mut app, BlockPos([8, 20, 8]), Block::Leaves);
+    drain(&mut app);
+    assert_eq!(light_at(&app, BlockPos([8, 15, 8])), 0);
+    assert_eq!(
+        app.world().resource::<ChunkRenders>().0[&floor].mesh,
+        handle
+    );
+    assert_eq!(
+        original.attribute(Mesh::ATTRIBUTE_COLOR),
+        app.world()
+            .resource::<Assets<Mesh>>()
+            .get(&handle)
+            .unwrap()
+            .attribute(Mesh::ATTRIBUTE_COLOR)
+    );
+    assert_geometry(&app, &BTreeSet::from([floor, ChunkPos([0, 1, 0])]));
+}
+
+#[test]
+fn non_geometry_roof_edit_rejects_old_load_without_installing_stale_light_samples() {
+    let mut app = app(1);
+    drain(&mut app);
+    let previous = app.world().resource::<StreamState>().lights.clone();
+    let before = app.world().resource::<StreamState>().discarded;
+    let tx = blocked_column(&mut app, [1, 0]);
+    let p = BlockPos([8, 31, 8]);
+    assert!(
+        !voxel_core::BlockChange {
+            position: p,
+            before: Block::Air,
+            after: Block::Wood
+        }
+        .affected_chunks()
+        .contains(&ChunkPos([1, 1, 0]))
+    );
+    edit(&mut app, p, Block::Wood);
+    app.update();
+    tx.send(()).unwrap();
+    wait_finished(&app);
+    app.update();
+    assert_eq!(app.world().resource::<StreamState>().discarded, before + 1);
+    assert_eq!(app.world().resource::<StreamState>().lights, previous);
+    drain(&mut app);
+    assert_geometry(
+        &app,
+        &BTreeSet::from([
+            ChunkPos([0, 1, 0]),
+            ChunkPos([1, 1, 0]),
+            ChunkPos([1, 0, 0]),
+        ]),
     );
 }

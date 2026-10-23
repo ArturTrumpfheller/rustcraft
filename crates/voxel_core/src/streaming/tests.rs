@@ -228,20 +228,22 @@ fn generator_v2_column_golden_contract_includes_expanded_negative_and_positive_t
 }
 
 #[test]
-fn local_mesh_dependencies_track_faces_not_unrelated_edits_or_residency() {
+fn local_mesh_dependencies_cover_lighting_but_not_unrelated_edits_or_residency() {
     let mut world = new_world(42);
     prepare_spawn(&mut world).unwrap();
     world.set_block(BlockPos([8, 25, 8]), Block::Wood).unwrap();
     let owner = ChunkPos([0, 1, 0]);
     let revision = world.mesh_revision(owner);
     assert!(revision > 0);
-    assert_eq!(world.mesh_revision(ChunkPos([1, 1, 0])), 0);
+    assert_eq!(world.mesh_revision(ChunkPos([1, 1, 0])), revision);
+    assert_eq!(world.mesh_revision(ChunkPos([2, 1, 0])), 0);
     world
         .set_block(BlockPos([15, 31, 15]), Block::Leaves)
         .unwrap();
     assert_eq!(world.mesh_revision(ChunkPos([1, 1, 0])), world.revision());
     assert_eq!(world.mesh_revision(ChunkPos([0, 1, 1])), world.revision());
-    assert_eq!(world.mesh_revision(ChunkPos([1, 1, 1])), 0);
+    assert_eq!(world.mesh_revision(ChunkPos([1, 1, 1])), world.revision());
+    assert_eq!(world.mesh_revision(ChunkPos([2, 1, 1])), 0);
     let latest = world.mesh_revision(owner);
     assert!(latest > revision);
     world

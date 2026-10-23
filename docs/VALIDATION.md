@@ -1,5 +1,167 @@
 # RustCraft validation
 
+## Slice 10 — bounded voxel skylight and retro atmospheric lighting
+
+Started from accepted `main` **bc34e76** (merged PR #19); the owner confirmed
+Slice 9 on native Void. Branch `feat/slice-10-voxel-lighting`. Rust 1.99.1/Bevy 0.20.0,
+dependencies/features, atlas pixels/UVs, block/item IDs, frozen generator outputs
+and world v1–v4/player/session formats remain unchanged. A read-only generator
+config accessor scopes pristine halo caches to seed/version. Older sections below
+are historical. Algorithm, bounds, rendering tradeoffs and no-AO policy: LIGHTING.
+
+### Checks and regression coverage
+
+Passed on Debian 13 glibc x86-64, debug profiles:
+
+```sh
+python3 tools/generate_textures.py --check
+cargo fmt --all -- --check
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo test --locked --workspace
+cargo build --locked --workspace
+```
+
+**209 tests passed (129 core +80 client), zero failed/ignored.** All 196 accepted
+Slice 9 cases remain; footprint/stride expectations and asynchronous render waits
+were adapted. New coverage includes:
+
+- Direct sky, sealed rooms, indirect tunnel attenuation/cutoff, roof open/close,
+  opaque dense leaf canopies, signed XYZ seams and full vertical occlusion.
+- Independent all-sky-source reference flood on randomized roof/wall openings
+  versus the optimized roof-frontier solver, plus chunk/source order equality.
+- Exact sample equality, skipping unchanged mesh batches, cached halo reuse,
+  seed-change invalidation and eviction. Local tokens include non-geometry roof
+  dependencies without returning to global save-revision rejection.
+- Actual Bevy worker schedules for a roof in one vertical chunk relighting an
+  unchanged floor mesh in another; stale load/light samples never install,
+  mesh handles remain stable, and stale legacy batches retain old complete meshes.
+- Paired save/restart in v1/v2/v3/v4 retains edited blocks, held items and selection
+  and reconstructs identical colors/meshes, including a far regional world.
+  Lighting does not mutate world revisions or serialized bytes. Existing journal,
+  corrupt/foreign files, inventory conservation, diagonal collision, respawn,
+  texture UV/culling, regional seams and floating-origin regressions still pass.
+
+Ubuntu and Windows completed the full workflow at implementation `6eb3457`
+([run 39853408089](https://github.com/ArturTrumpfheller/rustcraft/actions/runs/39853408089)),
+including the final cache identity guard. The PR checks provide final-head results. An initial Windows failure came from the new test
+helper advancing extra physics ticks while waiting for async presentation. Waiting
+now occurs only at mesh assertions; physics frame helpers again advance exactly
+one frame. The floor-break test passes on both OSes without changing physics.
+CI also emits bounded failure annotations: full runner-log storage was blocked
+by the cloud network policy; the annotation exposed the actual failed assertion.
+No native GUI claim follows from either CI job.
+
+### Matched headless CPU comparison versus accepted Slice 9
+
+Same cloud host, debug binaries, seed 42, radius 1, three independent trials/version,
+medians, no compilation/GUI overlap. Baseline binary is accepted Slice 9 production
+(source-identical to `bc34e76`); current CPU measurements include the final cache
+identity guard. The existing tests exercise actual streaming/meshing and far
+regional travel; their update timings are **not GPU/display frametimes**.
+
+| Metric | Slice 9 | Slice 10 |
+| --- | ---: | ---: |
+| Surface, 32 edit batches, elapsed | 214.72 ms | 1112.92 ms |
+| Surface update p50/p95/p99 | 0.379/0.555/0.738 ms | 0.372/0.714/0.874 ms |
+| Surface complete-process CPU time | 0.675 s | 2.484 s |
+| Surface process peak RSS | 37,036 KiB | 37,824 KiB |
+| Surface terrain buffer bytes | 1,577,608 | 2,241,864 |
+| Far travel elapsed | 0.939 s | 2.095 s |
+| Far visit p50/p95 | 102.14/109.28 ms | 226.70/242.42 ms |
+| Far complete-process CPU time | 1.510 s | 3.669 s |
+| Far process peak RSS | 37,376 KiB | 38,284 KiB |
+
+Both retain 27 peak residents, four region overlays and bounded queues in this
+radius 1 workload. Far terrain payload is 1,641,296→2,332,368 bytes. The increase
+is the expected **42.1% quad payload** from 32→48-byte vertices; face counts/indices
+are unchanged. Driver allocations/alignment and CPU retained copies are separate.
+
+Lighting materially increases worker CPU and load latency; it is not a free
+performance improvement. Edits still use cached authoritative blocks and pristine
+halos, not full column regeneration per click. Coalescing 256 rapid changes keeps
+one current batch, and unchanged exact samples skip mesh work. Light work is a
+bounded regional rebuild, not a persistent per-cell removal solver; optimizing
+that CPU cost and packed light attributes are sensible next performance work.
+
+### X11/Mesa graphics, correctness and stress
+
+Xvfb X11, Mesa 25.0.7 llvmpipe/LLVM 19 Vulkan software renderer, LP_NUM_THREADS=4,
+independent disposable directories. Renderer selection was overridden only in
+the harness, not in the game. Both versions used the same saved v3 seed 42
+platform/wall fixture, 640×360/radius 1/camera, eight-second warmup. No compilation
+or headless CPU workloads overlapped. One graphical trial per version per rate.
+
+| 64 applied edits, 0.4s/input, final 128 frames | Slice 9 | Slice 10 |
+| --- | ---: | ---: |
+| Mean FPS | 27.9 | 33.7 |
+| p50/p95/p99 | 35.30/41.76/48.63 ms | 27.95/36.44/55.77 ms |
+| Wall time | 25.66 s | 25.65 s |
+| Process CPU (100%=one CPU) | 259.3% | 223.8% |
+| RSS before→after | 425,416→425,784 KiB | 427,584→428,340 KiB |
+
+| 128 applied edits, 0.15s/input, final 128 frames | Slice 9 | Slice 10 |
+| --- | ---: | ---: |
+| Mean FPS | 28.0 | 34.4 |
+| p50/p95/p99 | 34.36/43.73/57.47 ms | 27.97/36.00/42.94 ms |
+| Wall time | 19.28 s | 19.30 s |
+| Process CPU | 255.8% | 229.8% |
+| RSS before→after | 412,724→413,300 KiB | 428,948→429,664 KiB |
+
+Both rates restored the exact root bytes and within-version pixel-identical
+before/after screenshots. Final save revisions 66/130 prove all 64/128 edits
+applied (including preliminary pair). New inventory retained Stone 64 total,
+other starter totals and selected slot 3. Both stayed at 27 residents/23 meshes;
+final terrain bytes 1,628,376→2,314,008. No renderer errors or empty-mesh warnings.
+Repeated asset-count/eviction tests and short RSS plateaus support bounded
+resources; these short runs cannot prove absence of every leak.
+
+The unlit material reduces software rendering work despite additional light CPU,
+but p99 worsens in the first trial. Do not infer native hardware speedups from
+this, or hide startup tails: queue-to-install maxima were 1.461→1.261s (normal)
+and 0.974→1.335s (fast); startup-inclusive dirty latency maxima 237→485ms and 90→512ms.
+Fast-test worker maximum 62→255ms includes cold/first-use work, while stream-update
+maximum stayed below 1ms in that run. No hard timing guarantees are asserted.
+The normal Slice 10 run counted **16,234,560 light cells /301,776 indirect updates**
+across startup+edits, **24** pristine source columns generated/cached and **27**
+applied chunk arrays; no per-edit column regeneration or stale outputs.
+
+An original sealed tunnel fixture at 960×640 verified actual darkness, entry
+falloff, mining a roof opening, returning to the same view, placing it closed,
+F5 and inventory/capture controls. Closed/open/closed RGB means in a fixed central
+ROI were approximately **(28.76,30.88,31.00) → (48.29,51.23,51.47) → original**.
+Baseline global lighting stayed around (152,157,157), unaffected by the opening.
+Walking time gave slightly different camera coordinates between versions, so
+these are qualitative visibility checks, not calibrated photometry. Exact root
+restoration and Stone 64 were independently checked on both versions. UI remained
+bright/readable in darkness. Actual original screenshots are in
+`docs/images/slice10-cave-closed.png` and `slice10-cave-open.png`.
+
+The first cave harness mis-scaled XTest relative mouse movement and aimed away
+from the roof during placement, on both baseline and new code. Repeating in fresh
+directories with calibrated absolute pitch targeting passed open/close and exact
+world/item restoration. This required no game input change.
+
+### Limits and native acceptance
+
+No native Void/Wayland/Windows GUI or physical GPU/high-DPI testing here. Follow
+PLATFORMS' Slice 10 Fish checklist with a fresh absolute save directory; existing
+saves are never test fixtures. All prior paired-save/recovery limits remain.
+No lights are persisted; loading reconstructs them from saved blocks/overlays.
+There is no AO, emitted light/torches, day/night, transparent foliage or shader
+rewrite. Flat face bands and a small readable cave floor are intentional.
+
+Conservative full-height target sets can do more work than a fully incremental
+cell solver. Large connected batches and dense edits still need native profiling.
+The maximum radius 3 light domain is 967,872 cells; cached source blocks cap at
+995,328 payload bytes and applied samples at 857,304 bytes, excluding scratch,
+mesh/driver and map overhead. Startup regional-light errors can delay initial
+terrain presentation rather than invent bright Air. Failed inputs retain safe
+barriers/old coherent meshes and existing visible retry feedback.
+
+All binaries, logs, scripts and disposable worlds remain outside Git. Atlas art,
+licenses, worldgen goldens and save contracts are preserved. Original new code,
+documents and screenshots are MIT OR Apache-2.0; no imported third-party assets.
+
 ## Slice 9 — functional inventory, retained hotbar and paired session saves
 
 Started from accepted `main` **ee16009** (PR #16); the owner accepted Slice 8

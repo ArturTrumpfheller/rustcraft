@@ -39,6 +39,20 @@ jobs:
       - name: Cargo Clippy
         run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - name: Cargo test
-        run: cargo test --locked --workspace
+        shell: bash
+        run: cargo test --locked --workspace 2>&1 | tee "$RUNNER_TEMP/rustcraft-tests.log"
+      - name: Test failure diagnostics
+        if: failure()
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          log = Path(os.environ["RUNNER_TEMP"]) / "rustcraft-tests.log"
+          if log.exists():
+              text = log.read_text(encoding="utf-8", errors="replace")
+              start = text.find("failures:")
+              detail = text[start:] if start >= 0 else text[-12000:]
+              detail = detail[:24000].replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+              print("::error title=Workspace test failure::" + detail)
       - name: Cargo build
         run: cargo build --locked --workspace
