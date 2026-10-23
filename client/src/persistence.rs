@@ -1,4 +1,4 @@
-//! Startup loading is handled before App construction. Per-frame code only
+//! Startup loading is owned by the client lifecycle worker. Per-frame code only
 //! clones bounded snapshots and polls completed jobs; all save I/O is off-thread.
 use crate::scene::VoxelWorld;
 use bevy::{
@@ -25,7 +25,7 @@ impl Plugin for PersistencePlugin {
         app.init_resource::<SaveFeedback>()
             .add_message::<WindowCloseRequested>()
             .add_message::<AppExit>()
-            .add_systems(Update, update_saving);
+            .add_systems(Update, update_saving.run_if(crate::session::has_world));
     }
 }
 
@@ -277,6 +277,7 @@ struct SaveUi<'w, 's> {
     close: MessageReader<'w, 's, WindowCloseRequested>,
     exit: MessageWriter<'w, AppExit>,
     load_failure: Option<Res<'w, crate::streaming::StreamFailure>>,
+    flow: Option<ResMut<'w, crate::session::ClientFlow>>,
 }
 fn update_saving(
     mut session: ResMut<SaveSession>,
@@ -287,8 +288,18 @@ fn update_saving(
     mut ui: SaveUi,
     inventory: Option<Res<crate::inventory_ui::GameInventory>>,
 ) {
+    let had_job = session.job.is_some();
     if let Some(revision) = session.poll() {
         world.0.mark_regions_saved(revision);
+    }
+    if had_job
+        && session.job.is_none()
+        && let Some(error) = &session.last_error
+        && let Some(flow) = &mut ui.flow
+        && flow.state == crate::session::ClientState::Saving
+    {
+        flow.state = crate::session::ClientState::RecoverableError;
+        flow.error = error.clone();
     }
     let current = world.0.revision();
     if current != session.observed_revision {
@@ -303,7 +314,14 @@ fn update_saving(
             .is_none_or(|i| i.contents.revision() != r)
     });
     let dirty = session.creation_pending || current != session.saved_revision || inventory_dirty;
-    if ui.close.read().count() > 0 {
+    if ui
+        .flow
+        .as_ref()
+        .is_some_and(|f| f.state == crate::session::ClientState::Saving)
+    {
+        session.closing = true;
+    }
+    if ui.close.read().count() > 0 && ui.flow.is_none() {
         session.closing = true;
     }
     let manual =
@@ -333,7 +351,19 @@ fn update_saving(
         session.manual_pending = false;
     }
     if session.closing && !dirty && session.job.is_none() {
-        ui.exit.write(AppExit::Success);
+        if let Some(flow) = &mut ui.flow {
+            flow.save_complete = true;
+        } else {
+            ui.exit.write(AppExit::Success);
+        }
+    }
+    if let Some(flow) = &mut ui.flow
+        && flow.state == crate::session::ClientState::Saving
+        && let Some(error) = &session.last_error
+        && session.job.is_none()
+    {
+        flow.state = crate::session::ClientState::RecoverableError;
+        flow.error = error.clone();
     }
     feedback.closing = session.closing;
     feedback.label = if session.last_error.is_none()

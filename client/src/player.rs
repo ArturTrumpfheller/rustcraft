@@ -42,9 +42,18 @@ impl Plugin for PlayerPlugin {
             .init_resource::<ControllerInput>()
             .add_systems(
                 Startup,
+                initialize_player
+                    .before(crate::camera::CameraSetup)
+                    .run_if(crate::session::has_world),
+            )
+            .add_systems(
+                crate::session::SessionSetup,
                 initialize_player.before(crate::camera::CameraSetup),
             )
-            .add_systems(FixedUpdate, simulate_player);
+            .add_systems(
+                FixedUpdate,
+                simulate_player.run_if(crate::session::has_world),
+            );
     }
 }
 

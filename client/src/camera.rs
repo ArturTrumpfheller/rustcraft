@@ -21,20 +21,31 @@ impl Plugin for FirstPersonPlugin {
             .init_resource::<ViewAngles>()
             .init_resource::<RenderOrigin>()
             .init_resource::<ViewPose>()
-            .add_systems(Startup, spawn_camera.in_set(CameraSetup))
+            .add_systems(
+                Startup,
+                (spawn_camera.in_set(CameraSetup)).run_if(crate::session::has_world),
+            )
+            .add_systems(
+                crate::session::SessionSetup,
+                spawn_camera.in_set(CameraSetup),
+            )
             .add_systems(
                 RunFixedMainLoop,
                 (manage_cursor, read_input)
                     .chain()
                     .in_set(RunFixedMainLoopSystems::BeforeFixedMainLoop)
-                    .after(crate::inventory_ui::InventoryInput),
+                    .after(crate::inventory_ui::InventoryInput)
+                    .after(crate::session::FlowInput)
+                    .in_set(CameraInput)
+                    .run_if(crate::session::has_world),
             )
             .add_systems(
                 RunFixedMainLoop,
                 (rebase_scene, sync_camera, sync_sprint_fov)
                     .chain()
                     .in_set(RunFixedMainLoopSystems::AfterFixedMainLoop)
-                    .in_set(ViewSync),
+                    .in_set(ViewSync)
+                    .run_if(crate::session::has_world),
             );
     }
 }
@@ -47,6 +58,8 @@ pub(crate) struct ViewSync;
 
 #[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub(crate) struct CameraSetup;
+#[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub(crate) struct CameraInput;
 
 #[derive(Resource, Default)]
 pub(crate) struct ViewPose {
@@ -73,6 +86,7 @@ impl Default for ViewAngles {
 
 fn spawn_camera(mut commands: Commands, player: Res<PlayerState>, settings: Res<PlayerSettings>) {
     commands.spawn((
+        crate::session::SessionEntity,
         FirstPersonCamera,
         SprintFov::default(),
         Camera3d::default(),
@@ -89,11 +103,32 @@ fn manage_cursor(
     mouse: Res<ButtonInput<MouseButton>>,
     mut input: ResMut<ControllerInput>,
     inventory: Option<Res<crate::inventory_ui::GameInventory>>,
+    mut flow: Option<ResMut<crate::session::ClientFlow>>,
 ) {
     input.captured_this_frame = false;
     let Ok((window, mut cursor)) = windows.single_mut() else {
         return;
     };
+    if flow.as_ref().is_some_and(|f| !f.playing()) {
+        cursor.grab_mode = CursorGrabMode::None;
+        cursor.visible = true;
+        return;
+    }
+    if !window.focused || inventory.as_ref().is_some_and(|i| i.open) {
+        if let Some(flow) = &mut flow {
+            flow.resume_frame = false;
+        }
+        cursor.grab_mode = CursorGrabMode::None;
+        cursor.visible = true;
+        return;
+    }
+    if flow.as_ref().is_some_and(|f| f.resume_frame) {
+        flow.as_mut().unwrap().resume_frame = false;
+        cursor.grab_mode = CursorGrabMode::Locked;
+        cursor.visible = false;
+        input.captured_this_frame = true;
+        return;
+    }
     if let Some(inv) = inventory {
         if inv.open {
             cursor.grab_mode = CursorGrabMode::None;
@@ -129,6 +164,7 @@ struct KeyboardCommands<'w> {
     gestures: ResMut<'w, MovementGestures>,
     time: Res<'w, Time<Real>>,
     player: Res<'w, PlayerState>,
+    flow: Option<Res<'w, crate::session::ClientFlow>>,
 }
 
 fn read_input(
@@ -145,7 +181,8 @@ fn read_input(
     input.active = windows
         .single()
         .is_ok_and(|(window, cursor)| window.focused && cursor.grab_mode != CursorGrabMode::None);
-    if inventory.is_some_and(|i| i.open || i.transition)
+    if commands.flow.as_ref().is_some_and(|f| !f.playing())
+        || inventory.is_some_and(|i| i.open || i.transition)
         || save.is_some_and(|status| status.closing)
     {
         input.active = false;
@@ -301,4 +338,9 @@ fn rebase_scene(
             }
         }
     }
+}
+
+pub(crate) fn reset(world: &mut World) {
+    world.insert_resource(ViewAngles::default());
+    world.insert_resource(ViewPose::default());
 }

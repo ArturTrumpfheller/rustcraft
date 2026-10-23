@@ -711,3 +711,56 @@ fn failed_player_save_retains_items_cancels_close_and_retry_saves_the_pair() {
     assert_eq!(app.world().resource::<SaveFeedback>().label, "Saved");
     assert!(!dir.0.join("session.pending").exists());
 }
+
+#[test]
+fn return_to_title_waits_for_inflight_save_and_newer_inventory_revision() {
+    let dir = TestDir::new();
+    let (store, mut world, source) = SaveStore::open(&dir.0).unwrap();
+    let inventory = store.load_player(&mut world).unwrap();
+    let session = SaveSession::with_player(store, &world, source, &inventory);
+    let mut app = app_from_session(world, session, inventory);
+    drain(&mut app);
+    let snapshot = app.world().resource::<VoxelWorld>().0.save_snapshot();
+    let revision = snapshot.revision();
+    let inv = app
+        .world()
+        .resource::<crate::inventory_ui::GameInventory>()
+        .contents
+        .clone();
+    let inventory_revision = Some(inv.revision());
+    let store = Arc::clone(&app.world().resource::<SaveSession>().store);
+    let (tx, rx) = std::sync::mpsc::channel();
+    let handle = std::thread::spawn(move || {
+        rx.recv().unwrap();
+        store.save_player_session(&snapshot, &inv, false)
+    });
+    app.world_mut().resource_mut::<SaveSession>().job = Some(SaveJob {
+        revision,
+        inventory_revision,
+        handle,
+    });
+    app.world_mut()
+        .resource_mut::<crate::inventory_ui::GameInventory>()
+        .contents
+        .select(8);
+    let mut flow = crate::session::ClientFlow::default();
+    flow.save(crate::session::Destination::Title);
+    app.insert_resource(flow);
+    frame(&mut app, Duration::ZERO);
+    assert!(
+        !app.world()
+            .resource::<crate::session::ClientFlow>()
+            .save_complete
+    );
+    assert!(app.should_exit().is_none());
+    tx.send(()).unwrap();
+    drain(&mut app);
+    assert!(
+        app.world()
+            .resource::<crate::session::ClientFlow>()
+            .save_complete
+    );
+    let session = app.world().resource::<SaveSession>();
+    let mut saved = decode(&fs::read(dir.0.join("world.rcw")).unwrap()).unwrap();
+    assert_eq!(session.store.load_player(&mut saved).unwrap().selected(), 8);
+}

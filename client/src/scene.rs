@@ -41,14 +41,26 @@ pub(crate) struct TerrainMaterial(pub Handle<StandardMaterial>);
 
 impl Plugin for VoxelScenePlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<VoxelWorld>()
-            .init_resource::<Assets<Image>>()
+        if !app
+            .world()
+            .contains_resource::<crate::session::ClientFlow>()
+        {
+            app.init_resource::<VoxelWorld>();
+        }
+        app.init_resource::<Assets<Image>>()
             .init_resource::<RenderOrigin>()
             .init_resource::<DirtyChunks>()
             .init_resource::<LegacyMeshing>()
             .init_resource::<ChunkRenders>()
-            .add_systems(Startup, spawn_scene.in_set(SceneSetup))
-            .add_systems(Update, rebuild_dirty_chunks);
+            .add_systems(
+                Startup,
+                (spawn_scene.in_set(SceneSetup)).run_if(crate::session::has_world),
+            )
+            .add_systems(crate::session::SessionSetup, spawn_scene.in_set(SceneSetup))
+            .add_systems(
+                Update,
+                rebuild_dirty_chunks.run_if(crate::session::has_world),
+            );
     }
 }
 
@@ -112,6 +124,7 @@ pub(crate) fn upsert_chunk(
     let handle = meshes.add(mesh);
     let entity = commands
         .spawn((
+            crate::session::SessionEntity,
             Name::new(format!("Voxel chunk {:?}", position.0)),
             Mesh3d(handle.clone()),
             MeshMaterial3d(material.clone()),
@@ -197,6 +210,12 @@ pub(crate) struct LegacyMeshing {
     job: Option<LegacyJob>,
 }
 impl LegacyMeshing {
+    pub(crate) fn drain(&mut self) -> bool {
+        if self.job.as_ref().is_some_and(|j| j.handle.is_finished()) {
+            let _ = self.job.take().unwrap().handle.join();
+        }
+        self.job.is_none()
+    }
     #[cfg(test)]
     pub(crate) fn pending(&self) -> bool {
         self.job.is_some()
@@ -222,7 +241,11 @@ fn rebuild_dirty_chunks(
     mut dirty: ResMut<DirtyChunks>,
     mut scene: TerrainWrites,
     mut legacy: ResMut<LegacyMeshing>,
+    flow: Option<Res<crate::session::ClientFlow>>,
 ) {
+    if flow.as_ref().is_some_and(|f| f.leaving()) {
+        return;
+    }
     if world.0.identity().is_some() {
         return;
     }

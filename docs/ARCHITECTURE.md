@@ -1,8 +1,10 @@
 # RustCraft architecture
 
-Status: **Slice 12 first-person hand/held block**, based on accepted Slice11 main
-`cfcf645`. Presentation-only overlay/animation is specified in VIEWMODEL. Physics,
-world/player formats, IDs, generators, terrain lighting and streaming are unchanged.
+Status: **Slice 13 main/pause menus and repeatable sessions**, based on Slice12
+`cdb28f3`. See [MENUS](MENUS.md) for the explicit state machine, setup schedule,
+worker ownership, final-save barrier and teardown. The title owns no world/lock;
+loading/recovery now happens on a worker after Play. Core formats, generators,
+lighting, physics and inventory rules are unchanged.
 
 ## Slice 7 design note (before implementation)
 
@@ -144,7 +146,7 @@ with physics/editing disabled while pending, then selects clear supported edited
 ground. Both interpolation positions reset together. Spawn search is capped at
 64 blocks rather than scanning the large world. No terrain is created for spawn.
 An optional v4-only `RUSTCRAFT_START_CHUNK=x,z` prepares a distant column/region
-before App startup. It does not persist player position; R still returns to origin.
+during the Loading state. It does not persist player position; R still returns to origin.
 
 ## Regional persistence and failure behavior
 

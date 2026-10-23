@@ -116,3 +116,11 @@ geometric landmarks and our independent implementation are recorded here.
 captures of our own art/code, under the root licenses, as are the earlier
 `slice12-viewmodel.png` and `slice12-cave.png`. No dependency/feature/shader or
 external-asset distribution changes.
+
+## Slice 13 original menus
+
+`client/src/menu.rs` frames, stepped landscape, copper/slate/cream palette and
+expanded bitmap glyph tables are original RustCraft artwork/code, **MIT OR
+Apache-2.0**, including `docs/images/slice13-title.png` and `slice13-pause.png`
+(actual Xvfb/Mesa captures). No imported font, image, proprietary menu art,
+dependency, engine feature or lockfile change is added.

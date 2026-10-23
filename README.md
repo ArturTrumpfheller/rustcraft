@@ -21,7 +21,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 12**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 13**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -37,6 +37,16 @@ and [validation](docs/VALIDATION.md).
 ![Revised first-person grass block](docs/images/slice12-revised-block.png)
 
 ![Revised single-cuboid empty arm](docs/images/slice12-revised-arm.png)
+
+## Main and pause menus
+
+RustCraft starts at its original pixel title screen. **Spielen** loads the single
+world (or creates one on first play); opening the title alone does not touch saves.
+Escape closes inventory first, then opens Pause. Resume, return to title and quit
+support mouse and arrow keys/Enter. Returning to title saves asynchronously,
+waits for workers and releases the world lock; the same world can be reopened in
+the same process. A save failure retains changes and offers retry.
+See [menu architecture, screenshots and Void Fish / Windows instructions](docs/MENUS.md).
 
 ## Voxel skylight
 
@@ -133,8 +143,8 @@ In the prepared Codex cloud machine, first run `. /workspace/.rustcraft-env/acti
 | E | Open/close inventory; free cursor and pause gameplay while open |
 | Inventory left / right click | Pick/place/merge/swap / take rounded-up half or place one |
 | Shift + inventory left click | Transfer between main inventory and hotbar, merging first |
-| Escape | Close inventory first; otherwise release mouse and pause player |
-| Window focus loss | Release mouse; click again after returning |
+| Escape | Close inventory first; otherwise open/close Pause |
+| Window focus loss | Release mouse and pause; explicitly resume after returning |
 | Mouse | Look around; pitch is clamped |
 | W / A / S / D | Walk relative to horizontal view direction |
 | Space | Jump; hold to jump again after each landing |
@@ -143,7 +153,7 @@ In the prepared Codex cloud machine, first run `. /workspace/.rustcraft-env/acti
 | R while captured | Respawn on safe ground near the starting area and reset view/velocity |
 | F5 while focused | Save world and inventory, including with inventory open or mouse released |
 
-The 0.6×1.8-block player spawns on or just above safe solid ground, with eyes 1.62 blocks above the feet. Walking accelerates toward 5.0 blocks/s; sprinting toward 8.0 and sneaking toward 1.8 blocks/s. Continuous sprint-jumps gain a bounded run-up bonus up to 9.2 blocks/s. Sprinting smoothly widens the current base FOV by 9%. Shift lowers the body to 1.5 blocks and the eye to 1.32; standing requires headroom. Sneak guards supported ledges, but jumping or removing support still permits falling. See [movement tuning and limits](docs/MOVEMENT.md). Falling below Y=-32 automatically respawns the player. Escape or focus loss pauses the local simulation, including gravity; click again to continue. Inventory/focus/capture/respawn resets double-W detection, and a jump key held across such transitions must be released before it can jump again.
+The 0.6×1.8-block player spawns on or just above safe solid ground, with eyes 1.62 blocks above the feet. Walking accelerates toward 5.0 blocks/s; sprinting toward 8.0 and sneaking toward 1.8 blocks/s. Continuous sprint-jumps gain a bounded run-up bonus up to 9.2 blocks/s. Sprinting smoothly widens the current base FOV by 9%. Shift lowers the body to 1.5 blocks and the eye to 1.32; standing requires headroom. Sneak guards supported ledges, but jumping or removing support still permits falling. See [movement tuning and limits](docs/MOVEMENT.md). Falling below Y=-32 automatically respawns the player. Escape or focus loss pauses the local simulation, including gravity; choose Fortsetzen or press Escape to continue. Inventory/focus/capture/respawn resets double-W detection, and a jump key held across such transitions must be released before it can jump again.
 
 The center crosshair aims at blocks within five blocks of the displayed eye. A black outline marks the current target; the hotbar frames the selected slot and shows actual counts. Empty clicks and empty selected slots do nothing. Placement cannot replace solid blocks or intersect the current/displayed player body. Simultaneous buttons prioritize breaking. Closing inventory returns a held stack only if it all fits; otherwise NO ROOM keeps it open. Outside clicks never discard items. Normal application close saves a held stack and restores it with inventory open next time.
 
