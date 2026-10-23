@@ -87,6 +87,13 @@ fn rename_archive_and_collision_preserve_bundle() {
     c.rename(&id, ".. / CON: ♥").unwrap();
     assert_eq!(c.list().unwrap()[0].name, ".. / CON: ♥");
     assert_eq!(fs::read(p.join("world.rcw")).unwrap(), before);
+    // The catalog gate must still exclude a new session if Windows has to
+    // close the checked bundle handle immediately before moving the directory.
+    let gate = c.transaction().unwrap();
+    let checked = SaveStore::lock_directory(&p).unwrap();
+    drop(checked);
+    assert!(c.open(&id).is_err());
+    drop(gate);
     fs::create_dir_all(t.0.join("archive").join(&id)).unwrap();
     assert!(c.archive(&id).is_err());
     assert!(p.exists());

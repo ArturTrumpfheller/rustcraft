@@ -41,7 +41,11 @@ the stored lowercase name was correct and the subsequent test verified rename.
 No game defect or source data loss occurred. This was a functional GUI check,
 not a performance benchmark.
 
-Ubuntu/Windows CI status is tracked in the PR. Native Void X11/Wayland, Windows11,
+The first Windows CI run exposed Windows' refusal to rename a directory with
+an open descendant lock handle. Archive now releases that verified handle only
+on Windows under the still-held catalog mutex, which excludes all production
+opens through the rename. Unix retains the bundle lock throughout. The regression
+that found this remains unchanged. Ubuntu/Windows CI status is tracked in the PR. Native Void X11/Wayland, Windows11,
 physical GPU/DPI/IME and filesystem power-loss guarantees remain manual/platform
 limitations. No permanent delete, automatic staging recovery or GUI archive
 restore is provided. See [WORLDS](WORLDS.md) for exact storage/import guarantees,

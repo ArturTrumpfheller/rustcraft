@@ -458,9 +458,14 @@ impl WorldCatalog {
         if fs::symlink_metadata(&target).is_ok() {
             return Err(fail("Archivziel existiert bereits"));
         }
-        // Rust's file handles allow delete sharing on Windows. Retain the OS
-        // lock through rename so a direct/older SaveStore opener cannot race us.
+        // Windows refuses a directory rename with an open descendant, even
+        // with delete sharing. The catalog mutex excludes all production opens
+        // across this checked unlock/rename. A competing external open makes
+        // rename fail without moving or deleting data. Unix keeps the lock.
+        #[cfg(windows)]
+        drop(lock);
         fs::rename(&p, &target)?;
+        #[cfg(not(windows))]
         drop(lock);
         sync_dir(&archive)?;
         sync_dir(&self.area("worlds")?)?;

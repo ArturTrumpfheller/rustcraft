@@ -68,9 +68,12 @@ LOCALAPPDATA/RustCraft with APPDATA fallback. No alternate fallback on I/O error
 A directory ID is separate from the UTF-8 name and the existing immutable binary
 save identity. Rename changes only world.meta. Each world has a distinct SaveStore
 and lock. All production opens take the catalog mutex while acquiring that lock;
-archive/rename cannot race a cooperating open. Archive retains the world lock
-through the rename (including Windows delete sharing), refuses occupied targets
-and does no recursive deletion. Archived IDs are not reused.
+archive/rename cannot race a cooperating open. Archive verifies the world lock,
+refuses occupied targets and does no recursive deletion. Unix retains the world
+lock through rename. Windows requires closing descendant handles before moving
+a directory, so it closes the verified world handle under the still-held catalog
+mutex immediately before rename; all production opens remain excluded. A failed
+rename preserves the original directory. Archived IDs are not reused.
 
 `world.meta` v1 is independent of all game formats: `RCMETA01` (8 bytes), exact
 32-byte lowercase-hex directory ID, little-endian u64 catalog timestamp (seconds
