@@ -114,6 +114,14 @@ fn manage_cursor(
         cursor.visible = true;
         return;
     }
+    if !window.focused || inventory.as_ref().is_some_and(|i| i.open) {
+        if let Some(flow) = &mut flow {
+            flow.resume_frame = false;
+        }
+        cursor.grab_mode = CursorGrabMode::None;
+        cursor.visible = true;
+        return;
+    }
     if flow.as_ref().is_some_and(|f| f.resume_frame) {
         flow.as_mut().unwrap().resume_frame = false;
         cursor.grab_mode = CursorGrabMode::Locked;

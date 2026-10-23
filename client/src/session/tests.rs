@@ -161,6 +161,14 @@ fn repeated_sessions_save_edits_inventory_release_lock_and_reclaim_assets() {
         assert!(SaveStore::open(&dir.0).is_err());
         let pos = BlockPos([1, 31, 1]);
         if index > 0 {
+            let entity = window(&mut app);
+            assert!(app.world().resource::<inventory_ui::GameInventory>().open);
+            assert_eq!(
+                app.world().get::<CursorOptions>(entity).unwrap().grab_mode,
+                CursorGrabMode::None
+            );
+            assert!(app.world().get::<CursorOptions>(entity).unwrap().visible);
+
             assert_eq!(
                 app.world().resource::<scene::VoxelWorld>().0.block(pos),
                 Block::Wood

@@ -117,7 +117,7 @@ fn edit_and_target(
         && let Ok(mut window) = ctx.windows.single_mut()
     {
         window.title = format!(
-            "RustCraft | Slot: {} {} | 1–9 / wheel | E inventory | LMB break | RMB place | F5 save | Esc release | R respawn",
+            "RustCraft | Slot: {} {} | 1–9 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn",
             ctx.inventory.contents.selected() + 1,
             ctx.inventory
                 .contents
