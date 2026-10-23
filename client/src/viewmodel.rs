@@ -10,8 +10,10 @@ use bevy::{
     asset::RenderAssetUsages,
     camera::{Camera3dDepthLoadOp, visibility::RenderLayers},
     ecs::system::SystemParam,
+    image::{ImageSampler, ImageSamplerDescriptor},
     mesh::VertexAttributeValues,
     prelude::*,
+    render::render_resource::{Extent3d, TextureDimension, TextureFormat},
     render::view::Tonemapping,
 };
 use voxel_core::{Block, inventory::Item, texture::face_tile};
@@ -53,11 +55,14 @@ struct OverlayCamera;
 struct HandRoot;
 #[derive(Component)]
 struct HeldBlock;
+#[derive(Component)]
+struct Arm;
 #[derive(Resource)]
 struct Models {
     blocks: [Handle<Mesh>; 5],
     root: Entity,
     block: Entity,
+    arm: Entity,
     selected: Option<Item>,
     motion: Motion,
 }
@@ -90,7 +95,7 @@ fn cube(block: Option<Block>) -> Mesh {
         uvs.push(
             block
                 .and_then(|b| face_tile(b, normal))
-                .map_or([0.; 2], |t| t.uv(local)),
+                .map_or(local.map(f32::from), |t| t.uv(local)),
         );
         let shade = if n[1] > 0. {
             1.
@@ -110,58 +115,59 @@ fn cube(block: Option<Block>) -> Mesh {
     mesh
 }
 
+// One and only one cuboid. Sleeve/skin are pixels, never extra geometry.
 fn arm_mesh() -> Mesh {
-    // Four original boxes: forearm, cuff, palm and side thumb, one draw call.
-    let parts = [
-        (
-            Vec3::new(0.28, 0.7, 0.30),
-            Vec3::new(0., -0.24, 0.14),
-            [0.62, 0.43, 0.30],
-        ),
-        (
-            Vec3::new(0.30, 0.18, 0.32),
-            Vec3::new(0., -0.32, 0.14),
-            [0.19, 0.28, 0.34],
-        ),
-        (
-            Vec3::new(0.32, 0.29, 0.33),
-            Vec3::new(-0.03, 0.16, 0.06),
-            [0.69, 0.49, 0.34],
-        ),
-        (
-            Vec3::new(0.11, 0.20, 0.17),
-            Vec3::new(-0.20, 0.14, -0.02),
-            [0.64, 0.44, 0.30],
-        ),
-    ];
-    let mut combined: Option<Mesh> = None;
-    for (size, offset, color) in parts {
-        let mut part = cube(None);
-        if let Some(VertexAttributeValues::Float32x3(p)) =
-            part.attribute_mut(Mesh::ATTRIBUTE_POSITION)
-        {
-            for v in p {
-                *v = (Vec3::from_array(*v) * size + offset).to_array();
-            }
-        }
-        if let Some(VertexAttributeValues::Float32x4(c)) = part.attribute_mut(Mesh::ATTRIBUTE_COLOR)
-        {
-            let linear = Color::srgb(color[0], color[1], color[2])
-                .to_linear()
-                .to_f32_array();
-            for v in c {
-                for a in 0..3 {
-                    v[a] *= linear[a] / 0.55;
-                }
-            }
-        }
-        if let Some(m) = &mut combined {
-            m.merge(&part).expect("identical cuboid attributes");
-        } else {
-            combined = Some(part);
+    let mut mesh = cube(None);
+    if let Some(VertexAttributeValues::Float32x3(positions)) =
+        mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION)
+    {
+        for p in positions {
+            *p = (Vec3::from_array(*p) * Vec3::new(0.25, 0.75, 0.25)).to_array();
         }
     }
-    combined.expect("four authored cuboids")
+    mesh
+}
+
+fn arm_image() -> Image {
+    // Original RustCraft artwork, editable/reproducible here, MIT OR Apache-2.0.
+    // Warm clay skin with sparse highlights; a slate sleeve occupies the lower
+    // part of the same surface. Not a Minecraft skin layout or imported pixels.
+    let palette = [
+        [181, 132, 95, 255],
+        [192, 144, 105, 255],
+        [174, 123, 89, 255],
+        [55, 75, 83, 255],
+        [62, 84, 92, 255],
+    ];
+    let mut pixels = Vec::with_capacity(16 * 16 * 4);
+    for y in 0..16 {
+        for x in 0..16 {
+            let index = if y >= 6 {
+                3 + usize::from((x + y * 3) % 13 == 0)
+            } else if (x * 7 + y * 11) % 19 == 0 {
+                1
+            } else {
+                usize::from((x * 3 + y * 5) % 23 == 0) * 2
+            };
+            pixels.extend_from_slice(&palette[index]);
+        }
+    }
+    let mut image = Image::new(
+        Extent3d {
+            width: 16,
+            height: 16,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        pixels,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+    );
+    image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+        lod_max_clamp: 0.,
+        ..ImageSamplerDescriptor::nearest()
+    });
+    image
 }
 
 fn setup(
@@ -170,6 +176,7 @@ fn setup(
     terrain: Res<TerrainMaterial>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>,
 ) {
     let Ok(camera) = camera.single() else {
         return;
@@ -198,6 +205,7 @@ fn setup(
         .base_color_texture
         .clone();
     let skin = materials.add(StandardMaterial {
+        base_color_texture: Some(images.add(arm_image())),
         unlit: true,
         ..default()
     });
@@ -220,6 +228,7 @@ fn setup(
     commands.entity(overlay).add_child(root);
     let arm = commands
         .spawn((
+            Arm,
             Mesh3d(meshes.add(arm_mesh())),
             MeshMaterial3d(skin),
             Visibility::Inherited,
@@ -233,9 +242,7 @@ fn setup(
             Mesh3d(blocks[0].clone()),
             MeshMaterial3d(textured),
             RenderLayers::layer(OVERLAY_LAYER),
-            Transform::from_xyz(-0.19, 0.41, -0.17)
-                .with_scale(Vec3::splat(0.67))
-                .with_rotation(Quat::from_euler(EulerRot::XYZ, 0.15, -0.36, 0.)),
+            Transform::default(),
         ))
         .id();
     commands.entity(root).add_children(&[arm, block]);
@@ -243,6 +250,7 @@ fn setup(
         blocks,
         root,
         block,
+        arm,
         selected: None,
         motion: Motion::default(),
     });
@@ -258,10 +266,7 @@ struct Motion {
     landing: f32,
     swing: f32,
     swing_active: bool,
-    swing_start: f32,
     swing_time: f32,
-    swing_strength: f32,
-    strength_target: f32,
     serial: u64,
 }
 impl Motion {
@@ -307,47 +312,82 @@ impl Motion {
         self.landing *= (-14. * dt).exp();
         if action.serial != self.serial {
             self.serial = action.serial;
-            self.swing_active = true;
-            self.swing_start = self.swing;
-            self.swing_time = 0.;
-            self.strength_target = if action.place { 0.55 } else { 1. };
+            // Consume every action, but avoid repeatedly snapping an early swing
+            // back to zero under rapid clicks. No accumulated/queued animation.
+            if !self.swing_active || self.swing_time >= SWING_SECONDS * 0.5 {
+                self.swing_active = true;
+                self.swing_time = 0.;
+            }
         }
-        self.swing_time += dt;
-        let smooth = |t: f32| {
-            let t = t.clamp(0., 1.);
-            t * t * (3. - 2. * t)
-        };
-        self.swing = if self.swing_time < 0.06 {
-            self.swing_start + (1. - self.swing_start) * smooth(self.swing_time / 0.06)
+        if self.swing_active {
+            self.swing_time += dt;
+            self.swing_active = self.swing_time < SWING_SECONDS;
+        }
+        self.swing = if self.swing_active {
+            self.swing_time / SWING_SECONDS
         } else {
-            1. - smooth((self.swing_time - 0.06) / 0.18)
+            0.
         };
-        // No initial/no-action swing, including fresh capture.
-        if !self.swing_active || self.swing_time >= 0.24 {
-            self.swing = 0.;
-            self.swing_active = false;
-        }
-        self.swing_strength += (self.strength_target - self.swing_strength) * blend;
-        let swing = self.swing * self.swing_strength;
         let offset = Vec3::new(
-            self.phase.sin() * self.bob * 0.018 - swing * 0.10,
-            (self.phase * 2.).cos() * self.bob * 0.010
-                - self.crouch * 0.07
+            self.phase.sin() * self.bob * 0.025,
+            -(self.phase * 2.).cos().abs() * self.bob * 0.025
+                - self.crouch * 0.025
                 - self.landing
-                - (vy as f32 * 0.003).clamp(-0.035, 0.035)
-                + swing * 0.10,
-            -swing * 0.18,
+                - (vy as f32 * 0.002).clamp(-0.02, 0.02),
+            0.,
         );
         (
             offset,
-            Quat::from_euler(
-                EulerRot::XYZ,
-                -0.12 - swing * 0.32,
-                -0.22 - swing * 0.28,
-                -0.12 + self.phase.sin() * self.bob * 0.025 + swing * 0.18,
-            ),
+            Quat::from_rotation_z(self.phase.sin() * self.bob * 0.035),
         )
     }
+}
+
+// Independently authored visual-fit coefficients, not verified Java source
+// constants. Reference images/limitations and normalized landmarks: VIEWMODEL.md.
+const SWING_SECONDS: f32 = 0.30;
+fn model_pose(block: bool, motion: &Motion, aspect: f32) -> Transform {
+    let t = motion.swing;
+    // Fast inward strike followed by a longer outward recovery. A second arc
+    // supplies lift early and dip late, rather than retracing a linear jab.
+    let strike = (t.sqrt() * std::f32::consts::PI).sin();
+    let lift = (t * std::f32::consts::TAU).sin();
+    let (position, angles, size, pivot, swing_angles) = if block {
+        (
+            Vec3::new(0.555, -0.527, -0.726),
+            Vec3::new(3.2, 45.7, -2.6),
+            0.40,
+            Vec3::new(0.60, -0.65, -0.60),
+            Vec3::new(-65., -25., -20.),
+        )
+    } else {
+        (
+            Vec3::new(0.609, -0.641, -0.80),
+            Vec3::new(-46.5, 19.4, -23.9),
+            1.,
+            Vec3::new(0.65, -0.90, -0.45),
+            Vec3::new(-65., 25., 30.),
+        )
+    };
+    let euler = |angles: Vec3| {
+        Quat::from_euler(
+            EulerRot::XYZ,
+            angles.x.to_radians(),
+            angles.y.to_radians(),
+            angles.z.to_radians(),
+        )
+    };
+    let swing_rotation = euler(swing_angles * strike);
+    let rotation = swing_rotation * euler(angles);
+    let position = pivot
+        + swing_rotation * (position - pivot)
+        + Vec3::new(-0.22 * strike, 0.08 * lift, -0.08 * strike);
+    let shift = (aspect - 16. / 9.) * (70_f32.to_radians() * 0.5).tan() * -position.z;
+    let mut pose = Transform::from_translation(position)
+        .with_rotation(rotation)
+        .with_scale(Vec3::splat(size));
+    pose.translation.x += shift;
+    pose
 }
 
 #[derive(SystemParam)]
@@ -369,7 +409,11 @@ fn update(
     source: Query<&Projection, With<FirstPersonCamera>>,
     mut overlay: Query<&mut Projection, (With<OverlayCamera>, Without<FirstPersonCamera>)>,
     mut roots: Query<(&mut Transform, &mut Visibility), With<HandRoot>>,
-    mut blocks: Query<(&mut Mesh3d, &mut Visibility), HeldFilter>,
+    mut blocks: Query<(&mut Mesh3d, &mut Visibility, &mut Transform), HeldFilter>,
+    mut arms: Query<
+        (&mut Visibility, &mut Transform),
+        (With<Arm>, Without<HandRoot>, Without<HeldBlock>),
+    >,
 ) {
     let (Some(mut models), Ok(Projection::Perspective(p))) = (models, source.single()) else {
         return;
@@ -384,7 +428,14 @@ fn update(
         }
     }
     let selected = frame.inventory.contents.selected_stack().map(|s| s.item());
-    if let Ok((mut handle, mut visibility)) = blocks.get_mut(models.block) {
+    if let Ok((mut visibility, _)) = arms.get_mut(models.arm) {
+        *visibility = if selected.is_none() {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        };
+    }
+    if let Ok((mut handle, mut visibility, _)) = blocks.get_mut(models.block) {
         *visibility = if selected.is_some() {
             Visibility::Inherited
         } else {
@@ -421,12 +472,20 @@ fn update(
         &frame.player.body,
         &frame.action,
     );
-    let half = (p.fov * 0.5).tan();
-    let scale = half * 0.68 * (p.aspect_ratio / 1.4).min(1.);
-    *transform = Transform::from_xyz(half * p.aspect_ratio * 0.64, -half * 0.60, -1.)
-        .with_scale(Vec3::splat(scale))
-        .with_rotation(rotation);
-    transform.translation += offset * scale;
+    // Correct the lens in camera X/Y only, BEFORE each child's rotation. Unlike
+    // scaling the model uniformly this keeps its perspective and screen bounds.
+    let correction = (p.fov * 0.5).tan() / (70_f32.to_radians() * 0.5).tan();
+    *transform = Transform::from_scale(Vec3::new(correction, correction, 1.));
+    let mut pose = model_pose(selected.is_some(), &models.motion, p.aspect_ratio);
+    pose.translation += offset;
+    pose.rotation = rotation * pose.rotation;
+    if selected.is_some() {
+        if let Ok((_, _, mut block)) = blocks.get_mut(models.block) {
+            *block = pose;
+        }
+    } else if let Ok((_, mut arm)) = arms.get_mut(models.arm) {
+        *arm = pose;
+    }
 }
 
 #[cfg(test)]

@@ -119,8 +119,8 @@ fn cube_faces_reuse_exact_original_uv_orientation_for_all_five_blocks() {
         }
         assert_eq!(mesh.indices().unwrap().len(), 36);
     }
-    assert_eq!(arm_mesh().count_vertices(), 96);
-    assert_eq!(arm_mesh().indices().unwrap().len(), 144);
+    assert_eq!(arm_mesh().count_vertices(), 24);
+    assert_eq!(arm_mesh().indices().unwrap().len(), 36);
 }
 
 #[test]
@@ -328,8 +328,8 @@ fn repeated_selection_animation_fov_resize_and_rebase_keep_assets_bounded() {
         let m = app.world().resource::<Assets<Mesh>>().get(h).unwrap();
         bytes += m.count_vertices() * 48 + m.indices().unwrap().len() * 4;
     }
-    bytes += 96 * 48 + 144 * 4;
-    assert_eq!(bytes, 11664);
+    bytes += 24 * 48 + 36 * 4;
+    assert_eq!(bytes, 7776);
     for n in 0..600 {
         app.world_mut()
             .resource_mut::<GameInventory>()
@@ -450,4 +450,160 @@ fn saved_inventory_reopens_with_the_correct_selected_model_and_empty_hand() {
     assert_eq!(selection(&app), None);
     drop(store);
     std::fs::remove_dir_all(path).unwrap();
+}
+
+#[test]
+fn arm_is_exactly_one_textured_wide_cuboid() {
+    let mesh = arm_mesh();
+    let VertexAttributeValues::Float32x3(p) = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap()
+    else {
+        panic!()
+    };
+    assert_eq!(p.len(), 24);
+    assert_eq!(mesh.indices().unwrap().len(), 36);
+    for axis in 0..3 {
+        let extent = if axis == 1 { 0.375 } else { 0.125 };
+        assert!(p.iter().all(|v| v[axis] == -extent || v[axis] == extent));
+    }
+    let mut corners: Vec<_> = p.iter().map(|v| v.map(f32::to_bits)).collect();
+    corners.sort();
+    corners.dedup();
+    assert_eq!(corners.len(), 8);
+    let VertexAttributeValues::Float32x2(uv) = mesh.attribute(Mesh::ATTRIBUTE_UV_0).unwrap() else {
+        panic!()
+    };
+    assert!(uv.iter().all(|v| v.iter().all(|x| *x == 0. || *x == 1.)));
+    let image = arm_image();
+    assert_eq!(image.texture_descriptor.size.width, 16);
+    assert_eq!(image.texture_descriptor.size.height, 16);
+    assert_eq!(image.texture_descriptor.mip_level_count, 1);
+    assert_eq!(image.data.as_ref().unwrap().len(), 1024);
+    assert!(
+        image
+            .data
+            .as_ref()
+            .unwrap()
+            .chunks_exact(4)
+            .all(|p| p[3] == 255)
+    );
+    let ImageSampler::Descriptor(sampler) = image.sampler else {
+        panic!()
+    };
+    assert_eq!(sampler.mag_filter, bevy::image::ImageFilterMode::Nearest);
+    assert_eq!(sampler.min_filter, bevy::image::ImageFilterMode::Nearest);
+    assert_eq!(sampler.lod_max_clamp, 0.);
+}
+
+#[test]
+fn only_one_model_is_visible_and_its_perspective_survives_custom_fov() {
+    let mut app = app();
+    capture(&mut app);
+    for selected in [true, false] {
+        app.world_mut()
+            .resource_mut::<GameInventory>()
+            .contents
+            .select(if selected { 0 } else { 8 });
+        let mut reference: Option<Vec<Vec2>> = None;
+        for degrees in [35_f32, 45., 70., 110.] {
+            let w = app.world_mut();
+            let mut q = w.query_filtered::<&mut Projection, With<FirstPersonCamera>>();
+            if let Projection::Perspective(p) = &mut *q.single_mut(w).unwrap() {
+                p.fov = degrees.to_radians();
+                p.aspect_ratio = 16. / 9.;
+            }
+            frame(&mut app, Duration::ZERO);
+            let w = app.world();
+            let models = w.resource::<Models>();
+            assert_eq!(
+                *w.get::<Visibility>(models.root).unwrap(),
+                Visibility::Inherited
+            );
+            assert_eq!(
+                *w.get::<Visibility>(models.arm).unwrap(),
+                if selected {
+                    Visibility::Hidden
+                } else {
+                    Visibility::Inherited
+                }
+            );
+            assert_eq!(
+                *w.get::<Visibility>(models.block).unwrap(),
+                if selected {
+                    Visibility::Inherited
+                } else {
+                    Visibility::Hidden
+                }
+            );
+            let entity = if selected { models.block } else { models.arm };
+            let root = w.get::<Transform>(models.root).unwrap().to_matrix();
+            let model = root * w.get::<Transform>(entity).unwrap().to_matrix();
+            let mesh = w
+                .resource::<Assets<Mesh>>()
+                .get(&w.get::<Mesh3d>(entity).unwrap().0)
+                .unwrap();
+            let VertexAttributeValues::Float32x3(vertices) =
+                mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap()
+            else {
+                panic!()
+            };
+            let points: Vec<_> = vertices
+                .iter()
+                .map(|v| {
+                    let p = model.transform_point3(Vec3::from_array(*v));
+                    assert!(p.z < -0.1, "geometry must stay behind UI/near plane");
+                    Vec2::new(p.x / (16. / 9.), -p.y)
+                        / (-2. * p.z * (degrees.to_radians() * 0.5).tan())
+                        + Vec2::splat(0.5)
+                })
+                .collect();
+            if let Some(reference) = &reference {
+                assert!(
+                    points
+                        .iter()
+                        .zip(reference)
+                        .all(|(a, b)| a.distance(*b) < 1e-5)
+                );
+            } else {
+                reference = Some(points);
+            }
+        }
+    }
+}
+
+#[test]
+fn swing_is_a_timed_pivoted_arc_and_never_replays_hidden_actions() {
+    let mut action = HandAction::default();
+    action.trigger(false);
+    for fps in [30, 60, 144] {
+        let mut motion = Motion::default();
+        for _ in 0..fps {
+            motion.step(1. / fps as f32, [0.; 3], &body(true, false, 0.), &action);
+        }
+        assert!(!motion.swing_active);
+        assert_eq!(motion.swing, 0.);
+        motion.reset([0.; 3], action.serial);
+        motion.step(1. / fps as f32, [0.; 3], &body(true, false, 0.), &action);
+        assert_eq!(motion.swing, 0.);
+    }
+    for block in [true, false] {
+        let mut motion = Motion::default();
+        let idle = model_pose(block, &motion, 16. / 9.);
+        motion.swing = 0.25;
+        let strike = model_pose(block, &motion, 16. / 9.);
+        motion.swing = 0.75;
+        let recovery = model_pose(block, &motion, 16. / 9.);
+        motion.swing = 1.;
+        let end = model_pose(block, &motion, 16. / 9.);
+        assert!(strike.rotation.angle_between(idle.rotation) > 0.5);
+        assert!(strike.translation.x < idle.translation.x - 0.1);
+        assert!(strike.translation.distance(recovery.translation) > 0.1);
+        assert!(end.translation.distance(idle.translation) < 1e-5);
+        assert!(end.rotation.angle_between(idle.rotation) < 0.001);
+        for n in 0..=100 {
+            motion.swing = n as f32 / 100.;
+            let pose = model_pose(block, &motion, 16. / 9.);
+            assert!(pose.translation.is_finite() && pose.rotation.is_finite());
+            assert!(pose.translation.z < -0.3 && pose.translation.length() < 2.);
+        }
+    }
 }
