@@ -457,12 +457,16 @@ env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p
 
 1. Click to capture. Inspect the original right arm and selected cube. Select1–5
    and scroll: Grass top/side, Dirt, Stone, Wood top/bark and Leaves must change
-   immediately. Select6–9: empty hand. Hand should not obscure crosshair/targets.
+   immediately. Select6–9: exactly one rectangular empty arm. A selected block
+   must hide the arm. Check the revised screenshots/reference table in VIEWMODEL.
+   The model should not obscure crosshair/targets.
 2. Walk, Ctrl/double-W sprint, sneak/fastbridge, hold Space and sprint-jump.
-   Bob must follow actual travel, stop against walls/at rest, be quieter/lower
-   crouched, and react gently to jumping/landing. No aim/camera bob is added.
+   Bob must follow actual travel, stop against walls/at rest, have similar walk/
+   sprint amplitude with a faster sprint rhythm, be still/lower crouched, and
+   react gently to jumping/landing. No aim/camera bob is added.
 3. Mine/place quickly, including a selected stack's last item and chunk seams.
-   One bounded swing should retrigger; no delayed stack of animations. Verify
+   One bounded350-ms action should retrigger, with a curved inward/downward
+   sweep and recovery, not a straight jab; no delayed stack of animations. Verify
    exact inventory counts, body-overlap refusal, old diagonal stability and ledges.
 4. Stand at a wall, under a roof and in a dark cave. The hand/block must remain
    visible without world clipping, with muted readable faces; no glow/light is

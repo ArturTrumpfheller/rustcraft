@@ -1,6 +1,53 @@
 # RustCraft validation
 
-## Slice 12 — original first-person hand and held hotbar block
+## PR #29 visual revision — single cuboid and Java reference calibration
+
+Continues existing branch from31e3c8e; checkpoint f0669a8 preserved. No new slice/PR.
+The initial four-part geometry and associated cost figures below are historical.
+Current architecture, reference provenance, measured landmarks and dynamic
+approximation limits: [VIEWMODEL](VIEWMODEL.md).
+
+The unmodified official Java1.21.1 Demo was used as a controlled visual reference,
+with wide Steve,854×480 and a verified FOV45 Options label. Recorded idle hand,
+grass, swings, walk/sprint/sneak and real mining/placement; checked4:3. The later70° demo/focus-dialog capture is excluded.
+No game code was decompiled/copied and no reference pixels/client files enter Git.
+
+Five additional regressions cover one-cuboid topology/skin sampling, exclusive
+arm-versus-block visibility, unchanged projected geometry across35–110° FOV,
+measured reference landmarks at16:9/4:3, sway ranges and sampled swing depth.
+Existing integration tests still cover real edits, save restoration, menus,
+resource counts, UVs and floating origin. Swing duration now uses real elapsed
+frame time, including low-FPS replay; fixed simulation is untouched.
+
+Exact retained geometry:11664→7776 bytes (−33.3%), at most2→1 model draws and
+60→12 triangles; one additional1-KiB skin image. The overlay render view remains.
+No new hardware FPS/VRAM/RSS speedup claim or repeated large-world benchmark.
+
+Local final checks passed: fmt, locked workspace Clippy with `-D warnings`,
+**247 tests (106 client +141 core, none ignored)**, locked workspace build and
+original texture regeneration check. Clippy's two findings (query type complexity
+and constant-size chunk iteration in a test) were fixed before the full run.
+
+Xvfb/Mesa25 llvmpipe/Vulkan,854×480,seed42,radius1: both the pre-revision executable
+and revised executable were captured; the final elapsed-time fix was checked again
+on the final build. All five block types, empty arm, curved swings, movement,
+E inventory/capture restore,20 rapid mine/place attempts, F5/SAVED and normal
+close passed. Software capture produces duplicate frames and input/render latency;
+representative swing comparisons are not assertions of exact Java tick alignment.
+Sneak/jump/landing/control regressions pass automated tests; their native feel and
+Void/Wayland/Windows/hardware GPU rendering remain owner acceptance.
+
+Owned before/after captures (same854×480,45°):
+[old arm](images/slice12-before-arm.png), [revised arm](images/slice12-revised-arm.png),
+[old block](images/slice12-before-block.png), [revised block](images/slice12-revised-block.png).
+External Java captures are retained outside Git to avoid redistributing Minecraft
+art. The later full4:3/70° attempt was interrupted by the demo player's death and
+subsequent menus; those frames are excluded. The earlier cropped4:3 viewport check
+and wide45° calibration, captured before that survival session, remain valid.
+
+Ubuntu/Windows CI results are added after pushing this revision.
+
+## Slice 12 — initial implementation (historical, before owner visual revision)
 
 Base: accepted Slice11 main `cfcf645`, branch
 `feat/slice-12-first-person-viewmodel`, Issue #24. See VIEWMODEL for rendering,

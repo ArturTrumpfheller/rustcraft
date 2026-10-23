@@ -297,7 +297,7 @@ fn animation_follows_actual_distance_sprint_sneak_air_and_bounded_rapid_actions(
         );
     }
     assert_eq!(idle.bob, 0.);
-    assert!(fast.bob > 1.5 && sneak.bob < 0.15 && sneak.crouch > 0.99);
+    assert!((fast.bob - 1.).abs() < 0.001 && sneak.bob == 0. && sneak.crouch > 0.99);
     let mut m = Motion::default();
     let mut action = HandAction::default();
     for n in 0..1000 {
@@ -472,7 +472,7 @@ fn arm_is_exactly_one_textured_wide_cuboid() {
     let VertexAttributeValues::Float32x2(uv) = mesh.attribute(Mesh::ATTRIBUTE_UV_0).unwrap() else {
         panic!()
     };
-    assert!(uv.iter().all(|v| v.iter().all(|x| *x == 0. || *x == 1.)));
+    assert!(uv.iter().all(|v| v.iter().all(|x| (0. ..=1.).contains(x))));
     let image = arm_image();
     assert_eq!(image.texture_descriptor.size.width, 16);
     assert_eq!(image.texture_descriptor.size.height, 16);
@@ -483,7 +483,9 @@ fn arm_is_exactly_one_textured_wide_cuboid() {
             .data
             .as_ref()
             .unwrap()
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .all(|p| p[3] == 255)
     );
     let ImageSampler::Descriptor(sampler) = image.sampler else {
@@ -574,7 +576,7 @@ fn only_one_model_is_visible_and_its_perspective_survives_custom_fov() {
 fn swing_is_a_timed_pivoted_arc_and_never_replays_hidden_actions() {
     let mut action = HandAction::default();
     action.trigger(false);
-    for fps in [30, 60, 144] {
+    for fps in [10, 30, 60, 144] {
         let mut motion = Motion::default();
         for _ in 0..fps {
             motion.step(1. / fps as f32, [0.; 3], &body(true, false, 0.), &action);
@@ -587,13 +589,13 @@ fn swing_is_a_timed_pivoted_arc_and_never_replays_hidden_actions() {
     }
     for block in [true, false] {
         let mut motion = Motion::default();
-        let idle = model_pose(block, &motion, 16. / 9.);
+        let idle = model_pose(block, &motion);
         motion.swing = 0.25;
-        let strike = model_pose(block, &motion, 16. / 9.);
+        let strike = model_pose(block, &motion);
         motion.swing = 0.75;
-        let recovery = model_pose(block, &motion, 16. / 9.);
+        let recovery = model_pose(block, &motion);
         motion.swing = 1.;
-        let end = model_pose(block, &motion, 16. / 9.);
+        let end = model_pose(block, &motion);
         assert!(strike.rotation.angle_between(idle.rotation) > 0.5);
         assert!(strike.translation.x < idle.translation.x - 0.1);
         assert!(strike.translation.distance(recovery.translation) > 0.1);
@@ -601,9 +603,112 @@ fn swing_is_a_timed_pivoted_arc_and_never_replays_hidden_actions() {
         assert!(end.rotation.angle_between(idle.rotation) < 0.001);
         for n in 0..=100 {
             motion.swing = n as f32 / 100.;
-            let pose = model_pose(block, &motion, 16. / 9.);
+            let pose = model_pose(block, &motion);
             assert!(pose.translation.is_finite() && pose.rotation.is_finite());
-            assert!(pose.translation.z < -0.3 && pose.translation.length() < 2.);
+            assert!(pose.translation.z < -0.3 && pose.translation.length() < 6.);
         }
     }
+}
+
+// Hand-measured silhouettes in the unmodified Java1.21.1 wide-Steve reference,
+// 854x480/FOV45. These are observations, not Mojang transform/source constants.
+fn projected(mesh: &Mesh, pose: Transform, size: Vec2) -> Vec<Vec2> {
+    let VertexAttributeValues::Float32x3(vertices) =
+        mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap()
+    else {
+        panic!()
+    };
+    vertices
+        .iter()
+        .map(|p| {
+            let v = pose.transform_point(Vec3::from_array(*p));
+            assert!(
+                v.z < -0.16,
+                "UI must stay in front throughout the swing: {v:?}"
+            );
+            let half = (70_f32.to_radians() * 0.5).tan();
+            Vec2::new(v.x / (size.x / size.y), -v.y) / (-2. * v.z * half) * size + size * 0.5
+        })
+        .collect()
+}
+#[test]
+fn idle_silhouettes_match_measured_wide_arm_and_grass_reference_landmarks() {
+    for (block, landmarks) in [
+        (false, [[602., 374.], [658., 338.], [737., 383.]]),
+        (true, [[559., 392.], [618., 349.], [828., 392.]]),
+    ] {
+        let mesh = if block {
+            cube(Some(Block::Grass))
+        } else {
+            arm_mesh()
+        };
+        let pose = model_pose(block, &Motion::default());
+        let points = projected(&mesh, pose, Vec2::new(854., 480.));
+        for point in landmarks {
+            assert!(
+                points
+                    .iter()
+                    .any(|p| p.distance(Vec2::from_array(point)) < 3.),
+                "{block}: {point:?} in {points:?}"
+            );
+        }
+        for n in 0..=100 {
+            let motion = Motion {
+                swing: n as f32 / 100.,
+                ..default()
+            };
+            projected(&mesh, model_pose(block, &motion), Vec2::new(854., 480.));
+        }
+    }
+    let points = projected(
+        &arm_mesh(),
+        model_pose(false, &Motion::default()),
+        Vec2::new(854., 640.),
+    );
+    assert!(
+        points
+            .iter()
+            .any(|p| p.distance(Vec2::new(736., 450.)) < 4.)
+    );
+}
+
+#[test]
+fn walk_sway_matches_reference_range_and_sprint_increases_rhythm_not_size() {
+    let mut walk = Motion::default();
+    let mut sprint = Motion::default();
+    walk.reset([0.; 3], 0);
+    sprint.reset([0.; 3], 0);
+    walk.step(
+        0.02,
+        [0.1, 0., 0.],
+        &body(true, false, 0.),
+        &HandAction::default(),
+    );
+    sprint.step(
+        0.02,
+        [0.16, 0., 0.],
+        &body(true, false, 0.),
+        &HandAction::default(),
+    );
+    assert!(sprint.phase > walk.phase);
+    assert_eq!(sprint.bob, walk.bob);
+    let mut tips = Vec::new();
+    for n in 0..128 {
+        let mut motion = Motion {
+            bob: 1.,
+            phase: n as f32 / 128. * std::f32::consts::TAU,
+            ..default()
+        };
+        let (offset, rotation) =
+            motion.step(0., [0.; 3], &body(true, false, 0.), &HandAction::default());
+        let mut pose = model_pose(false, &motion);
+        pose.translation = rotation * pose.translation + offset * MODEL_DEPTH_SCALE;
+        pose.rotation = rotation * pose.rotation;
+        let p = projected(&arm_mesh(), pose, Vec2::new(854., 480.));
+        tips.push(*p.iter().min_by(|a, b| a.y.total_cmp(&b.y)).unwrap());
+    }
+    let min = tips.iter().copied().reduce(Vec2::min).unwrap();
+    let max = tips.iter().copied().reduce(Vec2::max).unwrap();
+    assert!(min.distance(Vec2::new(639.6, 336.)) < 4., "{min:?}");
+    assert!(max.distance(Vec2::new(674.5, 368.)) < 4., "{max:?}");
 }

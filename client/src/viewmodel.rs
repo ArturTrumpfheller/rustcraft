@@ -19,6 +19,9 @@ use bevy::{
 use voxel_core::{Block, inventory::Item, texture::face_tile};
 
 pub(crate) const OVERLAY_LAYER: usize = 1;
+// Uniformly scale camera-space position AND geometry: identical projected
+// pixels, but even the nearest swing vertex remains behind the existing UI.
+const MODEL_DEPTH_SCALE: f32 = 3.;
 
 /// Written only by the existing authoritative gameplay-click gate. A serial
 /// replaces queued animation events: repeated actions restart one bounded swing.
@@ -125,6 +128,32 @@ fn arm_mesh() -> Mesh {
             *p = (Vec3::from_array(*p) * Vec3::new(0.25, 0.75, 0.25)).to_array();
         }
     }
+    let VertexAttributeValues::Float32x3(normals) = mesh.attribute(Mesh::ATTRIBUTE_NORMAL).unwrap()
+    else {
+        unreachable!()
+    };
+    let VertexAttributeValues::Float32x2(uvs) = mesh.attribute(Mesh::ATTRIBUTE_UV_0).unwrap()
+    else {
+        unreachable!()
+    };
+    let uvs: Vec<_> = uvs
+        .iter()
+        .zip(normals)
+        .map(|(uv, n)| {
+            // End caps sample only skin/sleeve; never put a sleeve stripe on the fist.
+            [
+                uv[0],
+                if n[1] > 0. {
+                    uv[1] * 0.25
+                } else if n[1] < 0. {
+                    0.75 + uv[1] * 0.25
+                } else {
+                    uv[1]
+                },
+            ]
+        })
+        .collect();
+    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
     mesh
 }
 
@@ -293,10 +322,11 @@ impl Motion {
             self.reset(feet, action.serial);
         }
         let speed = if dt > 0. { distance / dt } else { 0. };
+        let elapsed = dt;
         let dt = dt.min(0.05);
         let blend = 1. - (-12. * dt).exp();
         let amount = if grounded {
-            (speed / 5.).min(1.8) * if crouched { 0.35 } else { 1. }
+            (speed / 5.).min(1.) * if crouched { 0. } else { 1. }
         } else {
             0.
         };
@@ -320,7 +350,7 @@ impl Motion {
             }
         }
         if self.swing_active {
-            self.swing_time += dt;
+            self.swing_time += elapsed;
             self.swing_active = self.swing_time < SWING_SECONDS;
         }
         self.swing = if self.swing_active {
@@ -329,8 +359,8 @@ impl Motion {
             0.
         };
         let offset = Vec3::new(
-            self.phase.sin() * self.bob * 0.025,
-            -(self.phase * 2.).cos().abs() * self.bob * 0.025
+            (self.phase.sin() * 0.04 - 0.006) * self.bob,
+            -((self.phase * 2.).cos().abs() * 0.055 + 0.005) * self.bob
                 - self.crouch * 0.025
                 - self.landing
                 - (vy as f32 * 0.002).clamp(-0.02, 0.02),
@@ -345,20 +375,29 @@ impl Motion {
 
 // Independently authored visual-fit coefficients, not verified Java source
 // constants. Reference images/limitations and normalized landmarks: VIEWMODEL.md.
-const SWING_SECONDS: f32 = 0.30;
-fn model_pose(block: bool, motion: &Motion, aspect: f32) -> Transform {
-    let t = motion.swing;
+const SWING_SECONDS: f32 = 0.35;
+fn model_pose(block: bool, motion: &Motion) -> Transform {
+    let elapsed = motion.swing * SWING_SECONDS;
+    // The recorded Java held cube first lowers, then swings while returning to
+    // its equipped pose. Keep that lead-in separate from the 300-ms arc.
+    let t = if block {
+        ((elapsed - 0.05) / 0.30).clamp(0., 1.)
+    } else {
+        motion.swing
+    };
     // Fast inward strike followed by a longer outward recovery. A second arc
     // supplies lift early and dip late, rather than retracing a linear jab.
     let strike = (t.sqrt() * std::f32::consts::PI).sin();
-    let lift = (t * std::f32::consts::TAU).sin();
+    let lift = (t.sqrt() * std::f32::consts::TAU).sin();
+    let recovery = (t * std::f32::consts::PI).sin();
+    let late = (t * t * std::f32::consts::PI).sin();
     let (position, angles, size, pivot, swing_angles) = if block {
         (
-            Vec3::new(0.555, -0.527, -0.726),
-            Vec3::new(3.2, 45.7, -2.6),
+            Vec3::new(0.56, -0.52, -0.72),
+            Vec3::new(0., 45., 0.),
             0.40,
-            Vec3::new(0.60, -0.65, -0.60),
-            Vec3::new(-65., -25., -20.),
+            Vec3::new(0.56, -0.52, -0.72),
+            Vec3::new(-75. * strike, -20. * late, -20. * strike),
         )
     } else {
         (
@@ -366,7 +405,7 @@ fn model_pose(block: bool, motion: &Motion, aspect: f32) -> Transform {
             Vec3::new(-46.5, 19.4, -23.9),
             1.,
             Vec3::new(0.65, -0.90, -0.45),
-            Vec3::new(-65., 25., 30.),
+            Vec3::new(-7.5 * late, 63.8 * strike, strike),
         )
     };
     let euler = |angles: Vec3| {
@@ -377,17 +416,29 @@ fn model_pose(block: bool, motion: &Motion, aspect: f32) -> Transform {
             angles.z.to_radians(),
         )
     };
-    let swing_rotation = euler(swing_angles * strike);
+    let swing_rotation = euler(swing_angles);
     let rotation = swing_rotation * euler(angles);
-    let position = pivot
-        + swing_rotation * (position - pivot)
-        + Vec3::new(-0.22 * strike, 0.08 * lift, -0.08 * strike);
-    let shift = (aspect - 16. / 9.) * (70_f32.to_radians() * 0.5).tan() * -position.z;
-    let mut pose = Transform::from_translation(position)
+    let travel = if block {
+        let drop = if elapsed < 0.10 {
+            0.32 * elapsed / 0.10
+        } else if elapsed < 0.17 {
+            0.32
+        } else {
+            let u = ((elapsed - 0.17) / 0.18).clamp(0., 1.);
+            0.32 * (1. - u * u * (3. - 2. * u))
+        };
+        Vec3::new(-0.35 * strike, 0.20 * lift - drop, -0.18 * recovery)
+    } else {
+        Vec3::new(
+            0.14 * strike - 0.325 * recovery,
+            0.26 * lift + 0.03 * recovery,
+            0.17 * recovery,
+        )
+    };
+    let position = pivot + swing_rotation * (position - pivot) + travel;
+    Transform::from_translation(position * MODEL_DEPTH_SCALE)
         .with_rotation(rotation)
-        .with_scale(Vec3::splat(size));
-    pose.translation.x += shift;
-    pose
+        .with_scale(Vec3::splat(size * MODEL_DEPTH_SCALE))
 }
 
 #[derive(SystemParam)]
@@ -402,6 +453,7 @@ struct Frame<'w> {
     bindings: Res<'w, MovementBindings>,
 }
 type HeldFilter = (With<HeldBlock>, Without<HandRoot>);
+type ArmFilter = (With<Arm>, Without<HandRoot>, Without<HeldBlock>);
 
 fn update(
     frame: Frame,
@@ -410,10 +462,7 @@ fn update(
     mut overlay: Query<&mut Projection, (With<OverlayCamera>, Without<FirstPersonCamera>)>,
     mut roots: Query<(&mut Transform, &mut Visibility), With<HandRoot>>,
     mut blocks: Query<(&mut Mesh3d, &mut Visibility, &mut Transform), HeldFilter>,
-    mut arms: Query<
-        (&mut Visibility, &mut Transform),
-        (With<Arm>, Without<HandRoot>, Without<HeldBlock>),
-    >,
+    mut arms: Query<(&mut Visibility, &mut Transform), ArmFilter>,
 ) {
     let (Some(mut models), Ok(Projection::Perspective(p))) = (models, source.single()) else {
         return;
@@ -476,8 +525,8 @@ fn update(
     // scaling the model uniformly this keeps its perspective and screen bounds.
     let correction = (p.fov * 0.5).tan() / (70_f32.to_radians() * 0.5).tan();
     *transform = Transform::from_scale(Vec3::new(correction, correction, 1.));
-    let mut pose = model_pose(selected.is_some(), &models.motion, p.aspect_ratio);
-    pose.translation += offset;
+    let mut pose = model_pose(selected.is_some(), &models.motion);
+    pose.translation = rotation * pose.translation + offset * MODEL_DEPTH_SCALE;
     pose.rotation = rotation * pose.rotation;
     if selected.is_some() {
         if let Ok((_, _, mut block)) = blocks.get_mut(models.block) {

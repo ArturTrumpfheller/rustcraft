@@ -208,10 +208,14 @@ Resolve these incrementally while preserving backward-compatible migration paths
 - Use one isolated overlay view because world-depth camera children can clip
   at close walls/ceilings. Load scene color, clear depth; existing near-camera UI
   shares the overlay layer and remains in front, avoiding a third camera.
-- Prebuild one original four-box arm and five cubes, reuse exact original atlas
-  UVs and muted unlit fill. Retain all handles and share the atlas Image.
-- Normalize anchor/scale to projection and aspect; parent to the camera for
-  floating origin. Animate displayed movement, never authoritative aim/body.
+- Owner revision: use exactly one textured cuboid arm OR one held cube.
+  Prebuild all six meshes, share terrain UVs/atlas, retain two materials and one
+  original16×16 arm Image. Java1.21.1 wide-Steve demo captures calibrate the visual
+  fit; no proprietary code/assets enter the project. See VIEWMODEL for limits.
+- Emulate a stable hand lens inside the shared world/UI projection, with normal
+  aspect-dependent perspective. Scale model position and geometry together for
+  UI depth separation. Parent to the camera for floating origin; animate
+  displayed movement, never authoritative aim/body.
 - Gate action serials through existing interactions. One retriggerable bounded
   swing, no queued click accumulation; hide/reset during pauses/modal/capture.
 - Document extra render-pass/per-view costs separately from mesh payload; native

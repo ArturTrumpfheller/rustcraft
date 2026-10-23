@@ -100,10 +100,19 @@ feature/toolchain changes. Bitmap UI and terrain art retain Slice8/9 provenance.
 
 ## Slice 12 original hand and viewmodel
 
-Original forearm/cuff/palm/thumb composition, skin/slate palette, animations,
-render-layer glue, tests and documentation are authored RustCraft work,
-MIT OR Apache-2.0. Procedural Bevy cuboids are used via the normal dependency API;
-no model or proprietary animation source is imported/copied. Held blocks sample
-our already licensed original atlas, with no image changes or new game assets.
-The screenshots `docs/images/slice12-viewmodel.png` and `slice12-cave.png` show
-this original code/art and are covered by the same root licenses. Dependencies, features, shaders and distribution notices unchanged.
+The single-cuboid arm, original16×16 skin/slate pixels reproducibly authored in
+`client/src/viewmodel.rs::arm_image`, rendering/animation code, tests and docs
+are original RustCraft work, **MIT OR Apache-2.0**, including the artwork.
+Procedural Bevy cuboids use the normal dependency API. Held cubes share our
+original Slice8 terrain atlas. No proprietary model, texture, skin layout,
+source, font or animation code is imported/copied.
+
+Visual behavior is calibrated against independently captured, unmodified official
+Minecraft Java1.21.1 Demo footage, using wide Steve, plus publicly viewable Java
+screenshots during investigation. Those executables, assets and reference images
+remain outside Git and are not licensed as RustCraft artwork. Only measured
+geometric landmarks and our independent implementation are recorded here.
+`docs/images/slice12-revised-*.png` and `slice12-before-*.png` are actual RustCraft
+captures of our own art/code, under the root licenses, as are the earlier
+`slice12-viewmodel.png` and `slice12-cave.png`. No dependency/feature/shader or
+external-asset distribution changes.

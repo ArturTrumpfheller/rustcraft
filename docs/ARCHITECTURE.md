@@ -269,7 +269,10 @@ without changing aspect/frustum settings or creating UI/GPU resources.
 
 ## Slice 12 viewmodel
 
-`client::viewmodel` owns six immutable meshes, two materials and one overlay view.
+`client::viewmodel` owns six immutable meshes, two materials, one original skin
+Image and one overlay view. Only a single cuboid arm OR a held block is visible.
+A fitted hand lens is compensated in camera X/Y; uniform model depth scaling
+keeps all swing vertices behind UI without changing their projected silhouettes.
 The main world camera remains authoritative for view/rays. An identity overlay
 child copies perspective projection, loads color and clears depth; layer1 draws
 the original arm/block behind existing near-camera UI. World/target stay layer0.

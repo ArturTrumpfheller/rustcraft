@@ -25,15 +25,18 @@ This is **v0.1 / slice 12**. **World edits, inventory and selected hotbar slot s
 
 ## First-person hand
 
-The original voxel-styled right arm holds the selected hotbar block, with the
-existing atlas's correct faces. Empty slots show an empty hand. Walking/sprint,
+A single rectangular arm cuboid appears for empty slots; selected blocks appear
+on their own, with the original atlas's correct faces. Proportions and motion are
+visually calibrated against Java1.21.1's wide standard arm. Walking/sprint,
 crouch, jump/landing and click gestures animate only the viewmodel; targeting
 and physics stay unchanged. Menus/free cursor hide and reset it. One overlay
 view prevents wall occlusion and keeps the existing UI in front; six retained
 meshes share the original atlas. See [rendering/resources](docs/VIEWMODEL.md)
 and [validation](docs/VALIDATION.md).
 
-![Original first-person hand and grass block](docs/images/slice12-viewmodel.png)
+![Revised first-person grass block](docs/images/slice12-revised-block.png)
+
+![Revised single-cuboid empty arm](docs/images/slice12-revised-arm.png)
 
 ## Voxel skylight
 
