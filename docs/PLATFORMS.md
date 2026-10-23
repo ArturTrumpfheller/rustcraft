@@ -1,6 +1,6 @@
 # RustCraft platform support and development setup
 
-Status: **Slice 10 lighting acceptance**. The owner accepted Slices 1–9 on Void. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
+Status: **Slice 12 viewmodel acceptance**. The owner accepted Slices 1–11 on Void. Linux cloud compilation and headless tests are distinct from native Void/Windows play-testing. See the PR validation report for commands actually executed. The pinned Rust toolchain is 1.99.1 and Bevy is 0.20.0.
 
 ## Supported platforms and targets
 
@@ -438,3 +438,51 @@ checks cannot establish physical GPU or compositor behavior. For old saves use
 complete closed-directory **copies**; back up every regional/player/session file.
 Use a persistent separate path under your home if the test world should survive
 `/tmp` cleanup. Full tuning and deterministic comparisons: [MOVEMENT](MOVEMENT.md).
+
+## Slice 12 viewmodel test (Fish)
+
+Use normal Void glibc/X11 or Wayland drivers and an isolated absolute directory.
+No assets or renderer flags need installation; the existing atlas is embedded.
+
+```fish
+git fetch origin
+git switch feat/slice-12-first-person-viewmodel
+git pull --ff-only
+set test_dir (mktemp -d /tmp/rustcraft-slice12.XXXXXX)
+echo $test_dir
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_WORLD_SEED=42 RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
+# After normal close, keep this shell/path to verify saved inventory:
+env RUSTCRAFT_DATA_DIR="$test_dir" RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -p rustcraft
+```
+
+1. Click to capture. Inspect the original right arm and selected cube. Select1–5
+   and scroll: Grass top/side, Dirt, Stone, Wood top/bark and Leaves must change
+   immediately. Select6–9: exactly one rectangular empty arm. A selected block
+   must hide the arm. Check the revised screenshots/reference table in VIEWMODEL.
+   The model should not obscure crosshair/targets.
+2. Walk, Ctrl/double-W sprint, sneak/fastbridge, hold Space and sprint-jump.
+   Bob must follow actual travel, stop against walls/at rest, have similar walk/
+   sprint amplitude with a faster sprint rhythm, be still/lower crouched, and
+   react gently to jumping/landing. No aim/camera bob is added.
+3. Mine/place quickly, including a selected stack's last item and chunk seams.
+   One bounded350-ms action should retrigger, with a curved inward/downward
+   sweep and recovery, not a straight jab; no delayed stack of animations. Verify
+   exact inventory counts, body-overlap refusal, old diagonal stability and ledges.
+4. Stand at a wall, under a roof and in a dark cave. The hand/block must remain
+   visible without world clipping, with muted readable faces; no glow/light is
+   emitted into the world. Verify grass/log face textures from both sides.
+5. E hides the hand. Shift-click transfers, split/swap, empty/refill hotbar, held
+   cursor and selected slot should retain original behavior. Close/reopen, focus
+   loss/return, Escape/recapture and R must not replay prior click animations.
+6. Observe sprint FOV, resize wide/narrow windows and check UI/crosshair alignment.
+   Test low/high FPS if available. Custom base FOV/aspect values are covered by
+   integration tests; no settings UI or new FOV override is introduced here.
+7. F5, wait SAVED, close/restart: selected block and counts should restore.
+   After normal close, optionally repeat with `RUSTCRAFT_START_CHUNK="1000,-1000"`
+   in the same isolated directory. The model/atlas should remain stable far away.
+   Repeated selection/travel/edit cycles should not accumulate meshes/materials.
+
+Keep the path or use a separate persistent directory under your home if `/tmp`
+cleanup would matter. Never test recovery on the only real save; use a complete
+closed-directory copy. Native Void/Wayland/Windows and physical GPU endurance
+remain owner acceptance. Resource/memory limitations and actual tests: VALIDATION.

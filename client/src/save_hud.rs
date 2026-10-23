@@ -114,6 +114,7 @@ fn setup(
             SaveHud {
                 text: String::new(),
             },
+            bevy::camera::visibility::RenderLayers::layer(crate::viewmodel::OVERLAY_LAYER),
             Mesh3d(meshes.add(text_mesh("NEW WORLD", [1.; 4]))),
             MeshMaterial3d(materials.add(StandardMaterial {
                 unlit: true,

@@ -358,6 +358,7 @@ fn setup(
     for (i, h) in handles.iter().enumerate() {
         let e = commands
             .spawn((
+                bevy::camera::visibility::RenderLayers::layer(crate::viewmodel::OVERLAY_LAYER),
                 Mesh3d(h.clone()),
                 MeshMaterial3d(if i % 2 == 0 {
                     flat.clone()

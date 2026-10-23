@@ -201,3 +201,22 @@ Resolve these incrementally while preserving backward-compatible migration paths
   positive directional alignment, overhead clearance and an unblocked step. Retain
   earned sprint momentum with bounded vector air control. No stacking, sneak,
   stationary, low-ceiling or pending-barrier boosts; core stays Bevy-independent.
+
+## Slice 12 viewmodel decisions
+
+- Start from accepted Slice11 `cfcf645`. No core/gameplay/save/generator changes.
+- Use one isolated overlay view because world-depth camera children can clip
+  at close walls/ceilings. Load scene color, clear depth; existing near-camera UI
+  shares the overlay layer and remains in front, avoiding a third camera.
+- Owner revision: use exactly one textured cuboid arm OR one held cube.
+  Prebuild all six meshes, share terrain UVs/atlas, retain two materials and one
+  original16×16 arm Image. Java1.21.1 wide-Steve demo captures calibrate the visual
+  fit; no proprietary code/assets enter the project. See VIEWMODEL for limits.
+- Emulate a stable hand lens inside the shared world/UI projection, with normal
+  aspect-dependent perspective. Scale model position and geometry together for
+  UI depth separation. Parent to the camera for floating origin; animate
+  displayed movement, never authoritative aim/body.
+- Gate action serials through existing interactions. One retriggerable bounded
+  swing, no queued click accumulation; hide/reset during pauses/modal/capture.
+- Document extra render-pass/per-view costs separately from mesh payload; native
+  driver/VRAM/endurance acceptance cannot be inferred from software X11 alone.

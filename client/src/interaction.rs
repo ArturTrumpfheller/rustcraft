@@ -14,10 +14,14 @@ use voxel_core::{
     raycast::{DEFAULT_REACH, Ray, RayHit, raycast},
 };
 
+#[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub(crate) struct InteractionUpdate;
+
 pub struct BlockInteractionPlugin;
 impl Plugin for BlockInteractionPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Editor>()
+            .init_resource::<crate::viewmodel::HandAction>()
             .init_resource::<crate::inventory_ui::GameInventory>()
             .add_systems(Startup, setup_visuals.after(CameraSetup))
             .add_systems(
@@ -25,6 +29,7 @@ impl Plugin for BlockInteractionPlugin {
                 (edit_and_target, update_visuals)
                     .chain()
                     .after(ViewSync)
+                    .in_set(InteractionUpdate)
                     .in_set(RunFixedMainLoopSystems::AfterFixedMainLoop),
             );
     }
@@ -57,6 +62,7 @@ struct EditContext<'w, 's> {
     player: Res<'w, PlayerState>,
     settings: Res<'w, PlayerSettings>,
     control: Res<'w, ControllerInput>,
+    hand: ResMut<'w, crate::viewmodel::HandAction>,
     bindings: Res<'w, crate::controls::MovementBindings>,
     view: Res<'w, ViewPose>,
     editor: ResMut<'w, Editor>,
@@ -132,6 +138,7 @@ fn edit_and_target(
         || ctx.control.reset_pending
         || keyboard.just_pressed(ctx.bindings.respawn);
     if let Some(action) = action.filter(|_| !blocked) {
+        ctx.hand.trigger(matches!(action, EditAction::Place(_)));
         let config = ctx.settings.0;
         let body = ctx.player.body;
         // Also protect the displayed/interpolated body during fast falls. The
@@ -237,8 +244,13 @@ fn setup_visuals(
         .id();
     commands.entity(camera).add_child(overlay);
     commands.entity(overlay).with_children(|parent| {
-        parent.spawn((Mesh3d(crosshair.clone()), MeshMaterial3d(white.clone())));
         parent.spawn((
+            Mesh3d(crosshair.clone()),
+            MeshMaterial3d(white.clone()),
+            bevy::camera::visibility::RenderLayers::layer(crate::viewmodel::OVERLAY_LAYER),
+        ));
+        parent.spawn((
+            bevy::camera::visibility::RenderLayers::layer(crate::viewmodel::OVERLAY_LAYER),
             Mesh3d(crosshair),
             MeshMaterial3d(white.clone()),
             Transform::from_rotation(Quat::from_rotation_z(std::f32::consts::FRAC_PI_2)),

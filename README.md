@@ -14,13 +14,29 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Mouse look, responsive yaw-relative WASD walking, Ctrl sprint, Shift crouch with safe ledges, grounded jumping and safe respawn.
 - Fixed 60-Hz engine-independent AABB physics, wall sliding and interpolated camera movement.
 - Precise five-block targeting, visible target outline and inventory-backed click-to-break/place.
+- Original first-person right hand, textured selected block and subtle movement/action animation.
 - Persistent nine-slot hotbar and 27-slot inventory, stacks up to 64, original pixel UI and atlas icons.
 - Engine-independent raycasts and validated edits; authoritative blocks change immediately and connected dirty meshes update together off-thread.
 - Versioned legacy snapshots / new-world identity and edit overlays, F5 saving, 30-second dirty-only autosave and final save on normal window close.
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 11**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 12**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+
+## First-person hand
+
+A single rectangular arm cuboid appears for empty slots; selected blocks appear
+on their own, with the original atlas's correct faces. Proportions and motion are
+visually calibrated against Java1.21.1's wide standard arm. Walking/sprint,
+crouch, jump/landing and click gestures animate only the viewmodel; targeting
+and physics stay unchanged. Menus/free cursor hide and reset it. One overlay
+view prevents wall occlusion and keeps the existing UI in front; six retained
+meshes share the original atlas. See [rendering/resources](docs/VIEWMODEL.md)
+and [validation](docs/VALIDATION.md).
+
+![Revised first-person grass block](docs/images/slice12-revised-block.png)
+
+![Revised single-cuboid empty arm](docs/images/slice12-revised-arm.png)
 
 ## Voxel skylight
 
