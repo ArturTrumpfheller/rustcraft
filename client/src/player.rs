@@ -7,7 +7,7 @@ use crate::scene::VoxelWorld;
 
 // Clear ground at (0, 10), above the low terrace and facing the island's centre.
 pub(crate) const SPAWN: [f64; 3] = [0.5, 4.0, 10.5];
-const RECOVERY_Y: f64 = -32.0;
+pub(crate) const RECOVERY_Y: f64 = -32.0;
 
 pub struct PlayerPlugin;
 #[derive(Resource)]
@@ -124,7 +124,7 @@ fn simulate_player(
         }
     }
     let mut command = input.command;
-    command.jump = std::mem::take(&mut input.jump_pending);
+    command.jump |= std::mem::take(&mut input.jump_pending);
     player.body.tick(&world.0, command, &config.0);
 }
 

@@ -1,6 +1,6 @@
 //! Frame-rate input/view adapter. Player physics never reads a camera transform.
 
-use crate::controls::MovementBindings;
+use crate::controls::{MovementBindings, MovementGestures};
 use crate::player::{ControllerInput, PlayerSettings, PlayerState};
 use crate::scene::{ChunkRenders, RenderOrigin};
 use bevy::{
@@ -17,6 +17,7 @@ pub struct FirstPersonPlugin;
 impl Plugin for FirstPersonPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MovementBindings>()
+            .init_resource::<MovementGestures>()
             .init_resource::<ViewAngles>()
             .init_resource::<RenderOrigin>()
             .init_resource::<ViewPose>()
@@ -30,7 +31,7 @@ impl Plugin for FirstPersonPlugin {
             )
             .add_systems(
                 RunFixedMainLoop,
-                (rebase_scene, sync_camera)
+                (rebase_scene, sync_camera, sync_sprint_fov)
                     .chain()
                     .in_set(RunFixedMainLoopSystems::AfterFixedMainLoop)
                     .in_set(ViewSync),
@@ -73,6 +74,7 @@ impl Default for ViewAngles {
 fn spawn_camera(mut commands: Commands, player: Res<PlayerState>, settings: Res<PlayerSettings>) {
     commands.spawn((
         FirstPersonCamera,
+        SprintFov::default(),
         Camera3d::default(),
         Tonemapping::Reinhard,
         Transform::from_translation(Vec3::from_array(
@@ -124,10 +126,13 @@ fn manage_cursor(
 struct KeyboardCommands<'w> {
     keys: Res<'w, ButtonInput<KeyCode>>,
     bindings: Res<'w, MovementBindings>,
+    gestures: ResMut<'w, MovementGestures>,
+    time: Res<'w, Time<Real>>,
+    player: Res<'w, PlayerState>,
 }
 
 fn read_input(
-    commands: KeyboardCommands,
+    mut commands: KeyboardCommands,
     motion: Res<AccumulatedMouseMotion>,
     windows: Query<(&Window, &CursorOptions), With<PrimaryWindow>>,
     mut view: ResMut<ViewAngles>,
@@ -146,6 +151,9 @@ fn read_input(
         input.active = false;
     }
     if !input.active {
+        commands
+            .gestures
+            .update(keyboard, bindings, commands.time.elapsed(), false);
         *input = ControllerInput::default();
         return;
     }
@@ -159,9 +167,20 @@ fn read_input(
         *view = ViewAngles::default();
         input.reset_pending = true;
     }
+    let enabled = !input.captured_this_frame
+        && !input.reset_pending
+        && !commands.player.awaiting_spawn
+        && commands.player.body.position[1] >= crate::player::RECOVERY_Y;
+    commands
+        .gestures
+        .update(keyboard, bindings, commands.time.elapsed(), enabled);
     input.command = bindings.command(keyboard, f64::from(view.yaw));
-    if !input.captured_this_frame {
+    input.command.sprint |= commands.gestures.double_tap_sprint;
+    input.command.jump = enabled && commands.gestures.jump_ready && keyboard.pressed(bindings.jump);
+    if enabled && commands.gestures.jump_ready {
         input.jump_pending |= keyboard.just_pressed(bindings.jump);
+    } else {
+        input.jump_pending = false;
     }
 }
 
@@ -206,6 +225,55 @@ fn sync_camera(
             (position[2] - space.origin.0[2]) as f32,
         );
         transform.rotation = rotation;
+    }
+}
+
+// Relative to the perspective projection's base, including future settings edits.
+const SPRINT_FOV_GAIN: f32 = 0.09;
+const SPRINT_FOV_RESPONSE: f32 = 10.0;
+#[derive(Component, Default)]
+struct SprintFov {
+    base: Option<f32>,
+    amount: f32,
+    applied: Option<f32>,
+}
+
+fn sync_sprint_fov(
+    time: Res<Time<Real>>,
+    input: Res<ControllerInput>,
+    player: Res<PlayerState>,
+    settings: Res<PlayerSettings>,
+    mut cameras: Query<(&mut Projection, &mut SprintFov), With<FirstPersonCamera>>,
+) {
+    let sprinting = input.active
+        && !input.reset_pending
+        && !player.awaiting_spawn
+        && input.command.sprint
+        && !input.command.sneak
+        && !player.body.crouched
+        && player.body.velocity[0].hypot(player.body.velocity[2]) > settings.0.walk_speed + 0.2
+        && input.command.direction[0].hypot(input.command.direction[1]) > 0.0;
+    let target = if sprinting { 1.0 } else { 0.0 };
+    // Smooth return even in menus; limit the first step after a long OS stall.
+    let blend = 1.0 - (-SPRINT_FOV_RESPONSE * time.delta_secs().min(0.05)).exp();
+    for (mut projection, mut fov) in &mut cameras {
+        let Projection::Perspective(p) = &*projection else {
+            continue;
+        };
+        if fov.applied != Some(p.fov) {
+            fov.base = Some(p.fov);
+        }
+        fov.amount += (target - fov.amount) * blend;
+        if (target - fov.amount).abs() < 1e-5 {
+            fov.amount = target;
+        }
+        let next = fov.base.unwrap_or(p.fov) * (1.0 + SPRINT_FOV_GAIN * fov.amount);
+        fov.applied = Some(next);
+        if next != p.fov
+            && let Projection::Perspective(p) = &mut *projection
+        {
+            p.fov = next;
+        }
     }
 }
 

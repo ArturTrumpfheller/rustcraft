@@ -770,3 +770,186 @@ fn pending_headroom_prevents_uncrouching_until_the_upper_chunk_is_loaded() {
     p.tick(&world, MovementInput::default(), &cfg);
     assert!(!p.crouched && p.cache_ready(&world, &cfg));
 }
+
+#[test]
+fn held_jumps_launch_only_after_landing_and_stop_after_release() {
+    let world = world_with(floor());
+    let cfg = PhysicsConfig::default();
+    let mut p = Player::new([0.5, 1., 0.5]);
+    let mut launches = 0;
+    for _ in 0..600 {
+        let was_supported = p.grounded || p.position[1] == 1.;
+        let old_vy = p.velocity[1];
+        p.tick(
+            &world,
+            MovementInput {
+                jump: true,
+                ..Default::default()
+            },
+            &cfg,
+        );
+        if p.velocity[1] > 0.0 && p.velocity[1] > old_vy {
+            launches += 1;
+            assert!(was_supported && old_vy <= 0.);
+        }
+        assert_clear(&p, &world);
+    }
+    assert_eq!(launches, 15);
+    run(&mut p, &world, MovementInput::default(), 120);
+    assert!(p.grounded);
+    near(p.position[1], 1.);
+    let mut blocked = Player::new([0.5, 1., 0.5]);
+    let roof = world_with(floor().chain([[0, 3, 0]]));
+    let tall = PhysicsConfig { height: 2., ..cfg };
+    for _ in 0..120 {
+        blocked.tick(
+            &roof,
+            MovementInput {
+                jump: true,
+                sprint: true,
+                ..Default::default()
+            },
+            &tall,
+        );
+        near(blocked.position[1], 1.);
+        near(blocked.velocity[1], 0.);
+        near(blocked.velocity[0].hypot(blocked.velocity[2]), 0.);
+        assert!(blocked.grounded);
+    }
+    let mut unsupported = Player::new([0.5, 1., 0.5]);
+    unsupported.grounded = true;
+    unsupported.tick(
+        &World::default(),
+        MovementInput {
+            jump: true,
+            ..Default::default()
+        },
+        &cfg,
+    );
+    assert!(unsupported.velocity[1] < 0.);
+}
+
+#[test]
+fn sprint_jump_bonus_is_capped_normalized_and_has_no_standing_sneak_wall_or_roof_boost() {
+    let cfg = PhysicsConfig::default();
+    let ground = || (-4..=128).flat_map(|x| (-4..=128).map(move |z| [x, 0, z]));
+    let world = world_with(ground());
+    for direction in [[1., 0.], [1., 1.]] {
+        let mut p = Player::new([0.5, 1., 0.5]);
+        let command = MovementInput {
+            direction,
+            sprint: true,
+            jump: true,
+            ..Default::default()
+        };
+        let mut maximum: f64 = 0.;
+        for _ in 0..600 {
+            p.tick(&world, command, &cfg);
+            let speed = p.velocity[0].hypot(p.velocity[2]);
+            maximum = maximum.max(speed);
+            assert!(speed <= 9.2 + 1e-8);
+            assert_clear(&p, &world);
+        }
+        near(maximum, 9.2);
+    }
+    let mut standing = Player::new([0.5, 1., 0.5]);
+    standing.tick(
+        &world,
+        MovementInput {
+            sprint: true,
+            jump: true,
+            ..Default::default()
+        },
+        &cfg,
+    );
+    near(standing.velocity[0].hypot(standing.velocity[2]), 0.);
+    for sneak in [false, true] {
+        let mut p = Player::new([0.5, 1., 0.5]);
+        p.velocity[0] = 8.;
+        let roof = world_with(ground().chain([[0, 3, 0]]));
+        p.tick(
+            &roof,
+            MovementInput {
+                direction: [1., 0.],
+                sprint: true,
+                jump: true,
+                sneak,
+            },
+            &cfg,
+        );
+        assert!(p.velocity[0] <= if sneak { 1.8 + 1e-8 } else { 8. });
+    }
+    for pending in [false, true] {
+        let mut world = if pending {
+            crate::streaming::new_world(42)
+        } else {
+            world_with(ground())
+        };
+        if pending {
+            for y in -1..=1 {
+                world.insert_chunk(ChunkPos([0, y, 0]), Chunk::default());
+            }
+            for x in 0..16 {
+                for z in 0..16 {
+                    world.set_block(BlockPos([x, 0, z]), Block::Stone).unwrap();
+                }
+            }
+        } else {
+            for y in 1..=4 {
+                world.set_block(BlockPos([16, y, 0]), Block::Stone).unwrap();
+            }
+        }
+        let mut p = Player::new([15.7, 1., 0.5]);
+        p.velocity[0] = 8.;
+        p.tick(
+            &world,
+            MovementInput {
+                direction: [1., 0.],
+                sprint: true,
+                jump: true,
+                ..Default::default()
+            },
+            &cfg,
+        );
+        near(p.position[0], 15.7);
+        near(p.velocity[0], 0.);
+    }
+}
+
+#[test]
+fn flat_course_sprint_jumping_has_a_modest_measured_advantage() {
+    let world = world_with((-4..=128).flat_map(|x| (-2..=2).map(move |z| [x, 0, z])));
+    let cfg = PhysicsConfig::default();
+    let mut times = Vec::new();
+    for (label, sprint, jump) in [
+        ("walk", false, false),
+        ("Ctrl or double-W sprint", true, false),
+        ("sprint + held jump", true, true),
+    ] {
+        let mut p = Player::new([0.5, 1., 0.5]);
+        let command = MovementInput {
+            direction: [1., 0.],
+            sprint,
+            jump,
+            ..Default::default()
+        };
+        let mut ticks = 0;
+        let mut at_twenty = 0;
+        while p.position[0] < 100.5 && ticks < 1500 {
+            p.tick(&world, command, &cfg);
+            ticks += 1;
+            if at_twenty == 0 && p.position[0] >= 20.5 {
+                at_twenty = ticks;
+            }
+        }
+        assert!(ticks < 1500);
+        println!(
+            "{label}: 20 blocks {:.3}s, 100 blocks {:.3}s, average {:.3} blocks/s",
+            f64::from(at_twenty) * PHYSICS_DT,
+            f64::from(ticks) * PHYSICS_DT,
+            100. / (f64::from(ticks) * PHYSICS_DT)
+        );
+        times.push(ticks);
+    }
+    assert!(times[2] < times[1] && f64::from(times[1]) / f64::from(times[2]) < 1.16);
+}

@@ -150,6 +150,9 @@ fn jump_edge_survives_a_frame_without_physics_and_is_consumed_once() {
     key(&mut app, KeyCode::Space);
     frame(&mut app, Duration::ZERO);
     assert!(app.world().resource::<ControllerInput>().jump_pending);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .release(KeyCode::Space);
     let step = app.world().resource::<Time<Fixed>>().timestep();
     frame(&mut app, step * 3);
     assert!((body(&app).velocity[1] - 7.3).abs() < 1e-8);
@@ -157,7 +160,7 @@ fn jump_edge_survives_a_frame_without_physics_and_is_consumed_once() {
     for _ in 0..120 {
         tick(&mut app);
     }
-    // Space stayed pressed the entire time: landing must not trigger auto-jump.
+    // A released tap is consumed once; it must not repeat on landing.
     assert!(body(&app).grounded);
     assert_eq!(body(&app).velocity[1], 0.0);
 }
@@ -580,4 +583,247 @@ fn sprint_and_sneak_command_replay_matches_at_30_60_144_fps() {
     assert_eq!(results[0], results[1]);
     assert_eq!(results[1], results[2]);
     assert!(results[0].crouched);
+}
+
+fn flat_app() -> App {
+    let mut world = voxel_core::World::default();
+    for x in -24..=24 {
+        for z in -24..=24 {
+            world
+                .set_block(voxel_core::BlockPos([x, 0, z]), voxel_core::Block::Stone)
+                .unwrap();
+        }
+    }
+    let mut app = test_app_with_world(world);
+    settle(&mut app);
+    app
+}
+
+fn release(app: &mut App, key: KeyCode) {
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .release(key);
+}
+
+fn render_frames(app: &mut App, fps: u32, frames: u32) {
+    for n in 1..=frames {
+        frame(
+            app,
+            Duration::from_secs_f64(f64::from(n) / f64::from(fps))
+                - Duration::from_secs_f64(f64::from(n - 1) / f64::from(fps)),
+        );
+    }
+}
+
+fn fov(app: &mut App) -> f32 {
+    match app
+        .world_mut()
+        .query_filtered::<&Projection, With<FirstPersonCamera>>()
+        .single(app.world())
+        .unwrap()
+    {
+        Projection::Perspective(p) => p.fov,
+        _ => panic!("perspective required"),
+    }
+}
+
+#[test]
+fn held_space_repeats_on_landings_but_never_in_midair_and_releases_cleanly() {
+    let mut app = flat_app();
+    key(&mut app, KeyCode::Space);
+    let mut launches = 0;
+    for _ in 0..180 {
+        let old = body(&app);
+        tick(&mut app);
+        let p = body(&app);
+        if p.velocity[1] > 0. && p.velocity[1] > old.velocity[1] {
+            assert!(old.grounded);
+            launches += 1;
+        }
+    }
+    assert_eq!(launches, 5);
+    release(&mut app, KeyCode::Space);
+    for _ in 0..120 {
+        tick(&mut app);
+    }
+    assert!(body(&app).grounded);
+    assert_eq!(body(&app).velocity[1], 0.);
+}
+
+#[test]
+fn double_w_reaches_sprint_and_hold_jump_replays_identically_at_mixed_render_rates() {
+    let mut results = Vec::new();
+    for fps in [30, 60, 144] {
+        let mut app = flat_app();
+        key(&mut app, KeyCode::KeyW);
+        frame(&mut app, Duration::ZERO);
+        release(&mut app, KeyCode::KeyW);
+        frame(&mut app, Duration::ZERO);
+        key(&mut app, KeyCode::KeyW);
+        key(&mut app, KeyCode::Space);
+        frame(&mut app, Duration::ZERO);
+        assert!(app.world().resource::<ControllerInput>().command.sprint);
+        render_frames(&mut app, fps, fps * 3);
+        assert!(body(&app).velocity[0].hypot(body(&app).velocity[2]) <= 9.2 + 1e-8);
+        results.push(body(&app));
+        release(&mut app, KeyCode::KeyW);
+        frame(&mut app, Duration::ZERO);
+        assert!(!app.world().resource::<ControllerInput>().command.sprint);
+    }
+    assert_eq!(results[0], results[1]);
+    assert_eq!(results[1], results[2]);
+    assert!(results[0].position[2] < -14.);
+}
+
+#[test]
+fn pause_capture_respawn_and_rebinding_disarm_taps_and_require_jump_release() {
+    for mode in [
+        "focus",
+        "cursor",
+        "inventory",
+        "save",
+        "respawn",
+        "void",
+        "binding",
+    ] {
+        let mut app = flat_app();
+        key(&mut app, KeyCode::KeyW);
+        frame(&mut app, Duration::ZERO);
+        release(&mut app, KeyCode::KeyW);
+        frame(&mut app, Duration::from_millis(20));
+        key(&mut app, KeyCode::Space);
+        match mode {
+            "focus" => {
+                let w = window(&mut app);
+                app.world_mut().get_mut::<Window>(w).unwrap().focused = false;
+            }
+            "cursor" => key(&mut app, KeyCode::Escape),
+            "inventory" => {
+                let mut inv = crate::inventory_ui::GameInventory::default();
+                inv.open = true;
+                app.insert_resource(inv);
+            }
+            "save" => {
+                app.insert_resource(crate::persistence::SaveFeedback {
+                    label: "Saving".into(),
+                    closing: true,
+                });
+            }
+            "respawn" => key(&mut app, KeyCode::KeyR),
+            "void" => app.world_mut().resource_mut::<PlayerState>().body.position[1] = -33.,
+            "binding" => {
+                app.world_mut().resource_mut::<MovementBindings>().sprint = KeyCode::ShiftRight
+            }
+            _ => unreachable!(),
+        }
+        tick(&mut app);
+        match mode {
+            "focus" => {
+                let w = window(&mut app);
+                app.world_mut().get_mut::<Window>(w).unwrap().focused = true;
+                capture(&mut app);
+            }
+            "cursor" => {
+                release(&mut app, KeyCode::Escape);
+                capture(&mut app);
+            }
+            "inventory" => {
+                {
+                    let mut i = app
+                        .world_mut()
+                        .resource_mut::<crate::inventory_ui::GameInventory>();
+                    i.open = false;
+                    i.transition = true;
+                    i.resume_capture = true;
+                }
+                frame(&mut app, Duration::ZERO);
+                app.world_mut()
+                    .resource_mut::<crate::inventory_ui::GameInventory>()
+                    .transition = false;
+            }
+            "save" => {
+                app.world_mut()
+                    .resource_mut::<crate::persistence::SaveFeedback>()
+                    .closing = false
+            }
+            _ => {}
+        }
+        key(&mut app, KeyCode::KeyW);
+        frame(&mut app, Duration::ZERO);
+        let input = app.world().resource::<ControllerInput>();
+        assert!(
+            !input.command.sprint && !input.command.jump && !input.jump_pending,
+            "{mode}"
+        );
+        release(&mut app, KeyCode::Space);
+        frame(&mut app, Duration::ZERO);
+        key(&mut app, KeyCode::Space);
+        frame(&mut app, Duration::ZERO);
+        assert!(
+            app.world().resource::<ControllerInput>().jump_pending,
+            "{mode}"
+        );
+    }
+}
+
+#[test]
+fn sprint_fov_eases_in_and_out_respects_base_edits_and_does_not_trigger_while_stationary() {
+    let mut app = flat_app();
+    let base = fov(&mut app);
+    key(&mut app, KeyCode::ControlLeft);
+    for _ in 0..10 {
+        tick(&mut app);
+    }
+    assert_eq!(fov(&mut app), base);
+    key(&mut app, KeyCode::KeyW);
+    app.world_mut().resource_mut::<PlayerState>().body.velocity[2] = -8.;
+    tick(&mut app);
+    let first = fov(&mut app);
+    assert!(first > base && first < base * 1.09);
+    for _ in 0..30 {
+        tick(&mut app);
+    }
+    assert!(fov(&mut app) > base * 1.08);
+    key(&mut app, KeyCode::Escape);
+    tick(&mut app);
+    let returning = fov(&mut app);
+    assert!(returning > base && returning < base * 1.09);
+    for _ in 0..120 {
+        tick(&mut app);
+    }
+    assert_eq!(fov(&mut app), base);
+    let replacement = 75_f32.to_radians();
+    {
+        let w = app.world_mut();
+        let mut q = w.query_filtered::<&mut Projection, With<FirstPersonCamera>>();
+        if let Projection::Perspective(p) = &mut *q.single_mut(w).unwrap() {
+            p.fov = replacement;
+            p.aspect_ratio = 1.73;
+        }
+    }
+    tick(&mut app);
+    assert_eq!(fov(&mut app), replacement);
+    let w = app.world_mut();
+    let mut q = w.query_filtered::<&Projection, With<FirstPersonCamera>>();
+    assert!(matches!(q.single(w).unwrap(), Projection::Perspective(p) if p.aspect_ratio == 1.73));
+}
+
+#[test]
+fn fov_time_response_matches_at_30_60_144_fps_and_sneak_eases_back() {
+    let mut values = Vec::new();
+    for fps in [30, 60, 144] {
+        let mut app = flat_app();
+        let base = fov(&mut app);
+        key(&mut app, KeyCode::ControlLeft);
+        key(&mut app, KeyCode::KeyW);
+        app.world_mut().resource_mut::<PlayerState>().body.velocity[2] = -8.;
+        render_frames(&mut app, fps, fps / 2);
+        let wide = fov(&mut app);
+        assert!((wide / base - (1. + 0.09 * (1. - (-5_f32).exp()))).abs() < 1e-5);
+        key(&mut app, KeyCode::ShiftLeft);
+        render_frames(&mut app, fps, fps / 2);
+        assert!(fov(&mut app) < wide && fov(&mut app) > base);
+        values.push(fov(&mut app));
+    }
+    assert!((values[0] - values[1]).abs() < 1e-6 && (values[1] - values[2]).abs() < 1e-6);
 }

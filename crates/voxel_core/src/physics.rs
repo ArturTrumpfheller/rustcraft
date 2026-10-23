@@ -25,6 +25,7 @@ pub struct PhysicsConfig {
     pub sneak_speed: f64,
     pub walk_speed: f64,
     pub sprint_speed: f64,
+    pub sprint_jump_boost: f64,
     pub ground_acceleration: f64,
     pub ground_braking: f64,
     pub air_acceleration: f64,
@@ -44,6 +45,7 @@ impl Default for PhysicsConfig {
             sneak_speed: 1.8,
             walk_speed: 5.0,
             sprint_speed: 8.0,
+            sprint_jump_boost: 1.2,
             ground_acceleration: 65.0,
             ground_braking: 75.0,
             air_acceleration: 12.0,
@@ -54,8 +56,8 @@ impl Default for PhysicsConfig {
     }
 }
 
-/// One tick's world-space X/Z movement command. Jump is an edge/request, not a
-/// held key: callers must not repeat it unless the player actually presses again.
+/// One tick's world-space X/Z movement command. Jump may remain requested while
+/// held: only actual support permits a launch, never a second airborne jump.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MovementInput {
     pub direction: [f64; 2],
@@ -174,6 +176,7 @@ impl Player {
             }
         }
         if input.jump && self.grounded {
+            self.boost_sprint_jump(world, input, config);
             self.velocity[1] = config.jump_speed;
             self.grounded = false;
         }
@@ -216,7 +219,16 @@ impl Player {
         let speed = if self.crouched {
             config.sneak_speed
         } else if input.sprint {
-            config.sprint_speed
+            if self.grounded {
+                config.sprint_speed
+            } else {
+                // Retain earned launch momentum through bounded vector air
+                // control; turning cannot accumulate speed above this target.
+                self.velocity[0]
+                    .hypot(self.velocity[2])
+                    .max(config.sprint_speed)
+                    .min(config.sprint_speed + config.sprint_jump_boost)
+            }
         } else {
             config.walk_speed
         };
@@ -235,6 +247,40 @@ impl Player {
             self.velocity[0] += delta[0] * factor;
             self.velocity[2] += delta[1] * factor;
         }
+    }
+
+    fn boost_sprint_jump(&mut self, world: &World, input: MovementInput, config: &PhysicsConfig) {
+        let speed = self.velocity[0].hypot(self.velocity[2]);
+        let alignment =
+            self.velocity[0] * input.direction[0] + self.velocity[2] * input.direction[1];
+        // A run-up and real vertical clearance prevent standing/ceiling or
+        // wall-pushing launches from earning horizontal speed.
+        if !input.sprint
+            || self.crouched
+            || speed < config.walk_speed
+            || !alignment.is_finite()
+            || alignment <= 0.0
+            || self.sweep_axis(world, config, 1, 0.5) < 0.5
+        {
+            return;
+        }
+        let boosted =
+            (speed + config.sprint_jump_boost).min(config.sprint_speed + config.sprint_jump_boost);
+        let velocity = [
+            self.velocity[0] * boosted / speed,
+            self.velocity[2] * boosted / speed,
+        ];
+        let mut probe = *self;
+        for (axis, v) in [(0, velocity[0]), (2, velocity[1])] {
+            let delta = v * PHYSICS_DT;
+            let allowed = probe.sweep_axis(world, config, axis, delta);
+            if (allowed - delta).abs() > CONTACT_EPSILON {
+                return;
+            }
+            probe.position[axis] += allowed;
+        }
+        self.velocity[0] = velocity[0];
+        self.velocity[2] = velocity[1];
     }
 
     fn bounds(&self, config: &PhysicsConfig) -> ([f64; 3], [f64; 3]) {
