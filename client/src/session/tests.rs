@@ -331,3 +331,28 @@ fn corrupt_load_is_recoverable_and_never_creates_replacement_files() {
     key(&mut app, KeyCode::Enter);
     assert_eq!(state(&app), ClientState::Title);
 }
+
+#[test]
+fn close_during_loading_waits_for_load_and_final_save_before_releasing_lock() {
+    let mut app = app();
+    let dir = Directory::new();
+    let path = dir.0.clone();
+    let (tx, rx) = std::sync::mpsc::channel();
+    app.world_mut()
+        .insert_resource(Loading(thread::spawn(move || {
+            rx.recv().unwrap();
+            load(path)
+        })));
+    app.world_mut().resource_mut::<ClientFlow>().state = ClientState::Loading;
+    let window = window(&mut app);
+    app.world_mut()
+        .write_message(WindowCloseRequested { window });
+    frame(&mut app);
+    assert!(app.should_exit().is_none());
+    assert_eq!(state(&app), ClientState::Loading);
+    tx.send(()).unwrap();
+    until(&mut app, |a| a.should_exit().is_some());
+    assert!(!has_world(app.world()));
+    let (store, mut world, _) = SaveStore::open(&dir.0).unwrap();
+    assert!(store.load_player(&mut world).is_ok());
+}

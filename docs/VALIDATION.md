@@ -1,5 +1,41 @@
 # RustCraft validation
 
+## Slice 13 menus and session lifecycle (2026-10-23)
+
+Based on main `cdb28f3`; no core/dependency/format/generator changes.
+Final local validation passed: `cargo fmt --all -- --check`,
+`cargo clippy --locked --workspace --all-targets -- -D warnings`,
+`cargo test --locked --workspace` (**113 client + 141 core tests**),
+`cargo build --locked --workspace`, and
+`python tools/generate_textures.py --check`.
+
+Six full-client lifecycle tests cover title without store/world/camera, async
+loading, inventory/Escape priority, paused physics/edits, resume click suppression,
+focus/capture, three same-process v4 sessions with exact asset/camera reclamation,
+edits/held-stack/selection persistence, real backup-path save failure with lock
+retention/retry, corrupt-load preservation and native close during blocked loading.
+An additional controlled in-flight save test verifies that return-to-title waits
+for an older snapshot and a newer inventory revision. Existing physics, inventory,
+rendering, legacy formats, journal/recovery and streaming regression suites pass.
+
+Actual X11/Xvfb + Mesa 25.0.7 llvmpipe Vulkan smoke tests used a fresh absolute
+temporary directory. The directory remained empty at title. Mouse Play, Escape,
+keyboard resume/return, same-process reload, a real save failure/error dialog and
+successful retry were exercised. Inspected 1280×720 title/pause screenshots are
+committed in `docs/images/slice13-*.png`; also checked 4:3, wide and 1080p resizing.
+The first graphical pass exposed redundant recursive-child despawn warnings;
+cleanup now removes ownership roots only, with the final lifecycle suite passing.
+This is functional software rendering, not a performance benchmark.
+
+The existing Ubuntu/Windows CI matrix runs locked Clippy/tests/build plus format
+and asset validation; consult the PR checks for live status. Native Void
+X11/Wayland, Windows 11, physical GPU, DPI and compositor input acceptance remain
+manual. World selection/settings are deferred. Legacy finite initial scene setup
+retains the existing bounded synchronous light/mesh preparation; normal generated
+world loading and all final-save/worker waiting run asynchronously. Full protocol,
+limits and launch/acceptance steps: [MENUS](MENUS.md).
+
+
 ## PR #29 visual revision — single cuboid and Java reference calibration
 
 Continues existing branch from31e3c8e; checkpoint f0669a8 preserved. No new slice/PR.

@@ -2,6 +2,10 @@
 
 This document tracks intended milestones, not promised delivery dates. Implement and test one vertical slice at a time.
 
+Slice 13 adds title/pause menus, explicit client states, asynchronous loading and
+save-before-return with repeatable session teardown; see [MENUS](MENUS.md). World
+management and settings remain separate future slices.
+
 ## v0.1 — Classic-style prototype
 
 Slice 12 adds an original first-person arm, atlas-textured selected block and

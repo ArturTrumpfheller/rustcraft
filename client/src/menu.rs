@@ -77,6 +77,7 @@ fn setup(
         }),
         RenderLayers::layer(LAYER),
         Tonemapping::None,
+        bevy::render::view::DebandDither::Disabled,
     ));
     commands.spawn((
         MenuSurface,

@@ -220,3 +220,18 @@ Resolve these incrementally while preserving backward-compatible migration paths
   swing, no queued click accumulation; hide/reset during pauses/modal/capture.
 - Document extra render-pass/per-view costs separately from mesh payload; native
   driver/VRAM/endurance acceptance cannot be inferred from software X11 alone.
+
+## Slice 13 menu/session decisions
+
+- Explicit resource/enum lifecycle with ordered pre-physics transitions; no new
+  engine features/dependencies. Reusable setup schedule, session entity ownership
+  and explicit setup/chunk asset reclamation. Keep gameplay modules intact.
+- Title never opens SaveStore. One load worker owns validation/recovery/spawn;
+  one existing save worker retains paired journal semantics and revision tracking.
+- Final save plus async terrain drain precede teardown/lock release. Failures keep
+  RAM/session/lock and offer retry or retained gameplay, never discard changes.
+- Original scalable bitmap/geometry menu uses one retained mesh/material and an
+  isolated orthographic camera. Static opaque background, release-to-activate
+  buttons, shared mouse/keyboard actions. No third-party font or artwork.
+- Selected-world loading and menu actions are future extension points; no world
+  chooser/settings implementation. See MENUS for platform acceptance and limits.

@@ -202,7 +202,7 @@ fn install(world: &mut World, loaded: Loaded) {
 }
 fn cleanup(world: &mut World) {
     let entities: Vec<_> = world
-        .query_filtered::<Entity, With<SessionEntity>>()
+        .query_filtered::<Entity, (With<SessionEntity>, Without<ChildOf>)>()
         .iter(world)
         .collect();
     for entity in entities {
