@@ -214,7 +214,13 @@ fn modal_open_pauses_camera_motion_mining_jump_reset_and_escape_closes_first() {
     let body = app.world().resource::<PlayerState>().body;
     let direction = app.world().resource::<crate::camera::ViewPose>().direction;
     let world = app.world().resource::<VoxelWorld>().0.clone();
-    for k in [KeyCode::KeyW, KeyCode::Space, KeyCode::KeyR] {
+    for k in [
+        KeyCode::KeyW,
+        KeyCode::Space,
+        KeyCode::KeyR,
+        KeyCode::ControlLeft,
+        KeyCode::ShiftLeft,
+    ] {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
             .press(k);

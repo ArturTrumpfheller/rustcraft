@@ -377,6 +377,7 @@ fn diagonal_contact_does_not_trigger_clearance_recovery_or_camera_backtracking()
     *app.world_mut().resource_mut::<PlayerState>() = PlayerState {
         body: Player::new(p),
         previous_position: p,
+        previous_crouched: false,
         awaiting_spawn: false,
     };
     capture(&mut app);
@@ -434,6 +435,7 @@ fn floating_origin_keeps_far_camera_and_chunk_transforms_precise_without_changin
         *app.world_mut().resource_mut::<PlayerState>() = PlayerState {
             body: Player::new(position),
             previous_position: position,
+            previous_crouched: false,
             awaiting_spawn: false,
         };
         app.update();
@@ -475,4 +477,106 @@ fn far_start_configuration_is_bounded_and_does_not_accept_invalid_coordinates() 
     for s in ["", "0", "1,2,3", "2048,0", "-2049,0", "NaN,1"] {
         assert!(start_column(Some(s.into()), 2048).is_err());
     }
+}
+
+#[test]
+fn default_ctrl_sprint_shift_sneak_conflict_and_rebinding_reach_simulation() {
+    let mut app = test_app();
+    settle(&mut app);
+    key(&mut app, KeyCode::KeyD);
+    key(&mut app, KeyCode::ControlLeft);
+    for _ in 0..12 {
+        tick(&mut app);
+    }
+    assert!((body(&app).velocity[0] - 8.).abs() < 1e-8);
+    key(&mut app, KeyCode::ShiftLeft);
+    for _ in 0..3 {
+        tick(&mut app);
+    }
+    assert!(body(&app).crouched);
+    assert!((body(&app).velocity[0] - 1.8).abs() < 1e-8);
+    app.world_mut().resource_mut::<MovementBindings>().sneak = KeyCode::KeyC;
+    tick(&mut app);
+    assert!(
+        !body(&app).crouched,
+        "Shift no longer maps to sneak after rebinding"
+    );
+    key(&mut app, KeyCode::KeyC);
+    tick(&mut app);
+    assert!(body(&app).crouched);
+}
+
+#[test]
+fn capture_frame_does_not_consume_hover_jump_or_respawn_edges() {
+    let mut app = test_app();
+    let before = body(&app);
+    key(&mut app, KeyCode::Space);
+    key(&mut app, KeyCode::KeyR);
+    capture(&mut app);
+    let input = app.world().resource::<ControllerInput>();
+    assert!(!input.jump_pending && !input.reset_pending);
+    assert_eq!(body(&app), before);
+    tick(&mut app);
+    assert!(!app.world().resource::<ControllerInput>().jump_pending);
+}
+
+#[test]
+fn crouch_eye_interpolates_with_feet_and_pause_freezes_posture() {
+    let mut app = test_app();
+    settle(&mut app);
+    let standing = body(&app).eye_position(&PhysicsConfig::default())[1];
+    key(&mut app, KeyCode::ShiftLeft);
+    let step = app.world().resource::<Time<Fixed>>().timestep();
+    frame(&mut app, step + step / 2);
+    assert!(body(&app).crouched);
+    let pose = app.world().resource::<ViewPose>();
+    assert!((pose.eye[1] - (standing - 0.15)).abs() < 1e-5);
+    assert!(!pose.crouched, "transition protects taller displayed body");
+    tick(&mut app);
+    assert!(app.world().resource::<ViewPose>().crouched);
+    let eye = body(&app).eye_position(&PhysicsConfig::default());
+    assert!((camera(&mut app).translation.y - eye[1] as f32).abs() < 1e-5);
+    key(&mut app, KeyCode::Escape);
+    tick(&mut app);
+    let paused = body(&app);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    for _ in 0..5 {
+        tick(&mut app);
+    }
+    assert_eq!(body(&app), paused);
+    capture(&mut app);
+    tick(&mut app);
+    assert!(!body(&app).crouched);
+}
+
+#[test]
+fn sprint_and_sneak_command_replay_matches_at_30_60_144_fps() {
+    let mut results = Vec::new();
+    for fps in [30, 60, 144] {
+        let mut app = test_app();
+        settle(&mut app);
+        key(&mut app, KeyCode::KeyD);
+        key(&mut app, KeyCode::ControlLeft);
+        for n in 1..=fps {
+            frame(
+                &mut app,
+                Duration::from_secs_f64(f64::from(n) / f64::from(fps))
+                    - Duration::from_secs_f64(f64::from(n - 1) / f64::from(fps)),
+            );
+        }
+        key(&mut app, KeyCode::ShiftLeft);
+        for n in 1..=fps {
+            frame(
+                &mut app,
+                Duration::from_secs_f64(f64::from(n) / f64::from(fps))
+                    - Duration::from_secs_f64(f64::from(n - 1) / f64::from(fps)),
+            );
+        }
+        results.push(body(&app));
+    }
+    assert_eq!(results[0], results[1]);
+    assert_eq!(results[1], results[2]);
+    assert!(results[0].crouched);
 }

@@ -134,7 +134,7 @@ fn movement_accelerates_brakes_and_normalizes_diagonals_and_sprint() {
             MovementInput {
                 direction: [1.0, 0.0],
                 sprint,
-                jump: false,
+                ..Default::default()
             },
             60,
         );
@@ -144,11 +144,11 @@ fn movement_accelerates_brakes_and_normalizes_diagonals_and_sprint() {
             MovementInput {
                 direction: [1.0, 1.0],
                 sprint,
-                jump: false,
+                ..Default::default()
             },
             60,
         );
-        near(straight.velocity[0], if sprint { 5.6 } else { 4.3 });
+        near(straight.velocity[0], if sprint { 8.0 } else { 5.0 });
         near(
             diagonal.velocity[0].hypot(diagonal.velocity[2]),
             straight.velocity[0],
@@ -455,4 +455,268 @@ fn clearance_tolerance_permits_roundoff_but_rejects_real_penetration() {
     let config = PhysicsConfig::default();
     assert!(Player::new([2.3, 1., 0.5]).fits_in_world(&world, &config));
     assert!(!Player::new([2.3 - 1e-5, 1., 0.5]).fits_in_world(&world, &config));
+}
+
+#[test]
+fn tuned_speeds_acceleration_braking_and_turning_are_bounded() {
+    let world = world_with(floor());
+    let cfg = PhysicsConfig::default();
+    for (sprint, sneak, speed) in [(false, false, 5.), (true, false, 8.), (true, true, 1.8)] {
+        let mut p = Player::new([0.5, 1., 0.5]);
+        let command = MovementInput {
+            direction: [1., 0.],
+            sprint,
+            sneak,
+            jump: false,
+        };
+        p.tick(&world, command, &cfg);
+        near(p.velocity[0], cfg.ground_acceleration * PHYSICS_DT);
+        for _ in 0..20 {
+            p.tick(&world, command, &cfg);
+        }
+        near(p.velocity[0], speed);
+        let start = p.position;
+        for _ in 0..60 {
+            p.tick(&world, command, &cfg);
+        }
+        near(p.position[0] - start[0], speed);
+        let old = p.velocity;
+        p.tick(
+            &world,
+            MovementInput {
+                direction: [0., 1.],
+                ..command
+            },
+            &cfg,
+        );
+        assert!(
+            (p.velocity[0] - old[0]).hypot(p.velocity[2] - old[2])
+                <= cfg.ground_acceleration * PHYSICS_DT + 1e-8
+        );
+        p.tick(
+            &world,
+            MovementInput {
+                sneak,
+                ..Default::default()
+            },
+            &cfg,
+        );
+        assert!(p.velocity[0].hypot(p.velocity[2]) < speed);
+        run(
+            &mut p,
+            &world,
+            MovementInput {
+                sneak,
+                ..Default::default()
+            },
+            10,
+        );
+        near(p.velocity[0].hypot(p.velocity[2]), 0.);
+    }
+}
+
+#[test]
+fn sneak_guards_cardinal_and_diagonal_ledges_with_partial_support_at_signed_seams() {
+    let cfg = PhysicsConfig::default();
+    for base in [-17, -16, -1, 0, 15, 16, 15999] {
+        for direction in [
+            [1., 0.],
+            [-1., 0.],
+            [0., 1.],
+            [0., -1.],
+            [1., 1.],
+            [-1., 1.],
+            [1., -1.],
+            [-1., -1.],
+        ] {
+            let world = world_with([[base, 0, base]]);
+            let mut p = Player::new([f64::from(base) + 0.5, 1., f64::from(base) + 0.5]);
+            let command = MovementInput {
+                direction,
+                sneak: true,
+                sprint: true,
+                ..Default::default()
+            };
+            for _ in 0..150 {
+                p.tick(&world, command, &cfg);
+                assert!(p.grounded, "{base} {direction:?}: {p:?}");
+                near(p.position[1], 1.);
+                assert_clear(&p, &world);
+            }
+            assert!(p.position[0] > f64::from(base) - 0.3 && p.position[0] < f64::from(base) + 1.3);
+            assert!(p.position[2] > f64::from(base) - 0.3 && p.position[2] < f64::from(base) + 1.3);
+            let contact = p.position;
+            run(&mut p, &world, command, 180);
+            assert_eq!(p.position, contact, "no edge jitter");
+            run(
+                &mut p,
+                &world,
+                MovementInput {
+                    sneak: false,
+                    ..command
+                },
+                60,
+            );
+            assert!(!p.grounded && p.position[1] < 1.);
+        }
+    }
+}
+
+#[test]
+fn sneak_slides_along_a_ledge_and_traverses_chunk_seams_without_snagging() {
+    let world = world_with((-24..=24).map(|z| [0, 0, z]));
+    let mut p = Player::new([0.5, 1., -18.5]);
+    let command = MovementInput {
+        direction: [1., 1.],
+        sneak: true,
+        ..Default::default()
+    };
+    run(&mut p, &world, command, 1200);
+    assert!(p.grounded && p.position[2] > 3. && p.position[0] < 1.3);
+    near(p.position[1], 1.);
+}
+
+#[test]
+fn crouch_changes_collision_and_eye_and_only_uncrouches_with_headroom() {
+    let world = world_with(floor().chain([[0, 3, 0]]));
+    let cfg = PhysicsConfig::default();
+    let mut p = Player::new([0.5, 1.49, 0.5]);
+    p.crouched = true;
+    assert!(p.fits_in_world(&world, &cfg));
+    near(p.height(&cfg), 1.5);
+    near(p.eye_position(&cfg)[1], 2.81);
+    assert!(!p.intersects_block(BlockPos([0, 3, 0]), &cfg));
+    let standing = Player {
+        crouched: false,
+        ..p
+    };
+    assert!(!standing.fits_in_world(&world, &cfg));
+    assert!(standing.intersects_block(BlockPos([0, 3, 0]), &cfg));
+    for _ in 0..5 {
+        p.tick(&world, MovementInput::default(), &cfg);
+        assert!(p.crouched && p.fits_in_world(&world, &cfg));
+    }
+    run(&mut p, &world, MovementInput::default(), 60);
+    assert!(!p.crouched && p.grounded);
+    near(p.eye_position(&cfg)[1], 2.62);
+}
+
+#[test]
+fn sneak_cannot_hover_after_support_is_mined_or_while_falling_and_jump_bypasses_guard() {
+    let cfg = PhysicsConfig::default();
+    let sneak = MovementInput {
+        direction: [1., 0.],
+        sneak: true,
+        ..Default::default()
+    };
+    let mut world = world_with([[0, 0, 0]]);
+    let mut p = Player::new([0.5, 1., 0.5]);
+    p.tick(&world, sneak, &cfg);
+    world.set_block(BlockPos([0, 0, 0]), Block::Air).unwrap();
+    let old_x = p.position[0];
+    p.tick(&world, sneak, &cfg);
+    assert!(!p.grounded && p.velocity[1] < 0. && p.position[0] > old_x);
+    let mut falling = Player::new([0.5, 8., 0.5]);
+    falling.velocity = [3., -4., 0.];
+    run(
+        &mut falling,
+        &World::default(),
+        MovementInput {
+            sneak: true,
+            ..Default::default()
+        },
+        30,
+    );
+    near(falling.velocity[0], 3.); // no midair snap brake
+    assert!(falling.position[0] > 1.9 && falling.position[1] < 8.);
+    let world = world_with([[0, 0, 0]]);
+    let mut jumping = Player::new([1.29, 1., 0.5]);
+    jumping.tick(
+        &world,
+        MovementInput {
+            jump: true,
+            ..sneak
+        },
+        &cfg,
+    );
+    assert!(!jumping.grounded && jumping.velocity[1] > 0. && jumping.position[0] > 1.3);
+}
+
+#[test]
+fn sprint_to_sneak_stops_at_ledge_and_missing_streamed_chunks_remain_barriers() {
+    let cfg = PhysicsConfig::default();
+    let mut p = Player::new([1.29, 1., 0.5]);
+    p.velocity[0] = cfg.sprint_speed;
+    let world = world_with([[0, 0, 0]]);
+    p.tick(
+        &world,
+        MovementInput {
+            sneak: true,
+            direction: [1., 0.],
+            ..Default::default()
+        },
+        &cfg,
+    );
+    assert!(p.grounded && p.position[0] < 1.3);
+    let mut world = crate::streaming::new_world(42);
+    for y in -1..=1 {
+        world.insert_chunk(ChunkPos([0, y, 0]), Chunk::default());
+    }
+    for x in 0..16 {
+        for z in 0..16 {
+            world.set_block(BlockPos([x, 0, z]), Block::Stone).unwrap();
+        }
+    }
+    let mut p = Player::new([14.5, 1., 8.5]);
+    run(
+        &mut p,
+        &world,
+        MovementInput {
+            direction: [1., 0.],
+            sneak: true,
+            ..Default::default()
+        },
+        180,
+    );
+    near(p.position[0], 15.7);
+    assert!(p.cache_ready(&world, &cfg) && p.grounded);
+}
+
+#[test]
+fn twenty_block_movement_profile_records_speed_and_time_comparisons() {
+    let world = world_with(floor());
+    let old = PhysicsConfig {
+        walk_speed: 4.3,
+        sprint_speed: 5.6,
+        ground_acceleration: 55.,
+        ground_braking: 60.,
+        ..Default::default()
+    };
+    for (label, config, sprint, sneak, expected_ticks) in [
+        ("Slice10 walk", old, false, false, 281),
+        ("Slice10 sprint", old, true, false, 217),
+        ("Slice11 walk", PhysicsConfig::default(), false, false, 242),
+        ("Slice11 sprint", PhysicsConfig::default(), true, false, 154),
+        ("Slice11 sneak", PhysicsConfig::default(), false, true, 668),
+    ] {
+        let mut p = Player::new([0.5, 1., 0.5]);
+        let command = MovementInput {
+            direction: [1., 0.],
+            sprint,
+            sneak,
+            jump: false,
+        };
+        let mut ticks = 0;
+        while p.position[0] < 20.5 && ticks < 1000 {
+            p.tick(&world, command, &config);
+            ticks += 1;
+        }
+        println!(
+            "{label}: {ticks} ticks, {:.3}s, {:.3} blocks/s",
+            f64::from(ticks) * PHYSICS_DT,
+            p.velocity[0]
+        );
+        assert_eq!(ticks, expected_ticks, "{label}");
+        assert!(p.grounded);
+    }
 }

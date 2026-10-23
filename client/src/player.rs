@@ -55,6 +55,7 @@ pub(crate) struct PlayerSettings(pub PhysicsConfig);
 pub(crate) struct PlayerState {
     pub body: Player,
     pub previous_position: [f64; 3],
+    pub previous_crouched: bool,
     pub awaiting_spawn: bool,
 }
 
@@ -63,6 +64,7 @@ impl Default for PlayerState {
         Self {
             body: Player::new(SPAWN),
             previous_position: SPAWN,
+            previous_crouched: false,
             awaiting_spawn: false,
         }
     }
@@ -86,6 +88,7 @@ fn simulate_player(
     mut player: ResMut<PlayerState>,
 ) {
     player.previous_position = player.body.position;
+    player.previous_crouched = player.body.crouched;
     if !input.active {
         return;
     } // Local single-player pause while cursor is free.
@@ -116,6 +119,7 @@ fn simulate_player(
             let p = voxel_core::physics::spawn_position(&world.0, &config.0, player.body.position);
             player.body = Player::new(p);
             player.previous_position = p;
+            player.previous_crouched = false;
             input.jump_pending = false;
         }
     }
@@ -133,6 +137,7 @@ fn safe_spawn(world: &voxel_core::World, config: &PhysicsConfig) -> PlayerState 
     });
     PlayerState {
         previous_position: body.position,
+        previous_crouched: false,
         body,
         awaiting_spawn,
     }
@@ -148,6 +153,7 @@ fn initialize_player(
         *player = PlayerState {
             body: Player::new(p),
             previous_position: p,
+            previous_crouched: false,
             awaiting_spawn: false,
         };
     } else {

@@ -1,4 +1,5 @@
 mod camera;
+mod controls;
 mod interaction;
 mod inventory_ui;
 mod persistence;
@@ -117,7 +118,7 @@ fn main() -> std::process::ExitCode {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             close_when_requested: false,
             primary_window: Some(Window {
-                title: "RustCraft — Click: capture | Esc: release | WASD: move | Space: jump | Shift: sprint | R: respawn".into(),
+                title: "RustCraft — Click: capture | Esc: release | WASD: move | Space: jump | Ctrl: sprint | Shift: sneak | R: respawn".into(),
                 resolution: (1280, 720).into(),
                 resize_constraints: WindowResizeConstraints {min_width:320.,min_height:240.,..default()},
                 ..default()

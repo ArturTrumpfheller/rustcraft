@@ -1,5 +1,6 @@
 //! Frame-rate input/view adapter. Player physics never reads a camera transform.
 
+use crate::controls::MovementBindings;
 use crate::player::{ControllerInput, PlayerSettings, PlayerState};
 use crate::scene::{ChunkRenders, RenderOrigin};
 use bevy::{
@@ -10,13 +11,13 @@ use bevy::{
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 use std::f32::consts::FRAC_PI_2;
-use voxel_core::physics::MovementInput;
 
 pub struct FirstPersonPlugin;
 
 impl Plugin for FirstPersonPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<ViewAngles>()
+        app.init_resource::<MovementBindings>()
+            .init_resource::<ViewAngles>()
             .init_resource::<RenderOrigin>()
             .init_resource::<ViewPose>()
             .add_systems(Startup, spawn_camera.in_set(CameraSetup))
@@ -50,6 +51,8 @@ pub(crate) struct CameraSetup;
 pub(crate) struct ViewPose {
     pub eye: [f64; 3],
     pub direction: [f64; 3],
+    pub feet: [f64; 3],
+    pub crouched: bool,
 }
 
 #[derive(Resource)]
@@ -117,8 +120,14 @@ fn manage_cursor(
     }
 }
 
+#[derive(SystemParam)]
+struct KeyboardCommands<'w> {
+    keys: Res<'w, ButtonInput<KeyCode>>,
+    bindings: Res<'w, MovementBindings>,
+}
+
 fn read_input(
-    keyboard: Res<ButtonInput<KeyCode>>,
+    commands: KeyboardCommands,
     motion: Res<AccumulatedMouseMotion>,
     windows: Query<(&Window, &CursorOptions), With<PrimaryWindow>>,
     mut view: ResMut<ViewAngles>,
@@ -126,6 +135,8 @@ fn read_input(
     save: Option<Res<crate::persistence::SaveFeedback>>,
     inventory: Option<Res<crate::inventory_ui::GameInventory>>,
 ) {
+    let keyboard = &commands.keys;
+    let bindings = &commands.bindings;
     input.active = windows
         .single()
         .is_ok_and(|(window, cursor)| window.focused && cursor.grab_mode != CursorGrabMode::None);
@@ -144,23 +155,14 @@ fn read_input(
             (view.pitch - motion.delta.y * 0.002).clamp(-FRAC_PI_2 + 0.01, FRAC_PI_2 - 0.01);
         view.yaw = (view.yaw - motion.delta.x * 0.002) % std::f32::consts::TAU;
     }
-    if keyboard.just_pressed(KeyCode::KeyR) {
+    if !input.captured_this_frame && keyboard.just_pressed(bindings.respawn) {
         *view = ViewAngles::default();
         input.reset_pending = true;
     }
-    let axis = |positive, negative| {
-        f64::from(keyboard.pressed(positive)) - f64::from(keyboard.pressed(negative))
-    };
-    input.command = MovementInput::from_yaw(
-        [
-            axis(KeyCode::KeyD, KeyCode::KeyA),
-            axis(KeyCode::KeyS, KeyCode::KeyW),
-        ],
-        f64::from(view.yaw),
-        keyboard.pressed(KeyCode::ShiftLeft),
-        false,
-    );
-    input.jump_pending |= keyboard.just_pressed(KeyCode::Space);
+    input.command = bindings.command(keyboard, f64::from(view.yaw));
+    if !input.captured_this_frame {
+        input.jump_pending |= keyboard.just_pressed(bindings.jump);
+    }
 }
 
 #[derive(SystemParam)]
@@ -187,17 +189,20 @@ fn sync_camera(
     let position: [f64; 3] = std::array::from_fn(|axis| {
         player.previous_position[axis] * (1.0 - alpha) + player.body.position[axis] * alpha
     });
-    space.pose.eye = [
-        position[0],
-        position[1] + space.settings.0.eye_height,
-        position[2],
-    ];
+    let mut previous_body = player.body;
+    previous_body.crouched = player.previous_crouched;
+    let eye_height = previous_body.eye_height(&space.settings.0) * (1.0 - alpha)
+        + player.body.eye_height(&space.settings.0) * alpha;
+    space.pose.feet = position;
+    // Protect the union of the old/new posture during the single interpolated tick.
+    space.pose.crouched = player.body.crouched && (player.previous_crouched || alpha == 1.0);
+    space.pose.eye = [position[0], position[1] + eye_height, position[2]];
     let rotation = Quat::from_euler(EulerRot::YXZ, view.yaw, view.pitch, 0.0);
     space.pose.direction = (rotation * Vec3::NEG_Z).to_array().map(f64::from);
     for mut transform in &mut cameras {
         transform.translation = Vec3::new(
             (position[0] - space.origin.0[0]) as f32,
-            (position[1] + space.settings.0.eye_height - space.origin.0[1]) as f32,
+            (position[1] + eye_height - space.origin.0[1]) as f32,
             (position[2] - space.origin.0[2]) as f32,
         );
         transform.rotation = rotation;

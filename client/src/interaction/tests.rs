@@ -271,36 +271,43 @@ fn empty_clicks_and_simultaneous_buttons_do_not_create_blocks_or_double_edit() {
 
 #[test]
 fn breaking_the_floor_in_the_real_input_schedule_changes_the_next_physics_tick() {
-    let mut app = app();
-    click(&mut app, MouseButton::Left);
-    let step = app.world().resource::<Time<Fixed>>().timestep();
-    *app.world_mut().resource_mut::<TimeUpdateStrategy>() =
-        TimeUpdateStrategy::ManualDuration(step);
-    for _ in 0..90 {
+    for sneak in [false, true] {
+        let mut app = app();
+        if sneak {
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::ShiftLeft);
+        }
+        click(&mut app, MouseButton::Left);
+        let step = app.world().resource::<Time<Fixed>>().timestep();
+        *app.world_mut().resource_mut::<TimeUpdateStrategy>() =
+            TimeUpdateStrategy::ManualDuration(step);
+        for _ in 0..90 {
+            frame(&mut app);
+        }
+        assert!(app.world().resource::<PlayerState>().body.grounded);
+        app.world_mut()
+            .resource_mut::<AccumulatedMouseMotion>()
+            .delta
+            .y = 1000.0;
         frame(&mut app);
+        assert_eq!(
+            app.world().resource::<Editor>().target.unwrap().position,
+            BlockPos([0, 2, 10])
+        );
+        click(&mut app, MouseButton::Left);
+        assert_eq!(world(&app).block(BlockPos([0, 2, 10])), Block::Air);
+        frame(&mut app);
+        assert!(!app.world().resource::<PlayerState>().body.grounded);
+        assert!(app.world().resource::<PlayerState>().body.velocity[1] < 0.0);
+        // Filling the freshly mined cell would now intersect the falling feet.
+        click(&mut app, MouseButton::Right);
+        assert_eq!(world(&app).block(BlockPos([0, 2, 10])), Block::Air);
+        assert_eq!(
+            app.world().resource::<Editor>().rejection,
+            Some(EditError::IntersectsPlayer)
+        );
     }
-    assert!(app.world().resource::<PlayerState>().body.grounded);
-    app.world_mut()
-        .resource_mut::<AccumulatedMouseMotion>()
-        .delta
-        .y = 1000.0;
-    frame(&mut app);
-    assert_eq!(
-        app.world().resource::<Editor>().target.unwrap().position,
-        BlockPos([0, 2, 10])
-    );
-    click(&mut app, MouseButton::Left);
-    assert_eq!(world(&app).block(BlockPos([0, 2, 10])), Block::Air);
-    frame(&mut app);
-    assert!(!app.world().resource::<PlayerState>().body.grounded);
-    assert!(app.world().resource::<PlayerState>().body.velocity[1] < 0.0);
-    // Filling the freshly mined cell would now intersect the falling feet.
-    click(&mut app, MouseButton::Right);
-    assert_eq!(world(&app).block(BlockPos([0, 2, 10])), Block::Air);
-    assert_eq!(
-        app.world().resource::<Editor>().rejection,
-        Some(EditError::IntersectsPlayer)
-    );
 }
 
 #[test]

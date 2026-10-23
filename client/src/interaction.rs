@@ -11,7 +11,6 @@ use bevy::{
 };
 use voxel_core::{
     interaction::{BuildBlock, EditAction, EditError},
-    physics::Player,
     raycast::{DEFAULT_REACH, Ray, RayHit, raycast},
 };
 
@@ -58,6 +57,7 @@ struct EditContext<'w, 's> {
     player: Res<'w, PlayerState>,
     settings: Res<'w, PlayerSettings>,
     control: Res<'w, ControllerInput>,
+    bindings: Res<'w, crate::controls::MovementBindings>,
     view: Res<'w, ViewPose>,
     editor: ResMut<'w, Editor>,
     inventory: ResMut<'w, crate::inventory_ui::GameInventory>,
@@ -130,17 +130,15 @@ fn edit_and_target(
     };
     let blocked = ctx.control.captured_this_frame
         || ctx.control.reset_pending
-        || keyboard.just_pressed(KeyCode::KeyR);
+        || keyboard.just_pressed(ctx.bindings.respawn);
     if let Some(action) = action.filter(|_| !blocked) {
         let config = ctx.settings.0;
         let body = ctx.player.body;
         // Also protect the displayed/interpolated body during fast falls. The
         // core independently protects the current authoritative physics AABB.
-        let displayed_body = Player::new([
-            ray.origin[0],
-            ray.origin[1] - config.eye_height,
-            ray.origin[2],
-        ]);
+        let mut displayed_body = body;
+        displayed_body.position = ctx.view.feet;
+        displayed_body.crouched = ctx.view.crouched;
         let overlaps_view = matches!(action, EditAction::Place(_))
             && raycast(&ctx.world.0, ray)
                 .and_then(|hit| hit.adjacent)
