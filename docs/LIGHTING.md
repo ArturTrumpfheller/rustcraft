@@ -95,6 +95,6 @@ partitioning while preserving unit-face coverage. See [details](GREEDY_MESHING.m
 
 [Vertex AO](AMBIENT_OCCLUSION.md) multiplies the existing base face color, with
 reduced strength in darkness. It never changes these 0–15 light samples or their
-propagation. Merge keys now include corner AO and permit only constant fields
-to grow. Geometry forcing includes the one-cell diagonal chunk footprint, even
+propagation. Packed merge keys include corner AO and permit constant and exactly
+matching affine fields to grow. Geometry forcing includes the one-cell diagonal chunk footprint, even
 when exact cached light is unchanged. Existing source/region bounds are sufficient.

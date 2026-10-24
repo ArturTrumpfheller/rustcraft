@@ -146,3 +146,8 @@ AO code, regression tests, renderer fixture and documentation are original
 RustCraft work, MIT OR Apache-2.0. `docs/images/slice17-*.png` are actual captures
 of original RustCraft fixtures/art, under the same licenses. No third-party art,
 shader pack, source, crate, engine feature or dependency graph change was added.
+
+Slice17's revision adds original meshing/profile-tool code and screenshot crops
+of the same original art, under MIT OR Apache-2.0. Crops preserve captured pixels
+without imported fonts/art or shader packs. No runtime dependency, feature,
+lockfile or asset artwork change.

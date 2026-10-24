@@ -1383,3 +1383,14 @@ See [AO validation, matched screenshots and Slice 16 comparisons](AMBIENT_OCCLUS
 Format, locked all-target Clippy, 310 workspace tests, locked workspace build and
 texture regeneration check passed locally. Native Void GPU/Wayland/Windows
 acceptance remains separate from X11 software-rendered fixture evidence.
+
+### Slice 17 visual/performance revision
+
+The owner accepted initial Slice17 functionality on native Void but found AO
+too subtle. The revision strengthens only the visual corner factors, reuses
+occupancy for visibility and allows provably identical affine greedy fields.
+See AMBIENT_OCCLUSION for three-way screenshots, profiles, matched benchmarks,
+remaining regressions and revised native acceptance. Native approval of the
+initial version is not approval of this revision. All local required checks pass
+with 313 workspace tests (148 client + 165 core); original Ubuntu/Windows CI passed.
+Revision CI is reported on PR #34.

@@ -15,49 +15,85 @@ are opaque. If both sides are solid, occlusion is 3 regardless of the diagonal;
 otherwise it is the number of solid samples (0–3). Same-layer neighboring floor
 blocks do not darken an unobstructed flat top or outline every block.
 
-A temporary 18³ occupancy halo includes all 26 neighboring chunks. It queries
-each chunk once and copies only the required cells, avoiding world-map queries
-per vertex. Sampling offsets are precomputed for the six orientations. Scratch
-is fixed: 5,832 occupancy bytes, 288 offset bytes, plus Slice 16's fixed
-6×16×256 merge mask with four additional AO bytes per key. There is no AO cache
-per resident chunk and no per-frame recomputation for unchanged terrain.
+A fixed 18³ occupancy halo includes all 26 neighboring chunks. It queries each
+chunk once and now supplies **both visibility and AO**, replacing repeated
+neighbor-chunk/local-coordinate checks. A cell index is computed once per solid
+block. Face sample offsets are precomputed. The visibility mask stores each
+four-corner tuple as four two-bit counts: each optional merge key occupies three
+bytes on this toolchain, reducing the fixed 6×16×256 mask from 147,456 to 73,728
+bytes. Halo storage remains 5,832 bytes. The shader/56-byte vertex format is unchanged.
 
-| Occlusion | Open-sky multiplier | Level-0 multiplier |
-| --- | ---: | ---: |
-| 0 | 1.000 | 1.000 |
-| 1 | 0.920 | 0.972 |
-| 2 | 0.840 | 0.944 |
-| 3 | 0.760 | 0.916 |
+### Intensity revision
 
-The factor is `1 - occlusion * 0.08 * (0.35 + 0.65 * skylight / 15)`.
-It multiplies the existing linear RGB `face_color`; alpha stays 1. The light
-solver, exact 0–15 gameplay samples, directional face factors and cave floor
-are unchanged. AO strength fades in darkness to preserve texture legibility.
-Skylight remains flat per unit face as in Slice 16; this slice does not replace
-it with smooth lighting. Existing skylight transitions can still be visible.
+The owner accepted the original implementation's functionality on native Void
+Linux (Radeon RX 9060 XT 16 GB, Core i3-13100, 32 GB RAM), but reported almost no
+perceptible visual improvement. Approximately 27% overall CPU use was reported;
+that is not a mesh-worker, frame-time or GPU measurement. Desktop protocol and
+build mode were not specified. The revised implementation still needs native
+visual acceptance.
+
+| Occlusion | Original, sky 15 | Original, sky 0 | Revised, sky 15 | Revised, sky 0 |
+| --- | ---: | ---: | ---: | ---: |
+| 0 | 1.000 | 1.000 | 1.000 | 1.000 |
+| 1 | 0.920 | 0.972 | 0.860 | 0.910 |
+| 2 | 0.840 | 0.944 | 0.720 | 0.820 |
+| 3 | 0.760 | 0.916 | 0.580 | 0.730 |
+
+The original factor was `1 - ao * .08 * (.35 + .65 * sky / 15)`.
+The revised factor is `1 - ao * (.09 + (.14 - .09) * sky / 15)`.
+`SKY_STEP` and `DARK_STEP` in `mesh/ao.rs` centralize the two strength parameters;
+no user setting is added. RGB multiplies the same `face_color`; alpha stays 1.
+The exact 0–15 gameplay light, propagation, directional factors and cave floor
+remain unchanged. AO zero retains the original color exactly.
+
+A first gallery trial used .11/.07 steps (open-sky strength +37.5%). Contact
+shading was still restrained at the original viewing distance. After inspecting
+the same four scenes with .14/.09, the latter was selected: wall/floor contacts,
+placed-block bases, room recesses and trunk/leaf junctions read more clearly,
+while unoccluded surfaces and the cave interior away from contacts retain their
+existing brightness. This deliberately exceeds the initial 25–40% suggestion
+in sunlight (+75% step strength); darkness uses a separate .09 step, rather than
+a blind global percentage. The darkest contact retains 73% of the unoccluded cave-base
+RGB, so the change concentrates on corners instead of blackening the entire room.
+This is a software-rendered visual judgment, not a claim of native owner acceptance.
+
+A process-wide, lazily initialized 6,144-byte table caches the exact formula for
+six directions × 16 skylight levels × four AO counts. It avoids repeated powers,
+face-factor selection and modulation arithmetic during quad emission. It has
+no world state, heap allocation or invalidation lifecycle; tests compare all
+384 entries with the formula and check the documented endpoints.
 
 ## Greedy compatibility and triangulation
 
-The merge key is `(atlas tile, exact skylight, four AO counts)`, with orientation
-and slice implicit in the plane. Only faces with **constant AO at all four
-corners** may grow, and all keys in the rectangle must match. Equal nonuniform
-tuples alone are insufficient: repeating a gradient across unit faces is not
-the same field as stretching one gradient over a large rectangle.
+Merge keys retain tile, exact skylight and all four AO counts, now packed into
+one byte. Orientation/slice are implicit. Constant fields keep a direct key
+comparison. **Nonconstant affine fields may now merge too.**
 
-Nonuniform faces remain unit quads. This conservative rule preserves every
-corner and internal block boundary exactly; constant shading interpolates
-identically at every point on a merged rectangle. Uniform occluded strips can
-still merge, as can large open surfaces. Some valid affine gradients could be
-merged by a more complex algorithm; deliberately retaining those unit quads is
-the main geometry limitation. The measured reductions versus individual faces
-remain substantial (see below).
+In face corner order, a unit face is affine iff `a0 + a2 == a1 + a3`. Map its
+corners into positive plane u/v directions and derive integer slopes `du, dv`.
+A candidate at offset `(x,y)` is compatible only if its tile/skylight match and
+each of its four counts equals the seed's corresponding count plus `du*x + dv*y`.
+Width then height grow in the existing deterministic order. Emit the field's
+actual outer-corner values, including both rectangle extents.
 
-Unit quads connect the darker opposite vertex pair: flip from diagonal 0–2 to
-1–3 when `ao[0] + ao[2] < ao[1] + ao[3]`; ties keep Slice 16's diagonal.
-Both index patterns are outward CCW. Normals, visibility, face corner order,
-repeat UVs and constant atlas origins retain Slice 16's contracts. The shader,
-nearest LOD0 sampling and original padded 16×16 artwork are unchanged. Vertex
-stride remains 56 bytes; four vertices and six u32 indices cost 248 bytes/quad.
+**Why this is exact:** the sum condition makes either unit-face triangulation
+the same affine field. Every included face matches that one field at every
+vertex. For equal skylight/direction, RGB is affine in the AO count, so the
+large quad has the same color at every point, including internal unit boundaries
+and either triangle diagonal. Integer comparisons introduce no approximate
+merge threshold; tests allow only floating arithmetic roundoff in resulting RGB.
+
+Matching corner tuples alone is still insufficient. A gradient may be extruded
+perpendicular to itself, but repeating that tuple *along* its slope would reset
+the field and is rejected. Non-affine/saddle faces stay unit quads. More general
+piecewise-affine combinations are not attempted. Exact skylight discontinuities
+still prevent merging even when AO alone would allow it.
+
+Non-affine units connect the darker opposite pair: flip diagonal 0–2 to 1–3 when
+`ao[0] + ao[2] < ao[1] + ao[3]`. Affine fields tie mathematically and work with
+either diagonal. Outward CCW winding, normals, visibility, original corner order,
+atlas origins and block-repeat UVs are unchanged. No new pass, material instance,
+texture or renderer feature is introduced. A quad still costs 248 payload bytes.
 
 ## Chunk seams, edits and workers
 
@@ -85,75 +121,101 @@ Outside the finite world is known Air under the existing contract. Unrepresentab
 coordinate offsets are ignored. Streaming/reloading computes AO from current
 authority, never from an old mesh or a pristine generator in place of edits.
 
-## Performance against Slice 16
+## Profiling and performance
 
-Measured on 2026-10-24, Debian 13 x86-64, AMD EPYC 9V74 (three exposed CPUs),
-Rust 1.99.1, release optimization. No renderer or other test suite ran during
-this final mesh-only comparison. Both versions use the same existing fixture and
-timing harness; the baseline is reconstructed from the exact merged commit in
-an isolated temporary Cargo package. Raw [before](performance/slice17/before.csv),
-[after](performance/slice17/after.csv) and [base revision](performance/slice17/baseline.txt).
+The original stage profile was collected **before** changing the mesher in a
+disposable, release-optimized core copy. Four `Instant` boundaries separate halo
+construction, fixed-mask initialization, visibility/AO fill, and merge/emission.
+Timers/counters never enter the game source. In that initial 27-chunk workload,
+about 64% of instrumented mesher time was visibility/AO, 27% merge/emission,
+6% halo and 3% mask initialization. This identified duplicate visibility lookups
+as the first target, rather than replacing the halo speculatively.
+
+Final matched stage profiles, mean µs per chunk (not per batch):
+
+| Stage, seeded streaming | Original 17 | Revised 17 |
+| --- | ---: | ---: |
+| Halo | 5.94 | 6.16 |
+| Mask initialization | 3.17 | 1.13 |
+| Visibility / AO | 63.09 | 31.01 |
+| Merge / emission | 26.40 | 21.69 |
+
+These instrumented phase means include timer overhead and cloud scheduling noise;
+the uninstrumented medians below are the performance comparison. Halo code was
+retained: the larger improvements came from reusing it for visibility, one index
+per block, compact mask entries, exact affine merging with a constant-field fast
+path, and the fixed color lookup table. The original/revised
+[stage CSVs](performance/slice17-revision/profile-original.csv) /
+[stage CSVs](performance/slice17-revision/profile-revised.csv) include all scenes.
 
 ```sh
-python3 tools/benchmark_meshing.py --baseline ed0c3e4 --output /tmp/rustcraft-ao-results
-cargo run --locked --release -p voxel_core --example meshing_bench
+python3 tools/profile_meshing.py --revision e4c2bf4 --output /tmp/ao-profile-original
+python3 tools/profile_meshing.py --revision WORKTREE --output /tmp/ao-profile-revised
+python3 tools/benchmark_meshing.py --baseline ed0c3e4 --original e4c2bf4 --output /tmp/ao-three-way
 ```
 
-Use a new output directory. CPU is the median of five samples, each averaging
-100 batches, including buffer construction/destruction. Generation and shared
-skylight solving are excluded. Edits repeatedly changes a block and recomputes
-light outside the timed mesh pass; its geometry counts describe the initial
-edited state. Stream meshes 27 seeded chunks per batch, not disk I/O, generation,
-light propagation or end-to-end streaming latency. These are CPU measurements,
-not GPU timestamps or FPS. Payload includes all vertex attributes and u32 indices;
-capacity also includes vector spare capacity, but not allocator overhead, retained
-Bevy copies, driver allocations or process RSS.
+Use new output directories. Profiling and baseline packages build independently,
+so cached same-name Cargo artifacts cannot substitute another revision's binary.
+The benchmark uses the existing identical fixtures and timing loops for all
+three versions. Rust 1.99.1, Debian 13 x86-64, AMD EPYC 9V74 / three exposed CPUs,
+release optimization, no renderer or other tests running. Generation and shared
+skylight solving are excluded. Each CPU entry is the median of five samples,
+each averaging 100 batches including buffer creation/destruction. These are
+CPU-only wall-clock mesh timings, not GPU timestamps or frame measurements.
 
-| Scene | Quads 16 → 17 | Vertices 16 → 17 | Payload bytes 16 → 17 | Capacity bytes 16 → 17 |
+Raw [Slice 16](performance/slice17-revision/before.csv),
+[original 17](performance/slice17-revision/original.csv),
+[revised 17](performance/slice17-revision/after.csv), and exact
+[baseline](performance/slice17-revision/baseline.txt) /
+[original](performance/slice17-revision/original.txt) revisions.
+Historical first-implementation numbers remain in [slice17](performance/slice17/after.csv);
+compare the fresh matched run below rather than different cloud sessions.
+
+| Scene | CPU µs 16 | CPU µs original 17 | CPU µs revised 17 | Revision vs original | Revision vs 16 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| solid | 93.52 | 143.13 | 70.06 | -51.1% | -25.1% |
+| flat | 31.42 | 42.08 | 23.89 | -43.2% | -24.0% |
+| mixed | 42.90 | 83.40 | 51.12 | -38.7% | +19.2% |
+| cave | 44.35 | 78.05 | 45.06 | -42.3% | +1.6% |
+| trees | 20.61 | 37.40 | 31.29 | -16.3% | +51.8% |
+| edits | 67.26 | 115.83 | 80.54 | -30.5% | +19.7% |
+| stream | 1637.28 | 2528.32 | 1496.75 | -40.8% | -8.6% |
+
+Geometry and buffers are **Slice 16 → original 17 → revised 17**. Each quad has
+four vertices, two triangles and 248 payload bytes; stride stays 56 bytes.
+
+| Scene | Quads | Vertices | Payload bytes | Vector capacity bytes |
 | --- | ---: | ---: | ---: | ---: |
-| solid | 34 → 34 | 136 → 136 | 8432 → 8432 | 15872 → 15872 |
-| flat | 1 → 1 | 4 → 4 | 248 → 248 | 248 → 248 |
-| mixed | 148 → 456 | 592 → 1824 | 36704 → 113088 | 63488 → 126976 |
-| cave | 13 → 155 | 52 → 620 | 3224 → 38440 | 3968 → 63488 |
-| trees | 68 → 116 | 272 → 464 | 16864 → 28768 | 31744 → 31744 |
-| edits | 271 → 421 | 1084 → 1684 | 67208 → 104408 | 126976 → 126976 |
-| stream | 4176 → 6236 | 16704 → 24944 | 1035648 → 1546528 | 1406408 → 2233736 |
+| solid | 34 → 34 → 34 | 136 → 136 → 136 | 8432 → 8432 → 8432 | 15872 → 15872 → 15872 |
+| flat | 1 → 1 → 1 | 4 → 4 → 4 | 248 → 248 → 248 | 248 → 248 → 248 |
+| mixed | 148 → 456 → 448 | 592 → 1824 → 1792 | 36704 → 113088 → 111104 | 63488 → 126976 → 126976 |
+| cave | 13 → 155 → 79 | 52 → 620 → 316 | 3224 → 38440 → 19592 | 3968 → 63488 → 31744 |
+| trees | 68 → 116 → 116 | 272 → 464 → 464 | 16864 → 28768 → 28768 | 31744 → 31744 → 31744 |
+| edits | 271 → 421 → 397 | 1084 → 1684 → 1588 | 67208 → 104408 → 98456 | 126976 → 126976 → 126976 |
+| stream | 4176 → 6236 → 5909 | 16704 → 24944 → 23636 | 1035648 → 1546528 → 1465432 | 1406408 → 2233736 → 2233736 |
 
-| Scene | CPU µs 16 → 17 | CPU change |
-| --- | ---: | ---: |
-| solid | 91.89 → 147.04 | +60.0% |
-| flat | 27.23 → 42.89 | +57.5% |
-| mixed | 41.92 → 89.37 | +113.2% |
-| cave | 44.96 → 78.64 | +74.9% |
-| trees | 20.69 → 39.58 | +91.3% |
-| edits | 68.37 → 117.91 | +72.5% |
-| stream | 1662.11 → 2628.73 | +58.2% |
+The 27-chunk phase improves **40.8%** versus original AO, and is **8.6% faster**
+than Slice 16 in this run. Geometry/payload falls 5.2% versus original AO;
+allocated vector capacity stays unchanged for that workload because geometric
+vector growth does not shrink at every quad reduction. Caves drop 155 → 79 quads
+(-49.0%) and halve vector capacity. Edits drop 421 → 397 quads (-5.7%).
 
-AO increases CPU time in every measured scene. The 27-chunk mesh phase grows
-by about 0.97 ms (+58.2%); payload grows by 49.3%. Cave geometry has the largest
-relative regression: 13 → 155 quads. The same fixture has 842 individual visible
-faces, so it still reduces those by 81.6%. Trees retain an 80.0% reduction from
-580 unit faces; seeded streaming retains a 56.3% reduction from 14,266 faces;
-flat remains one quad for 256 faces. The stepped mixed fixture falls from a
-72.0% reduction to only 13.6% (456 quads for 528 faces). The conservative merge
-rule intentionally spends that geometry to preserve shading. Uniform solid/flat
-geometry counts remain unchanged.
+Regressions remain versus no AO: trees +51.8% CPU, mixed +19.2%, repeated edits
++19.7%, caves +1.6%. Extra occupancy sampling, more emitted vertices and exact
+field checks still cost work; non-affine corners and flat-skylight discontinuities
+cannot safely merge under this rule. Tree geometry stays 116 quads. No target
+number justified weakening these checks. Halo/mask scratch is fixed and smaller,
+the color table is process-wide constant data, and output/cache residency remains
+radius-bounded; unchanged terrain does no per-frame AO work.
 
-The bounded halo, precomputed face offsets and one base skylight/color calculation
-per emitted quad avoid redundant map lookups and four repeated skylight evaluations.
-No unchanged terrain is reprocessed per frame. The new fixed mask/halo scratch
-and larger output remain radius-bounded. These costs are acceptable for this
-foundation's correctness, but native frame/driver acceptance is still required;
-no FPS improvement or real-hardware performance guarantee is claimed.
-
-
-A separate headless debug streaming test (`repeated_seam_mining_workload`, one
-test thread, no renderer) performed 32 coherent edit batches across a seam:
-1.184 → 1.392 seconds wall clock (+17.6%), with 32 installs, zero discarded jobs,
-22 final meshes and 27 resident chunks in each version. Its assertions verify
-128 changed-chunk mesh installs, no cached-column regeneration and restored
-initial asset/buffer counts. These are single-run observations, not statistical
-latency estimates. [Raw observations](performance/slice17/edit-worker.txt).
+The edits fixture changes a cell repeatedly and recomputes light outside its
+timed mesh pass; its geometry columns describe the initial edited state. Stream
+meshes 27 seeded chunks per batch; it excludes I/O, generation, propagation and
+end-to-end queue/install latency. Existing real client tests exercise repeated
+worker edits, stale rejection, streaming/eviction and unchanged-light AO. No new
+matched end-to-end or frame/GPU timing was measured for this revision. Payload/
+capacity exclude allocator metadata, Bevy retained copies, driver/VRAM and RSS.
+No native FPS improvement is claimed.
 
 ## Automated and graphical validation
 
@@ -161,7 +223,7 @@ On 2026-10-24, Rust 1.99.1 / Bevy 0.20.0, Debian 13 x86-64:
 
 - `cargo fmt --all -- --check` — passed.
 - `cargo clippy --locked --workspace --all-targets -- -D warnings` — passed.
-- `cargo test --locked --workspace` — passed: 148 client + 162 core tests;
+- `cargo test --locked --workspace` — passed: 148 client + 165 core tests;
   zero doctests. Example texture-module tests are also checked by all-target Clippy.
 - `cargo build --locked --workspace` — passed.
 - `python3 tools/generate_textures.py --check` — passed; artwork unchanged.
@@ -172,12 +234,17 @@ The rectangle oracle compares exact unit-face coverage, no duplicates, tile
 origins, repeat lengths, normals and both triangle windings against separately
 queried world occupancy. It evaluates emitted triangle interpolation at every
 unit corner, including internal rectangle boundaries. All merged rectangles
-must be constant, proving their entire field matches the unit-face reference.
+must be affine; every included unit face must match the same field. Five interior
+points per unit face additionally compare against independently triangulated
+reference colors. This checks both triangle regions and internal boundaries.
 Fixtures include isolated/flat/solid/hollow/irregular shapes, mixed materials,
 inside/outside corners, all eight occupancy combinations, six orientations,
 signed X/Y/Z seams, finite boundaries, pending neighbors, diagonal dependencies,
-compatible uniform and incompatible repeated gradient patterns, both diagonals,
-and AO/skylight attenuation. Placement/removal cycles restore identical meshes.
+constant and nonconstant affine fields, rejected repeated gradients, both diagonals,
+and AO/skylight attenuation. All 256 packed corner patterns, six orientations,
+field translations and rectangle sizes 1–4 are exhaustively checked; changing
+any one candidate corner must reject the merge. Placement/removal cycles restore
+identical meshes.
 
 A real client streaming regression creates a sealed pocket crossing X/Y/Z=0.
 A diagonal occupancy edit changes vertex colors while the target's entire exact
@@ -186,31 +253,39 @@ stale worker rejection, no regeneration of cached columns, eviction and reload
 against fresh authoritative meshes. Existing save, inventory, physics, worldgen,
 radius/resource-lifetime and skylight suites continue passing.
 
-### Matched screenshots
+### Matched three-way screenshots
 
-`client/examples/ao_gallery.rs` uses the actual production terrain material,
-embedded shader, atlas, skylight and mesh conversion with fixed cameras. It
-never opens saves or changes gameplay. The same fixture source was built once
-against exact Slice 16 and once against this implementation. Captures are
-960×640, Xvfb X11 / Mesa 25.0.7 llvmpipe (LLVM 19.1.7), Vulkan software rendering.
-They demonstrate shader execution and the original art, **not native GPU
-compatibility or GPU performance**. Camera, geometry and lighting inputs match.
+The unchanged `client/examples/ao_gallery.rs` uses the production terrain material,
+embedded shader, atlas, skylight, geometry and fixed cameras. It never opens saves.
+A is exact merged Slice 16 (`ed0c3e4`), B is original Slice 17 (`e4c2bf4`), C is
+this revision. A/B retain their verified original captures; C was freshly rendered
+with identical inputs. All are 960×640, Xvfb X11 / Mesa 25.0.7 llvmpipe Vulkan.
+Every new frame was nonblack and stable across successive captures, without
+shader errors. This is **software rendering, not native GPU performance evidence**.
 
-| Scene | Slice 16 | Slice 17 |
-| --- | --- | --- |
-| A: Flat grass and placed blocks | [Before](images/slice17-flat-before.png) | [After](images/slice17-flat-after.png) |
-| B: Stone interior corners/overhang | [Before](images/slice17-structure-before.png) | [After](images/slice17-structure-after.png) |
-| C: Enclosed room and skylight aperture | [Before](images/slice17-room-before.png) | [After](images/slice17-room-after.png) |
-| D: Trees meeting terrain | [Before](images/slice17-trees-before.png) | [After](images/slice17-trees-after.png) |
+| Scene | A: No AO | B: Original AO | C: Revised AO |
+| --- | --- | --- | --- |
+| Flat / placed blocks | [A](images/slice17-flat-before.png) | [B](images/slice17-flat-after.png) | [C](images/slice17-flat-revised.png) |
+| Stone structure | [A](images/slice17-structure-before.png) | [B](images/slice17-structure-after.png) | [C](images/slice17-structure-revised.png) |
+| Enclosed room | [A](images/slice17-room-before.png) | [B](images/slice17-room-after.png) | [C](images/slice17-room-revised.png) |
+| Trees / terrain | [A](images/slice17-trees-before.png) | [B](images/slice17-trees-after.png) | [C](images/slice17-trees-revised.png) |
 
-Inspected all four pairs: contact corners and tree bases darken subtly; the room
-retains readable original stone pixels. Open flat areas keep uniform shading and
-per-block texture repetition. No persistent signed X/Z seam or oversized-quad
-gradient was seen in these fixed scenes. This is a bounded visual observation,
-not exhaustive native rasterization coverage. Edits/stale results were validated
-through real client schedules in automated tests, not an interactive GPU stress
-run. Each captured frame was nonblack and stable across successive screenshots;
-all four before/after pairs differ.
+Contact crops below are **A / B / C, left to right**, at original pixel scale.
+They use identical 320×240 regions with no color adjustment or difference
+amplification: flat (360,260), structure (310,250), room (250,250), trees (350,320).
+
+![Placed-block contact, A/B/C](images/slice17-flat-contact-comparison.png)
+![Stone wall/floor contacts, A/B/C](images/slice17-structure-contact-comparison.png)
+![Room recess, A/B/C](images/slice17-room-contact-comparison.png)
+![Tree base, A/B/C](images/slice17-trees-contact-comparison.png)
+
+Inspected contact separation, stone/grass/bark/leaf pixels, readable room corners,
+flat uniform shading and signed X/Z seams in all four scenes. Revised shading is
+clearer without a global cave-brightness change or block outlines on open flat
+surfaces. No stretched large-quad gradient or persistent seam was observed in
+these fixed views. These observations are bounded; native driver rasterization
+and rapid interactive edits still need acceptance. Edits, unchanged skylight,
+stale-result rejection and reload are exercised in real client-schedule tests.
 
 Reproduce a current fixture in a desktop session:
 
@@ -219,10 +294,11 @@ cargo run --locked -p rustcraft --example ao_gallery -- structure
 # Other arguments: flat, room, trees.
 ```
 
-## Native Void Linux acceptance (pending)
+## Native Void Linux revision acceptance (pending)
 
-Use Void glibc x86-64 with normal supported drivers, separately on X11 and
-Wayland. Cloud software rendering does not replace these checks. In Fish:
+Original Slice 17 functionality was accepted by the owner as described above.
+Repeat the checklist for this revised intensity and mesher on Void glibc x86-64
+with normal supported drivers, separately on X11 and Wayland. Cloud software rendering does not replace these checks. In Fish:
 
 ```fish
 git fetch origin
@@ -264,7 +340,7 @@ cargo run --locked -p rustcraft
 # Retain RUSTCRAFT_DATA_DIR to check save/restart.
 ```
 
-Native Void GPU, Wayland, Windows rendering/input/DPI and long-session VRAM
-endurance remain unverified here. The algorithm intentionally retains flat
+The revised intensity/merging on native Void GPU, Wayland, Windows rendering/
+input/DPI and long-session VRAM endurance remain unverified here. The algorithm intentionally retains flat
 skylight discontinuities and greedy T-junctions from Slice 16; it does not add
 smooth skylight, directional shadows, emitted light or a day/night cycle.
