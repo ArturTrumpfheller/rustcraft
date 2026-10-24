@@ -28,8 +28,8 @@ preserves horizontal momentum. Sneaking in the air adjusts the desired velocity
 only through ordinary air control: no midair speed snap or fall cancellation.
 
 `client::controls::MovementBindings` centralizes locomotion keys and produces
-simulation commands. It is replaceable for future rebinding; no settings UI or
-binding persistence yet. E, 1–9/wheel, mouse clicks, Escape and F5 retain their
+simulation commands. Slice15 uses this resource for persistent rebinding;
+see [SETTINGS](SETTINGS.md). E, 1–9/wheel, mouse clicks, Escape and F5 retain their
 existing adapters. Shift-click transfers while inventory is open, with simulation
 paused; it cannot change the body posture. Capture frames discard jump/respawn
 edges and pre-capture pointer motion; held movement starts normally.

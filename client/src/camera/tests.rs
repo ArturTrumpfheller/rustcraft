@@ -827,3 +827,40 @@ fn fov_time_response_matches_at_30_60_144_fps_and_sneak_eases_back() {
     }
     assert!((values[0] - values[1]).abs() < 1e-6 && (values[1] - values[2]).abs() < 1e-6);
 }
+
+#[test]
+fn settings_change_sprint_base_and_mouse_sensitivity_without_changing_physics() {
+    let mut app = flat_app();
+    app.world_mut()
+        .insert_resource(crate::settings::Preferences {
+            fov: 78,
+            sensitivity: 200,
+            invert_y: true,
+            ..default()
+        });
+    super::set_fov(app.world_mut(), 78);
+    let base = 78_f32.to_radians();
+    assert_eq!(fov(&mut app), base);
+    key(&mut app, KeyCode::KeyW);
+    key(&mut app, KeyCode::ControlLeft);
+    for _ in 0..90 {
+        tick(&mut app);
+    }
+    assert!(fov(&mut app) > base * 1.08);
+    super::set_fov(app.world_mut(), 60);
+    assert_eq!(fov(&mut app), 60_f32.to_radians());
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    let (pitch, yaw) = {
+        let v = app.world().resource::<ViewAngles>();
+        (v.pitch, v.yaw)
+    };
+    app.world_mut()
+        .resource_mut::<AccumulatedMouseMotion>()
+        .delta = Vec2::new(10., 10.);
+    frame(&mut app, Duration::ZERO);
+    let v = app.world().resource::<ViewAngles>();
+    assert!((v.pitch - pitch - 0.04).abs() < 1e-5);
+    assert!((v.yaw - yaw + 0.04).abs() < 1e-5);
+}

@@ -10,6 +10,14 @@ save/worker/entity/asset barriers. See [WORLDS](WORLDS.md) for filesystem/securi
 semantics and [MENUS](MENUS.md) for lifecycle. Frozen game formats and generators,
 lighting, movement and inventory rules remain unchanged.
 
+## Slice 15 user preferences
+
+`client::settings` owns bounded versioned user configuration and a short-lived
+IO worker, outside SaveStore. `menu::settings` reuses the retained canvas with
+drafts, key capture and timed display rollback. Apply installs validated keys,
+camera base and radius through existing adapters; session setup retains the
+user resource across worlds. See [SETTINGS](SETTINGS.md).
+
 ## Slice 7 design note (before implementation)
 
 - New worlds use generator v3 and a v4 regional identity. The first supported

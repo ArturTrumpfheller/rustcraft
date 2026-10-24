@@ -1299,3 +1299,73 @@ Xvfb emits expected display/settings warnings, and Bevy warns about the software
 - Manual resize, physical input feel, fullscreen behavior and supported GPU/driver combinations.
 
 Follow the [manual test procedure](PLATFORMS.md#slice-1-manual-test). Full v0.1 gameplay is intentionally incomplete: collision/gravity, block interaction, seeded generation, hotbar and save/load are later slices.
+
+## Slice 15: settings (stacked on Slice14)
+
+Local Linux validation on 2026-10-24: format, locked workspace Clippy with
+`-D warnings`, all **138 client +154 core tests**, locked workspace build and
+`python tools/generate_textures.py --check` passed. Existing FOV/viewmodel,
+legacy formats/generator fixtures, inventory and session/resource checks pass.
+New tests cover strict settings format/ranges/versions, first start/restart,
+corruption preservation, stale writers, lock contention, interrupted temp files,
+key conflicts/reset/capture, timed display/focus rollback, queued close during
+settings IO, exact78° and mouse sensitivity, three world sessions with bindings,
+and live radius changes with obsolete in-flight work and exact mesh reclamation.
+
+Actual Xvfb/X11 + Mesa25.0.7 llvmpipe/LLVM19.1 Vulkan software rendering:
+mouse slider saved78°, capture rebound forward to Z, restart restored graphics,
+window-size preview canceled, Pause → Settings → Apply → Resume, live radius
+2→3→1, 720p/1080p/1024×768 and native WM close passed. Screenshots were visually
+inspected; an overlapping preview hint and key-page label were corrected before
+these captures. Logs showed75→147→27 resident chunks, meshes50→99→18, with
+out-of-radius resources reclaimed and zero edited region records in this scenario.
+The software world averaged about4FPS at radius3/1280×720; this is a GUI smoke,
+not a physical GPU performance comparison. Scripted inputs needed generous
+spacing under software rendering; no native input-latency result is claimed.
+
+![Graphics with persisted vertical78°](images/slice15-graphics.png)
+![Key capture result](images/slice15-keys.png)
+![Safe display confirmation](images/slice15-display-confirm.png)
+![4:3 settings](images/slice15-settings-four-three.png)
+![Settings at1080p](images/slice15-settings-1080p.png)
+![World/hand at78° vertical](images/slice15-fov78-world.png)
+
+Ubuntu/Windows CI results are linked in PR32. Native Void X11/Wayland and
+Windows11 GPU/DPI/compositor acceptance remains manual; automated tests and
+Xvfb do not establish it. Exact supported options, deliberate omissions,
+recovery and reproducible Fish/PowerShell instructions: [SETTINGS](SETTINGS.md).
+
+Final visual cross-check at78° vertical confirmed both the empty arm and held
+Stone. The original held Grass top blends into this grassy test scene; a plain
+color diagnostic and Stone selection distinguish the model from the terrain.
+Temporary diagnostics were removed; no viewmodel/culling/material change is
+part of Slice15.
+
+![Empty arm at78° vertical](images/slice15-fov78-arm.png)
+
+## Slice 15 UI polish: English, discrete distance and keyboard labels
+
+Local checks passed: format, locked workspace Clippy with warnings denied,
+**147 client +154 core tests**, locked workspace build and texture consistency.
+Targeted tests cover integer slider snapping/clamping, mouse click/drag/release,
+Left/Right stepping, radius persistence, English text bounds, distinct button
+states and text/fill contrast >=4.5:1. Existing navigation/confirmation and VSync
+rollback tests remain green. Simulated OS logical-key events test German QWERTZ
+and English QWERTY through capture, save/reload and physical movement commands.
+
+Actual Xvfb/X11 + Mesa llvmpipe smoke passed: English title, creation/world list,
+options, distance3 click and distance2 drag with persisted values, 720p/1080p/4:3,
+plus native close. Using setxkbmap de/us on the test X server, physical US Y/Z
+positions produced the expected logical Z/Y (German) and Y/Z (English) labels.
+The saved file retained physical KeyY/KeyZ values, with no format change. These
+captures verify X11 software rendering/input, not native Wayland/Windows GPU/DPI.
+Unobserved character keys deliberately show Scan names; see SETTINGS for the
+cross-platform layout-cache limitation and restart behavior.
+
+![English main menu](images/slice15-polish-title.png)
+![World selection](images/slice15-polish-worlds.png)
+![Video settings / discrete distance](images/slice15-polish-graphics.png)
+![German QWERTZ labels](images/slice15-polish-qwertz-y.png)
+![English QWERTY labels](images/slice15-polish-qwerty.png)
+![4:3](images/slice15-polish-graphics-four-three.png)
+![1080p](images/slice15-polish-graphics-1080p.png)

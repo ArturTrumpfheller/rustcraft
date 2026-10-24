@@ -84,11 +84,20 @@ impl Default for ViewAngles {
     }
 }
 
-fn spawn_camera(mut commands: Commands, player: Res<PlayerState>, settings: Res<PlayerSettings>) {
+fn spawn_camera(
+    mut commands: Commands,
+    player: Res<PlayerState>,
+    settings: Res<PlayerSettings>,
+    preferences: Option<Res<crate::settings::Preferences>>,
+) {
     commands.spawn((
         crate::session::SessionEntity,
         FirstPersonCamera,
         SprintFov::default(),
+        Projection::Perspective(PerspectiveProjection {
+            fov: preferences.map_or(45., |p| p.fov as f32).to_radians(),
+            ..default()
+        }),
         Camera3d::default(),
         Tonemapping::Reinhard,
         Transform::from_translation(Vec3::from_array(
@@ -165,6 +174,7 @@ struct KeyboardCommands<'w> {
     time: Res<'w, Time<Real>>,
     player: Res<'w, PlayerState>,
     flow: Option<Res<'w, crate::session::ClientFlow>>,
+    preferences: Option<Res<'w, crate::settings::Preferences>>,
 }
 
 fn read_input(
@@ -196,9 +206,14 @@ fn read_input(
     }
     // Do not apply pre-capture hover motion to the freshly captured view.
     if !input.captured_this_frame {
-        view.pitch =
-            (view.pitch - motion.delta.y * 0.002).clamp(-FRAC_PI_2 + 0.01, FRAC_PI_2 - 0.01);
-        view.yaw = (view.yaw - motion.delta.x * 0.002) % std::f32::consts::TAU;
+        let sensitivity = commands
+            .preferences
+            .as_ref()
+            .map_or(0.002, |p| p.sensitivity as f32 * 0.00002);
+        let invert = commands.preferences.as_ref().is_some_and(|p| p.invert_y);
+        view.pitch = (view.pitch - motion.delta.y * sensitivity * if invert { -1. } else { 1. })
+            .clamp(-FRAC_PI_2 + 0.01, FRAC_PI_2 - 0.01);
+        view.yaw = (view.yaw - motion.delta.x * sensitivity) % std::f32::consts::TAU;
     }
     if !input.captured_this_frame && keyboard.just_pressed(bindings.respawn) {
         *view = ViewAngles::default();
@@ -343,4 +358,16 @@ fn rebase_scene(
 pub(crate) fn reset(world: &mut World) {
     world.insert_resource(ViewAngles::default());
     world.insert_resource(ViewPose::default());
+}
+
+pub(crate) fn set_fov(world: &mut World, degrees: u16) {
+    for (mut projection, mut sprint) in world
+        .query_filtered::<(&mut Projection, &mut SprintFov), With<FirstPersonCamera>>()
+        .iter_mut(world)
+    {
+        if let Projection::Perspective(p) = &mut *projection {
+            p.fov = (degrees as f32).to_radians();
+        }
+        *sprint = SprintFov::default();
+    }
 }

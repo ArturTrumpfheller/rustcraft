@@ -114,12 +114,14 @@ fn legacy_import_copies_complete_bundle_without_modifying_source_or_overwriting(
     inv.select(7);
     store.save_player_session(&w, &inv, false).unwrap();
     fs::write(t.0.join("custom.recovery"), b"opaque sidecar").unwrap();
+    fs::write(t.0.join("settings.rcs"), b"root user settings").unwrap();
     assert!(c.import_legacy("Import").is_err());
     drop(store);
     let before = bytes(&t.0);
     let id = c.import_legacy("Import").unwrap();
     assert_eq!(bytes(&t.0), before);
     let p = c.managed(&id).unwrap();
+    assert!(!p.join("settings.rcs").exists());
     assert_eq!(
         fs::read(p.join("custom.recovery")).unwrap(),
         b"opaque sidecar"

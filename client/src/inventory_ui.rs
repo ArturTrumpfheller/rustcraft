@@ -112,6 +112,7 @@ impl Layout {
 fn input(
     mut state: ResMut<GameInventory>,
     keyboard: Res<ButtonInput<KeyCode>>,
+    bindings: Option<Res<crate::controls::MovementBindings>>,
     mouse: Res<ButtonInput<MouseButton>>,
     scroll: Option<Res<AccumulatedMouseScroll>>,
     windows: Query<(&Window, &CursorOptions), With<PrimaryWindow>>,
@@ -125,8 +126,10 @@ fn input(
         state.wheel = 0.;
         return;
     }
-    if keyboard.just_pressed(KeyCode::KeyE)
-        || (state.open && keyboard.just_pressed(KeyCode::Escape))
+    let bindings = bindings.as_deref().copied().unwrap_or_default();
+    if keyboard.just_pressed(bindings.inventory)
+        || (state.open
+            && (keyboard.just_pressed(bindings.menu) || keyboard.just_pressed(KeyCode::Escape)))
     {
         if state.open {
             if state.contents.return_cursor() {
@@ -144,20 +147,7 @@ fn input(
         }
         return;
     }
-    for (i, key) in [
-        KeyCode::Digit1,
-        KeyCode::Digit2,
-        KeyCode::Digit3,
-        KeyCode::Digit4,
-        KeyCode::Digit5,
-        KeyCode::Digit6,
-        KeyCode::Digit7,
-        KeyCode::Digit8,
-        KeyCode::Digit9,
-    ]
-    .into_iter()
-    .enumerate()
-    {
+    for (i, key) in bindings.hotbar.into_iter().enumerate() {
         if keyboard.just_pressed(key) {
             state.contents.select(i);
         }

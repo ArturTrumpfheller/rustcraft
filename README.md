@@ -53,6 +53,14 @@ world can load. A save failure retains changes and offers retry.
 See [world structure, migration, controls and Void Fish / Windows tests](docs/WORLDS.md)
 and [session architecture](docs/MENUS.md).
 
+## User settings (Slice 15)
+
+Title/Pause → Options provides persistent vertical FOV (including78°),
+mouse sensitivity/inversion, complete key bindings, live radius1–3, VSync,
+window size and windowed/borderless with timed rollback. Apply saves separate
+user preferences; worlds and inventory keep their own identities.
+See [settings format, limits, Fish/Windows tests and stacked PR workflow](docs/SETTINGS.md).
+
 ## Voxel skylight
 
 Open vertical sky supplies level15; solid blocks, including leaves, occlude it.

@@ -235,3 +235,12 @@ Resolve these incrementally while preserving backward-compatible migration paths
   buttons, shared mouse/keyboard actions. No third-party font or artwork.
 - Selected-world loading and menu actions are future extension points; no world
   chooser/settings implementation. See MENUS for platform acceptance and limits.
+
+## Slice 15 decisions
+
+Use strict bounded user config outside world identities, explicit Apply on one IO worker,
+original menu canvas, timed display rollback and existing movement/stream adapters.
+Keep 45° vertical default and expose exact78°. Use portable presentation fallback
+modes; defer exclusive mode, toggle latches, manual UI zoom and custom FPS pacing.
+Stack PR on Slice14, preserve its fork boundary for later squash-safe transplant.
+See SETTINGS for validation and recovery contracts.

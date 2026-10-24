@@ -151,7 +151,7 @@ while the game runs, remote filesystem guarantees or power-loss-proof hardware.
 Windows lacks the Unix directory-fsync guarantee; existing SaveStore limits remain.
 Catalog validation scans historical paths on its worker and can be slow for very
 large worlds; no per-frame filesystem scans are added. Player position remains
-session-only. Settings belong to Slice15.
+session-only. Slice15 preferences remain at the data root; legacy-copy import additionally excludes settings.rcs, .settings.lock, settings.rcs.tmp and settings.rcs.rejected. See [SETTINGS](SETTINGS.md).
 
 ## Void Linux glibc / Fish acceptance
 

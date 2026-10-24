@@ -5,7 +5,10 @@ This document tracks intended milestones, not promised delivery dates. Implement
 Slice14 adds paged world selection, named seeded creation, separate bundles,
 metadata rename, reversible archive and explicit validated legacy-copy import.
 It reuses Slice13's save/cleanup barrier; see [WORLDS](WORLDS.md) and [MENUS](MENUS.md).
-Settings remain Slice15.
+Slice15 adds persistent user settings; see [SETTINGS](SETTINGS.md) for exact options, limits and acceptance.
+
+- [x] Title/pause settings, versioned configuration, FOV/mouse/keys, live radius and safe display preview
+- [ ] Native Slice15 Void/Windows GPU, compositor and DPI acceptance
 
 ## v0.1 — Classic-style prototype
 

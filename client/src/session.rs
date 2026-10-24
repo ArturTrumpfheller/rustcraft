@@ -17,6 +17,7 @@ pub(crate) enum ClientState {
     #[default]
     Title,
     Worlds,
+    Settings,
     Loading,
     Playing,
     Paused,
@@ -134,7 +135,7 @@ pub(crate) fn begin_loading(world: &mut World) {
             thread::Builder::new()
                 .name("rustcraft-load".into())
                 .spawn(move || {
-                    let id = selected.ok_or("Keine Welt ausgewaehlt")?;
+                    let id = selected.ok_or("No world selected")?;
                     let catalog = voxel_core::persistence::catalog::WorldCatalog::new(directory)
                         .map_err(|e| e.to_string())?;
                     prepare(catalog.open(&id).map_err(|e| e.to_string())?)
@@ -170,6 +171,14 @@ fn install(world: &mut World, loaded: Loaded) {
     world.insert_resource(loaded.inventory);
     world.insert_resource(loaded.save);
     world.insert_resource(loaded.stream);
+    if let Some(p) = world.get_resource::<crate::settings::Preferences>()
+        && std::env::var_os("RUSTCRAFT_LOAD_RADIUS").is_none()
+    {
+        let radius = p.radius;
+        world
+            .resource_mut::<streaming::StreamState>()
+            .set_radius(radius);
+    }
     world.insert_resource(loaded.spawn);
     world.insert_resource(player::PlayerState::default());
     world.insert_resource(player::ControllerInput::default());
@@ -269,7 +278,7 @@ fn advance(world: &mut World) {
         match world.remove_resource::<Loading>().unwrap().0.join() {
             Ok(Ok(loaded)) => install(world, loaded),
             Ok(Err(e)) => load_failed(world, e),
-            Err(_) => load_failed(world, "Ladeauftrag unerwartet beendet".into()),
+            Err(_) => load_failed(world, "Loading stopped unexpectedly".into()),
         }
     }
     if world.resource::<ClientFlow>().save_complete {
@@ -288,6 +297,7 @@ fn advance(world: &mut World) {
 fn modal_input(
     mut flow: ResMut<ClientFlow>,
     keys: Res<ButtonInput<KeyCode>>,
+    bindings: Res<controls::MovementBindings>,
     mut windows: Query<(&Window, &mut CursorOptions), With<PrimaryWindow>>,
     inventory: Res<inventory_ui::GameInventory>,
     mut close: MessageReader<WindowCloseRequested>,
@@ -295,7 +305,7 @@ fn modal_input(
 ) {
     if close.read().count() > 0 {
         match flow.state {
-            ClientState::Worlds => {
+            ClientState::Worlds | ClientState::Settings => {
                 // The browser drains an in-flight filesystem operation before exit.
                 flow.destination = Some(Destination::Quit);
             }
@@ -316,12 +326,14 @@ fn modal_input(
     };
     if flow.playing()
         && (!window.focused && !inventory.open
-            || (keys.just_pressed(KeyCode::Escape) && !inventory.open && !inventory.transition))
+            || ((keys.just_pressed(bindings.menu) || keys.just_pressed(KeyCode::Escape))
+                && !inventory.open
+                && !inventory.transition))
     {
         flow.state = ClientState::Paused;
     } else if flow.state == ClientState::Paused
         && window.focused
-        && keys.just_pressed(KeyCode::Escape)
+        && (keys.just_pressed(bindings.menu) || keys.just_pressed(KeyCode::Escape))
     {
         flow.state = ClientState::Playing;
         flow.resume_frame = true;
