@@ -13,6 +13,9 @@ pub(crate) struct MovementBindings {
     pub sneak: KeyCode,
     pub jump: KeyCode,
     pub respawn: KeyCode,
+    pub inventory: KeyCode,
+    pub menu: KeyCode,
+    pub hotbar: [KeyCode; 9],
 }
 
 impl Default for MovementBindings {
@@ -26,11 +29,64 @@ impl Default for MovementBindings {
             sneak: KeyCode::ShiftLeft,
             jump: KeyCode::Space,
             respawn: KeyCode::KeyR,
+            inventory: KeyCode::KeyE,
+            menu: KeyCode::Escape,
+            hotbar: [
+                KeyCode::Digit1,
+                KeyCode::Digit2,
+                KeyCode::Digit3,
+                KeyCode::Digit4,
+                KeyCode::Digit5,
+                KeyCode::Digit6,
+                KeyCode::Digit7,
+                KeyCode::Digit8,
+                KeyCode::Digit9,
+            ],
         }
     }
 }
 
 impl MovementBindings {
+    pub fn keys(&self) -> [KeyCode; 19] {
+        let mut out = [
+            self.forward,
+            self.backward,
+            self.left,
+            self.right,
+            self.jump,
+            self.sprint,
+            self.sneak,
+            self.respawn,
+            self.inventory,
+            self.menu,
+            KeyCode::Digit1,
+            KeyCode::Digit2,
+            KeyCode::Digit3,
+            KeyCode::Digit4,
+            KeyCode::Digit5,
+            KeyCode::Digit6,
+            KeyCode::Digit7,
+            KeyCode::Digit8,
+            KeyCode::Digit9,
+        ];
+        out[10..].copy_from_slice(&self.hotbar);
+        out
+    }
+    pub fn from_keys(k: [KeyCode; 19]) -> Self {
+        Self {
+            forward: k[0],
+            backward: k[1],
+            left: k[2],
+            right: k[3],
+            jump: k[4],
+            sprint: k[5],
+            sneak: k[6],
+            respawn: k[7],
+            inventory: k[8],
+            menu: k[9],
+            hotbar: k[10..].try_into().unwrap(),
+        }
+    }
     pub fn command(&self, keys: &ButtonInput<KeyCode>, yaw: f64) -> MovementInput {
         let axis = |positive, negative| {
             f64::from(keys.pressed(positive)) - f64::from(keys.pressed(negative))

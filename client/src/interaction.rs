@@ -81,6 +81,7 @@ struct EditContext<'w, 's> {
 
 fn edit_and_target(
     keyboard: Res<ButtonInput<KeyCode>>,
+    bindings: Option<Res<crate::controls::MovementBindings>>,
     mouse: Res<ButtonInput<MouseButton>>,
     mut ctx: EditContext,
 ) {
@@ -90,19 +91,16 @@ fn edit_and_target(
         && !ctx.inventory.open
         && !ctx.inventory.transition;
     if active {
-        for (key, slot) in [
-            (KeyCode::Digit1, 1),
-            (KeyCode::Digit2, 2),
-            (KeyCode::Digit3, 3),
-            (KeyCode::Digit4, 4),
-            (KeyCode::Digit5, 5),
-            (KeyCode::Digit6, 6),
-            (KeyCode::Digit7, 7),
-            (KeyCode::Digit8, 8),
-            (KeyCode::Digit9, 9),
-        ] {
+        for (slot, key) in bindings
+            .as_deref()
+            .copied()
+            .unwrap_or_default()
+            .hotbar
+            .into_iter()
+            .enumerate()
+        {
             if keyboard.just_pressed(key) {
-                ctx.inventory.contents.select(slot - 1);
+                ctx.inventory.contents.select(slot);
             }
         }
     }

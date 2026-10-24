@@ -5,7 +5,17 @@ use super::*;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const META: &str = "world.meta";
-const RESERVED: [&str; 4] = ["worlds", "archive", ".staging", ".catalog.lock"];
+// User preferences are root-owned, never copied into imported world bundles.
+const RESERVED: [&str; 8] = [
+    "worlds",
+    "archive",
+    ".staging",
+    ".catalog.lock",
+    "settings.rcs",
+    ".settings.lock",
+    "settings.rcs.tmp",
+    "settings.rcs.rejected",
+];
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum WorldKey {
     Managed(String),
@@ -56,7 +66,9 @@ pub fn valid_id(id: &str) -> bool {
 }
 pub fn validate_name(name: &str) -> Result<(), SaveError> {
     if name.trim().is_empty() || name.chars().count() > 96 || name.chars().any(char::is_control) {
-        return Err(fail("Name: 1 bis 96 Zeichen, keine Steuerzeichen"));
+        return Err(fail(
+            "Name must contain 1 to 96 characters without control characters",
+        ));
     }
     Ok(())
 }
@@ -66,12 +78,12 @@ pub fn parse_seed(seed: &str) -> Result<Option<u64>, SaveError> {
     }
     if !seed.bytes().all(|c| c.is_ascii_digit()) {
         return Err(fail(
-            "Seed muss eine Dezimalzahl von 0 bis 18446744073709551615 sein",
+            "Seed must be a decimal integer from 0 to 18446744073709551615",
         ));
     }
     seed.parse()
         .map(Some)
-        .map_err(|_| fail("Seed ausserhalb des u64-Bereichs"))
+        .map_err(|_| fail("Seed is outside the u64 range"))
 }
 pub fn random_seed() -> u64 {
     // Unpredictability is not a security boundary; seed is saved before playing.
@@ -176,17 +188,17 @@ fn tree(path: &Path, skip_catalog: bool) -> Result<Vec<PathBuf>, SaveError> {
 }
 fn metadata(path: &Path, id: &str) -> Result<(String, u64), SaveError> {
     plain(path)?;
-    let b = read_limited(path, 512)?.ok_or_else(|| fail("Metadaten fehlen"))?;
+    let b = read_limited(path, 512)?.ok_or_else(|| fail("Metadata is missing"))?;
     if b.len() < 52 || &b[..8] != b"RCMETA01" || b[8..40] != *id.as_bytes() {
-        return Err(fail("Ungueltige Metadaten / ID"));
+        return Err(fail("Invalid metadata / ID"));
     }
     let crc = u32::from_le_bytes(b[b.len() - 4..].try_into().unwrap());
     if crc32fast::hash(&b[..b.len() - 4]) != crc {
-        return Err(fail("Metadaten-Pruefsumme"));
+        return Err(fail("Metadata checksum mismatch"));
     }
     let created = u64::from_le_bytes(b[40..48].try_into().unwrap());
     let name = std::str::from_utf8(&b[48..b.len() - 4])
-        .map_err(|_| fail("Metadaten UTF-8"))?
+        .map_err(|_| fail("Invalid metadata UTF-8"))?
         .to_owned();
     validate_name(&name)?;
     Ok((name, created))
@@ -227,16 +239,16 @@ impl WorldCatalog {
             .truncate(false)
             .open(p)?;
         f.try_lock()
-            .map_err(|e| fail(format!("Weltenverwaltung gesperrt: {e}")))?;
+            .map_err(|e| fail(format!("World catalog is locked: {e}")))?;
         Ok(f)
     }
     fn managed(&self, id: &str) -> Result<PathBuf, SaveError> {
         if !valid_id(id) {
-            return Err(fail("Ungueltige Welt-ID"));
+            return Err(fail("Invalid world ID"));
         }
         let p = self.area("worlds")?.join(id);
         if !plain(&p)?.is_dir() {
-            return Err(fail("Weltverzeichnis fehlt"));
+            return Err(fail("World directory is missing"));
         }
         Ok(p)
     }
@@ -262,7 +274,7 @@ impl WorldCatalog {
             out.push(self.entry(
                 WorldKey::Legacy,
                 self.root.clone(),
-                "Alter Einzelspielstand".into(),
+                "Legacy Single World".into(),
             ));
         }
         for (area, incomplete) in [("worlds", false), (".staging", true)] {
@@ -291,19 +303,17 @@ impl WorldCatalog {
             path,
             seed: None,
             generator: None,
-            kind: "Unbekannt".into(),
+            kind: "Unknown".into(),
             created: None,
             error: None,
         };
         let result = (|| {
             if matches!(e.key, WorldKey::Incomplete(_)) {
-                return Err(fail(
-                    "Unvollstaendige Operation; Dateien zur Untersuchung erhalten",
-                ));
+                return Err(fail("Incomplete operation; files preserved for inspection"));
             }
             if let WorldKey::Managed(id) = &e.key {
                 if !valid_id(id) {
-                    return Err(fail("Ungueltige Verzeichnis-ID"));
+                    return Err(fail("Invalid directory ID"));
                 }
                 plain(&e.path)?;
                 let (name, created) = metadata(&e.path.join(META), id)?;
@@ -349,12 +359,12 @@ impl WorldCatalog {
                 Err(e) => return Err(e.into()),
             }
         }
-        Err(fail("Welt-ID Kollision"))
+        Err(fail("World ID collision"))
     }
     fn publish(&self, id: &str, stage: &Path) -> Result<(), SaveError> {
         let target = self.area("worlds")?.join(id);
         if fs::symlink_metadata(&target).is_ok() {
-            return Err(fail("Ziel existiert bereits"));
+            return Err(fail("Target already exists"));
         }
         fs::rename(stage, target)?;
         sync_dir(&self.area("worlds")?)?;
@@ -456,7 +466,7 @@ impl WorldCatalog {
         fs::create_dir_all(&archive)?;
         let target = archive.join(id);
         if fs::symlink_metadata(&target).is_ok() {
-            return Err(fail("Archivziel existiert bereits"));
+            return Err(fail("Archive target already exists"));
         }
         // Windows refuses a directory rename with an open descendant, even
         // with delete sharing. The catalog mutex excludes all production opens
@@ -496,7 +506,7 @@ fn validate(path: &Path, legacy: bool) -> Result<(SaveStore, World), SaveError> 
     let world = match root {
         Some(b) => decode(&b)?,
         None if store.backup_path().try_exists()? => {
-            return Err(fail("Primaere Welt fehlt; Backup erhalten"));
+            return Err(fail("Primary world file is missing; backup preserved"));
         }
         None => store.pending_world()?,
     };
@@ -517,13 +527,13 @@ fn validate(path: &Path, legacy: bool) -> Result<(SaveStore, World), SaveError> 
         let stem = primary.file_stem().unwrap().to_string_lossy();
         let (x, z) = stem
             .split_once('_')
-            .ok_or_else(|| fail("Ungueltiger Regionspfad"))?;
+            .ok_or_else(|| fail("Invalid region path"))?;
         let pos = crate::regions::RegionPos([
-            x.parse().map_err(|_| fail("Regionskoordinate"))?,
-            z.parse().map_err(|_| fail("Regionskoordinate"))?,
+            x.parse().map_err(|_| fail("Invalid region coordinate"))?,
+            z.parse().map_err(|_| fail("Invalid region coordinate"))?,
         ]);
         if store.region_path(pos) != primary {
-            return Err(fail("Falscher Regionspfad"));
+            return Err(fail("Incorrect region path"));
         }
         let id = world.region_identity().ok_or(FormatError::Identity)?;
         store.read_region(id, pos)?;

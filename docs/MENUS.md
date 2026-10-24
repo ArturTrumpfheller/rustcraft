@@ -77,7 +77,7 @@ remain emergency protection if another runner drops the whole App.
 `Destination` selects Title/Quit. Slice14 adds `ClientState::Worlds` and pins
 `selected_world` before the load worker opens it through WorldCatalog. All setup,
 save barriers and cleanup described here are reused. Catalog pages own one separate worker
-and no gameplay resources. Settings remain Slice15.
+and no gameplay resources. Settings is a further modal state entered from Title or Pause, returning to its origin; see [SETTINGS](SETTINGS.md).
 
 ## Current native acceptance
 

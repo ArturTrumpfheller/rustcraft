@@ -446,3 +446,64 @@ fn managed_world_a_b_a_without_restart_preserves_all_state_and_reclaims_assets()
         assert!(catalog.open(id).is_ok());
     }
 }
+
+#[test]
+fn user_settings_survive_world_switches_pause_focus_and_new_session_cameras() {
+    let mut app = app();
+    let a = Directory::new();
+    let b = Directory::new();
+    let baseline = assets(&app);
+    let mut preferences = crate::settings::Preferences {
+        fov: 78,
+        sensitivity: 123,
+        radius: 1,
+        ..default()
+    };
+    preferences.keys[0] = KeyCode::KeyZ;
+    preferences.keys[8] = KeyCode::KeyI;
+    preferences.keys[9] = KeyCode::KeyP;
+    preferences.keys[10] = KeyCode::KeyX;
+    crate::settings::apply(app.world_mut(), preferences.clone());
+    for dir in [&a, &b, &a] {
+        open(&mut app, dir);
+        let fov = app
+            .world_mut()
+            .query_filtered::<&Projection, With<camera::FirstPersonCamera>>()
+            .single(app.world())
+            .unwrap();
+        assert!(matches!(fov,Projection::Perspective(p) if p.fov==78_f32.to_radians()));
+        assert_eq!(
+            app.world().resource::<controls::MovementBindings>().forward,
+            KeyCode::KeyZ
+        );
+        key(&mut app, KeyCode::KeyX);
+        assert_eq!(
+            app.world()
+                .resource::<inventory_ui::GameInventory>()
+                .contents
+                .selected(),
+            0
+        );
+        key(&mut app, KeyCode::KeyI);
+        assert!(app.world().resource::<inventory_ui::GameInventory>().open);
+        key(&mut app, KeyCode::KeyI);
+        assert!(!app.world().resource::<inventory_ui::GameInventory>().open);
+        key(&mut app, KeyCode::KeyP);
+        assert_eq!(state(&app), ClientState::Paused);
+        key(&mut app, KeyCode::KeyP);
+        assert_eq!(state(&app), ClientState::Playing);
+        let id = window(&mut app);
+        app.world_mut().get_mut::<Window>(id).unwrap().focused = false;
+        frame(&mut app);
+        assert_eq!(state(&app), ClientState::Paused);
+        app.world_mut().get_mut::<Window>(id).unwrap().focused = true;
+        frame(&mut app);
+        assert_eq!(state(&app), ClientState::Paused);
+        assert_eq!(
+            *app.world().resource::<crate::settings::Preferences>(),
+            preferences
+        );
+        leave(&mut app);
+        assert_eq!(assets(&app), baseline);
+    }
+}

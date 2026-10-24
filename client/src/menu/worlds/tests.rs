@@ -8,7 +8,7 @@ fn app(page: Page) -> App {
         })
         .insert_resource(Browser {
             page,
-            name: "Neue Welt".into(),
+            name: "New World".into(),
             ..default()
         })
         .init_resource::<ButtonInput<KeyCode>>()

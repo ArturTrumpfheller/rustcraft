@@ -49,6 +49,7 @@ pub(super) struct Browser {
     focus: usize,
     pressed: Option<usize>,
     pointer: Option<Vec2>,
+    hovered: Option<usize>,
     name: String,
     seed: String,
     error: String,
@@ -59,7 +60,10 @@ impl Browser {
     pub fn stamp(&self) -> String {
         format!(
             "{}/{:?}/{}/{:?}",
-            self.revision, self.page, self.focus, self.pressed
+            self.revision,
+            self.page,
+            self.focus,
+            (self.pressed, self.hovered)
         )
     }
     fn entry(&self) -> Option<&WorldEntry> {
@@ -121,12 +125,12 @@ impl Browser {
                     );
                 }
                 add(
-                    "< Vorherige".into(),
+                    "< Previous".into(),
                     (self.offset > 0).then_some(Command::Previous),
                     [-208., -58., 100., 16.],
                 );
                 add(
-                    "Naechste >".into(),
+                    "Next >".into(),
                     (self.offset + 3 < self.entries.len()).then_some(Command::Next),
                     [108., -58., 100., 16.],
                 );
@@ -134,12 +138,12 @@ impl Browser {
                 let managed = e.is_some_and(|e| matches!(e.key, WorldKey::Managed(_)));
                 let valid = managed && e.is_some_and(|e| e.error.is_none());
                 for (i, (label, cmd)) in [
-                    ("Welt spielen", valid.then_some(Command::Play)),
-                    ("Neue Welt erstellen", Some(Command::Create)),
-                    ("Umbenennen", valid.then_some(Command::Rename)),
-                    ("Archivieren", managed.then_some(Command::Archive)),
-                    ("Untersuchen", e.map(|_| Command::Details)),
-                    ("Hauptmenü", Some(Command::Back)),
+                    ("Play Selected World", valid.then_some(Command::Play)),
+                    ("Create New World", Some(Command::Create)),
+                    ("Rename", valid.then_some(Command::Rename)),
+                    ("Archive", managed.then_some(Command::Archive)),
+                    ("Inspect", e.map(|_| Command::Details)),
+                    ("Main Menu", Some(Command::Back)),
                 ]
                 .into_iter()
                 .enumerate()
@@ -155,7 +159,7 @@ impl Browser {
                     );
                 }
                 add(
-                    "Aktualisieren".into(),
+                    "Refresh".into(),
                     Some(Command::Refresh),
                     [108., 102., 100., 16.],
                 );
@@ -171,7 +175,7 @@ impl Browser {
                         format!(
                             "Seed: {}",
                             if self.seed.is_empty() {
-                                "Zufaellig".into()
+                                "Random".into()
                             } else {
                                 self.seed.clone()
                             }
@@ -182,47 +186,39 @@ impl Browser {
                 }
                 add(
                     if self.page == Page::Create {
-                        "Welt erstellen"
+                        "Create World"
                     } else {
-                        "Namen speichern"
+                        "Save Name"
                     }
                     .into(),
                     Some(Command::Confirm),
                     [-204., -101., 198., 20.],
                 );
-                add(
-                    "Abbrechen".into(),
-                    Some(Command::Back),
-                    [6., -101., 198., 20.],
-                );
+                add("Cancel".into(), Some(Command::Back), [6., -101., 198., 20.]);
             }
             Page::Archive | Page::Import => {
                 add(
                     if self.page == Page::Archive {
-                        "Ja, archivieren"
+                        "Yes, Archive"
                     } else {
-                        "Ja, Kopie importieren"
+                        "Yes, Import a Copy"
                     }
                     .into(),
                     Some(Command::Confirm),
                     [-204., -67., 198., 20.],
                 );
-                add(
-                    "Abbrechen".into(),
-                    Some(Command::Back),
-                    [6., -67., 198., 20.],
-                );
+                add("Cancel".into(), Some(Command::Back), [6., -67., 198., 20.]);
             }
             Page::Details => {
                 if self.entry().is_some_and(|e| e.key == WorldKey::Legacy) {
                     add(
-                        "Legacy importieren...".into(),
+                        "Import Legacy World...".into(),
                         Some(Command::Import),
                         [-215., -75., 205., 23.],
                     );
                 }
                 add(
-                    "Zurück zur Liste".into(),
+                    "Back to World List".into(),
                     Some(Command::Back),
                     [10., -75., 205., 23.],
                 );
@@ -247,7 +243,7 @@ pub(super) fn poll(world: &mut World) {
     if done {
         let job = world.resource_mut::<Browser>().job.take().unwrap();
         let result = job.join().unwrap_or_else(|_| {
-            Err("Weltenauftrag unerwartet beendet; Dateien bleiben erhalten".into())
+            Err("World operation stopped unexpectedly; files are preserved".into())
         });
         let mut b = world.resource_mut::<Browser>();
         match result {
@@ -380,6 +376,7 @@ pub(super) fn input(world: &mut World) {
         b.focus = i;
     }
     b.pointer = pointer;
+    b.hovered = hovered;
     if up {
         b.focus = (b.focus + controls.len() - 1) % controls.len();
         b.pressed = None;
@@ -440,7 +437,7 @@ fn activate(world: &mut World, cmd: Command) {
         Command::Refresh => b.refresh(),
         Command::Create => {
             b.page = Page::Create;
-            b.name = "Neue Welt".into();
+            b.name = "New World".into();
             b.seed = std::env::var("RUSTCRAFT_WORLD_SEED").unwrap_or_default();
             b.focus = 0;
         }
@@ -513,7 +510,7 @@ fn activate(world: &mut World, cmd: Command) {
                 }
                 Page::Import => {
                     b.start(|c| {
-                        c.import_legacy("Importierte Welt")
+                        c.import_legacy("Imported World")
                             .map(|id| Some(WorldKey::Managed(id)))
                             .map_err(|e| e.to_string())
                     });
@@ -540,7 +537,7 @@ fn date(t: u64) -> String {
     let mut days = t / 86400;
     let mut year = 1970;
     if days > 2932896 {
-        return "unbekannt".into();
+        return "unknown".into();
     }
     loop {
         let count = if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) {
@@ -586,19 +583,19 @@ pub(super) fn paint(b: &Browser, c: &mut Canvas) {
     c.centered(
         105.,
         match b.page {
-            Page::List => "WELTENAUSWAHL",
-            Page::Create => "NEUE WELT ERSTELLEN",
-            Page::Rename => "WELT UMBENENNEN",
-            Page::Archive => "WELT ARCHIVIEREN?",
-            Page::Import => "LEGACY ALS KOPIE IMPORTIEREN?",
-            Page::Details => "WELT UNTERSUCHEN",
+            Page::List => "SELECT WORLD",
+            Page::Create => "CREATE NEW WORLD",
+            Page::Rename => "RENAME WORLD",
+            Page::Archive => "ARCHIVE WORLD?",
+            Page::Import => "IMPORT A COPY OF THE LEGACY WORLD?",
+            Page::Details => "INSPECT WORLD",
         },
         1.1,
         copper,
     );
     if b.job.is_some() {
-        c.centered(10., "DATEIEN WERDEN GEPRÜFT...", 1.2, cream);
-        c.centered(-10., "BITTE WARTEN", 1., muted);
+        c.centered(10., "CHECKING FILES...", 1.2, cream);
+        c.centered(-10., "PLEASE WAIT", 1., muted);
         return;
     }
     if b.page == Page::List {
@@ -607,11 +604,11 @@ pub(super) fn paint(b: &Browser, c: &mut Canvas) {
     }
     if b.page == Page::List {
         if b.entries.is_empty() {
-            c.centered(24., "NOCH KEINE WELTEN - NEUE WELT ERSTELLEN", 0.9, cream);
+            c.centered(24., "NO WORLDS YET - CREATE A NEW WORLD", 0.9, cream);
         }
         c.centered(
             -54.,
-            &format!("{} WELTEN / SEITE {}", b.entries.len(), b.offset / 3 + 1),
+            &format!("WORLDS: {} / PAGE {}", b.entries.len(), b.offset / 3 + 1),
             0.75,
             muted,
         );
@@ -619,34 +616,34 @@ pub(super) fn paint(b: &Browser, c: &mut Canvas) {
         c.text(
             -150.,
             61.,
-            "NAME FREI WAEHLBAR / DOPPELTE NAMEN ERLAUBT",
+            "CHOOSE ANY NAME / DUPLICATES ARE ALLOWED",
             0.7,
             muted,
         );
         c.centered(
             -39.,
             if b.page == Page::Create {
-                "LEERER SEED = ZUFALL / GENERATOR V3"
+                "EMPTY SEED = RANDOM / GENERATOR V3"
             } else {
-                "NUR DER ANZEIGENAME WIRD GEAENDERT"
+                "ONLY THE DISPLAY NAME WILL CHANGE"
             },
             0.85,
             muted,
         );
-        c.centered(-66., "TAB: FELD WECHSELN / CTRL+A: LEEREN", 0.85, muted);
+        c.centered(-66., "TAB: NEXT FIELD / CTRL+A: CLEAR", 0.85, muted);
     } else if let Some(e) = b.entry() {
         c.centered(64., &clip(&e.name, 45), 1., cream);
         if b.page == Page::Details {
             let lines = [
                 format!(
-                    "Typ: {} / Seed: {}",
+                    "Type: {} / Seed: {}",
                     e.kind,
                     e.seed.map_or("?".into(), |s| s.to_string())
                 ),
-                format!("Pfad: {}", e.path.display()),
+                format!("Path: {}", e.path.display()),
                 e.error
                     .clone()
-                    .unwrap_or_else(|| "Validiert. Ganze Verzeichnisse sichern.".into()),
+                    .unwrap_or_else(|| "Validated. Back up entire directories.".into()),
             ];
             let detail = lines.join("\n");
             let mut y = 46.;
@@ -659,14 +656,14 @@ pub(super) fn paint(b: &Browser, c: &mut Canvas) {
                     y -= 10.;
                 }
             }
-            c.centered(-104., "VOLLSTAENDIGER PFAD UND FEHLER IM LOG", 0.85, muted);
+            c.centered(-104., "FULL PATH AND ERROR ARE IN THE LOG", 0.85, muted);
         } else {
             c.centered(
                 29.,
                 if b.page == Page::Archive {
-                    "VERSCHIEBEN NACH ARCHIVE / KEIN LOESCHEN"
+                    "MOVE TO ARCHIVE / NO PERMANENT DELETION"
                 } else {
-                    "VOLLSTAENDIGE KOPIE DES ALTEN SPIELSTANDS"
+                    "COPY THE ENTIRE LEGACY SAVE"
                 },
                 0.9,
                 cream,
@@ -674,14 +671,14 @@ pub(super) fn paint(b: &Browser, c: &mut Canvas) {
             c.centered(
                 9.,
                 if b.page == Page::Archive {
-                    "WELT DARF NICHT GEOEFFNET SEIN"
+                    "THE WORLD MUST NOT BE OPEN"
                 } else {
-                    "ORIGINAL BLEIBT ERHALTEN / KEIN VERSCHIEBEN"
+                    "ORIGINAL IS PRESERVED / NOTHING IS MOVED"
                 },
                 0.9,
                 muted,
             );
-            c.centered(-16., "NUR NACH DEINER BESTAETIGUNG", 0.95, copper);
+            c.centered(-16., "ONLY AFTER YOUR CONFIRMATION", 0.95, copper);
         }
     }
     for (i, control) in b.controls().iter().enumerate() {
@@ -722,6 +719,7 @@ pub(super) fn paint(b: &Browser, c: &mut Canvas) {
                 control.rect,
                 &control.label,
                 focused,
+                b.hovered == Some(i),
                 b.pressed == Some(i),
                 enabled,
             );
@@ -729,16 +727,16 @@ pub(super) fn paint(b: &Browser, c: &mut Canvas) {
         if let Some(Command::Select(index)) = control.action {
             let e = &b.entries[index];
             let status = if let Some(error) = &e.error {
-                format!("FEHLER: {}", clip(error, 65))
+                format!("ERROR: {}", clip(error, 65))
             } else if e.key == WorldKey::Legacy {
-                "LEGACY / UNTERSUCHEN UND IMPORTIEREN".into()
+                "LEGACY / INSPECT AND IMPORT".into()
             } else {
                 format!(
                     "{} / Seed {} / Gen {} / {}",
                     e.kind,
                     e.seed.map_or("?".into(), |s| s.to_string()),
                     e.generator.map_or("?".into(), |s| s.to_string()),
-                    e.created.map_or("Datum ?".into(), date)
+                    e.created.map_or("Date ?".into(), date)
                 )
             };
             c.text(

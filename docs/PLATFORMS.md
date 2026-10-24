@@ -486,3 +486,10 @@ Keep the path or use a separate persistent directory under your home if `/tmp`
 cleanup would matter. Never test recovery on the only real save; use a complete
 closed-directory copy. Native Void/Wayland/Windows and physical GPU endurance
 remain owner acceptance. Resource/memory limitations and actual tests: VALIDATION.
+
+## Slice 15 settings acceptance
+
+See [SETTINGS](SETTINGS.md#native-acceptance-void-glibc--fish) for isolated Fish and
+Windows11 PowerShell procedures, display rollback, DPI and environment precedence.
+Windowed/borderless and portable VSync requests use Bevy platform integration;
+exclusive fullscreen and a custom FPS limiter are deliberately not offered.

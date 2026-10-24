@@ -187,6 +187,13 @@ pub(crate) struct StreamState {
     recent_frames: VecDeque<Duration>,
 }
 impl StreamState {
+    pub(crate) fn set_radius(&mut self, radius: i32) {
+        let radius = radius.clamp(1, streaming::MAX_RADIUS);
+        if self.radius != radius {
+            self.radius = radius;
+            self.center = None;
+        }
+    }
     pub(crate) fn drain(&mut self) -> bool {
         if self.job.as_ref().is_some_and(|j| j.handle.is_finished()) {
             let _ = self.job.take().unwrap().handle.join();

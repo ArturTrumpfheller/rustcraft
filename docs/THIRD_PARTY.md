@@ -124,3 +124,18 @@ expanded bitmap glyph tables are original RustCraft artwork/code, **MIT OR
 Apache-2.0**, including `docs/images/slice13-title.png` and `slice13-pause.png`
 (actual Xvfb/Mesa captures). No imported font, image, proprietary menu art,
 dependency, engine feature or lockfile change is added.
+
+## Slice 15 settings
+
+Configuration, menu sliders/controls, tests and documentation are original RustCraft
+MIT OR Apache-2.0 work. Gray bevels and bitmap lettering reuse Slice14 artwork.
+No new dependencies, lockfile, external fonts/art, renderer features or toolchain changes.
+
+`docs/images/slice15-*.png` are actual Xvfb/Mesa RustCraft captures of these
+original menus and the existing original terrain/hand, MIT OR Apache-2.0.
+No reference game artwork or external font is included in them.
+
+Slice15 UI polish adds original English UI text, slider adaptation, contrast
+palette and OS-event-derived key labels. The actual Xvfb/Mesa captures named
+`slice15-polish-*.png` show original RustCraft artwork, MIT OR Apache-2.0.
+No dependencies, third-party artwork, fonts or keyboard libraries were added.

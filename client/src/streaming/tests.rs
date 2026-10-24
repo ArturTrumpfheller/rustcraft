@@ -1184,3 +1184,32 @@ fn non_geometry_roof_edit_rejects_old_load_without_installing_stale_light_sample
         ]),
     );
 }
+
+#[test]
+fn settings_radius_changes_reclaim_assets_and_discard_an_inflight_outside_result() {
+    let mut app = app(3);
+    drain(&mut app);
+    let p = BlockPos([0, -15, 0]);
+    edit(&mut app, p, Block::Air);
+    drain(&mut app);
+    let revision = app.world().resource::<VoxelWorld>().0.revision();
+    let tx = blocked_column(&mut app, [3, 3]);
+    app.world_mut().resource_mut::<StreamState>().set_radius(1);
+    app.update();
+    tx.send(()).unwrap();
+    drain(&mut app);
+    for radius in [2, 3, 1, 3, 1] {
+        app.world_mut()
+            .resource_mut::<StreamState>()
+            .set_radius(radius);
+        drain(&mut app);
+        let world = app.world_mut();
+        let count = world.resource::<VoxelWorld>().0.chunks().count();
+        assert_eq!(count, ((radius * 2 + 1).pow(2) * 3) as usize);
+        let renders = world.resource::<ChunkRenders>().0.len();
+        assert_eq!(world.resource::<Assets<Mesh>>().len(), renders);
+        assert_eq!(world.query::<&Mesh3d>().iter(world).count(), renders);
+        assert_eq!(world.resource::<VoxelWorld>().0.revision(), revision);
+        assert_eq!(world.resource::<VoxelWorld>().0.block(p), Block::Air);
+    }
+}
