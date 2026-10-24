@@ -196,14 +196,14 @@ fn placement_creates_missing_neighbor_storage_and_updates_boundary_faces() {
 }
 
 #[test]
-fn dirty_neighbors_include_faces_but_not_diagonals_on_negative_seams() {
+fn dirty_neighbors_include_ao_diagonals_on_negative_seams() {
     let mut world = World::default();
     for (p, expected) in [
         ([1, 1, 1], 1),
         ([0, 1, 1], 2),
         ([-1, 1, 1], 2),
-        ([-16, 0, 0], 4),
-        ([15, 15, 15], 4),
+        ([-16, 0, 0], 8),
+        ([15, 15, 15], 8),
     ] {
         let change = world.set_block(BlockPos(p), Block::Stone).unwrap().unwrap();
         assert_eq!(change.affected_chunks().len(), expected);
@@ -212,7 +212,8 @@ fn dirty_neighbors_include_faces_but_not_diagonals_on_negative_seams() {
             let distance: i32 = (0..3)
                 .map(|axis| (owner.0[axis] - neighbor.0[axis]).abs())
                 .sum();
-            assert!(distance <= 1);
+            assert!(distance <= 3);
+            assert!((0..3).all(|a| (owner.0[a] - neighbor.0[a]).abs() <= 1));
         }
     }
 }

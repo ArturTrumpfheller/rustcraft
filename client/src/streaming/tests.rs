@@ -52,6 +52,88 @@ fn edit(app: &mut App, p: BlockPos, b: Block) {
     app.world_mut().resource_mut::<DirtyChunks>().mark(change);
 }
 
+#[test]
+fn diagonal_ao_only_edits_force_remeshing_with_identical_skylight_and_survive_eviction() {
+    let mut app = app(1);
+    drain(&mut app);
+    // A sealed four-cell pocket straddles X/Y/Z=0. The diagonal cell is dark
+    // Air before placement: its occupancy changes AO without changing any light.
+    for x in -3..=3 {
+        for y in -3..=3 {
+            for z in -3..=3 {
+                let p = BlockPos([x, y, z]);
+                let b = if y == 0 && (-1..=0).contains(&x) && (-1..=0).contains(&z) {
+                    Block::Air
+                } else {
+                    Block::Stone
+                };
+                if app.world().resource::<VoxelWorld>().0.block(p) != b {
+                    edit(&mut app, p, b);
+                }
+            }
+        }
+    }
+    drain(&mut app);
+    let cp = ChunkPos([-1, -1, -1]);
+    let source = BlockPos([0; 3]);
+    let targets = BTreeSet::from([cp]);
+    let colors = |app: &App| {
+        let handle = &app.world().resource::<ChunkRenders>().0[&cp].mesh;
+        app.world()
+            .resource::<Assets<Mesh>>()
+            .get(handle)
+            .unwrap()
+            .attribute(Mesh::ATTRIBUTE_COLOR)
+            .unwrap()
+            .clone()
+    };
+    let original = colors(&app);
+    let samples = app.world().resource::<StreamState>().lights[&cp].clone();
+    let generated = app.world().resource::<StreamState>().generated_columns;
+    for _ in 0..4 {
+        edit(&mut app, source, Block::Wood);
+        assert!(app.world().resource::<DirtyChunks>().0.contains(&cp));
+        drain(&mut app);
+        assert_eq!(app.world().resource::<StreamState>().lights[&cp], samples);
+        assert_ne!(
+            colors(&app),
+            original,
+            "diagonal occupancy must update shading even when light is unchanged"
+        );
+        assert_geometry(&app, &targets);
+        edit(&mut app, source, Block::Air);
+        drain(&mut app);
+        assert_eq!(colors(&app), original);
+    }
+    assert_eq!(
+        app.world().resource::<StreamState>().generated_columns,
+        generated
+    );
+    // Hold an old diagonal load, then coalesce rapid occupancy changes. It must
+    // be rejected without clearing current geometry/AO invalidations.
+    let tx = blocked_column(&mut app, [-1, -1]);
+    let discarded = app.world().resource::<StreamState>().discarded;
+    for b in [Block::Wood, Block::Air, Block::Leaves] {
+        edit(&mut app, source, b);
+        app.update();
+    }
+    tx.send(()).unwrap();
+    wait_finished(&app);
+    app.update();
+    assert_eq!(
+        app.world().resource::<StreamState>().discarded,
+        discarded + 1
+    );
+    drain(&mut app);
+    assert_geometry(&app, &targets);
+    let final_colors = colors(&app);
+    go(&mut app, [3, 3]);
+    assert!(!app.world().resource::<ChunkRenders>().0.contains_key(&cp));
+    go(&mut app, [0, 0]);
+    assert_geometry(&app, &targets);
+    assert_eq!(colors(&app), final_colors);
+}
+
 fn blocked_column(app: &mut App, column: Column) -> std::sync::mpsc::Sender<()> {
     let world = &app.world().resource::<VoxelWorld>().0;
     let edits = world.overlay_snapshot();

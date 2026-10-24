@@ -45,6 +45,8 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 - [ ] General reusable item/block registry, tools and crafting
 - [x] Initial profiling, matched baseline comparisons and explicit active/dirty memory budgets
 - [x] Initial greedy terrain meshing with atlas repetition and exact light merge boundaries (native acceptance pending)
+- [x] Vertex voxel AO, conservative greedy compatibility and diagonal edit invalidation (native acceptance pending)
+- [ ] Native Slice17 Void X11/Wayland and Windows AO acceptance — see [checklist](AMBIENT_OCCLUSION.md)
 - [ ] Dense-region/bulk-edit profiling and further native GPU optimization
 
 ## v0.3 — Alpha-inspired survival

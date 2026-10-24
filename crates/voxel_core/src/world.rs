@@ -23,22 +23,17 @@ pub struct BlockChange {
 }
 
 impl BlockChange {
-    /// Only face-sharing neighbor chunks need remeshing, never diagonals.
+    /// One-cell geometry/AO footprint, including edge- and corner-sharing chunks.
+    /// An interior edit affects one chunk; an edge/corner edit at most eight.
     pub fn affected_chunks(self) -> BTreeSet<ChunkPos> {
-        let (chunk, local) = self.position.split();
-        let mut result = BTreeSet::from([chunk]);
-        for (axis, coordinate) in local.coordinates().into_iter().enumerate() {
-            let delta = if coordinate == 0 {
-                -1
-            } else if coordinate == CHUNK_SIZE - 1 {
-                1
-            } else {
-                continue;
-            };
-            let mut neighbor = chunk.0;
-            if let Some(value) = neighbor[axis].checked_add(delta) {
-                neighbor[axis] = value;
-                result.insert(ChunkPos(neighbor));
+        let mut result = BTreeSet::new();
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                for dz in -1..=1 {
+                    if let Some(p) = self.position.offset([dx, dy, dz]) {
+                        result.insert(p.split().0);
+                    }
+                }
             }
         }
         result

@@ -303,3 +303,15 @@ The client adapts its engine-neutral repeated UV and tile-origin buffers to a
 terrain-only embedded material; UI/viewmodel retain StandardMaterial. The worker
 and persistence contracts remain unchanged. Session asset cleanup includes the
 terrain material type. See [algorithm and measurements](GREEDY_MESHING.md).
+
+## Slice 17 ambient occlusion
+
+`voxel_core::mesh::ao` samples a fixed one-cell occupancy halo and modulates
+terrain COLOR without changing skylight values. Greedy keys include four AO
+counts packed into one byte; constant and exactly matching affine fields merge.
+Non-affine unit quads choose their diagonal from corner brightness. The same
+halo serves visibility; a fixed color table avoids repeated modulation math. `BlockChange::affected_chunks` now includes
+edge/corner neighbors, forcing AO rebuilds even when exact light samples match.
+Existing source-column/region halos, local tokens, stale rejection and worker
+publication rules already cover those dependencies. No new material, pass,
+vertex attribute or persistent state. See [algorithm and evidence](AMBIENT_OCCLUSION.md).
