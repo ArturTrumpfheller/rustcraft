@@ -1,0 +1,78 @@
+{
+  "plains-r2": {
+    "roi": [
+      400,
+      500,
+      550,
+      590
+    ],
+    "changed_pixels": 0,
+    "total_pixels": 13500,
+    "maximum_channel_difference": 0
+  },
+  "plains-r1": {
+    "roi": [
+      400,
+      500,
+      550,
+      590
+    ],
+    "changed_pixels": 0,
+    "total_pixels": 13500,
+    "maximum_channel_difference": 0
+  },
+  "room-r1": {
+    "roi": [
+      0,
+      0,
+      960,
+      640
+    ],
+    "changed_pixels": 5062,
+    "total_pixels": 614400,
+    "maximum_channel_difference": 2
+  },
+  "cave-r2": {
+    "roi": [
+      440,
+      300,
+      520,
+      360
+    ],
+    "changed_pixels": 0,
+    "total_pixels": 4800,
+    "maximum_channel_difference": 0
+  },
+  "horizon_samples": {
+    "(100, 300)": [
+      172,
+      195,
+      213
+    ],
+    "(100, 355)": [
+      171,
+      195,
+      213
+    ],
+    "(100, 367)": [
+      171,
+      195,
+      213
+    ],
+    "(480, 0)": [
+      123,
+      160,
+      202
+    ],
+    "(480, 300)": [
+      172,
+      195,
+      213
+    ],
+    "(480, 367)": [
+      168,
+      191,
+      209
+    ]
+  }
+}

@@ -9,6 +9,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Deterministic seeded terrain, rolling hills/valleys, a walkable cave network with surface entrance, and blocky trees.
 - 16³ chunks streamed in a **65,536×65,536×48** new-world rollout with local generation and regional saves; configurable load radius, bounded background generation/meshing and cache eviction.
 - Seven original 16×16 pixel textures for grass, dirt, stone, bark, end-grain and opaque leaves, using one shared nearest-filtered atlas.
+- Procedural daylight sky gradient and terrain-only distance fog adapting to radius 1–3.
 - Derived 0–15 voxel skylight: dark roofs/caves, gradual entrance falloff and background updates after edits.
 - At most one surface mesh per rendered chunk; faces shared by solid blocks are removed, including at chunk boundaries.
 - Mouse look, responsive yaw-relative WASD walking, Ctrl sprint, Shift crouch with safe ledges, grounded jumping and safe respawn.
@@ -21,7 +22,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 17**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 18**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -60,6 +61,13 @@ mouse sensitivity/inversion, complete key bindings, live radius1–3, VSync,
 window size and windowed/borderless with timed rollback. Apply saves separate
 user preferences; worlds and inventory keep their own identities.
 See [settings format, limits, Fish/Windows tests and stacked PR workflow](docs/SETTINGS.md).
+
+## Sky and distance fog (Slice 18)
+
+The daylight sky transitions from blue overhead to a light horizon. Terrain fades
+toward the same color beyond a radius-dependent clear near field; dark caves
+retain their lighting. UI and the hand remain clear. See [implementation, matched
+images, software measurements and native acceptance](docs/SKY_FOG.md).
 
 ## Voxel skylight
 

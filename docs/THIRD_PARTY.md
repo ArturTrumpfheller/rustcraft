@@ -151,3 +151,13 @@ Slice17's revision adds original meshing/profile-tool code and screenshot crops
 of the same original art, under MIT OR Apache-2.0. Crops preserve captured pixels
 without imported fonts/art or shader packs. No runtime dependency, feature,
 lockfile or asset artwork change.
+
+## Slice 18 sky and fog
+
+Atmosphere Rust/WESL code, colors, fixtures, measurement/export tools, tests and
+documentation are original RustCraft work, MIT OR Apache-2.0. Screenshots named
+`slice18-*.png` are actual Xvfb/Mesa captures of original RustCraft art under the
+same licenses. No skybox, proprietary shader/source, third-party artwork, new
+crate, renderer feature, lockfile or toolchain change is included. Measurement
+tools use Python's standard library; Pillow/ImageMagick were capture-environment
+tools only and are not runtime dependencies or bundled assets.

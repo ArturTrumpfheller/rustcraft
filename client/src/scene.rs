@@ -50,6 +50,7 @@ impl Plugin for VoxelScenePlugin {
         }
         app.init_resource::<Assets<Image>>()
             .init_resource::<Assets<TerrainSurface>>()
+            .init_resource::<Assets<crate::atmosphere::SkyMaterial>>()
             .init_resource::<RenderOrigin>()
             .init_resource::<DirtyChunks>()
             .init_resource::<LegacyMeshing>()
@@ -62,6 +63,23 @@ impl Plugin for VoxelScenePlugin {
             .add_systems(
                 Update,
                 rebuild_dirty_chunks.run_if(crate::session::has_world),
+            )
+            .add_systems(
+                Startup,
+                spawn_atmosphere
+                    .after(SceneSetup)
+                    .after(crate::camera::CameraSetup)
+                    .run_if(crate::session::has_world),
+            )
+            .add_systems(
+                crate::session::SessionSetup,
+                spawn_atmosphere
+                    .after(SceneSetup)
+                    .after(crate::camera::CameraSetup),
+            )
+            .add_systems(
+                PostUpdate,
+                update_atmosphere.run_if(crate::session::has_world),
             );
     }
 }
@@ -167,6 +185,7 @@ fn spawn_scene(
         },
         extension: AtlasRepeat {
             atlas: atlas.clone(),
+            atmosphere: crate::atmosphere::AtmosphereUniform::for_radius(2),
         },
     });
     let initial_targets: BTreeSet<_> = world.0.chunks().map(|(p, _)| p).collect();
@@ -352,4 +371,68 @@ pub(crate) fn unit_faces(mesh: &Mesh) -> BTreeSet<([i32; 3], [i32; 3])> {
         }
     }
     out
+}
+
+fn atmosphere_radius(
+    stream: Option<&crate::streaming::StreamState>,
+    preferences: Option<&crate::settings::Preferences>,
+) -> i32 {
+    stream
+        .map(|s| s.radius())
+        .filter(|r| (1..=voxel_core::streaming::MAX_RADIUS).contains(r))
+        .unwrap_or_else(|| preferences.map_or(2, |p| p.radius))
+}
+#[derive(SystemParam)]
+struct AtmosphereSettings<'w> {
+    stream: Option<Res<'w, crate::streaming::StreamState>>,
+    preferences: Option<Res<'w, crate::settings::Preferences>>,
+}
+impl AtmosphereSettings<'_> {
+    fn parameters(&self) -> crate::atmosphere::AtmosphereUniform {
+        crate::atmosphere::AtmosphereUniform::for_radius(atmosphere_radius(
+            self.stream.as_deref(),
+            self.preferences.as_deref(),
+        ))
+    }
+}
+fn spawn_atmosphere(
+    mut commands: Commands,
+    camera: Query<(), With<crate::camera::FirstPersonCamera>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<crate::atmosphere::SkyMaterial>>,
+    mut terrain: ResMut<Assets<TerrainSurface>>,
+    handle: Res<TerrainMaterial>,
+    settings: AtmosphereSettings,
+) {
+    if camera.is_empty() {
+        return;
+    }
+    let params = settings.parameters();
+    if let Some(mut m) = terrain.get_mut(&handle.0) {
+        m.extension.atmosphere = params;
+    }
+    let sky = crate::atmosphere::spawn_sky(&mut commands, &mut meshes, &mut materials, params);
+    commands
+        .entity(sky.entity)
+        .insert(crate::session::SessionEntity);
+    commands.insert_resource(sky);
+}
+fn update_atmosphere(
+    settings: AtmosphereSettings,
+    handle: Option<Res<TerrainMaterial>>,
+    sky: Option<Res<crate::atmosphere::SkyAssets>>,
+    mut terrain: ResMut<Assets<TerrainSurface>>,
+    mut materials: ResMut<Assets<crate::atmosphere::SkyMaterial>>,
+) {
+    let Some(handle) = handle else {
+        return;
+    };
+    let params = settings.parameters();
+    crate::atmosphere::update_materials(
+        params,
+        &handle.0,
+        sky.as_ref().map(|s| &s.material),
+        &mut terrain,
+        &mut materials,
+    );
 }

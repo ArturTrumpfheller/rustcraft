@@ -1,3 +1,4 @@
+mod atmosphere;
 mod camera;
 mod controls;
 mod interaction;
@@ -44,7 +45,10 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins(terrain_material::TerrainRenderingPlugin)
+        .add_plugins((
+            terrain_material::TerrainRenderingPlugin,
+            atmosphere::AtmospherePlugin,
+        ))
         .add_plugins((
             scene::VoxelScenePlugin,
             inventory_ui::InventoryPlugin,

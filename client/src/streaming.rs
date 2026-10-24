@@ -187,6 +187,9 @@ pub(crate) struct StreamState {
     recent_frames: VecDeque<Duration>,
 }
 impl StreamState {
+    pub(crate) fn radius(&self) -> i32 {
+        self.radius
+    }
     pub(crate) fn set_radius(&mut self, radius: i32) {
         let radius = radius.clamp(1, streaming::MAX_RADIUS);
         if self.radius != radius {
