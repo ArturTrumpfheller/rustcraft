@@ -60,7 +60,7 @@ it does not create a Git checkout or switch branches. Both run the same harness,
 with only 48/56-byte buffer accounting adapted for the old/new API.
 
 ```sh
-python3 tools/benchmark_meshing.py --output /tmp/rustcraft-mesh-results
+python3 tools/benchmark_meshing.py --baseline 535c636 --output /tmp/rustcraft-mesh-results
 # Or measure only the current implementation:
 cargo run --locked --release -p voxel_core --example meshing_bench
 ```

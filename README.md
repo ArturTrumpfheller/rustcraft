@@ -21,7 +21,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 14**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 17**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -66,8 +66,10 @@ See [settings format, limits, Fish/Windows tests and stacked PR workflow](docs/S
 Open vertical sky supplies level15; solid blocks, including leaves, occlude it.
 Scattered light loses one per step. Roofs and caves are darker; mining openings
 lets light enter and sealing them removes it again. A small cave brightness floor
-keeps textures recognizable. Flat face shading retains the retro look; there is
-no AO, day/night cycle, torch/block light or modern shadow-map effect yet.
+keeps textures recognizable. Subtle vertex ambient occlusion adds depth to corners
+and tree bases while preserving directional face shading and greedy correctness.
+See [AO rules, measurements and native acceptance](docs/AMBIENT_OCCLUSION.md).
+There is no day/night cycle, torch/block light or shadow-map effect yet.
 
 ![Closed original test tunnel](docs/images/slice10-cave-closed.png)
 

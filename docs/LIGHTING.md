@@ -90,3 +90,11 @@ Greedy faces merge only with identical integer skylight samples and tile IDs in
 the same oriented plane. Propagation, adjacent-air sampling, directional shading
 and invalidation remain unchanged. Light changes can now change rectangle
 partitioning while preserving unit-face coverage. See [details](GREEDY_MESHING.md).
+
+## Slice 17 visual AO
+
+[Vertex AO](AMBIENT_OCCLUSION.md) multiplies the existing base face color, with
+reduced strength in darkness. It never changes these 0–15 light samples or their
+propagation. Merge keys now include corner AO and permit only constant fields
+to grow. Geometry forcing includes the one-cell diagonal chunk footprint, even
+when exact cached light is unchanged. Existing source/region bounds are sufficient.

@@ -1,0 +1,8 @@
+Headless debug integration test, one test thread, no renderer or concurrent workload.
+Baseline: ed0c3e48f2f8fcddf7e500d6b4062f8356d4c32e
+Command: cargo test --locked -p rustcraft repeated_seam_mining_workload -- --nocapture --test-threads=1
+Single run per revision; wall-clock observations, not statistical performance estimates.
+max_worker includes initial loading, not only the measured edit loop.
+
+before: SEAM_MINING elapsed=1.183805841s installed=32 discarded=0 max_worker=228.523182ms max_dispatch_frame=3.197733ms meshes=22 chunks=27
+after: SEAM_MINING elapsed=1.391740587s installed=32 discarded=0 max_worker=267.243059ms max_dispatch_frame=5.333273ms meshes=22 chunks=27

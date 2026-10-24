@@ -1,3 +1,5 @@
+mod ao;
+
 use crate::{CHUNK_SIZE, ChunkPos, LocalPos, World};
 
 /// Engine-neutral mesh buffers. Vertices are local to the chunk origin.
@@ -46,7 +48,8 @@ const FACES: [Face; 6] = [
 ];
 
 /// Emits only faces adjacent to air, consulting neighboring chunks too.
-/// Missing chunks and coordinates beyond i32 space are treated as air.
+/// Missing legacy chunks are Air; pending streamed chunks are opaque barriers.
+/// Coordinates beyond i32 space are Air.
 pub fn mesh_chunk(world: &World, position: ChunkPos) -> ChunkMesh {
     if world.chunk(position).is_none() {
         return ChunkMesh::default();
@@ -66,12 +69,15 @@ pub fn mesh_chunk_lit(
         return mesh;
     };
     // Fixed visibility planes, filled in one storage-order pass. Empty slices
-    // are skipped. Extend MergeKey for future AO/block-light data.
+    // are skipped. Only constant AO fields may grow into larger rectangles.
     #[derive(Clone, Copy, PartialEq)]
     struct MergeKey {
         tile: crate::texture::Tile,
         sky: u8,
+        ao: [u8; 4],
     }
+    let occlusion = ao::Occlusion::new(world, position);
+    let ao_offsets = FACES.each_ref().map(ao::offsets);
     let mut active_slices = [0u16; 6];
     let mut planes = [[[None; CHUNK_SIZE * CHUNK_SIZE]; CHUNK_SIZE]; 6];
     for y in 0..CHUNK_SIZE {
@@ -108,6 +114,7 @@ pub fn mesh_chunk_lit(
                         planes[f][p[axis]][p[v] * CHUNK_SIZE + p[u]] = Some(MergeKey {
                             tile: crate::texture::face_tile(block, face.normal).unwrap(),
                             sky: bp.offset(face.normal).map_or(0, |p| light.level(p)),
+                            ao: occlusion.sample(p, ao_offsets[f]),
                         });
                     }
                 }
@@ -132,12 +139,19 @@ pub fn mesh_chunk_lit(
                         i += 1;
                         continue;
                     };
+                    // Equal nonuniform tuples would repeat a gradient, while a
+                    // large quad would stretch it. Keep those faces as units.
+                    let uniform = key.ao.iter().all(|&a| a == key.ao[0]);
                     let mut width = 1;
-                    while i + width < CHUNK_SIZE && mask[j * CHUNK_SIZE + i + width] == Some(key) {
+                    while uniform
+                        && i + width < CHUNK_SIZE
+                        && mask[j * CHUNK_SIZE + i + width] == Some(key)
+                    {
                         width += 1;
                     }
                     let mut height = 1;
-                    while j + height < CHUNK_SIZE
+                    while uniform
+                        && j + height < CHUNK_SIZE
                         && (0..width).all(|x| mask[(j + height) * CHUNK_SIZE + i + x] == Some(key))
                     {
                         height += 1;
@@ -170,10 +184,16 @@ pub fn mesh_chunk_lit(
                         [[w, h], [w, 0.], [0., 0.], [0., h]]
                     });
                     mesh.atlas_uvs.extend([key.tile.uv([0, 0]); 4]);
+                    let base = crate::lighting::face_color(key.sky, face.normal);
                     mesh.colors
-                        .extend([crate::lighting::face_color(key.sky, face.normal); 4]);
-                    mesh.indices
-                        .extend([start, start + 1, start + 2, start, start + 2, start + 3]);
+                        .extend(key.ao.map(|a| ao::modulate(base, key.sky, a)));
+                    // Connect the darker opposite pair to avoid a bright crease.
+                    let indices = if key.ao[0] + key.ao[2] < key.ao[1] + key.ao[3] {
+                        [0, 1, 3, 1, 2, 3]
+                    } else {
+                        [0, 1, 2, 0, 2, 3]
+                    };
+                    mesh.indices.extend(indices.map(|i| start + i));
                     i += width;
                 }
             }
@@ -380,7 +400,7 @@ mod greedy_tests {
             })
             .sum()
     }
-    fn verify(world: &World, cp: ChunkPos) {
+    pub(super) fn verify(world: &World, cp: ChunkPos) {
         let light = Skylight::for_chunks(world, &BTreeSet::from([cp]));
         let m = mesh_chunk_lit(world, cp, &light);
         assert_eq!(m, mesh_chunk_lit(world, cp, &light));
@@ -410,10 +430,13 @@ mod greedy_tests {
                                     crate::texture::face_tile(block, face.normal)
                                         .unwrap()
                                         .uv([0, 0]),
-                                    crate::lighting::face_color(
-                                        bp.offset(face.normal).map_or(0, |p| light.level(p)),
-                                        face.normal,
-                                    ),
+                                    super::ao_tests::reference_ao(world, bp, face).map(|a| {
+                                        ao::color(
+                                            bp.offset(face.normal).map_or(0, |p| light.level(p)),
+                                            face.normal,
+                                            a,
+                                        )
+                                    }),
                                 ),
                             );
                         }
@@ -438,9 +461,10 @@ mod greedy_tests {
             for x in lo[0]..hi[0] {
                 for y in lo[1]..hi[1] {
                     for z in lo[2]..hi[2] {
+                        let colors = face_colors_at_unit(&m, q, [x, y, z], &FACES[f]);
                         assert!(
                             actual
-                                .insert(([x, y, z], f), (m.atlas_uvs[q * 4], m.colors[q * 4]))
+                                .insert(([x, y, z], f), (m.atlas_uvs[q * 4], colors))
                                 .is_none(),
                             "overlap"
                         );
@@ -448,7 +472,6 @@ mod greedy_tests {
                 }
             }
             for k in 0..4 {
-                assert_eq!(m.colors[q * 4 + k], m.colors[q * 4]);
                 assert_eq!(m.atlas_uvs[q * 4 + k], m.atlas_uvs[q * 4]);
             }
             let a: [f32; 3] = std::array::from_fn(|i| ps[1][i] - ps[0][i]);
@@ -464,7 +487,74 @@ mod greedy_tests {
             let uv_area = (uv[1][0] - uv[0][0]).abs() + (uv[1][1] - uv[0][1]).abs();
             assert_eq!(uv_area, a.iter().map(|v| v.abs()).sum::<f32>());
         }
-        assert_eq!(actual, expected, "coverage/tile/light at {cp:?}");
+        assert_eq!(
+            actual.keys().collect::<Vec<_>>(),
+            expected.keys().collect::<Vec<_>>(),
+            "coverage at {cp:?}"
+        );
+        for (key, (tile, colors)) in &actual {
+            let (expected_tile, expected_colors) = &expected[key];
+            assert_eq!(tile, expected_tile);
+            for (a, b) in colors
+                .iter()
+                .flatten()
+                .zip(expected_colors.iter().flatten())
+            {
+                assert!(
+                    (a - b).abs() < 1e-6,
+                    "AO/light at {cp:?} {key:?}: {colors:?} != {expected_colors:?}"
+                );
+            }
+            // A merged rectangle must have the same piecewise-linear field as
+            // every unit face, including internal boundaries and both diagonals.
+        }
+    }
+    fn face_colors_at_unit(m: &ChunkMesh, q: usize, p: [usize; 3], face: &Face) -> [[f32; 4]; 4] {
+        let axis = face.normal.iter().position(|&n| n != 0).unwrap();
+        let [u, v] = match axis {
+            0 => [1, 2],
+            1 => [0, 2],
+            _ => [0, 1],
+        };
+        // Nonuniform faces remain units; uniform rectangles interpolate a constant
+        // at every point. Checking unit corners therefore proves the entire field.
+        let quad_colors = &m.colors[q * 4..q * 4 + 4];
+        let ps = &m.positions[q * 4..q * 4 + 4];
+        let area: f32 = (0..3).map(|a| (ps[1][a] - ps[0][a]).abs()).sum::<f32>()
+            * (0..3).map(|a| (ps[3][a] - ps[0][a]).abs()).sum::<f32>();
+        if area > 1. {
+            assert!(quad_colors.iter().all(|&c| c == quad_colors[0]));
+        }
+        for tri in m.indices[q * 6..q * 6 + 6].as_chunks::<3>().0 {
+            let a = m.positions[tri[0] as usize];
+            let b = m.positions[tri[1] as usize];
+            let c = m.positions[tri[2] as usize];
+            let determinant = (b[u] - a[u]) * (c[v] - a[v]) - (b[v] - a[v]) * (c[u] - a[u]);
+            let expected_sign = match axis {
+                1 => -face.normal[axis],
+                _ => face.normal[axis],
+            };
+            assert!(determinant * expected_sign as f32 > 0.);
+        }
+        face.corners.map(|corner| {
+            let x = p[u] as f32 + f32::from(corner[u]);
+            let y = p[v] as f32 + f32::from(corner[v]);
+            for tri in m.indices[q * 6..q * 6 + 6].as_chunks::<3>().0 {
+                let [a, b, c] = [tri[0], tri[1], tri[2]].map(|i| m.positions[i as usize]);
+                let d = (b[v] - c[v]) * (a[u] - c[u]) + (c[u] - b[u]) * (a[v] - c[v]);
+                let w0 = ((b[v] - c[v]) * (x - c[u]) + (c[u] - b[u]) * (y - c[v])) / d;
+                let w1 = ((c[v] - a[v]) * (x - c[u]) + (a[u] - c[u]) * (y - c[v])) / d;
+                let w2 = 1. - w0 - w1;
+                if [w0, w1, w2].iter().all(|&w| w >= -1e-6) {
+                    return std::array::from_fn(|i| {
+                        w0 * m.colors[tri[0] as usize][i]
+                            + w1 * m.colors[tri[1] as usize][i]
+                            + w2 * m.colors[tri[2] as usize][i]
+                    });
+                }
+            }
+            panic!("uncovered vertex")
+        })
     }
     #[test]
     fn surfaces_match_unit_visibility_and_lighting_for_adversarial_shapes() {
@@ -545,3 +635,6 @@ mod greedy_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod ao_tests;

@@ -1376,3 +1376,10 @@ See [measured results, visual evidence and limitations](GREEDY_MESHING.md).
 Local locked build, format, all-target Clippy, 302 workspace tests, atlas artifact
 check, matched release benchmarks and X11 software rendering passed. Native
 GPU/Wayland/Windows and remote CI results are separate outstanding checks.
+
+## Slice 17 ambient occlusion
+
+See [AO validation, matched screenshots and Slice 16 comparisons](AMBIENT_OCCLUSION.md).
+Format, locked all-target Clippy, 310 workspace tests, locked workspace build and
+texture regeneration check passed locally. Native Void GPU/Wayland/Windows
+acceptance remains separate from X11 software-rendered fixture evidence.

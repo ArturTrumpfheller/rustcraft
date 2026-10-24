@@ -9,7 +9,7 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--baseline', default='535c636')
+parser.add_argument('--baseline', default='ed0c3e4')
 parser.add_argument('--output', type=pathlib.Path, required=True)
 args = parser.parse_args()
 # Resolve once, so neither source reads nor the report can race a branch move.
@@ -28,7 +28,8 @@ with tempfile.TemporaryDirectory(prefix='rustcraft-meshing-') as tmp:
     harness = (ROOT / prefix / 'examples/meshing_bench.rs').read_text(encoding='utf-8')
     (baseline / 'examples').mkdir()
     # Only buffer accounting differs. Fixtures, lighting and timed loops match.
-    harness = harness.replace('* 56', '* 48').replace('+ m.atlas_uvs.capacity() * 8', '')
+    if 'pub atlas_uvs:' not in (baseline / 'src/mesh.rs').read_text(encoding='utf-8'):
+        harness = harness.replace('* 56', '* 48').replace('+ m.atlas_uvs.capacity() * 8', '')
     (baseline / 'examples/meshing_bench.rs').write_text(harness, encoding='utf-8')
     for label, manifest in [('before', baseline / 'Cargo.toml'), ('after', ROOT / 'Cargo.toml')]:
         command = ['cargo', 'run', '--offline', '--release', '--manifest-path', str(manifest), '-p', 'voxel_core', '--example', 'meshing_bench']
