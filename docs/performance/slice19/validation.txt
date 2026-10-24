@@ -1,0 +1,9 @@
+Rust 1.99.1 / Bevy 0.20.0 / Linux cloud, 2026-10-24
+Base main: f381ce196bb3162fa3e834b412b943375d24facf
+cargo fmt --all -- --check: PASS
+cargo clippy --locked --workspace --all-targets -- -D warnings: PASS
+cargo test --locked --workspace: PASS (164 client + 165 core; 1 ignored CPU-cost benchmark run separately and PASS)
+cargo build --locked --workspace: PASS
+python3 tools/generate_textures.py --check: PASS
+Graphical: production client, Xvfb1280x720, Mesa25.0.7 llvmpipe LLVM19.1.7, Vulkan software adapter.
+Native Void/Windows GPU, Wayland and high-DPI acceptance: pending owner tests.

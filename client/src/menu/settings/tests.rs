@@ -471,7 +471,12 @@ fn os_layout_labels_during_rebinding_keep_saved_physical_keys_functional() {
         let bindings = crate::controls::MovementBindings::from_keys(restored.keys);
         let mut keys = ButtonInput::default();
         keys.press(physical);
-        assert_ne!(bindings.command(&keys, 0.).direction, [0., 0.]);
+        assert_ne!(
+            crate::controls::MovementGestures::default()
+                .command(&keys, &bindings, 0.)
+                .direction,
+            [0., 0.]
+        );
         std::fs::remove_dir_all(root).unwrap();
     }
 }

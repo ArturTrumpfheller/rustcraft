@@ -1,0 +1,5 @@
+cargo test --locked -p voxel_core flat_course_sprint_jumping -- --nocapture
+Flat 100-block course from rest, fixed 60 Hz; exact arrival rounded up to one tick.
+walk: 20 blocks 4.667s, 100 blocks 23.200s, average 4.310 blocks/s
+Ctrl or double-W sprint: 20 blocks 3.600s, 100 blocks 17.867s, average 5.597 blocks/s
+sprint + held jump: 20 blocks 3.333s, 100 blocks 15.733s, average 6.356 blocks/s

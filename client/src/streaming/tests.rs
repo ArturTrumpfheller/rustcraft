@@ -245,6 +245,9 @@ fn pending_teleport_freezes_then_recovers_clearance_and_void_reset_reloads_spawn
     let mut app = app(1);
     drain(&mut app);
     app.world_mut().resource_mut::<ControllerInput>().active = true;
+    app.world_mut()
+        .resource_mut::<ControllerInput>()
+        .simulation_active = true;
     app.world_mut().resource_mut::<PlayerState>().body.position = [48.5, -10., 48.5];
     let before = app.world().resource::<PlayerState>().body;
     app.world_mut().run_schedule(FixedUpdate);
@@ -649,6 +652,7 @@ fn explicit_respawn_reloads_edited_spawn_and_preserves_edits_without_interpolate
         assert!(!app.world().resource::<VoxelWorld>().0.ready(p));
         let mut input = app.world_mut().resource_mut::<ControllerInput>();
         input.active = true;
+        input.simulation_active = true;
         input.reset_pending = !void_reset;
         input.jump_pending = true;
         if void_reset {

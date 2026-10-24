@@ -1,0 +1,20 @@
+cargo test --locked -p rustcraft steady_ground_speeds -- --nocapture
+1 second warmup + 4 seconds measured, fixed 60 Hz, tolerance1e-7; complete final states identical.
+STEADY_SPEED fps=30 sprint=false sneak=false diagonal=false blocks_per_second=4.317000
+STEADY_SPEED fps=60 sprint=false sneak=false diagonal=false blocks_per_second=4.317000
+STEADY_SPEED fps=144 sprint=false sneak=false diagonal=false blocks_per_second=4.317000
+STEADY_SPEED fps=30 sprint=true sneak=false diagonal=false blocks_per_second=5.612000
+STEADY_SPEED fps=60 sprint=true sneak=false diagonal=false blocks_per_second=5.612000
+STEADY_SPEED fps=144 sprint=true sneak=false diagonal=false blocks_per_second=5.612000
+STEADY_SPEED fps=30 sprint=false sneak=true diagonal=false blocks_per_second=1.295000
+STEADY_SPEED fps=60 sprint=false sneak=true diagonal=false blocks_per_second=1.295000
+STEADY_SPEED fps=144 sprint=false sneak=true diagonal=false blocks_per_second=1.295000
+STEADY_SPEED fps=30 sprint=false sneak=false diagonal=true blocks_per_second=4.317000
+STEADY_SPEED fps=60 sprint=false sneak=false diagonal=true blocks_per_second=4.317000
+STEADY_SPEED fps=144 sprint=false sneak=false diagonal=true blocks_per_second=4.317000
+STEADY_SPEED fps=30 sprint=true sneak=false diagonal=true blocks_per_second=5.612000
+STEADY_SPEED fps=60 sprint=true sneak=false diagonal=true blocks_per_second=5.612000
+STEADY_SPEED fps=144 sprint=true sneak=false diagonal=true blocks_per_second=5.612000
+STEADY_SPEED fps=30 sprint=false sneak=true diagonal=true blocks_per_second=1.295000
+STEADY_SPEED fps=60 sprint=false sneak=true diagonal=true blocks_per_second=1.295000
+STEADY_SPEED fps=144 sprint=false sneak=true diagonal=true blocks_per_second=1.295000

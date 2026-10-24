@@ -1,3 +1,8 @@
+> Slice19 changes the original inventory pause policy: inventory blocks gameplay
+> input but continues fixed physics, gravity and collision. Focus loss and the
+> actual Pause/settings pages freeze physics. Held movement/jump keys need a
+> release after closing. See [current behavior and tests](DEBUG_GAMEPLAY.md).
+
 # Inventory and paired player persistence (Slice 9)
 
 Implemented from accepted Slice-8 main `ee16009`. This slice changes no block IDs,

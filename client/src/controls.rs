@@ -87,23 +87,6 @@ impl MovementBindings {
             hotbar: k[10..].try_into().unwrap(),
         }
     }
-    pub fn command(&self, keys: &ButtonInput<KeyCode>, yaw: f64) -> MovementInput {
-        let axis = |positive, negative| {
-            f64::from(keys.pressed(positive)) - f64::from(keys.pressed(negative))
-        };
-        MovementInput {
-            sneak: keys.pressed(self.sneak),
-            ..MovementInput::from_yaw(
-                [
-                    axis(self.right, self.left),
-                    axis(self.backward, self.forward),
-                ],
-                yaw,
-                keys.pressed(self.sprint),
-                false,
-            )
-        }
-    }
 }
 
 pub(crate) const DOUBLE_TAP_WINDOW: std::time::Duration = std::time::Duration::from_millis(250);
@@ -116,9 +99,48 @@ pub(crate) struct MovementGestures {
     forward_down: bool,
     pub double_tap_sprint: bool,
     pub jump_ready: bool,
+    // Keys held during a modal/capture transition need a release before reuse.
+    blocked_movement: [bool; 6],
 }
 
 impl MovementGestures {
+    pub fn block_held_movement(
+        &mut self,
+        keys: &ButtonInput<KeyCode>,
+        bindings: &MovementBindings,
+    ) {
+        self.blocked_movement = [
+            bindings.forward,
+            bindings.backward,
+            bindings.left,
+            bindings.right,
+            bindings.sprint,
+            bindings.sneak,
+        ]
+        .map(|k| keys.pressed(k));
+    }
+
+    pub fn command(
+        &self,
+        keys: &ButtonInput<KeyCode>,
+        bindings: &MovementBindings,
+        yaw: f64,
+    ) -> MovementInput {
+        let held = |i: usize, key| keys.pressed(key) && !self.blocked_movement[i];
+        MovementInput {
+            sneak: held(5, bindings.sneak),
+            ..MovementInput::from_yaw(
+                [
+                    f64::from(held(3, bindings.right)) - f64::from(held(2, bindings.left)),
+                    f64::from(held(1, bindings.backward)) - f64::from(held(0, bindings.forward)),
+                ],
+                yaw,
+                held(4, bindings.sprint),
+                false,
+            )
+        }
+    }
+
     pub fn update(
         &mut self,
         keys: &ButtonInput<KeyCode>,
@@ -132,9 +154,20 @@ impl MovementGestures {
                 bindings: Some(*bindings),
                 forward_down: forward,
                 jump_ready: !keys.pressed(bindings.jump),
+                blocked_movement: self.blocked_movement,
                 ..Default::default()
             };
             return;
+        }
+        for (blocked, key) in self.blocked_movement.iter_mut().zip([
+            bindings.forward,
+            bindings.backward,
+            bindings.left,
+            bindings.right,
+            bindings.sprint,
+            bindings.sneak,
+        ]) {
+            *blocked &= keys.pressed(key);
         }
         if !keys.pressed(bindings.jump) {
             self.jump_ready = true;

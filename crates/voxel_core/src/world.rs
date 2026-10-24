@@ -295,6 +295,11 @@ impl World {
         self.chunks.get(&position)
     }
 
+    /// Resident voxel chunks, including empty chunks; constant-time diagnostics.
+    pub fn chunk_count(&self) -> usize {
+        self.chunks.len()
+    }
+
     pub fn chunks(&self) -> impl Iterator<Item = (ChunkPos, &Chunk)> {
         self.chunks
             .iter()
