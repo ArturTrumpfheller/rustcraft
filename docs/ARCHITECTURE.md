@@ -295,3 +295,11 @@ state. Interaction's existing accepted input gate increments a bounded-action
 serial; the viewmodel reads selection after edits, without parallel inventory
 or save state. Hidden/pause/capture/reset consumes animation history safely.
 No per-frame mesh/material generation; resource costs/limits are in VIEWMODEL.
+
+## Slice 16 terrain geometry
+
+`voxel_core::mesh` greedily merges visible coplanar faces sharing tile/skylight.
+The client adapts its engine-neutral repeated UV and tile-origin buffers to a
+terrain-only embedded material; UI/viewmodel retain StandardMaterial. The worker
+and persistence contracts remain unchanged. Session asset cleanup includes the
+terrain material type. See [algorithm and measurements](GREEDY_MESHING.md).

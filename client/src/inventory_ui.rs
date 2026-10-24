@@ -321,11 +321,7 @@ fn setup(
     let Ok(camera) = cameras.single() else {
         return;
     };
-    let atlas = materials
-        .get(&terrain.0)
-        .unwrap()
-        .base_color_texture
-        .clone();
+    let atlas = Some(terrain.1.clone());
     let flat = materials.add(StandardMaterial {
         unlit: true,
         ..default()

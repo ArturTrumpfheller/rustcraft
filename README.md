@@ -107,8 +107,8 @@ standard-library generator are **MIT OR Apache-2.0**: [asset provenance](assets/
 
 A single embedded 128×64 sRGB atlas/material serves all chunks, with eight texels
 of extruded padding per tile, nearest sampling and one mip. Chunk meshes retain
-face culling and async updates; UVs retain their original layout and derived
-RGBA light modulation uses a 48-byte terrain vertex. Inventory icons share that image. Intentional distant pixel shimmer is
+face culling and async updates; greedy quads repeat each block tile using terrain-only UVs and an embedded shader.
+Derived RGBA light modulation is retained; uncompressed terrain vertices use 56 bytes. Inventory icons share that image. Intentional distant pixel shimmer is
 a consequence of nearest LOD0 sampling. See [texture contract](docs/TEXTURES.md)
 and [measurements/limits](docs/VALIDATION.md).
 
@@ -267,6 +267,13 @@ Use the [Slice14 Fish and PowerShell instructions](docs/WORLDS.md#void-linux-gli
 They use isolated roots and cover A/B/A without restarting, complete-copy legacy
 imports, naming, archives, paging and save/restart. Never delete a real save to
 switch worlds. Preserve full closed-directory backups including all sidecars.
+
+## Greedy terrain geometry (Slice 16)
+
+Compatible visible faces now merge into rectangles while keeping exact skylight
+and per-block texture repetition. See [algorithm, benchmarks and visual checks](docs/GREEDY_MESHING.md),
+including CPU regressions and native acceptance limits. Gameplay and save formats
+are unchanged.
 
 ## Development checks
 

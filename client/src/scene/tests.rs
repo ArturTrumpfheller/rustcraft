@@ -4,7 +4,7 @@ use super::*;
 fn scene_plugin_builds_four_renderable_chunk_entities_with_one_embedded_atlas() {
     let mut app = App::new();
     app.init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<StandardMaterial>>()
+        .init_resource::<Assets<TerrainSurface>>()
         .add_plugins(VoxelScenePlugin);
     app.update();
     let world = app.world_mut();
@@ -23,7 +23,7 @@ fn scene_plugin_builds_four_renderable_chunk_entities_with_one_embedded_atlas() 
         assert!(mesh.attribute(Mesh::ATTRIBUTE_UV_0).is_some());
         assert!(!mesh.indices().unwrap().is_empty());
     }
-    assert_eq!(world.resource::<Assets<StandardMaterial>>().len(), 1);
+    assert_eq!(world.resource::<Assets<TerrainSurface>>().len(), 1);
     assert_eq!(world.query::<&DirectionalLight>().iter(world).count(), 0);
 }
 
@@ -48,7 +48,7 @@ fn edit_cell(app: &mut App, position: [i32; 3], block: voxel_core::Block) {
 fn terrain_app() -> App {
     let mut app = App::new();
     app.init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<StandardMaterial>>()
+        .init_resource::<Assets<TerrainSurface>>()
         .add_plugins(VoxelScenePlugin);
     app.insert_resource(VoxelWorld(World::default()));
     app.update();
@@ -96,7 +96,7 @@ fn repeated_boundary_edits_update_neighbors_and_reuse_assets_even_when_empty() {
         edit_cell(&mut app, [16, 1, 1], voxel_core::Block::Stone);
     }
     assert_eq!(app.world().resource::<Assets<Image>>().len(), 1);
-    assert_eq!(app.world().resource::<Assets<StandardMaterial>>().len(), 1);
+    assert_eq!(app.world().resource::<Assets<TerrainSurface>>().len(), 1);
     assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
     assert_eq!(app.world().resource::<ChunkRenders>().0.len(), 2);
     assert_eq!(
@@ -159,18 +159,18 @@ fn all_materials_share_one_opaque_texture_and_mesh_layout_is_compact() {
     }
     let world = app.world_mut();
     assert_eq!(world.resource::<Assets<Image>>().len(), 1);
-    assert_eq!(world.resource::<Assets<StandardMaterial>>().len(), 1);
+    assert_eq!(world.resource::<Assets<TerrainSurface>>().len(), 1);
     let terrain = &world.resource::<TerrainMaterial>().0;
     let material = world
-        .resource::<Assets<StandardMaterial>>()
+        .resource::<Assets<TerrainSurface>>()
         .get(terrain)
         .unwrap();
-    assert_eq!(material.base_color, Color::WHITE);
-    assert_eq!(material.alpha_mode, AlphaMode::Opaque);
+    assert_eq!(material.base.base_color, Color::WHITE);
+    assert_eq!(material.base.alpha_mode, AlphaMode::Opaque);
     assert!(
         world
             .resource::<Assets<Image>>()
-            .get(material.base_color_texture.as_ref().unwrap())
+            .get(material.base.base_color_texture.as_ref().unwrap())
             .is_some()
     );
     let h = world.resource::<ChunkRenders>().0[&ChunkPos([0, 0, 0])]
@@ -181,7 +181,7 @@ fn all_materials_share_one_opaque_texture_and_mesh_layout_is_compact() {
         m.attribute(Mesh::ATTRIBUTE_COLOR).unwrap().len(),
         m.count_vertices()
     );
-    assert!(material.unlit);
+    assert!(material.base.unlit);
     assert_eq!(m.count_vertices(), 120);
     assert_eq!(m.attribute(Mesh::ATTRIBUTE_UV_0).unwrap().len(), 120);
     assert_eq!(
@@ -189,7 +189,7 @@ fn all_materials_share_one_opaque_texture_and_mesh_layout_is_compact() {
             .0
             .layout()
             .array_stride,
-        48
+        56
     );
 }
 

@@ -88,3 +88,9 @@ vertices of each face share one neutral multiplier sampled in adjacent Air, so
 there is no smooth interpolation across shadow corners or AO. LIGHTING specifies
 integer propagation and the small dark floor. No new game textures, per-block
 materials/lights, extra terrain draw calls or per-frame atlas resources are added.
+
+## Slice 16 terrain repetition
+
+Terrain now uses block-repeat UV0 plus constant atlas-origin UV1 and an embedded
+terrain-only WESL material. Inventory and viewmodel keep the original UV scheme.
+See [greedy meshing](GREEDY_MESHING.md) for filtering, layout and validation.

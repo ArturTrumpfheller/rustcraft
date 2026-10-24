@@ -115,7 +115,13 @@ fn cube_faces_reuse_exact_original_uv_orientation_for_all_five_blocks() {
                 .zip(&original.normals)
                 .position(|(p, n)| *p == pos[i].map(|v| v + 0.5) && *n == normals[i])
                 .unwrap();
-            assert_eq!(uv[i], original.uvs[index]);
+            assert_eq!(
+                uv[i],
+                [
+                    original.atlas_uvs[index][0] + original.uvs[index][0] * 16. / 128.,
+                    original.atlas_uvs[index][1] + original.uvs[index][1] * 16. / 64.
+                ]
+            );
         }
         assert_eq!(mesh.indices().unwrap().len(), 36);
     }

@@ -10,6 +10,7 @@ mod scene;
 mod session;
 mod settings;
 mod streaming;
+mod terrain_material;
 mod terrain_texture;
 mod viewmodel;
 
@@ -43,6 +44,7 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(terrain_material::TerrainRenderingPlugin)
         .add_plugins((
             scene::VoxelScenePlugin,
             inventory_ui::InventoryPlugin,

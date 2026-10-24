@@ -83,3 +83,10 @@ the supported built-in material path; packed light attributes can be considered
 later if measurements justify shader/pipeline complexity.
 
 Tests, benchmarks, GUI/native coverage and limits are recorded in VALIDATION.
+
+## Slice 16 mesh compatibility
+
+Greedy faces merge only with identical integer skylight samples and tile IDs in
+the same oriented plane. Propagation, adjacent-air sampling, directional shading
+and invalidation remain unchanged. Light changes can now change rectangle
+partitioning while preserving unit-face coverage. See [details](GREEDY_MESHING.md).

@@ -52,7 +52,7 @@ fn app() -> App {
     frame(&mut app);
     app
 }
-fn index_count(app: &mut App) -> usize {
+fn terrain_area(app: &mut App) -> usize {
     // Await asynchronous presentation only for mesh assertions. Input/physics
     // frame helpers must advance exactly one tick on every OS.
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
@@ -65,10 +65,12 @@ fn index_count(app: &mut App) -> usize {
         std::thread::sleep(Duration::from_millis(1));
         app.update();
     }
+    let meshes = app.world().resource::<Assets<Mesh>>();
     app.world()
-        .resource::<Assets<Mesh>>()
-        .iter()
-        .map(|(_, mesh)| mesh.indices().map_or(0, |indices| indices.len()))
+        .resource::<crate::scene::ChunkRenders>()
+        .0
+        .values()
+        .map(|r| crate::scene::unit_faces(meshes.get(&r.mesh).unwrap()).len())
         .sum()
 }
 fn aim_block() -> BlockPos {
@@ -110,14 +112,14 @@ fn capture_click_does_not_edit_then_repeated_clicks_break_and_place_selected_blo
         .resource_mut::<ButtonInput<KeyCode>>()
         .press(KeyCode::Digit3);
     frame(&mut app);
-    let indices_before = index_count(&mut app);
+    let area_before = terrain_area(&mut app);
     click(&mut app, MouseButton::Right);
-    assert!(index_count(&mut app) > indices_before);
+    assert!(terrain_area(&mut app) > area_before);
     let adjacent = BlockPos([0, 5, 8]);
     assert_eq!(world(&app).block(adjacent), Block::Stone);
     click(&mut app, MouseButton::Left);
     assert_eq!(world(&app).block(adjacent), Block::Air);
-    assert_eq!(index_count(&mut app), indices_before);
+    assert_eq!(terrain_area(&mut app), area_before);
     assert_eq!(world(&app).block(aim_block()), Block::Stone);
     click(&mut app, MouseButton::Left);
     assert_eq!(world(&app).block(aim_block()), Block::Air);
@@ -337,12 +339,12 @@ fn wood_and_leaves_select_place_break_and_use_opaque_chunk_faces() {
             .resource_mut::<ButtonInput<KeyCode>>()
             .press(key);
         frame(&mut app);
-        let before = index_count(&mut app);
+        let before = terrain_area(&mut app);
         click(&mut app, MouseButton::Right);
         assert_eq!(world(&app).block(BlockPos([0, 5, 8])), block);
-        assert!(index_count(&mut app) > before);
+        assert!(terrain_area(&mut app) > before);
         click(&mut app, MouseButton::Left);
         assert_eq!(world(&app).block(BlockPos([0, 5, 8])), Block::Air);
-        assert_eq!(index_count(&mut app), before);
+        assert_eq!(terrain_area(&mut app), before);
     }
 }
