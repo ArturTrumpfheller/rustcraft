@@ -47,30 +47,6 @@ impl Tile {
     }
 }
 
-// Precompute the two existing CCW corner orders, avoiding per-vertex divisions
-// or normal matches in the worker's hot loop. Image V points down: walls are
-// upright; top U=+X,V=+Z and bottom U=+X,V=-Z.
-const fn quad(tile: Tile) -> [[[f32; 2]; 4]; 2] {
-    let min = tile.uv([0, 0]);
-    let max = tile.uv([1, 1]);
-    [
-        [max, [max[0], min[1]], min, [min[0], max[1]]],
-        [[min[0], max[1]], max, [max[0], min[1]], min],
-    ]
-}
-const QUADS: [[[[f32; 2]; 4]; 2]; 7] = [
-    quad(Tile::GrassTop),
-    quad(Tile::GrassSide),
-    quad(Tile::Dirt),
-    quad(Tile::Stone),
-    quad(Tile::Bark),
-    quad(Tile::EndGrain),
-    quad(Tile::Leaves),
-];
-pub(crate) fn face_uvs(tile: Tile, horizontal: bool) -> &'static [[f32; 2]; 4] {
-    &QUADS[tile as usize][usize::from(horizontal)]
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
