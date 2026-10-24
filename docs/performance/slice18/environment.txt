@@ -1,0 +1,21 @@
+Measured: 2026-10-24
+Base: dc519cdbd6f1d37d037da514ce7144b1d7b749de (merged Slice 17)
+Host: Debian 13 x86-64, Linux 6.18.55
+CPU: AMD EPYC 9V74, three exposed logical CPUs
+Compiler: rustc 1.99.1 (58cf8f9c3 2026-10-13)
+Build: dev/unoptimized; identical locked Bevy 0.20 dependency graph
+Display: Xvfb X11, 1280x800x24; gallery window 960x640
+Renderer: Mesa llvmpipe Vulkan (software); no native GPU
+Presentation: AutoNoVsync
+Color: Reinhard; same Bevy post-lighting/deband path
+Frames: 120 warmup + 180 measured per process; p50/p95/p99 order statistics
+Protocol: before then after for each case, one renderer at a time, no test suite
+Motion: deterministic frame-index translation/rotation, identical in both builds
+Cycle: uniform-only radius 1/2/3 every 40 frames, radius-3 geometry retained
+Writes: total modified material assets including warmup (zero in static cases)
+Control: CPU duration of gallery animate system body, not whole-app CPU cost
+Frame times: Time<Real> frame intervals incl software rasterization/presentation
+No GPU timestamps, hardware FPS claim or end-to-end streaming benchmark
+Sources: original baseline terrain module/shader + new shared gallery adapter
+Baseline export: tools/prepare_atmosphere_baseline.py
+Measurement: tools/measure_atmosphere.py

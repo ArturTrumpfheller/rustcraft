@@ -252,6 +252,7 @@ fn cleanup(world: &mut World) {
     let assets = world.remove_resource::<SessionAssets>().unwrap_or_default();
     inventory_ui::cleanup(world);
     viewmodel::cleanup(world);
+    crate::atmosphere::cleanup(world);
     world.remove_resource::<scene::TerrainMaterial>();
     world.remove_resource::<scene::ChunkRenders>();
     world.remove_resource::<scene::VoxelWorld>();

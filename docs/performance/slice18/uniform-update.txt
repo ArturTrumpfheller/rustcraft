@@ -1,0 +1,4 @@
+Isolated dev CPU helper; median of five batches of 50,000 calls.
+No renderer or other test suite active.
+ATMOSPHERE_UPDATE varying=false ns_per_call=175 terrain_assets=1 sky_assets=1
+ATMOSPHERE_UPDATE varying=true ns_per_call=173 terrain_assets=1 sky_assets=1

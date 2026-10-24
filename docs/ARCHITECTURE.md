@@ -315,3 +315,20 @@ edge/corner neighbors, forcing AO rebuilds even when exact light samples match.
 Existing source-column/region halos, local tokens, stale rejection and worker
 publication rules already cover those dependencies. No new material, pass,
 vertex attribute or persistent state. See [algorithm and evidence](AMBIENT_OCCLUSION.md).
+
+## Slice 18 daylight atmosphere
+
+`client::atmosphere` centralizes scene-linear colors, radius-derived distances,
+a retained clip-space background triangle and SkyMaterial. A shared embedded
+WESL module supplies identical sky radiance to sky and terrain before Bevy's
+existing tonemapping. The terrain extension adds one 48-byte uniform; nearest
+atlas sampling, AO/skylight COLOR and all core geometry remain unchanged.
+Vertex brightness smoothly suppresses daylight fog in dark caves.
+
+`scene` selects the active streaming radius (preferences for finite legacy worlds),
+spawns a layer 0 sky per session and updates only changed uniforms in PostUpdate.
+Sky rays discard translation; terrain distance subtracts the camera in the same
+render-origin space. UI/menu/viewmodel layers keep their existing materials and
+depth order. Session cleanup reclaims the mesh/entity/material; the shared shader
+module remains global. No atmospheric world scan, worker, remesh, texture or
+additional render pass is introduced. See [formulas, costs and evidence](SKY_FOG.md).
