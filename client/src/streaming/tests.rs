@@ -1033,6 +1033,15 @@ fn assert_textured_residency(app: &mut App) {
     assert!(state.cache.columns() <= 81);
     let renders = w.resource::<ChunkRenders>();
     assert_eq!(w.resource::<Assets<Mesh>>().len(), renders.0.len());
+    let payload: usize = renders
+        .0
+        .values()
+        .map(|r| {
+            let mesh = w.resource::<Assets<Mesh>>().get(&r.mesh).unwrap();
+            mesh.count_vertices() * 56 + mesh.indices().unwrap().len() * 4
+        })
+        .sum();
+    assert_eq!(state.mesh_bytes, payload);
     for render in renders.0.values() {
         let m = w.resource::<Assets<Mesh>>().get(&render.mesh).unwrap();
         assert_eq!(
