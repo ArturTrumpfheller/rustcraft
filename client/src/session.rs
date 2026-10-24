@@ -8,15 +8,15 @@ use bevy::{
     prelude::*,
     window::{CursorGrabMode, CursorOptions, PrimaryWindow, WindowCloseRequested},
 };
-use std::{
-    path::PathBuf,
-    thread::{self, JoinHandle},
-};
+#[cfg(test)]
+use std::path::PathBuf;
+use std::thread::{self, JoinHandle};
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) enum ClientState {
     #[default]
     Title,
+    Worlds,
     Loading,
     Playing,
     Paused,
@@ -31,6 +31,7 @@ pub(crate) enum Destination {
 #[derive(Resource, Default)]
 pub(crate) struct ClientFlow {
     pub state: ClientState,
+    pub selected_world: Option<String>,
     pub destination: Option<Destination>,
     pub error: String,
     pub save_complete: bool,
@@ -72,10 +73,19 @@ struct Loaded {
 }
 #[derive(Resource)]
 struct Loading(JoinHandle<Result<Loaded, String>>);
+#[cfg(test)]
 fn load(directory: PathBuf) -> Result<Loaded, String> {
-    let (store, mut world, source) =
-        voxel_core::persistence::SaveStore::open_with(&directory, persistence::create_world)
-            .map_err(|e| e.to_string())?;
+    let data = voxel_core::persistence::SaveStore::open_with(&directory, persistence::create_world)
+        .map_err(|e| e.to_string())?;
+    prepare(data)
+}
+fn prepare(
+    (store, mut world, source): (
+        voxel_core::persistence::SaveStore,
+        voxel_core::World,
+        voxel_core::persistence::LoadSource,
+    ),
+) -> Result<Loaded, String> {
     let inventory = store.load_player(&mut world).map_err(|e| e.to_string())?;
     let start = if world.region_identity().is_some() {
         player::start_column(
@@ -116,13 +126,19 @@ fn load(directory: PathBuf) -> Result<Loaded, String> {
     })
 }
 pub(crate) fn begin_loading(world: &mut World) {
+    let selected = world.resource::<ClientFlow>().selected_world.clone();
     let result = persistence::data_directory()
         .map_err(|e| e.to_string())
         .and_then(|directory| {
             info!("Opening {}", directory.display());
             thread::Builder::new()
                 .name("rustcraft-load".into())
-                .spawn(move || load(directory))
+                .spawn(move || {
+                    let id = selected.ok_or("Keine Welt ausgewaehlt")?;
+                    let catalog = voxel_core::persistence::catalog::WorldCatalog::new(directory)
+                        .map_err(|e| e.to_string())?;
+                    prepare(catalog.open(&id).map_err(|e| e.to_string())?)
+                })
                 .map_err(|e| e.to_string())
         });
     match result {
@@ -279,6 +295,10 @@ fn modal_input(
 ) {
     if close.read().count() > 0 {
         match flow.state {
+            ClientState::Worlds => {
+                // The browser drains an in-flight filesystem operation before exit.
+                flow.destination = Some(Destination::Quit);
+            }
             ClientState::Title => {
                 exit.write(AppExit::Success);
             }

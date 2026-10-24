@@ -312,7 +312,7 @@ impl SaveStore {
     ) -> Result<(), SaveError> {
         self.save_player_with(world, inventory, world_dirty, |_| Ok(()))
     }
-    fn save_player_with(
+    pub(super) fn save_player_with(
         &self,
         world: &World,
         inventory: &Inventory,
@@ -397,6 +397,50 @@ impl SaveStore {
         fs::remove_file(self.pending_path())?;
         #[cfg(unix)]
         File::open(&self.directory)?.sync_all()?;
+        Ok(())
+    }
+    /// Read-only validation for catalog/import. Replay happens only on a copy or
+    /// when a player explicitly opens a managed world, never in a legacy source.
+    pub(super) fn validate_player_bundle(&self, world: &World) -> Result<(), SaveError> {
+        let pending = read_limited(&self.pending_path(), MAX_TX)?
+            .map(|b| decode_transaction(&b))
+            .transpose()?;
+        let binding = self.binding()?;
+        if let Some(tx) = &pending {
+            if binding != Some(tx.binding) || !tx.binding.matches(world) {
+                return Err(FormatError::Identity.into());
+            }
+            if !tx.world_dirty && read_save(&self.path())?.as_deref() != Some(&tx.root) {
+                return Err(recovery("clean-world journal generation mismatch"));
+            }
+        }
+        match read_limited(&self.player_path(), PLAYER_SIZE)? {
+            Some(b) => {
+                let (id, fp, _) = decode_player(&b)?;
+                if binding != Some(id) || !id.matches(world) {
+                    return Err(FormatError::Identity.into());
+                }
+                let current = read_save(&self.path())?;
+                let matches_root = current.as_ref().is_some_and(|r| fp == fingerprint(r));
+                if pending.is_none() && !matches_root {
+                    return Err(recovery("world/player generations disagree"));
+                }
+                if let Some(tx) = &pending {
+                    // In a partially committed legacy transaction the old player
+                    // can fingerprint the previous root. Replay validates binding.
+                    if !tx.world_dirty && fp != fingerprint(&tx.root) {
+                        return Err(recovery("clean journal/player generation mismatch"));
+                    }
+                }
+            }
+            None if self.player_path().with_extension("rcp.bak").try_exists()? => {
+                return Err(recovery("missing player primary with backup"));
+            }
+            None if binding.is_some() && pending.is_none() => {
+                return Err(recovery("initialized player missing without journal"));
+            }
+            None => {}
+        }
         Ok(())
     }
     pub(super) fn pending_world(&self) -> Result<World, SaveError> {

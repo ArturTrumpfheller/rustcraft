@@ -1,10 +1,14 @@
 # RustCraft architecture
 
-Status: **Slice 13 main/pause menus and repeatable sessions**, based on Slice12
-`cdb28f3`. See [MENUS](MENUS.md) for the explicit state machine, setup schedule,
-worker ownership, final-save barrier and teardown. The title owns no world/lock;
-loading/recovery now happens on a worker after Play. Core formats, generators,
-lighting, physics and inventory rules are unchanged.
+Status: **Slice14 world management**, based on main `50b2ae6`. The independent
+`voxel_core::persistence::catalog` owns safe directory IDs, metadata, complete-copy
+legacy import, validation/staging and archive. A catalog OS mutex serializes
+mutations and managed opens; each bundle retains its own SaveStore lock.
+`client::menu::worlds` owns paged original bitmap forms and one disk worker.
+`session` loads only the selected existing catalog ID and reuses Slice13's final
+save/worker/entity/asset barriers. See [WORLDS](WORLDS.md) for filesystem/security
+semantics and [MENUS](MENUS.md) for lifecycle. Frozen game formats and generators,
+lighting, movement and inventory rules remain unchanged.
 
 ## Slice 7 design note (before implementation)
 

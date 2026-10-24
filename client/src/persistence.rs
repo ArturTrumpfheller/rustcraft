@@ -33,6 +33,7 @@ pub(crate) fn data_directory() -> io::Result<PathBuf> {
     directory_from(cfg!(windows), |name| std::env::var_os(name))
 }
 
+#[cfg(test)]
 fn seed_from(value: Option<OsString>) -> io::Result<u64> {
     match value {
         None => Ok(voxel_core::worldgen::DEFAULT_SEED),
@@ -53,6 +54,7 @@ fn seed_from(value: Option<OsString>) -> io::Result<u64> {
 }
 /// Called lazily by SaveStore only for a genuinely absent world. An invalid
 /// override cannot interfere with loading an existing snapshot.
+#[cfg(test)]
 pub(crate) fn create_world() -> Result<World, SaveError> {
     let seed = seed_from(std::env::var_os("RUSTCRAFT_WORLD_SEED"))?;
     let start = std::time::Instant::now();

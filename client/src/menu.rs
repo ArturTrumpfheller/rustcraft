@@ -11,6 +11,7 @@ use bevy::{
     render::{render_resource::PrimitiveTopology, view::Tonemapping},
     window::PrimaryWindow,
 };
+mod worlds;
 const LAYER: usize = 2;
 #[derive(Component)]
 struct MenuCamera;
@@ -53,7 +54,7 @@ fn entries(flow: &ClientFlow) -> Vec<(&'static str, Option<Action>)> {
         ],
         ClientState::Loading => vec![("Welt wird geladen...", None), ("Bitte warten", None)],
         ClientState::Saving => vec![("Wird gespeichert...", None), ("Bitte warten", None)],
-        ClientState::Playing => vec![],
+        ClientState::Playing | ClientState::Worlds => vec![],
     }
 }
 fn setup(
@@ -99,9 +100,13 @@ fn scale(window: &Window) -> f32 {
 fn hit(window: &Window, count: usize) -> Option<usize> {
     let p = (window.cursor_position()? - Vec2::new(window.width(), window.height()) / 2.)
         / scale(window);
-    (0..count).find(|&i| p.x.abs() <= 118. && (p.y - (-14. + i as f32 * 30.)).abs() <= 12.)
+    (0..count).find(|&i| p.x.abs() <= 100. && (p.y - (-2. + i as f32 * 26.)).abs() <= 10.)
 }
 fn input(world: &mut World) {
+    if world.resource::<ClientFlow>().state == ClientState::Worlds {
+        worlds::input(world);
+        return;
+    }
     if world.resource::<ClientFlow>().playing() {
         return;
     }
@@ -164,7 +169,15 @@ fn input(world: &mut World) {
     if let Some(action) = action {
         world.resource_mut::<Navigation>().selected = 0;
         match action {
-            Action::Play => session::begin_loading(world),
+            Action::Play => {
+                if world.resource::<ClientFlow>().selected_world.is_some()
+                    && world.resource::<ClientFlow>().state == ClientState::RecoverableError
+                {
+                    session::begin_loading(world);
+                } else {
+                    worlds::open(world);
+                }
+            }
             Action::Resume => {
                 let mut f = world.resource_mut::<ClientFlow>();
                 f.state = ClientState::Playing;
@@ -209,6 +222,64 @@ impl Canvas {
         self.colors.extend([c; 4]);
         self.indices.extend([n, n + 1, n + 2, n, n + 2, n + 3]);
     }
+    /// Original bevel geometry: shared by every menu, with a separate flat
+    /// treatment for fields and list rows. No texture or external font.
+    fn button(&mut self, rect: [f32; 4], label: &str, focused: bool, pressed: bool, enabled: bool) {
+        let [x, y, w, h] = rect;
+        self.rect(x - 1., y - 1., w + 2., h + 2., [0.012, 0.014, 0.018, 1.]);
+        self.rect(
+            x,
+            y,
+            w,
+            h,
+            if focused && enabled {
+                [0.7, 0.73, 0.76, 1.]
+            } else {
+                [0.25, 0.27, 0.29, 1.]
+            },
+        );
+        self.rect(
+            x + 1.,
+            y + 1.,
+            w - 2.,
+            h - 2.,
+            if pressed {
+                [0.09, 0.10, 0.12, 1.]
+            } else if !enabled {
+                [0.055, 0.06, 0.07, 1.]
+            } else if focused {
+                [0.24, 0.27, 0.31, 1.]
+            } else {
+                [0.15, 0.17, 0.19, 1.]
+            },
+        );
+        self.rect(
+            x + 1.,
+            y + h - 2.,
+            w - 2.,
+            1.,
+            if pressed {
+                [0.07, 0.08, 0.09, 1.]
+            } else {
+                [0.35, 0.38, 0.41, 1.]
+            },
+        );
+        let size = if h < 19. { 0.75 } else { 0.95 };
+        let tx = x + (w - (label.to_uppercase().chars().count() as f32 * 6. - 1.) * size) / 2.;
+        let ty = y + (h - 7. * size) / 2. - if pressed { 1. } else { 0. };
+        self.text(tx + size, ty - size, label, size, [0.015, 0.018, 0.022, 1.]);
+        self.text(
+            tx,
+            ty,
+            label,
+            size,
+            if enabled {
+                [0.94, 0.95, 0.96, 1.]
+            } else {
+                [0.35, 0.37, 0.4, 1.]
+            },
+        );
+    }
     fn text(&mut self, x: f32, y: f32, text: &str, size: f32, c: [f32; 4]) {
         for (i, ch) in text.to_uppercase().chars().enumerate() {
             for (row, bits) in crate::save_hud::glyph(ch).into_iter().enumerate() {
@@ -249,6 +320,7 @@ impl Canvas {
 }
 fn draw(
     flow: Res<ClientFlow>,
+    browser: Res<worlds::Browser>,
     mut nav: ResMut<Navigation>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut camera: Query<(&mut Camera, &mut Projection), With<MenuCamera>>,
@@ -280,6 +352,7 @@ fn draw(
         window.height(),
         flow.error
     );
+    let stamp = format!("{stamp}/{:?}", browser.stamp());
     if nav.stamp == stamp {
         return;
     }
@@ -291,22 +364,34 @@ fn draw(
         };
     }
     let mut c = Canvas::default();
-    let ink = [0.035, 0.055, 0.075, 1.];
-    let copper = [0.76, 0.43, 0.21, 1.];
-    let cream = [0.94, 0.88, 0.73, 1.];
-    c.rect(-half.x, -half.y, half.x * 2., half.y * 2., ink);
-    // Original stepped terrain silhouette, deliberately quiet behind the panel.
-    for i in 0..(half.x * 2. / 16.).ceil() as i32 {
-        let x = -half.x + i as f32 * 16.;
-        let top = -98. + ((i * 7 + i / 3) % 5) as f32 * 4.;
-        c.rect(
-            x,
-            -half.y,
-            16.,
-            (top + half.y).max(0.),
-            [0.09, 0.13, 0.12, 1.],
-        );
-        c.rect(x, top, 16., 3., [0.15, 0.23, 0.18, 1.]);
+    let copper = [0.64, 0.69, 0.75, 1.];
+    let cream = [0.94, 0.95, 0.96, 1.];
+    c.rect(
+        -half.x,
+        -half.y,
+        half.x * 2.,
+        half.y * 2.,
+        [0.025, 0.03, 0.04, 1.],
+    );
+    // Authored slate mosaic, deliberately unrelated to game texture packs.
+    for row in 0..(half.y * 2. / 12.).ceil() as i32 {
+        for col in 0..(half.x * 2. / 16.).ceil() as i32 {
+            let shade = 0.026 + ((col * 13 + row * 7 + col * row) % 5) as f32 * 0.002;
+            c.rect(
+                -half.x + col as f32 * 16.,
+                -half.y + row as f32 * 12.,
+                15.,
+                11.,
+                [shade, shade * 1.12, shade * 1.32, 1.],
+            );
+        }
+    }
+    if flow.state == ClientState::Worlds {
+        worlds::paint(&browser, &mut c);
+        if let Some(mut target) = meshes.get_mut(&mesh.0) {
+            *target = c.mesh();
+        }
+        return;
     }
     c.centered(77., "RUSTCRAFT", 3., [0.12, 0.08, 0.055, 1.]);
     c.centered(80., "RUSTCRAFT", 3., cream);
@@ -320,47 +405,14 @@ fn draw(
     };
     c.centered(49., subtitle, 1., copper);
     for (i, (label, action)) in entries(&flow).iter().enumerate() {
-        let y = 2. - i as f32 * 30.;
-        let selected = i == nav.selected && action.is_some();
-        let pressed = nav.pressed == Some(i) && action.is_some();
-        c.rect(-120., y - 2., 240., 26., [0.015, 0.025, 0.035, 1.]);
-        c.rect(
-            -118.,
-            y,
-            236.,
-            24.,
-            if selected {
-                copper
-            } else {
-                [0.22, 0.27, 0.29, 1.]
-            },
-        );
-        c.rect(
-            -116.,
-            y + 2.,
-            232.,
-            20.,
-            if pressed {
-                [0.12, 0.17, 0.19, 1.]
-            } else if selected {
-                [0.22, 0.30, 0.31, 1.]
-            } else {
-                [0.105, 0.15, 0.18, 1.]
-            },
-        );
-        c.centered(
-            y + 7. - if pressed { 1. } else { 0. },
+        let y = -8. - i as f32 * 26.;
+        c.button(
+            [-100., y, 200., 20.],
             label,
-            1.2,
-            if action.is_none() {
-                [0.43, 0.49, 0.49, 1.]
-            } else {
-                cream
-            },
+            i == nav.selected,
+            nav.pressed == Some(i),
+            action.is_some(),
         );
-        if selected {
-            c.text(-110., y + 8., ">", 1., copper);
-        }
     }
     if flow.state == ClientState::RecoverableError {
         c.centered(
@@ -406,6 +458,15 @@ pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Navigation>()
+            .init_resource::<worlds::Browser>()
+            .add_message::<bevy::input::keyboard::KeyboardInput>()
+            .add_systems(Update, worlds::poll)
+            .add_systems(
+                RunFixedMainLoop,
+                worlds::text_input
+                    .before(input)
+                    .in_set(RunFixedMainLoopSystems::BeforeFixedMainLoop),
+            )
             .add_systems(Startup, setup)
             .add_systems(
                 RunFixedMainLoop,
