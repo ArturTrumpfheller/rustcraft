@@ -1369,3 +1369,10 @@ cross-platform layout-cache limitation and restart behavior.
 ![English QWERTY labels](images/slice15-polish-qwerty.png)
 ![4:3](images/slice15-polish-graphics-four-three.png)
 ![1080p](images/slice15-polish-graphics-1080p.png)
+
+## Slice 16 greedy meshing
+
+See [measured results, visual evidence and limitations](GREEDY_MESHING.md).
+Local locked build, format, all-target Clippy, 302 workspace tests, atlas artifact
+check, matched release benchmarks and X11 software rendering passed. Native
+GPU/Wayland/Windows and remote CI results are separate outstanding checks.
