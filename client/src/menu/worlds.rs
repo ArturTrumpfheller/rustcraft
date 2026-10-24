@@ -117,25 +117,25 @@ impl Browser {
                     add(
                         format!("{}{}", if selected { "> " } else { "" }, clip(&e.name, 34)),
                         Some(Command::Select(index)),
-                        [-220., 48. - (index - self.offset) as f32 * 32., 440., 29.],
+                        [-208., 47. - (index - self.offset) as f32 * 44., 416., 40.],
                     );
                 }
                 add(
                     "< Vorherige".into(),
                     (self.offset > 0).then_some(Command::Previous),
-                    [-220., -34., 110., 16.],
+                    [-208., -58., 100., 16.],
                 );
                 add(
                     "Naechste >".into(),
                     (self.offset + 3 < self.entries.len()).then_some(Command::Next),
-                    [110., -34., 110., 16.],
+                    [108., -58., 100., 16.],
                 );
                 let e = self.entry();
                 let managed = e.is_some_and(|e| matches!(e.key, WorldKey::Managed(_)));
                 let valid = managed && e.is_some_and(|e| e.error.is_none());
                 for (i, (label, cmd)) in [
                     ("Welt spielen", valid.then_some(Command::Play)),
-                    ("Neue Welt", Some(Command::Create)),
+                    ("Neue Welt erstellen", Some(Command::Create)),
                     ("Umbenennen", valid.then_some(Command::Rename)),
                     ("Archivieren", managed.then_some(Command::Archive)),
                     ("Untersuchen", e.map(|_| Command::Details)),
@@ -147,25 +147,24 @@ impl Browser {
                     add(
                         label.into(),
                         cmd,
-                        [
-                            -220. + (i % 3) as f32 * 150.,
-                            -63. - (i / 3) as f32 * 24.,
-                            140.,
-                            20.,
-                        ],
+                        if i < 2 {
+                            [-208. + i as f32 * 212., -84., 204., 20.]
+                        } else {
+                            [-208. + (i - 2) as f32 * 106., -109., 98., 20.]
+                        },
                     );
                 }
                 add(
                     "Aktualisieren".into(),
                     Some(Command::Refresh),
-                    [-70., -111., 140., 16.],
+                    [108., 102., 100., 16.],
                 );
             }
             Page::Create | Page::Rename => {
                 add(
                     format!("Name: {}", tail(&self.name, 39)),
                     Some(Command::Name),
-                    [-220., 26., 440., 25.],
+                    [-150., 28., 300., 22.],
                 );
                 if self.page == Page::Create {
                     add(
@@ -178,7 +177,7 @@ impl Browser {
                             }
                         ),
                         Some(Command::Seed),
-                        [-220., -14., 440., 25.],
+                        [-150., -20., 300., 22.],
                     );
                 }
                 add(
@@ -189,12 +188,12 @@ impl Browser {
                     }
                     .into(),
                     Some(Command::Confirm),
-                    [-205., -65., 195., 23.],
+                    [-204., -101., 198., 20.],
                 );
                 add(
                     "Abbrechen".into(),
                     Some(Command::Back),
-                    [10., -65., 195., 23.],
+                    [6., -101., 198., 20.],
                 );
             }
             Page::Archive | Page::Import => {
@@ -206,12 +205,12 @@ impl Browser {
                     }
                     .into(),
                     Some(Command::Confirm),
-                    [-215., -65., 205., 23.],
+                    [-204., -67., 198., 20.],
                 );
                 add(
                     "Abbrechen".into(),
                     Some(Command::Back),
-                    [10., -65., 205., 23.],
+                    [6., -67., 198., 20.],
                 );
             }
             Page::Details => {
@@ -580,12 +579,12 @@ fn date(t: u64) -> String {
     format!("{year:04}-{month:02}-{:02} UTC", days + 1)
 }
 pub(super) fn paint(b: &Browser, c: &mut Canvas) {
-    let cream = [0.94, 0.88, 0.73, 1.];
-    let copper = [0.76, 0.43, 0.21, 1.];
-    let muted = [0.53, 0.65, 0.65, 1.];
-    c.centered(112., "RUSTCRAFT", 1.4, cream);
+    let cream = [0.94, 0.95, 0.96, 1.];
+    let copper = [0.69, 0.74, 0.8, 1.];
+    let muted = [0.52, 0.55, 0.6, 1.];
+
     c.centered(
-        91.,
+        105.,
         match b.page {
             Page::List => "WELTENAUSWAHL",
             Page::Create => "NEUE WELT ERSTELLEN",
@@ -603,25 +602,29 @@ pub(super) fn paint(b: &Browser, c: &mut Canvas) {
         return;
     }
     if b.page == Page::List {
+        c.rect(-211., -41., 422., 132., [0.009, 0.011, 0.015, 1.]);
+        c.rect(-211., 90., 422., 1., [0.16, 0.18, 0.21, 1.]);
+    }
+    if b.page == Page::List {
         if b.entries.is_empty() {
             c.centered(24., "NOCH KEINE WELTEN - NEUE WELT ERSTELLEN", 0.9, cream);
         }
         c.centered(
-            -29.,
+            -54.,
             &format!("{} WELTEN / SEITE {}", b.entries.len(), b.offset / 3 + 1),
             0.75,
             muted,
         );
     } else if matches!(b.page, Page::Create | Page::Rename) {
         c.text(
-            -218.,
+            -150.,
             61.,
             "NAME FREI WAEHLBAR / DOPPELTE NAMEN ERLAUBT",
-            0.85,
+            0.7,
             muted,
         );
         c.centered(
-            -34.,
+            -39.,
             if b.page == Page::Create {
                 "LEERER SEED = ZUFALL / GENERATOR V3"
             } else {
@@ -630,7 +633,7 @@ pub(super) fn paint(b: &Browser, c: &mut Canvas) {
             0.85,
             muted,
         );
-        c.centered(-91., "TAB: FELD WECHSELN / CTRL+A: LEEREN", 0.85, muted);
+        c.centered(-66., "TAB: FELD WECHSELN / CTRL+A: LEEREN", 0.85, muted);
     } else if let Some(e) = b.entry() {
         c.centered(64., &clip(&e.name, 45), 1., cream);
         if b.page == Page::Details {
@@ -686,35 +689,43 @@ pub(super) fn paint(b: &Browser, c: &mut Canvas) {
         let focused = i == b.focus;
         let enabled = control.action.is_some();
         let selected = matches!(control.action,Some(Command::Select(index)) if Some(&b.entries[index].key)==b.selected.as_ref());
-        c.rect(
-            x - 1.,
-            y - 1.,
-            w + 2.,
-            h + 2.,
-            if (focused || selected) && enabled {
-                copper
-            } else {
-                [0.2, 0.27, 0.29, 1.]
-            },
-        );
-        c.rect(
-            x,
-            y,
-            w,
-            h,
-            if b.pressed == Some(i) {
-                [0.18, 0.28, 0.29, 1.]
-            } else {
-                [0.07, 0.12, 0.15, 1.]
-            },
-        );
-        c.text(
-            x + 5.,
-            y + h - 10.,
-            &control.label,
-            if h < 24. { 0.85 } else { 1. },
-            if enabled { cream } else { muted },
-        );
+        let row = matches!(control.action, Some(Command::Select(_)));
+        let field = matches!(control.action, Some(Command::Name | Command::Seed));
+        if row || field {
+            c.rect(
+                x - 1.,
+                y - 1.,
+                w + 2.,
+                h + 2.,
+                if selected || field && focused {
+                    cream
+                } else if focused {
+                    copper
+                } else {
+                    [0.08, 0.09, 0.11, 1.]
+                },
+            );
+            c.rect(
+                x,
+                y,
+                w,
+                h,
+                if selected {
+                    [0.09, 0.11, 0.14, 1.]
+                } else {
+                    [0.012, 0.015, 0.02, 1.]
+                },
+            );
+            c.text(x + 7., y + h - 12., &control.label, 1., cream);
+        } else {
+            c.button(
+                control.rect,
+                &control.label,
+                focused,
+                b.pressed == Some(i),
+                enabled,
+            );
+        }
         if let Some(Command::Select(index)) = control.action {
             let e = &b.entries[index];
             let status = if let Some(error) = &e.error {

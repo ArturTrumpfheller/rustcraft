@@ -35,6 +35,8 @@ creation, import, rename, archive and loading run on workers with a busy page.
 Native close waits for an in-flight catalog operation. There is no automatic retry
 of a failed mutation; refresh the list after filesystem errors.
 
+![Title screen](images/slice14-title.png)
+
 ![World selection](images/slice14-world-selection.png)
 
 ![World creation](images/slice14-world-create.png)
@@ -198,3 +200,15 @@ archive, legacy-copy import and focus/DPI tests above. No Python, external asset
 renderer override or admin rights are needed to run the game. Windows CI checks
 compilation/tests; physical GPU, compositor, capture and IME behavior require
 native manual acceptance.
+
+## Visual revision on PR31
+
+Java Edition-inspired hierarchy uses an upper page title, a large dark list with
+flat selected rows, two primary footer actions and four secondary footer actions.
+Creation/rename use central dark fields and a bottom confirmation/cancel pair;
+archive/import use quiet explanatory text and equal-width actions. Title/pause
+and errors share the original gray beveled button renderer. Hit regions and
+painting use the same logical rectangles. Paging, focus, confirmation defaults,
+workers and persistence contracts are unchanged. The slate mosaic, bevel geometry,
+RustCraft title and bitmap glyphs are independently authored; no Minecraft assets
+or external fonts are included. Screenshots above show the revised presentation.

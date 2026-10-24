@@ -1,5 +1,16 @@
 # RustCraft validation
 
+## PR31 visual revision (2026-10-24)
+
+Only menu layout/rendering changed; storage and session code remain untouched.
+All five menu tests and the full 119-client/154-core regression suite passed,
+including A/B/A cleanup, locks, imports and failed-save retention. Locked Clippy
+with warnings denied, format, workspace build and texture validation passed.
+Updated Xvfb/Mesa screenshots cover title, list, creation and confirmation;
+mouse/keyboard cancellation, 4:3 resizing and native quit were exercised.
+No new dependency, texture pack, font file or proprietary asset was introduced.
+
+
 ## Slice14 world management (2026-10-23)
 
 Based on main `50b2ae6`; no dependencies, renderer features, generator outputs or
