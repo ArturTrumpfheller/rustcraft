@@ -118,10 +118,13 @@ fn leave(app: &mut App) {
         .save(Destination::Title);
     until(app, |a| state(a) == ClientState::Title);
 }
-fn assets(app: &App) -> (usize, usize, usize) {
+fn assets(app: &App) -> (usize, usize, usize, usize) {
     (
         app.world().resource::<Assets<Mesh>>().len(),
         app.world().resource::<Assets<StandardMaterial>>().len(),
+        app.world()
+            .resource::<Assets<crate::terrain_material::TerrainSurface>>()
+            .len(),
         app.world().resource::<Assets<Image>>().len(),
     )
 }

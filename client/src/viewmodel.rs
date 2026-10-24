@@ -237,11 +237,7 @@ fn setup(
         ))
         .id();
     commands.entity(camera).add_child(overlay);
-    let atlas = materials
-        .get(&terrain.0)
-        .unwrap()
-        .base_color_texture
-        .clone();
+    let atlas = Some(terrain.1.clone());
     let skin = materials.add(StandardMaterial {
         base_color_texture: Some(images.add(arm_image())),
         unlit: true,

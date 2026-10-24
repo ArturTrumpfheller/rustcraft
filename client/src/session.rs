@@ -164,6 +164,7 @@ fn load_failed(world: &mut World, error: String) {
 struct SessionAssets {
     meshes: Vec<AssetId<Mesh>>,
     materials: Vec<AssetId<StandardMaterial>>,
+    terrain: Vec<AssetId<crate::terrain_material::TerrainSurface>>,
     images: Vec<AssetId<Image>>,
 }
 fn install(world: &mut World, loaded: Loaded) {
@@ -195,6 +196,10 @@ fn install(world: &mut World, loaded: Loaded) {
     let meshes: std::collections::HashSet<_> = world.resource::<Assets<Mesh>>().ids().collect();
     let materials: std::collections::HashSet<_> =
         world.resource::<Assets<StandardMaterial>>().ids().collect();
+    let terrain: std::collections::HashSet<_> = world
+        .resource::<Assets<crate::terrain_material::TerrainSurface>>()
+        .ids()
+        .collect();
     let images: std::collections::HashSet<_> = world.resource::<Assets<Image>>().ids().collect();
     world.run_schedule(SessionSetup);
     world.insert_resource(SessionAssets {
@@ -207,6 +212,11 @@ fn install(world: &mut World, loaded: Loaded) {
             .resource::<Assets<StandardMaterial>>()
             .ids()
             .filter(|id| !materials.contains(id))
+            .collect(),
+        terrain: world
+            .resource::<Assets<crate::terrain_material::TerrainSurface>>()
+            .ids()
+            .filter(|id| !terrain.contains(id))
             .collect(),
         images: world
             .resource::<Assets<Image>>()
@@ -254,6 +264,11 @@ fn cleanup(world: &mut World) {
     }
     for id in assets.materials {
         world.resource_mut::<Assets<StandardMaterial>>().remove(id);
+    }
+    for id in assets.terrain {
+        world
+            .resource_mut::<Assets<crate::terrain_material::TerrainSurface>>()
+            .remove(id);
     }
     for id in assets.images {
         world.resource_mut::<Assets<Image>>().remove(id);

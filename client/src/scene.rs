@@ -1,3 +1,4 @@
+use crate::terrain_material::{AtlasRepeat, TerrainSurface};
 use bevy::{
     asset::RenderAssetUsages, camera::primitives::Aabb, ecs::system::SystemParam, mesh::Indices,
     prelude::*, render::render_resource::PrimitiveTopology,
@@ -37,7 +38,7 @@ pub(crate) struct ChunkRender {
     pub mesh: Handle<Mesh>,
 }
 #[derive(Resource)]
-pub(crate) struct TerrainMaterial(pub Handle<StandardMaterial>);
+pub(crate) struct TerrainMaterial(pub Handle<TerrainSurface>, pub Handle<Image>);
 
 impl Plugin for VoxelScenePlugin {
     fn build(&self, app: &mut App) {
@@ -48,6 +49,7 @@ impl Plugin for VoxelScenePlugin {
             app.init_resource::<VoxelWorld>();
         }
         app.init_resource::<Assets<Image>>()
+            .init_resource::<Assets<TerrainSurface>>()
             .init_resource::<RenderOrigin>()
             .init_resource::<DirtyChunks>()
             .init_resource::<LegacyMeshing>()
@@ -78,6 +80,7 @@ fn convert_mesh(surface: voxel_core::ChunkMesh) -> (Mesh, Visibility) {
     .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, surface.positions)
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, surface.normals)
     .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, surface.uvs)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_1, surface.atlas_uvs)
     .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, surface.colors)
     .with_inserted_indices(Indices::U32(surface.indices));
     (mesh, visibility)
@@ -89,7 +92,7 @@ pub(crate) fn upsert_stream_mesh(
     renders: &mut ChunkRenders,
     position: ChunkPos,
     surface: voxel_core::ChunkMesh,
-    material: &Handle<StandardMaterial>,
+    material: &Handle<TerrainSurface>,
     origin: &RenderOrigin,
 ) {
     if surface.indices.is_empty() {
@@ -109,7 +112,7 @@ pub(crate) fn upsert_chunk(
     renders: &mut ChunkRenders,
     position: ChunkPos,
     surface: voxel_core::ChunkMesh,
-    material: &Handle<StandardMaterial>,
+    material: &Handle<TerrainSurface>,
     origin: &RenderOrigin,
 ) {
     let (mesh, visibility) = convert_mesh(surface);
@@ -146,19 +149,25 @@ pub(crate) fn upsert_chunk(
 fn spawn_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut materials: ResMut<Assets<TerrainSurface>>,
     mut images: ResMut<Assets<Image>>,
     world: Res<VoxelWorld>,
     mut renders: ResMut<ChunkRenders>,
     origin: Res<RenderOrigin>,
 ) {
     let started = std::time::Instant::now();
-    let material = materials.add(StandardMaterial {
-        base_color: Color::WHITE,
-        base_color_texture: Some(images.add(crate::terrain_texture::atlas_image())),
-        perceptual_roughness: 1.0,
-        unlit: true,
-        ..default()
+    let atlas = images.add(crate::terrain_texture::atlas_image());
+    let material = materials.add(TerrainSurface {
+        base: StandardMaterial {
+            base_color: Color::WHITE,
+            base_color_texture: Some(atlas.clone()),
+            perceptual_roughness: 1.0,
+            unlit: true,
+            ..default()
+        },
+        extension: AtlasRepeat {
+            atlas: atlas.clone(),
+        },
     });
     let initial_targets: BTreeSet<_> = world.0.chunks().map(|(p, _)| p).collect();
     let initial_light = if world.0.identity().is_none() && !initial_targets.is_empty() {
@@ -187,7 +196,7 @@ fn spawn_scene(
         );
     }
 
-    commands.insert_resource(TerrainMaterial(material));
+    commands.insert_resource(TerrainMaterial(material, atlas));
     commands.insert_resource(GlobalAmbientLight {
         color: Color::WHITE,
         brightness: 0.0,
@@ -308,3 +317,39 @@ fn rebuild_dirty_chunks(
 
 #[cfg(test)]
 mod tests;
+
+/// Test oracle for topology-independent comparisons after light splits/merges.
+#[cfg(test)]
+pub(crate) fn unit_faces(mesh: &Mesh) -> BTreeSet<([i32; 3], [i32; 3])> {
+    use bevy::mesh::VertexAttributeValues;
+    let Some(VertexAttributeValues::Float32x3(positions)) =
+        mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+    else {
+        panic!("positions")
+    };
+    let Some(VertexAttributeValues::Float32x3(normals)) = mesh.attribute(Mesh::ATTRIBUTE_NORMAL)
+    else {
+        panic!("normals")
+    };
+    let mut out = BTreeSet::new();
+    for (q, p) in positions.as_chunks::<4>().0.iter().enumerate() {
+        let n = normals[q * 4].map(|v| v as i32);
+        let axis = n.iter().position(|&v| v != 0).unwrap();
+        let mut lo: [i32; 3] =
+            std::array::from_fn(|a| p.iter().map(|p| p[a] as i32).min().unwrap());
+        let mut hi: [i32; 3] =
+            std::array::from_fn(|a| p.iter().map(|p| p[a] as i32).max().unwrap());
+        if n[axis] > 0 {
+            lo[axis] -= 1;
+        }
+        hi[axis] = lo[axis] + 1;
+        for x in lo[0]..hi[0] {
+            for y in lo[1]..hi[1] {
+                for z in lo[2]..hi[2] {
+                    assert!(out.insert(([x, y, z], n)));
+                }
+            }
+        }
+    }
+    out
+}

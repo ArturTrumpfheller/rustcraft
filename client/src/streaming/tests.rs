@@ -15,7 +15,7 @@ fn app(radius: i32) -> App {
         .insert_resource(VoxelWorld(world))
         .insert_resource(StreamState::new(generator, radius))
         .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<StandardMaterial>>()
+        .init_resource::<Assets<crate::terrain_material::TerrainSurface>>()
         .add_plugins((VoxelScenePlugin, PlayerPlugin, StreamingPlugin));
     app.update();
     app
@@ -200,7 +200,7 @@ fn legacy_snapshots_do_not_stream_and_radius_configuration_is_bounded() {
     let mut app = App::new();
     app.insert_resource(VoxelWorld(voxel_core::demo_world()))
         .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<StandardMaterial>>()
+        .init_resource::<Assets<crate::terrain_material::TerrainSurface>>()
         .init_resource::<PlayerState>()
         .add_plugins((VoxelScenePlugin, StreamingPlugin));
     app.update();
@@ -753,7 +753,7 @@ fn large_app(path: &std::path::Path) -> App {
         .insert_resource(session)
         .insert_resource(StreamState::new(generator, 1))
         .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<StandardMaterial>>()
+        .init_resource::<Assets<crate::terrain_material::TerrainSurface>>()
         .init_resource::<ButtonInput<KeyCode>>()
         .add_plugins((
             VoxelScenePlugin,
@@ -1023,7 +1023,11 @@ fn assert_textured_residency(app: &mut App) {
     let w = app.world_mut();
     let material = w.resource::<TerrainMaterial>().0.clone();
     assert_eq!(w.resource::<Assets<Image>>().len(), 1);
-    assert_eq!(w.resource::<Assets<StandardMaterial>>().len(), 1);
+    assert_eq!(
+        w.resource::<Assets<crate::terrain_material::TerrainSurface>>()
+            .len(),
+        1
+    );
     let state = w.resource::<StreamState>();
     assert!(state.lights.len() <= 147);
     assert!(state.cache.columns() <= 81);
@@ -1040,7 +1044,7 @@ fn assert_textured_residency(app: &mut App) {
             m.count_vertices()
         );
         assert_eq!(
-            w.get::<MeshMaterial3d<StandardMaterial>>(render.entity)
+            w.get::<MeshMaterial3d<crate::terrain_material::TerrainSurface>>(render.entity)
                 .unwrap()
                 .0,
             material
@@ -1054,9 +1058,10 @@ fn streaming_reuses_one_atlas_through_repeated_mesh_empty_refill_and_eviction() 
     drain(&mut app);
     let image = app
         .world()
-        .resource::<Assets<StandardMaterial>>()
+        .resource::<Assets<crate::terrain_material::TerrainSurface>>()
         .get(&app.world().resource::<TerrainMaterial>().0)
         .unwrap()
+        .base
         .base_color_texture
         .clone();
     // An entirely empty upper chunk must release its terrain asset then recreate
@@ -1076,9 +1081,10 @@ fn streaming_reuses_one_atlas_through_repeated_mesh_empty_refill_and_eviction() 
     }
     assert_eq!(
         app.world()
-            .resource::<Assets<StandardMaterial>>()
+            .resource::<Assets<crate::terrain_material::TerrainSurface>>()
             .get(&app.world().resource::<TerrainMaterial>().0)
             .unwrap()
+            .base
             .base_color_texture,
         image
     );
@@ -1125,8 +1131,8 @@ fn roof_open_close_relights_floor_in_other_vertical_chunk_and_reuses_mesh_handle
     assert_eq!(light_at(&app, BlockPos([8, 15, 8])), 15);
     let lit = app.world().resource::<Assets<Mesh>>().get(&handle).unwrap();
     assert_eq!(
-        original.attribute(Mesh::ATTRIBUTE_POSITION),
-        lit.attribute(Mesh::ATTRIBUTE_POSITION)
+        crate::scene::unit_faces(&original),
+        crate::scene::unit_faces(lit)
     );
     assert_ne!(
         original.attribute(Mesh::ATTRIBUTE_COLOR),
