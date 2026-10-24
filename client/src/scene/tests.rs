@@ -275,3 +275,76 @@ fn stale_legacy_worker_retains_complete_old_mesh_until_current_batch_is_ready() 
         60
     );
 }
+
+#[test]
+fn live_fog_radius_changes_update_one_shared_material_without_remeshing() {
+    use crate::atmosphere::{AtmosphereUniform, SkyAssets, SkyMaterial};
+    let mut app = App::new();
+    app.init_resource::<Assets<Mesh>>()
+        .init_resource::<Assets<TerrainSurface>>()
+        .init_resource::<crate::settings::Preferences>()
+        .add_plugins(VoxelScenePlugin);
+    app.world_mut().spawn(crate::camera::FirstPersonCamera);
+    app.update();
+    let terrain = app.world().resource::<TerrainMaterial>().0.clone();
+    let sky = app.world().resource::<SkyAssets>().material.clone();
+    let handles: Vec<_> = app
+        .world()
+        .resource::<ChunkRenders>()
+        .0
+        .values()
+        .map(|r| r.mesh.clone())
+        .collect();
+    let count = app.world().resource::<Assets<Mesh>>().len();
+    let revision = app.world().resource::<VoxelWorld>().0.revision();
+    for radius in [1, 3, 2, 1, 3, 1] {
+        app.world_mut()
+            .resource_mut::<crate::settings::Preferences>()
+            .radius = radius;
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<Assets<TerrainSurface>>()
+                .get(&terrain)
+                .unwrap()
+                .extension
+                .atmosphere,
+            AtmosphereUniform::for_radius(radius)
+        );
+        assert_eq!(
+            app.world()
+                .resource::<Assets<SkyMaterial>>()
+                .get(&sky)
+                .unwrap()
+                .atmosphere,
+            AtmosphereUniform::for_radius(radius)
+        );
+        assert_eq!(app.world().resource::<Assets<Mesh>>().len(), count);
+        assert_eq!(app.world().resource::<VoxelWorld>().0.revision(), revision);
+        assert!(app.world().resource::<DirtyChunks>().0.is_empty());
+        assert!(app.world().resource::<DirtyChunks>().1.is_empty());
+        assert!(!app.world().resource::<LegacyMeshing>().pending());
+        assert!(
+            handles
+                .iter()
+                .all(|h| app.world().resource::<Assets<Mesh>>().get(h).is_some())
+        );
+    }
+    // The actual active streaming radius wins over a saved preference, as it
+    // does when RUSTCRAFT_LOAD_RADIUS overrides settings at session creation.
+    let mut state = crate::streaming::StreamState::default();
+    state.set_radius(3);
+    app.insert_resource(state);
+    app.update();
+    assert_eq!(
+        app.world()
+            .resource::<Assets<TerrainSurface>>()
+            .get(&terrain)
+            .unwrap()
+            .extension
+            .atmosphere
+            .fog
+            .y,
+        48.
+    );
+}

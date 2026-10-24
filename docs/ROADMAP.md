@@ -47,6 +47,8 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 - [x] Initial greedy terrain meshing with atlas repetition and exact light merge boundaries (native acceptance pending)
 - [x] Vertex voxel AO, conservative greedy compatibility and diagonal edit invalidation (native acceptance pending)
 - [ ] Native Slice17 Void X11/Wayland and Windows AO acceptance — see [checklist](AMBIENT_OCCLUSION.md)
+- [x] Procedural daylight gradient and radius-dependent terrain fog with dark-cave protection
+- [ ] Native Slice18 Void X11/Wayland and Windows sky/fog visual and performance acceptance — see [checklist](SKY_FOG.md)
 - [ ] Dense-region/bulk-edit profiling and further native GPU optimization
 
 ## v0.3 — Alpha-inspired survival

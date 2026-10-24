@@ -510,3 +510,50 @@ fn user_settings_survive_world_switches_pause_focus_and_new_session_cameras() {
         assert_eq!(assets(&app), baseline);
     }
 }
+
+#[test]
+fn atmosphere_is_world_only_and_reclaimed_across_session_and_settings_transitions() {
+    use crate::atmosphere::{AtmosphereUniform, Sky, SkyAssets, SkyMaterial};
+    use bevy::camera::visibility::RenderLayers;
+    let mut app = app();
+    let dir = Directory::new();
+    let baseline = assets(&app);
+    assert_eq!(app.world().resource::<Assets<SkyMaterial>>().len(), 0);
+    for radius in [1, 3, 2] {
+        open(&mut app, &dir);
+        assert_eq!(app.world().resource::<Assets<SkyMaterial>>().len(), 1);
+        let sky = app.world().resource::<SkyAssets>();
+        assert!(app.world().get::<Sky>(sky.entity).is_some());
+        let layers = app
+            .world()
+            .get::<RenderLayers>(sky.entity)
+            .cloned()
+            .unwrap_or_default();
+        assert!(!layers.intersects(&RenderLayers::layer(crate::viewmodel::OVERLAY_LAYER)));
+        assert!(!layers.intersects(&RenderLayers::layer(2)));
+        let p = crate::settings::Preferences {
+            radius,
+            ..default()
+        };
+        crate::settings::apply(app.world_mut(), p);
+        frame(&mut app);
+        let handle = &app.world().resource::<scene::TerrainMaterial>().0;
+        assert_eq!(
+            app.world()
+                .resource::<Assets<crate::terrain_material::TerrainSurface>>()
+                .get(handle)
+                .unwrap()
+                .extension
+                .atmosphere,
+            AtmosphereUniform::for_radius(radius)
+        );
+        key(&mut app, KeyCode::Escape);
+        assert_eq!(state(&app), ClientState::Paused);
+        assert_eq!(app.world().resource::<Assets<SkyMaterial>>().len(), 1);
+        key(&mut app, KeyCode::Escape);
+        leave(&mut app);
+        assert!(!app.world().contains_resource::<SkyAssets>());
+        assert_eq!(app.world().resource::<Assets<SkyMaterial>>().len(), 0);
+        assert_eq!(assets(&app), baseline);
+    }
+}

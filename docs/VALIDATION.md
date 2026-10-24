@@ -1394,3 +1394,24 @@ remaining regressions and revised native acceptance. Native approval of the
 initial version is not approval of this revision. All local required checks pass
 with 313 workspace tests (148 client + 165 core); original Ubuntu/Windows CI passed.
 Revision CI is reported on PR #34.
+
+## Slice 18 — procedural sky and distance fog
+
+Implemented against merged Slice 17 dc519cdbd6f1d37d037da514ce7144b1d7b749de.
+All required locked commands passed on Linux/Rust 1.99.1:
+format check; Clippy workspace/all-targets with warnings denied; workspace tests
+(155 client,165 core); workspace build; original texture regeneration check.
+
+Seven matched before/after X11 llvmpipe pairs cover plains, forest, seeded uneven
+terrain, cave entrance, enclosed room and radii1/3. Pixel checks establish unchanged
+near-field texels and dark cave core, with matching rendered horizon colors.
+The comparison uses the exact old terrain shader in a shared deterministic
+harness. Software frame percentiles, control/update CPU timings, raw data,
+reproduction commands, limitations and native checklists are in [SKY_FOG](SKY_FOG.md).
+These observations do not substitute for native Void X11/Wayland or Windows GPU,
+input, compositor or performance acceptance.
+
+Normal-client X11 software smoke additionally observed world loading, held block,
+empty hand, inventory, hotbar/crosshair, Pause, save/return to title and reopening
+the same isolated test world. Captures are linked in SKY_FOG. No shader or pipeline
+errors occurred; Xvfb/software-driver warnings were expected.

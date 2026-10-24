@@ -1,5 +1,9 @@
 //! Fixed-camera renderer fixtures. Run with flat, structure, room or trees.
 //! Uses the production terrain material/atlas; never opens or modifies saves.
+// The AO-only gallery deliberately disables sky/fog.
+#[allow(dead_code)]
+#[path = "../src/atmosphere.rs"]
+mod atmosphere;
 #[path = "../src/terrain_material.rs"]
 mod terrain_material;
 #[path = "../src/terrain_texture.rs"]
@@ -132,7 +136,10 @@ fn setup(
             unlit: true,
             ..default()
         },
-        extension: AtlasRepeat { atlas },
+        extension: AtlasRepeat {
+            atlas,
+            atmosphere: atmosphere::AtmosphereUniform::disabled(),
+        },
     });
     for (cp, _) in w.chunks() {
         let m = mesh_chunk_lit(&w, cp, &light);
