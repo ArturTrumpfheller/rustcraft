@@ -679,7 +679,7 @@ fn idle_silhouettes_match_measured_wide_arm_and_grass_reference_landmarks() {
 }
 
 #[test]
-fn walk_sway_matches_reference_range_and_sprint_increases_rhythm_not_size() {
+fn reduced_walk_sway_has_a_small_visible_range_and_sprint_increases_rhythm_not_size() {
     let mut walk = Motion::default();
     let mut sprint = Motion::default();
     walk.reset([0.; 3], 0);
@@ -715,6 +715,65 @@ fn walk_sway_matches_reference_range_and_sprint_increases_rhythm_not_size() {
     }
     let min = tips.iter().copied().reduce(Vec2::min).unwrap();
     let max = tips.iter().copied().reduce(Vec2::max).unwrap();
-    assert!(min.distance(Vec2::new(639.6, 336.)) < 4., "{min:?}");
-    assert!(max.distance(Vec2::new(674.5, 368.)) < 4., "{max:?}");
+    // Previous reference envelope was roughly 35x32 pixels at this viewport.
+    // Retain visible motion, with approximately half the projected excursion.
+    let range = max - min;
+    assert!((14. ..22.).contains(&range.x), "{range:?}");
+    assert!((12. ..21.).contains(&range.y), "{range:?}");
+}
+
+#[test]
+fn subtle_gait_transitions_and_landing_match_at_30_60_144_fps() {
+    let mut results = Vec::new();
+    for fps in [30, 60, 144] {
+        let mut motion = Motion::default();
+        motion.reset([0.; 3], 0);
+        let mut x = 0.;
+        let mut samples = Vec::new();
+        // Idle, calibrated walk/sprint, stop, sneak, fall and landing.
+        for (speed, grounded, crouched, vy) in [
+            (0., true, false, 0.),
+            (4.317, true, false, 0.),
+            (5.612, true, false, 0.),
+            (0., true, false, 0.),
+            (1.295, true, true, 0.),
+            (0., false, false, 6.),
+            (0., false, false, -6.),
+            (0., true, false, 0.),
+        ] {
+            let mut last = Vec3::ZERO;
+            for n in 0..fps {
+                x += speed / f64::from(fps);
+                let (offset, rotation) = motion.step(
+                    1. / fps as f32,
+                    [x, 0., 0.],
+                    &body(grounded, crouched, vy),
+                    &HandAction::default(),
+                );
+                assert!(offset.is_finite() && rotation.is_finite());
+                if speed == 0. && grounded && !crouched && samples.len() == 3 && n == 0 {
+                    assert!(
+                        motion.bob > 0.5,
+                        "stopping eases out instead of snapping to idle"
+                    );
+                }
+                if n > 0 {
+                    assert!(offset.distance(last) < 0.025);
+                }
+                last = offset;
+            }
+            samples.push((last, motion.bob, motion.landing));
+        }
+        assert!(samples[0].0.length() < 1e-6);
+        assert!(samples[1].0.length() > 0.001);
+        assert!(samples[3].0.length() < 1e-5);
+        assert!(samples[4].1 < 1e-5, "sneak suppresses gait");
+        results.push(samples);
+    }
+    for samples in &results[1..] {
+        for (a, b) in results[0].iter().zip(samples) {
+            assert!(a.0.distance(b.0) < 1e-4, "{:?} {:?}", a.0, b.0);
+            assert!((a.1 - b.1).abs() < 1e-4 && (a.2 - b.2).abs() < 1e-5);
+        }
+    }
 }
