@@ -66,6 +66,29 @@ Blocks remain1B; per-chunk water counters and empty scheduler metadata are small
 fixed additions. Actual resident memory is recorded above, separately from mesh
 payload. Regional overlays and their COW/save memory retain existing bounds.
 
+### Regional overlays
+
+The same release fixture with `--regional` uses actual regional COW maps,
+region-ready validation, dirty-region backpressure and mesh-revision invalidation.
+All fixture columns are resident; no disk/streaming loads occur during timing.
+These additional measurements ran after compilation completed, without concurrent
+builds/tests. Raw data: [cpu-regional.csv](cpu-regional.csv); process CPU/RSS:
+[cpu-regional-resource.txt](cpu-regional-resource.txt).
+
+| Scene | Tick P50 / P95 / max µs | Stable tick ns | Processed updates |
+| --- | --- | --- | --- |
+| dry | 0.400 / 0.400 / 0.400 | 4 | 0 |
+| pool | 10.096 / 11.899 / 11.899 | 4 | 52 |
+| waterfall | 12.033 / 52.751 / 52.751 | 4 | 890 |
+| several | 103.217 / 186.036 / 186.036 | 8 | 1987 |
+| boundary | 38.229 / 52.321 / 52.321 | 4 | 568 |
+
+The multi-source regional maximum was186µs (0.186ms), compared with67µs in the
+finite fixture. This accounts for real overlay mutation; disk saves and dense
+concurrent save-snapshot COW remain outside this microbenchmark. Stable regional
+water also processes zero updates. For reproduction append `-- --regional` to
+`cargo run --release --locked -p voxel_core --example water_bench`.
+
 ## Active rendered fixture
 
 `water_gallery --active` deliberately pulses the same explicit sources every
@@ -127,7 +150,11 @@ channels, deterministic multi-source budgets, unloaded frontier/load order/retur
 old and water save formats, regional journal interruption/replay, source inventory
 transactions, water physics/land restoration, shared mesh heights/culling/light,
 retained blended assets and pure-water jobs with no new light work/terrain upload.
-Existing Linux/Windows CI configuration is retained. Physical Void X11/Wayland,
+The unchanged CI matrix passed on both Ubuntu and Windows for code commit
+`5c7a21d`: [workflow run134](https://github.com/ArturTrumpfheller/rustcraft/actions/runs/40227424085).
+Local validation: fmt, Clippy with warnings denied,184 client +210 core tests
+passed (three existing ignored tests), texture regeneration check and the
+required release build all passed. See [validation.txt](validation.txt). Physical Void X11/Wayland,
 Windows GUI, native RX9060 XT frame times, long travel with dense water, and
 transparency from all camera configurations remain manual acceptance; see WATER.
 Standard mesh-level alpha sorting can show errors in overlapping waterfalls.

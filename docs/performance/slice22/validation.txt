@@ -1,0 +1,24 @@
+Slice 22 validation — 2026-10-25
+
+Local Linux, Rust 1.99.1, Bevy 0.20.0:
+PASS cargo fmt --all -- --check
+PASS cargo clippy --locked --workspace --all-targets -- -D warnings
+PASS cargo test --locked --workspace
+     rustcraft: 184 passed, 0 failed, 3 existing ignored
+     voxel_core: 210 passed, 0 failed
+PASS cargo build --release --locked -p rustcraft
+     First optimized dependency build: 22m 29s. Final incremental check: 0.28s.
+PASS python tools/generate_textures.py --check
+PASS cargo build --release --locked -p voxel_core --example water_bench
+PASS water_bench --regional; steady pending/processed counts return to zero
+PASS production-shader screenshots and matched software-renderer measurements
+PASS git diff --check
+
+GitHub Actions code commit 5c7a21d68443d24b38b4d6f93d7a271ca5de5dc8:
+https://github.com/ArturTrumpfheller/rustcraft/actions/runs/40227424085
+ubuntu-latest: fmt, clippy, tests, texture check, debug build PASS
+windows-latest: fmt, clippy, tests, texture check, debug build PASS
+
+Native Void X11/Wayland and Windows GUI/GPU acceptance remains manual.
+Software-rendered active frame-time tails and alpha-sorting limitations are
+reported in README.md and docs/WATER.md; no native Radeon FPS claim is made.
