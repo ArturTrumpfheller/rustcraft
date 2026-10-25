@@ -121,3 +121,8 @@ vertex brightness. Neutral scalar lighting preserves sunny colors without a new
 RGB architecture. Future emissive blocks can supply scalar emission through the
 same API; adding color would extend independent samples/merge keys explicitly.
 [Rules, images, measured overhead, memory and native checklist](TORCHES.md).
+
+The Slice20 refinement's four wall variants emit the same14 and use exactly the
+same transparent-source/channel path. Orientation-only edits change geometry
+without changing light samples; a regression verifies that cached samples are
+reused and only the forced geometry footprint is remeshed.

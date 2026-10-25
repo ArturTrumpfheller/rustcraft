@@ -307,7 +307,9 @@ version, existing ID, generator, extent, identity, checksum or journal layout.
 This is an additive, fail-closed register extension, not a world-mode upgrade.
 Version1 stays frozen (IDs1–3); existing v1 edits use the established v2 writer.
 v2 snapshots, v3 overlays, v4 region-v1 records and player-v1 stacks accept ID6.
-Unknown IDs7+ still fail validation, including inside checksummed redo journals.
+The refinement appends world block IDs7 East,8 West,9 South,10 North for wall
+mounts; they all collect item6. Standing block6 and item6 keep their exact meanings.
+Unknown world IDs11+ still fail validation; player item IDs7+ remain invalid, including inside checksummed redo journals.
 Earlier tables describing IDs1–5 are the historical contracts extended here.
 
 This choice retains exact bytes for saves without torches and never rewrites
@@ -324,3 +326,9 @@ through single-cell edit validation; no additional drop transaction is needed.
 Lighting is derived and never encoded. Reload reconstructs it from blocks, also
 after region eviction. A freshly initialized inventory receives 32 torches once;
 existing player files retain exactly their saved contents.
+
+Full-snapshot restoration bypasses gameplay placement/support checks after each
+record's existing bounds/ID/order/checksum validation. Otherwise a valid wall
+support that sorts after its torch could make decoding depend on record order.
+This preserves exact old data and permits trusted malformed imports without
+repairing/mutating files. Gameplay placement still validates loaded support.

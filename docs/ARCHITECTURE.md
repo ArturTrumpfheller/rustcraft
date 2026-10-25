@@ -359,7 +359,7 @@ new asset per frame, renderer feature or dependency is added.
 `Block` separates collision, light opacity, cube geometry, targeting and emission.
 Torch is noncolliding, transparent, targetable and emits14; `is_solid` remains a
 collision compatibility alias. Placement checks Air occupancy separately. Single-
-cell support validation in `World::set_block` rejects removing a torch's floor
+cell support validation in `World::set_block` rejects removing a torch's floor or mounting wall
 until the torch is collected, keeping the existing inventory/save transaction.
 
 The existing `Skylight` worker field now retains two independent scalar channels.
@@ -375,3 +375,15 @@ Twelve-quad torch models share each chunk mesh/material; the tip has full vertex
 brightness. Inventory and hand reuse slot7 without terrain entities or point lights.
 Emission and independent sampling provide an extension point for future sources;
 RGB channels and tinting are intentionally deferred. See TORCHES/LIGHTING.
+
+### Slice20 selection and orientation refinement
+
+The core shared `shape` module supplies static shaft/tip boxes plus an orthonormal
+mount transform. DDA tests those boxes and continues through empty cell space;
+meshing and client outline use the same transform. World block IDs7–10 encode
+four wall mounts and map back to Torch item6. Support validation protects all
+five attachments with authoritative overlay checks for pending neighbors.
+Orientation affects geometry alone; emission/opacity/channel buffers and worker
+revision/dirty/publication rules are unchanged. The Bevy selection mesh updates
+only on shape changes. Independent viewmodel presentation profiles provide item
+pose/scale/rotation/origin without changing motion or allocating each frame.

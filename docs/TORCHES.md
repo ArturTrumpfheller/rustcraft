@@ -1,25 +1,26 @@
 # Slice 20 — torches and dynamic voxel block light
 
 Original RustCraft source/art: MIT OR Apache-2.0. Based on accepted Slice19
-`9eec01272d463c6eaa350bcbf3345d24eba6b53f`. Native owner acceptance remains open.
+`9eec01272d463c6eaa350bcbf3345d24eba6b53f`. The owner accepted the original Slice20 lighting/rendering/persistence/performance on native Void Linux. The targeting/wall/viewmodel refinement below awaits renewed native acceptance.
 
 ## Playing and support rules
 
 A freshly initialized player starts with **32 torches in hotbar slot6**. Select6
-(or use the wheel), aim at a solid floor and right click. A torch can also be
-placed against a side when its destination has an appropriate loaded solid block
-underneath. Left click collects the target torch. Full inventory rejects breaking;
+(or use the wheel). Right click a solid block's top face for a standing torch;
+a horizontal face mounts it to that wall. Underside placement is rejected. Left click collects the target torch. Full inventory rejects breaking;
 failed placements/no-ops never consume items. Existing initialized inventories
 are loaded exactly and never receive a refill.
 
 Torches are centered 0.1875-block-wide, 0.6875-block-high models: wood shaft and
 bright amber tip, twelve quads total. They allow movement and both light channels,
-remain targetable throughout their cell, and do not hide neighboring cube faces
-or contribute AO. Placement cannot replace occupied cells. Wall/ceiling mounts,
+are selectable only on their shaft/tip geometry, and do not hide neighboring cube faces
+or contribute AO. Placement cannot replace occupied cells. Ceiling mounts,
 particles, animated flames, sound, crafting and held moving lights are deferred.
 
-**Break the torch before mining its floor.** Support removal is refused while a
-torch is above it; when the upper cell is pending, retry once it loads. Support
+**Break the torch before mining its floor or mounting wall.** Support removal
+is refused while any standing/wall torch depends on that block. Pending neighbors
+are checked against complete authoritative overlays (frozen generators contain
+no torches); when a required overlay is unknown, retry once it loads. Support
 must be within world bounds and loaded; y=-16 cannot host a floor torch. This
 bounded single-cell policy avoids automatic multi-block removals, item drops and
 new journal transactions. Trusted imports/cache installs do not validate support;
@@ -142,7 +143,7 @@ cargo test --locked -p rustcraft torch_worker_measurements -- --ignored --nocapt
 Deterministic tests cover emission/properties/IDs, exact attenuation, overlap and
 removal, opaque partition opening/closing, signed X/Y/Z seams, world-height limits,
 pending cells, independent skylight, deterministic insertion/batch order, greedy
-light bands, model winding/tip, cell targeting/collision, inventory failure/no-op
+light bands, model winding/tip, shape targeting/collision, inventory failure/no-op
 atomicity, real slot6 clicks, paired save/reopen without refill, v2/v3 round trips,
 regional signed-seam eviction/reload and rapid edits against a blocked stale worker.
 Historical save/generator goldens, corruption/recovery and all existing worker,
@@ -176,3 +177,118 @@ then normal Cargo run and create a world). Record driver/backend, resolution,
 VSync, build mode, F3 frame times and worker diagnostics. Software llvmpipe images
 and CPU timing do not establish i3-13100/RX9060XT performance or native acceptance.
 Keep the new directory for restarts; back up entire closed world bundles.
+
+## Slice20 refinement: precise selection, wall mounts and held profiles
+
+Selection, ray intersection, outline and wall model placement share
+`voxel_core::shape`: the shaft and tip are two exact boxes in an orthonormal
+model frame. Wall torches tilt about22° out from their wall and stay entirely
+inside their voxel cell. The ray transforms into this frame, intersects each
+box and returns the closest hit within reach. Empty space beside/between the
+parts continues through the DDA to farther blocks. Cube tie ordering, inside hits
+and max reach remain unchanged. `RayHit.surface_normal` is the exact tilted
+normal; `normal` remains the dominant integer grid face for `adjacent` placement.
+
+The single selection entity draws both model boxes with a small local expansion
+to avoid coplanar flicker. Its retained mesh changes only when the selected shape
+changes; moving the target or standing still does not allocate new meshes.
+World torches still join chunk geometry with48 vertices/72 indices each.
+No per-torch entity/draw-call, PointLight or new texture is added. Block storage
+is still one byte, inventory Torch remains ID6 and lighting cache size/radius/
+propagation/worker publication are unchanged. An orientation-only change reuses
+identical light samples and forces only the existing geometry/AO footprint.
+
+| Stable block ID | Mount | Support offset from torch | Clicked support face |
+| --- | --- | --- | --- |
+| 6 | Standing | (0,-1,0) | +Y |
+| 7 | East | (-1,0,0) | +X |
+| 8 | West | (+1,0,0) | -X |
+| 9 | South | (0,0,-1) | +Z |
+| 10 | North | (0,0,+1) | -Z |
+
+This extends the same fail-closed world registry policy in v2/v3/v4 records;
+standing ID6 data is unchanged. All five variants collect the one Torch item.
+Player item IDs7–10 remain invalid. Unknown world IDs11+ remain invalid. No
+new envelope, migration, journal or derived save data is introduced. Tests cover
+all mounts, signed region support seams, eviction/reload and old standing saves.
+
+`client::viewmodel::presentation` supplies position, scale, rotation, model-origin
+correction and swing pivot for Arm, Block and Slender categories. Torches reuse
+the standing chunk model directly, centered through their profile. Ordinary blocks
+and torches sit higher/right; the full shaft stays visible beside/above the hotbar.
+Camera X/Y lens correction retains the equipped silhouette at FOV70/78/90/100;
+X also adapts to aspect ratio to avoid narrow-window edge clipping. The original
+arm profile, gait cadence/amplitude, swing timing/travel and pivot curves are kept.
+Profile selection is constant-time without frame allocations or mesh recreation.
+
+Reproduce the new selection/mount gallery using the production terrain and
+selection adapter (no save I/O):
+
+```sh
+cargo build --locked -p rustcraft --example lighting_gallery
+python3 tools/capture_lighting.py --output /tmp/rustcraft-torch-refinement --scenes standing-selection east west south north
+```
+
+Native retest: use the existing isolated Slice20 world or a fresh directory from
+the Fish commands above. Aim beside a standing torch at a block behind it; the
+outline must follow only the visible shaft/tip. Place on each of four wall faces
+and on top, reject undersides, collect each variant and test support protection.
+Repeat across signed chunk/region seams and with F5/autosave/Save and Quit/reopen/
+eviction. Check the full held torch and normal block at FOV70/78/90/100 with hotbar,
+walk/sprint/crouch/swing and empty-arm selection. New native tests remain open.
+
+### Refinement images and CPU comparison
+
+| Fixture | Screenshot |
+| --- | --- |
+| Standing torch and exact box outline, dark room | [Standing](images/slice20-refinement/slice20-standing-selection.png) |
+| +X wall mount | [East](images/slice20-refinement/slice20-east.png) |
+| -X wall mount | [West](images/slice20-refinement/slice20-west.png) |
+| +Z wall mount | [South](images/slice20-refinement/slice20-south.png) |
+| -Z wall mount | [North](images/slice20-refinement/slice20-north.png) |
+| Complete held torch, FOV78 and hotbar | [Torch](images/slice20-refinement/held-torch-fov78.png) |
+| Matched camera/FOV78, ordinary held block | [Block](images/slice20-refinement/held-block-fov78.png) |
+
+Selection/mount images use the production terrain/selection adapters at960×640.
+Held images use the actual application at1280×720, the same seed42 world/camera
+and saved FOV78 settings, changing only the selected slot. All captures use Xvfb
+X11/Mesa llvmpipe software Vulkan. They do not establish native AMD performance.
+
+An isolated release harness comparison against the previous PR head
+`d5c9c171327f611d4e5a634cad4015682390d4b0` uses three interleaved process runs
+after warmup, with no renderer/test suite running. The new mounts fixture gives
+both versions identical floor/side supports; the old version uses standing
+torches at the same emitter cells, so lighting/opacity and quad counts match.
+[Raw per-run CSVs and environment](performance/slice20-refinement).
+
+| Scene | Light+mesh µs before → after | Change |
+| --- | ---: | ---: |
+| No torches | 1296.53 → 1324.44 | +2.2% |
+| One | 1241.23 → 1244.28 | +0.2% |
+| Several | 1254.69 → 1399.67 | +11.6% |
+| Many | 1331.06 → 1350.21 | +1.4% |
+| Repeated edits | 1282.26 → 1187.51 | -7.4% |
+| Signed seam | 1213.13 → 1192.22 | -1.7% |
+| Four wall mounts plus one standing source | 1268.05 → 1309.14 | +3.2% |
+
+Small cloud timings vary; the several-source regression is retained explicitly.
+No general speedup or physical frame-time claim is made. The new orientations
+keep one-byte block storage, identical resident light buffers and exactly48
+vertices/72 indices per torch. A deterministic worker-core regression confirms
+that changing only mount orientation preserves all cached light samples and
+remeshes just the one affected interior geometry chunk. The selected outline
+uses one retained asset (16 vertices/48 line indices for two boxes), not per-torch
+assets or work on idle frames.
+
+```sh
+python3 tools/benchmark_lighting.py --baseline d5c9c171327f611d4e5a634cad4015682390d4b0 --output /tmp/rustcraft-refinement-bench
+```
+
+Known limits remain deliberate: no ceiling mounts, automatic support-loss drops,
+RGB/moving hand light or multiplayer. Removing support can be deferred at an
+unknown regional frontier; it never guesses away an unloaded dependent torch.
+Imported malformed worlds are preserved, not automatically repaired. The tilted
+surface normal is exposed separately from the grid normal used for adjacent-cell
+placement. Held action animations can lower/sweep the model as before; equipped
+poses and camera/UI clearance are tested. Native Void/Windows refinement testing
+is still required even though the original Slice20 was accepted on Void.

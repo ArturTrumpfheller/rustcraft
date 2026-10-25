@@ -43,6 +43,23 @@ pub fn room(scene: &str) -> World {
             }
         }
     }
+    if scene == "mounts" {
+        for (p, b, support) in [
+            ([-6, 2, -4], Block::TorchEast, [-1, 0, 0]),
+            ([-2, 2, -4], Block::TorchWest, [1, 0, 0]),
+            ([2, 2, -4], Block::TorchSouth, [0, 0, -1]),
+            ([6, 2, -4], Block::TorchNorth, [0, 0, 1]),
+        ] {
+            let p = BlockPos(p);
+            // Both floor and side supports make an equivalent standing-torch
+            // fallback possible in the original Slice20 benchmark baseline.
+            w.set_block(p.offset([0, -1, 0]).unwrap(), Block::Stone)
+                .unwrap();
+            w.set_block(p.offset(support).unwrap(), Block::Stone)
+                .unwrap();
+            w.set_block(p, b).unwrap();
+        }
+    }
     if scene == "wall" {
         for y in 1..8 {
             for z in -7..8 {

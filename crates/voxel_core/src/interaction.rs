@@ -109,7 +109,12 @@ pub fn edit(
             if selection.block().is_collidable() && player.intersects_block(position, config) {
                 return Err(EditError::IntersectsPlayer);
             }
-            world.set_block(position, selection.block())
+            let block = if selection == BuildBlock::Torch {
+                Block::torch_on_face(hit.normal).ok_or(EditError::Unsupported)?
+            } else {
+                selection.block()
+            };
+            world.set_block(position, block)
         }
     }
 }

@@ -704,7 +704,7 @@ fn torch_real_clicks_select_place_collect_and_save_without_refilling() {
     click(&mut app, MouseButton::Right);
     assert_eq!(
         app.world().resource::<VoxelWorld>().0.block(torch),
-        Block::Torch
+        Block::TorchSouth
     );
     assert_eq!(total(&app, Item::Torch), 31);
     assert_eq!(
@@ -734,7 +734,7 @@ fn torch_real_clicks_select_place_collect_and_save_without_refilling() {
     drop(app);
     let (store, mut world, _) = SaveStore::open(&dir.0).unwrap();
     let inv = store.load_player(&mut world).unwrap();
-    assert_eq!(world.block(torch), Block::Torch);
+    assert_eq!(world.block(torch), Block::TorchSouth);
     assert_eq!(inv.slots()[5].unwrap().count(), 31);
     assert_eq!(inv.selected(), 5);
 }

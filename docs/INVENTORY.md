@@ -128,13 +128,14 @@ identity; it does not refill or remap inventories. See [WORLDS](WORLDS.md).
 
 ## Slice 20 torches
 
-Slot6 of a fresh starter holds 32 torches (stable item/block ID6). Right click
-places on a loaded solid floor; the selected stack loses exactly one only after
+Slot6 of a fresh starter holds 32 torches (stable item/block ID6). Right click on top places on a loaded solid floor; horizontal face clicks mount
+on that wall, and underside clicks fail. The selected stack loses exactly one only after
 a successful world change. Torch cells are occupied for placement, transparent
-for both light channels, noncolliding for walking and targetable across the cell.
+for both light channels, noncolliding for walking and targetable only on their shared shaft/tip selection shape.
 Left click collects exactly one; a full inventory rejects mining unchanged.
-Supports cannot be removed until the torch is collected, including when their
-upper neighbor is pending (defer the edit). This bounded single-cell policy avoids
+Floors and mounting walls cannot be removed until their dependent torches are
+collected. Pending neighbor dependencies require a complete known edit overlay;
+unknown overlays defer the edit. This bounded single-cell policy avoids
 implicit multi-block drops/journal changes. No automatic support-loss drops exist.
 
 The icon uses two small quads (shaft/tip) and the same original atlas slot7; the
@@ -142,3 +143,9 @@ held model reuses the world twelve-quad model. One additional retained hand mesh
 adds 2,592 logical bytes (six block models plus arm total10,368 bytes). No held
 light emission. See [save extension](SAVE_FORMAT.md#slice-20-additive-material-registry-extension)
 and [native testing](TORCHES.md).
+
+Wall block IDs7–10 are orientations of Torch item6, not additional inventory
+items or stacks. Mining any orientation collects one Torch. Support protection
+checks the floor and four neighboring wall attachments, including authoritative
+overlays for evicted/pending torch cells. Unknown overlays defer edits without
+consuming or granting items. The paired save/journal protocol is unchanged.

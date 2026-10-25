@@ -5,7 +5,7 @@ use std::{collections::BTreeSet, hint::black_box, time::Instant};
 use voxel_core::{Block, BlockPos, lighting::Skylight, mesh_chunk_lit};
 fn main() {
     println!("scene,light_us,mesh_us,chunks,quads,channel_bytes,block_steps");
-    for scene in ["dark", "one", "several", "many", "edits", "seam"] {
+    for scene in ["dark", "one", "several", "many", "edits", "seam", "mounts"] {
         let mut w = lighting_fixture::room(if scene == "edits" { "one" } else { scene });
         let targets: BTreeSet<_> = w.chunks().map(|(p, _)| p).collect();
         let mut light_times = Vec::new();

@@ -348,3 +348,48 @@ fn wood_and_leaves_select_place_break_and_use_opaque_chunk_faces() {
         assert_eq!(terrain_area(&mut app), before);
     }
 }
+
+#[test]
+fn selection_outline_tracks_torch_boxes_and_reuses_one_asset_while_static() {
+    let mut app = app();
+    prepare_target(&mut app);
+    click(&mut app, MouseButton::Left);
+    let p = aim_block();
+    app.world_mut()
+        .resource_mut::<VoxelWorld>()
+        .0
+        .set_block(BlockPos([0, 5, 6]), Block::Stone)
+        .unwrap();
+    let change = app
+        .world_mut()
+        .resource_mut::<VoxelWorld>()
+        .0
+        .set_block(p, Block::TorchSouth)
+        .unwrap()
+        .unwrap();
+    app.world_mut().resource_mut::<DirtyChunks>().mark(change);
+    frame(&mut app);
+    assert_eq!(app.world().resource::<Editor>().target.unwrap().position, p);
+    let w = app.world_mut();
+    let entity = w
+        .query_filtered::<Entity, With<TargetHighlight>>()
+        .single(w)
+        .unwrap();
+    let handle = w.get::<Mesh3d>(entity).unwrap().0.clone();
+    let mesh = w.resource::<Assets<Mesh>>().get(&handle).unwrap();
+    assert_eq!(mesh.count_vertices(), 16);
+    assert_eq!(mesh.indices().unwrap().len(), 48);
+    let before = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().clone();
+    for _ in 0..10 {
+        frame(&mut app);
+    }
+    assert_eq!(app.world().get::<Mesh3d>(entity).unwrap().0, handle);
+    assert_eq!(
+        app.world()
+            .resource::<Assets<Mesh>>()
+            .get(&handle)
+            .unwrap()
+            .attribute(Mesh::ATTRIBUTE_POSITION),
+        Some(&before)
+    );
+}

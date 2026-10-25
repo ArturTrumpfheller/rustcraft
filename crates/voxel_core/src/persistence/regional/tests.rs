@@ -415,3 +415,64 @@ fn torches_survive_region_seams_eviction_reload_and_removal() {
         assert_eq!(w.block(p), Block::Air);
     }
 }
+
+#[test]
+fn wall_mounts_survive_signed_region_seams_eviction_reload_and_protect_pending_support() {
+    let d = Dir::new();
+    let (store, mut w, _) = SaveStore::open_with(&d.0, || Ok(World::regional(identity()))).unwrap();
+    let cases = [
+        (BlockPos([64, 25, 2]), Block::TorchEast),
+        (BlockPos([-65, 25, 2]), Block::TorchWest),
+        (BlockPos([2, 25, 64]), Block::TorchSouth),
+        (BlockPos([2, 25, -65]), Block::TorchNorth),
+    ];
+    for (p, b) in cases {
+        let s = p.offset(b.torch_support().unwrap()).unwrap();
+        for pos in [p, s] {
+            load_column(
+                &store,
+                &mut w,
+                [pos.0[0].div_euclid(16), pos.0[2].div_euclid(16)],
+            );
+        }
+        w.set_block(s, Block::Stone).unwrap();
+        w.set_block(p, b).unwrap();
+        w.evict_column([p.0[0].div_euclid(16), p.0[2].div_euclid(16)]);
+        assert_eq!(
+            w.set_block(s, Block::Air),
+            Err(crate::interaction::EditError::SupportsTorch)
+        );
+    }
+    store.save(&w).unwrap();
+    drop(store);
+    let (store, mut w, _) =
+        SaveStore::open_with(&d.0, || panic!("must load existing world")).unwrap();
+    for (p, b) in cases {
+        let c = [p.0[0].div_euclid(16), p.0[2].div_euclid(16)];
+        load_column(&store, &mut w, c);
+        assert_eq!(w.block(p), b);
+        w.evict_column(c);
+        w.retain_regions(&Default::default());
+        load_column(&store, &mut w, c);
+        assert_eq!(w.block(p), b);
+    }
+}
+
+#[test]
+fn unknown_pending_support_dependencies_defer_edits_until_overlay_is_known() {
+    let d = Dir::new();
+    let (store, mut w, _) = SaveStore::open_with(&d.0, || Ok(World::regional(identity()))).unwrap();
+    store.prepare_regional_column(&mut w, [0, 0]).unwrap();
+    streaming::prepare_column(&mut w, [0, 0]).unwrap();
+    let p = BlockPos([0, -15, 0]);
+    let revision = w.revision();
+    assert_eq!(
+        w.set_block(p, Block::Air),
+        Err(crate::interaction::EditError::NotLoaded)
+    );
+    assert_eq!(w.revision(), revision);
+    for c in [[-1, 0], [0, -1]] {
+        store.prepare_regional_column(&mut w, c).unwrap();
+    }
+    assert!(w.set_block(p, Block::Air).unwrap().is_some());
+}

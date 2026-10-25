@@ -57,6 +57,10 @@ fn block_id(block: Block) -> u16 {
         Block::Wood => 4,
         Block::Leaves => 5,
         Block::Torch => 6,
+        Block::TorchEast => 7,
+        Block::TorchWest => 8,
+        Block::TorchSouth => 9,
+        Block::TorchNorth => 10,
     }
 }
 fn stored_block(id: u16, version: u32) -> Result<Block, FormatError> {
@@ -70,6 +74,10 @@ fn stored_block(id: u16, version: u32) -> Result<Block, FormatError> {
         // Additive stable registry extension; old readers reject ID 6. v1
         // remains frozen. No envelope/identity/journal or old-ID reinterpretation.
         6 if version >= 2 => Ok(Block::Torch),
+        7 if version >= 2 => Ok(Block::TorchEast),
+        8 if version >= 2 => Ok(Block::TorchWest),
+        9 if version >= 2 => Ok(Block::TorchSouth),
+        10 if version >= 2 => Ok(Block::TorchNorth),
         _ => Err(FormatError::BlockId(id)),
     }
 }
@@ -238,9 +246,7 @@ pub fn decode(bytes: &[u8]) -> Result<World, FormatError> {
         if version == STREAM_FORMAT_VERSION {
             world.restore_edit(BlockPos(p), block);
         } else {
-            world
-                .set_block(BlockPos(p), block)
-                .map_err(|_| FormatError::Coordinates)?;
+            world.restore_snapshot_block(BlockPos(p), block);
         }
     }
     Ok(world)

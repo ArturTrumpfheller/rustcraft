@@ -14,9 +14,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--executable', type=Path, default=Path('target/debug/examples/lighting_gallery'))
+    parser.add_argument('--scenes', nargs='+', default=['dark', 'one', 'several', 'removed', 'wall', 'seam'])
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
-    for scene in ['dark', 'one', 'several', 'removed', 'wall', 'seam']:
+    for scene in args.scenes:
         dest = args.output / f'slice20-{scene}.png'
         if dest.exists():
             parser.error(f'Refusing to overwrite {dest}')

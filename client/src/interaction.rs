@@ -5,10 +5,7 @@ use crate::{
     player::{ControllerInput, PlayerSettings, PlayerState},
     scene::{DirtyChunks, RenderOrigin, VoxelWorld},
 };
-use bevy::{
-    asset::RenderAssetUsages, ecs::system::SystemParam, mesh::Indices, prelude::*,
-    render::render_resource::PrimitiveTopology, window::PrimaryWindow,
-};
+use bevy::{ecs::system::SystemParam, prelude::*, window::PrimaryWindow};
 use voxel_core::{
     interaction::{BuildBlock, EditAction, EditError},
     raycast::{DEFAULT_REACH, Ray, RayHit, raycast},
@@ -190,30 +187,8 @@ struct TargetHighlight;
 #[derive(Component)]
 struct OverlayRoot;
 
-fn outline_mesh() -> Mesh {
-    let corners: Vec<[f32; 3]> = (0..8)
-        .map(|i| [(i & 1) as f32, ((i >> 1) & 1) as f32, ((i >> 2) & 1) as f32])
-        .collect();
-    let indices: Vec<u32> = (0..8)
-        .flat_map(|i| {
-            [1, 2, 4].into_iter().filter_map(move |bit| {
-                if i & bit == 0 {
-                    Some([i, i | bit])
-                } else {
-                    None
-                }
-            })
-        })
-        .flatten()
-        .collect();
-    Mesh::new(
-        PrimitiveTopology::LineList,
-        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
-    )
-    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, corners)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 1.0, 0.0]; 8])
-    .with_inserted_indices(Indices::U32(indices))
-}
+#[derive(Component)]
+struct OutlineShape(voxel_core::Block);
 
 fn setup_visuals(
     mut commands: Commands,
@@ -237,7 +212,8 @@ fn setup_visuals(
     commands.spawn((
         crate::session::SessionEntity,
         TargetHighlight,
-        Mesh3d(meshes.add(outline_mesh())),
+        OutlineShape(voxel_core::Block::Stone),
+        Mesh3d(meshes.add(crate::selection::outline_mesh(voxel_core::Block::Stone))),
         MeshMaterial3d(black),
         Visibility::Hidden,
     ));
@@ -274,20 +250,35 @@ struct VisualState<'w> {
     editor: Res<'w, Editor>,
     control: Res<'w, ControllerInput>,
     origin: Res<'w, RenderOrigin>,
+    world: Res<'w, VoxelWorld>,
 }
 fn update_visuals(
     state: VisualState,
     windows: Query<&Window, With<PrimaryWindow>>,
     cameras: Query<&Projection, With<FirstPersonCamera>>,
-    mut highlights: Query<(&mut Transform, &mut Visibility), With<TargetHighlight>>,
+    mut highlights: Query<
+        (&mut Transform, &mut Visibility, &Mesh3d, &mut OutlineShape),
+        With<TargetHighlight>,
+    >,
+    mut meshes: ResMut<Assets<Mesh>>,
     mut overlays: Query<(&mut Transform, &mut Visibility), OverlayFilter>,
 ) {
-    for (mut transform, mut visibility) in &mut highlights {
+    for (mut transform, mut visibility, handle, mut shape) in &mut highlights {
         if let Some(hit) = state.editor.target {
+            let block = state.world.0.block(hit.position);
+            let key = if block.is_torch() {
+                block
+            } else {
+                voxel_core::Block::Stone
+            };
+            if shape.0 != key {
+                *meshes.get_mut(&handle.0).expect("retained selection mesh") =
+                    crate::selection::outline_mesh(key);
+                shape.0 = key;
+            }
             *transform = Transform::from_translation(Vec3::from_array(std::array::from_fn(|a| {
-                (f64::from(hit.position.0[a]) - state.origin.0[a]) as f32 - 0.002
-            })))
-            .with_scale(Vec3::splat(1.004));
+                (f64::from(hit.position.0[a]) - state.origin.0[a]) as f32
+            })));
             *visibility = Visibility::Inherited;
         } else {
             *visibility = Visibility::Hidden;

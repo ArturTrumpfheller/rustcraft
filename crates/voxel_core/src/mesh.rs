@@ -90,9 +90,14 @@ pub fn mesh_chunk_lit(
                 let p = [x, y, z];
                 let local = LocalPos::new(p).unwrap();
                 let block = chunk.get(local);
-                if block == crate::Block::Torch {
+                if block.is_torch() {
                     let bp = origin.offset(p.map(|v| v as i32)).unwrap();
-                    append_torch(&mut mesh, p.map(|v| v as f32), light.combined_level(bp));
+                    append_torch(
+                        &mut mesh,
+                        block,
+                        p.map(|v| v as f32),
+                        light.combined_level(bp),
+                    );
                 }
                 if !block.is_cube() {
                     continue;
@@ -238,27 +243,29 @@ pub fn mesh_chunk_lit(
 /// Texture V 0..1/4 is the flame, V 1/4..1 is the wooden shaft.
 pub fn torch_mesh() -> ChunkMesh {
     let mut mesh = ChunkMesh::default();
-    append_torch(&mut mesh, [0.; 3], 15);
+    append_torch(&mut mesh, crate::Block::Torch, [0.; 3], 15);
     mesh
 }
-fn append_torch(mesh: &mut ChunkMesh, origin: [f32; 3], level: u8) {
-    for (lo, hi, v0, v1, glowing) in [
-        ([0.4375, 0., 0.4375], [0.5625, 0.5, 0.5625], 0.25, 1., false),
-        (
-            [0.40625, 0.5, 0.40625],
-            [0.59375, 0.6875, 0.59375],
-            0.,
-            0.25,
-            true,
-        ),
+fn append_torch(mesh: &mut ChunkMesh, block: crate::Block, origin: [f32; 3], level: u8) {
+    let transform = block.shape_transform();
+    for (bounds, v0, v1, glowing) in [
+        (crate::shape::TORCH_BOXES[0], 0.25, 1., false),
+        (crate::shape::TORCH_BOXES[1], 0., 0.25, true),
     ] {
+        let lo = bounds.min;
+        let hi = bounds.max;
         for face in &FACES {
             let start = mesh.positions.len() as u32;
             for corner in face.corners {
-                mesh.positions.push(std::array::from_fn(|a| {
-                    origin[a] + lo[a] + f32::from(corner[a]) * (hi[a] - lo[a])
-                }));
-                mesh.normals.push(face.normal.map(|n| n as f32));
+                let local = std::array::from_fn(|a| lo[a] + f64::from(corner[a]) * (hi[a] - lo[a]));
+                let p = transform.point(local);
+                mesh.positions
+                    .push(std::array::from_fn(|a| origin[a] + p[a] as f32));
+                mesh.normals.push(
+                    transform
+                        .vector(face.normal.map(f64::from))
+                        .map(|n| n as f32),
+                );
             }
             mesh.uvs.extend([[0., v1], [1., v1], [1., v0], [0., v0]]);
             mesh.atlas_uvs
@@ -876,6 +883,62 @@ mod torch_tests {
             let expected =
                 crate::lighting::face_color(light.combined_level(BlockPos([x, 1, z])), [0, 1, 0]);
             assert_eq!(c, &[expected; 4]);
+        }
+    }
+}
+
+#[cfg(test)]
+mod wall_torch_tests {
+    use super::*;
+    #[test]
+    fn wall_models_use_selection_geometry_and_keep_original_quad_count_and_winding() {
+        for block in [
+            crate::Block::TorchEast,
+            crate::Block::TorchWest,
+            crate::Block::TorchSouth,
+            crate::Block::TorchNorth,
+        ] {
+            let mut m = ChunkMesh::default();
+            append_torch(&mut m, block, [0.; 3], 14);
+            assert_eq!(m.positions.len(), 48);
+            assert_eq!(m.indices.len(), 72);
+            assert!(m.colors[24..].iter().all(|c| *c == [1.; 4]));
+            assert!(
+                m.positions
+                    .iter()
+                    .flatten()
+                    .all(|v| (-1e-6..=1.000001).contains(v))
+            );
+            for (box_index, bounds) in block.selection_boxes().iter().enumerate() {
+                let corners = bounds
+                    .corners()
+                    .map(|p| block.shape_transform().point(p).map(|v| v as f32));
+                for p in &m.positions[box_index * 24..box_index * 24 + 24] {
+                    assert!(
+                        corners
+                            .iter()
+                            .any(|c| c.iter().zip(p).all(|(a, b)| (a - b).abs() < 1e-6))
+                    );
+                }
+            }
+            for t in m.indices.as_chunks::<3>().0 {
+                let [a, b, c] = t.map(|i| m.positions[i as usize]);
+                let ab: [f32; 3] = std::array::from_fn(|i| b[i] - a[i]);
+                let ac: [f32; 3] = std::array::from_fn(|i| c[i] - a[i]);
+                let cross = [
+                    ab[1] * ac[2] - ab[2] * ac[1],
+                    ab[2] * ac[0] - ab[0] * ac[2],
+                    ab[0] * ac[1] - ab[1] * ac[0],
+                ];
+                assert!(
+                    cross
+                        .into_iter()
+                        .zip(m.normals[t[0] as usize])
+                        .map(|(a, b)| a * b)
+                        .sum::<f32>()
+                        > 0.
+                );
+            }
         }
     }
 }

@@ -6,6 +6,8 @@
 mod atmosphere;
 #[path = "../../crates/voxel_core/examples/support/lighting_fixture.rs"]
 mod lighting_fixture;
+#[path = "../src/selection.rs"]
+mod selection;
 #[path = "../src/terrain_material.rs"]
 mod terrain_material;
 #[path = "../src/terrain_texture.rs"]
@@ -15,14 +17,29 @@ use bevy::{
     asset::RenderAssetUsages, mesh::Indices, prelude::*, render::render_resource::PrimitiveTopology,
 };
 use terrain_material::{AtlasRepeat, TerrainRenderingPlugin, TerrainSurface};
-use voxel_core::{lighting::Skylight, mesh_chunk_lit};
+use voxel_core::{Block, BlockPos, lighting::Skylight, mesh_chunk_lit};
 
 #[derive(Resource)]
 struct Scene(String);
 
 fn main() {
     let scene = std::env::args().nth(1).unwrap_or_else(|| "one".into());
-    assert!(["dark", "one", "several", "removed", "wall", "seam"].contains(&scene.as_str()));
+    assert!(
+        [
+            "dark",
+            "one",
+            "several",
+            "removed",
+            "wall",
+            "seam",
+            "standing-selection",
+            "east",
+            "west",
+            "south",
+            "north"
+        ]
+        .contains(&scene.as_str())
+    );
     let mut app = App::new();
     app.insert_resource(Scene(scene))
         .insert_resource(ClearColor(Color::srgb(0.48, 0.72, 0.92)))
@@ -55,8 +72,43 @@ fn setup(
     mut images: ResMut<Assets<Image>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<TerrainSurface>>,
+    mut lines: ResMut<Assets<StandardMaterial>>,
 ) {
-    let w = lighting_fixture::room(&scene.0);
+    let mount = match scene.0.as_str() {
+        "standing-selection" => Some(Block::Torch),
+        "east" => Some(Block::TorchEast),
+        "west" => Some(Block::TorchWest),
+        "south" => Some(Block::TorchSouth),
+        "north" => Some(Block::TorchNorth),
+        _ => None,
+    };
+    let mut w = lighting_fixture::room(if mount.is_some() { "dark" } else { &scene.0 });
+    if let Some(block) = mount {
+        let p = BlockPos([0, if block == Block::Torch { 1 } else { 2 }, 0]);
+        if block != Block::Torch {
+            let support = p.offset(block.torch_support().unwrap()).unwrap();
+            for y in 1..=4 {
+                for a in -1..=1 {
+                    let pos = if support.0[0] != 0 {
+                        [support.0[0], y, a]
+                    } else {
+                        [a, y, support.0[2]]
+                    };
+                    w.set_block(BlockPos(pos), Block::Stone).unwrap();
+                }
+            }
+        }
+        w.set_block(p, block).unwrap();
+        commands.spawn((
+            Mesh3d(meshes.add(selection::outline_mesh(block))),
+            MeshMaterial3d(lines.add(StandardMaterial {
+                base_color: Color::BLACK,
+                unlit: true,
+                ..default()
+            })),
+            Transform::from_translation(Vec3::from_array(p.0.map(|v| v as f32))),
+        ));
+    }
     let targets = w.chunks().map(|(p, _)| p).collect();
     let light = Skylight::for_chunks(&w, &targets);
     let atlas = images.add(terrain_texture::atlas_image());
@@ -91,7 +143,14 @@ fn setup(
             Transform::from_translation(Vec3::from_array(cp.0.map(|a| (a * 16) as f32))),
         ));
     }
-    let (eye, target) = (Vec3::new(9., 4., 6.), Vec3::new(-2., 2., -3.));
+    let (eye, target) = match mount {
+        Some(Block::Torch) => (Vec3::new(1.8, 2.1, 2.8), Vec3::new(0.5, 1.35, 0.5)),
+        Some(Block::TorchEast) => (Vec3::new(3., 3.1, 2.5), Vec3::new(0.2, 2.5, 0.5)),
+        Some(Block::TorchWest) => (Vec3::new(-2., 3.1, -1.5), Vec3::new(0.8, 2.5, 0.5)),
+        Some(Block::TorchSouth) => (Vec3::new(-1.5, 3.1, 3.), Vec3::new(0.5, 2.5, 0.2)),
+        Some(Block::TorchNorth) => (Vec3::new(2.5, 3.1, -2.), Vec3::new(0.5, 2.5, 0.8)),
+        _ => (Vec3::new(9., 4., 6.), Vec3::new(-2., 2., -3.)),
+    };
     commands.spawn((
         Camera3d::default(),
         bevy::render::view::Tonemapping::Reinhard,

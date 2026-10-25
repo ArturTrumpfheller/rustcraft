@@ -152,7 +152,12 @@ fn partially_written_far_regions_replay_with_the_matching_inventory() {
             SaveStore::open_with(&t.0, || Ok(crate::streaming::new_large_world(42))).unwrap();
         let mut inv = s.load_player(&mut w).unwrap();
         for c in [[1000, -1000], [-1000, 1000]] {
-            s.prepare_regional_column(&mut w, c).unwrap();
+            // Support-removal validation also needs the four adjacent region
+            // overlays when the edited cell lies on a pending region frontier.
+            for delta in [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]] {
+                s.prepare_regional_column(&mut w, [c[0] + delta[0], c[1] + delta[1]])
+                    .unwrap();
+            }
             crate::streaming::prepare_column(&mut w, c).unwrap();
         }
         let air = crate::BlockPos([16000, -15, -16000]);

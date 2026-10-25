@@ -180,6 +180,15 @@ impl World {
         );
         Arc::clone(&self.edits)
     }
+    /// Validated full-snapshot import. Gameplay support checks must not depend
+    /// on record order (a wall support can sort after its torch).
+    pub(crate) fn restore_snapshot_block(&mut self, p: BlockPos, block: Block) {
+        debug_assert!(self.identity.is_none() && self.in_bounds(p));
+        let (cp, lp) = p.split();
+        if self.chunks.entry(cp).or_default().set(lp, block) {
+            self.revision = self.revision.wrapping_add(1);
+        }
+    }
     pub(crate) fn restore_edit(&mut self, p: BlockPos, block: Block) {
         // Validated persistence import; does not materialize chunks or dirty state.
         Arc::make_mut(&mut self.edits).insert(p, block);
@@ -246,8 +255,8 @@ impl World {
         }
         // Single-cell support policy: reject support removal until its torch
         // is collected. No implicit multi-cell edits or unjournaled item drops.
-        if block == Block::Torch {
-            let support = position.offset([0, -1, 0]).ok_or(EditError::Unsupported)?;
+        if let Some(offset) = block.torch_support() {
+            let support = position.offset(offset).ok_or(EditError::Unsupported)?;
             if !self.in_bounds(support) {
                 return Err(EditError::Unsupported);
             }
@@ -258,15 +267,31 @@ impl World {
                 return Err(EditError::Unsupported);
             }
         }
-        if before.is_collidable()
-            && !block.is_collidable()
-            && let Some(above) = position.offset([0, 1, 0]).filter(|p| self.in_bounds(*p))
-        {
-            if !self.ready(above) {
-                return Err(EditError::NotLoaded);
-            }
-            if self.block(above) == Block::Torch {
-                return Err(EditError::SupportsTorch);
+        if before.is_collidable() && !block.is_collidable() {
+            // A pending neighbor could contain a dependent torch. Defer rather
+            // than remove unknown support or create implicit unjournaled drops.
+            for delta in [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]] {
+                let Some(neighbor) = position.offset(delta).filter(|p| self.in_bounds(*p)) else {
+                    continue;
+                };
+                let candidate = if self.ready(neighbor) {
+                    self.block(neighbor)
+                } else if self.regional.is_some() {
+                    // Frozen generators never contain torches. A complete
+                    // captured overlay can prove a pending neighbor harmless.
+                    self.regions
+                        .get(&RegionPos::of(neighbor))
+                        .ok_or(EditError::NotLoaded)?
+                        .edits
+                        .get(&neighbor)
+                        .copied()
+                        .unwrap_or(Block::Air)
+                } else {
+                    self.edits.get(&neighbor).copied().unwrap_or(Block::Air)
+                };
+                if candidate.torch_support() == Some(delta.map(|v| -v)) {
+                    return Err(EditError::SupportsTorch);
+                }
             }
         }
         if self.regional.is_some() {

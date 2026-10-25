@@ -31,7 +31,11 @@ pub fn face_tile(block: Block, normal: [i32; 3]) -> Option<Tile> {
         Block::Wood if normal[1] != 0 => Tile::EndGrain,
         Block::Wood => Tile::Bark,
         Block::Leaves => Tile::Leaves,
-        Block::Torch => Tile::Torch,
+        Block::Torch
+        | Block::TorchEast
+        | Block::TorchWest
+        | Block::TorchSouth
+        | Block::TorchNorth => Tile::Torch,
     })
 }
 

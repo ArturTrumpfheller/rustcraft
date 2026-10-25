@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT OR Apache-2.0
-"""Compare the lighting room with Slice 19 using cached dependencies, offline.
-Baseline has the exact same shell/camera but no unsupported Torch variant. Only
-its dark row is a matched no-source comparison; other rows measure new capability.
+"""Compare the lighting room with a Git baseline using cached dependencies offline.
+Slice19 lacks emitters (only the dark row is a matched capability comparison).
+The original Slice20 uses standing torches at wall emitter cells, retaining the
+same floor/side supports for equivalent lighting and mesh payload comparisons.
 """
 import argparse
 import csv
@@ -10,6 +11,7 @@ import io
 import statistics
 from pathlib import Path
 import platform
+import re
 import subprocess
 import tempfile
 
@@ -36,9 +38,18 @@ if __name__ == '__main__':
         (baseline / 'Cargo.toml').write_text('[package]\nname="voxel_core"\nversion="0.1.0"\nedition="2024"\n[workspace]\n[dependencies]\ncrc32fast="1.5.0"\n')
         (baseline / 'examples/support').mkdir(parents=True)
         source = ROOT / 'crates/voxel_core/examples'
-        fixture = (source / 'support/lighting_fixture.rs').read_text().replace('Block::Torch', 'Block::Air')
+        has_torch = '    Torch,' in (baseline / 'src/chunk.rs').read_text()
+        has_blocklight = 'pub fn block_level' in (baseline / 'src/lighting.rs').read_text()
+        fixture = (source / 'support/lighting_fixture.rs').read_text()
+        fixture = re.sub(r'Block::Torch(?:East|West|South|North)', 'Block::Torch' if has_torch else 'Block::Air', fixture)
+        if not has_torch:
+            fixture = fixture.replace('Block::Torch', 'Block::Air')
         (baseline / 'examples/support/lighting_fixture.rs').write_text(fixture)
-        bench = (source / 'lighting_bench.rs').read_text().replace('Block::Torch', 'Block::Air').replace('light.bytes()', 'light.cells()').replace('light.block_propagated', '0')
+        bench = (source / 'lighting_bench.rs').read_text()
+        if not has_torch:
+            bench = bench.replace('Block::Torch', 'Block::Air')
+        if not has_blocklight:
+            bench = bench.replace('light.bytes()', 'light.cells()').replace('light.block_propagated', '0')
         (baseline / 'examples/lighting_bench.rs').write_text(bench)
         # Finish compilation before either measurement; run each process alone.
         subprocess.run(['cargo', 'build', '--locked', '--offline', '--release', '-p', 'voxel_core', '--example', 'lighting_bench'], cwd=ROOT, check=True)

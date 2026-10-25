@@ -1,5 +1,8 @@
 # First-person viewmodel (Slice 12, PR #29 visual revision)
 
+> Slice20 refinement supersedes the historical held-cube positioning below.
+> The original empty-arm calibration and Slice19 motion remain in use.
+
 ## Reference and calibration
 
 The target is modern Minecraft Java's **wide standard arm**, not the slim model.
@@ -139,3 +142,22 @@ are not present in this workspace. No new direct Java A/B comparison or exact
 Java cadence claim is made. Native visual acceptance of this rhythm remains open:
 repeat the same flat route with fixed FOV and a held block, then an empty hand,
 walking/sprinting/stopping, followed by jump/land, sneak and mine/place.
+
+## Slice20 item presentation profiles
+
+`viewmodel/presentation.rs` owns a small `Presentation` value: equipped position,
+Euler rotation, scale, optional model-origin correction, swing pivot and held/arm
+category. `for_item` currently chooses Arm (empty), Block (ordinary blocks) or
+Slender (Torch). Future tools/food can add profiles without modifying bob/swing
+math. The original motion step and held/arm swing curves retain their timing,
+travel and angles; equipped poses are independent inputs to that animation.
+
+Blocks are higher/right with slightly reduced scale and more depth, keeping their
+whole silhouette on screen. Slender items use their own proportionate scale and
+origin correction; the torch reuses the unmodified core standing model, showing
+its wooden shaft and tip above/beside the hotbar. There is no moving light source.
+The empty arm profile stays unchanged. Camera X/Y FOV correction and camera-X
+aspect correction preserve equipped screen bounds at FOV70/78/90/100 and16:9,3:2,
+4:3. Animation may deliberately lower or sweep a model during an action; static
+equipped silhouette/hotbar clearance and near-plane safety are regression-tested.
+No per-frame allocations, per-item rendering entity or new texture/material.

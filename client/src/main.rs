@@ -9,6 +9,7 @@ mod persistence;
 mod player;
 mod save_hud;
 mod scene;
+mod selection;
 mod session;
 mod settings;
 mod streaming;

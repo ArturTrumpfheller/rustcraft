@@ -573,3 +573,50 @@ fn torch_height_limits_attenuation_radius_and_pending_barriers() {
     assert_eq!(l.block_level(BlockPos([16, 1, 8])), 0);
     assert_eq!(l.block_level(BlockPos([17, 1, 8])), 0);
 }
+
+#[test]
+fn changing_only_mount_orientation_reuses_light_samples_and_remeshes_geometry_only() {
+    use crate::streaming::*;
+    let mut w = new_world(42);
+    let generator = prepare_spawn(&mut w).unwrap();
+    let p = BlockPos([8, 25, 8]);
+    for s in [BlockPos([8, 24, 8]), BlockPos([7, 25, 8])] {
+        w.set_block(s, Block::Stone).unwrap();
+    }
+    w.set_block(p, Block::Torch).unwrap();
+    let targets = w.chunks().map(|(p, _)| p).collect();
+    let mut cache = TerrainCache::default();
+    let first = remesh_lit(
+        &generator,
+        mesh_snapshot(&w, &targets),
+        w.overlay_snapshot(),
+        &targets,
+        &mut cache,
+        &Default::default(),
+        &targets,
+    );
+    let change = w.set_block(p, Block::TorchEast).unwrap().unwrap();
+    let next = remesh_lit(
+        &generator,
+        mesh_snapshot(&w, &targets),
+        w.overlay_snapshot(),
+        &targets,
+        &mut cache,
+        &first.lights,
+        &change.affected_chunks(),
+    );
+    assert_eq!(next.lights, first.lights);
+    assert_eq!(next.meshes.len(), 1);
+    assert_eq!(next.meshes[0].0, p.split().0);
+    assert_ne!(
+        next.meshes[0].1.positions,
+        first
+            .meshes
+            .iter()
+            .find(|(cp, _)| *cp == p.split().0)
+            .unwrap()
+            .1
+            .positions
+    );
+    assert_eq!(next.lighting.generated_columns, 0);
+}

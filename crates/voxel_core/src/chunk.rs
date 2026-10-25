@@ -12,6 +12,10 @@ pub enum Block {
     Wood,
     Leaves,
     Torch,
+    TorchEast,
+    TorchWest,
+    TorchSouth,
+    TorchNorth,
 }
 
 impl Block {
@@ -21,20 +25,47 @@ impl Block {
 
     /// Physical collision is independent of rendering, targeting and lighting.
     pub fn is_collidable(self) -> bool {
-        !matches!(self, Self::Air | Self::Torch)
+        self != Self::Air && !self.is_torch()
     }
     pub fn is_opaque(self) -> bool {
-        !matches!(self, Self::Air | Self::Torch)
+        self != Self::Air && !self.is_torch()
     }
     pub fn is_cube(self) -> bool {
-        !matches!(self, Self::Air | Self::Torch)
+        self != Self::Air && !self.is_torch()
     }
-    /// Targeting uses the cell, deliberately more forgiving than the thin model.
+    pub fn is_torch(self) -> bool {
+        matches!(
+            self,
+            Self::Torch | Self::TorchEast | Self::TorchWest | Self::TorchSouth | Self::TorchNorth
+        )
+    }
+    /// Offset from torch cell to its supporting full cube.
+    pub fn torch_support(self) -> Option<[i32; 3]> {
+        Some(match self {
+            Self::Torch => [0, -1, 0],
+            Self::TorchEast => [-1, 0, 0],
+            Self::TorchWest => [1, 0, 0],
+            Self::TorchSouth => [0, 0, -1],
+            Self::TorchNorth => [0, 0, 1],
+            _ => return None,
+        })
+    }
+    /// Face points outward from the support toward the new torch cell.
+    pub fn torch_on_face(normal: [i32; 3]) -> Option<Self> {
+        Some(match normal {
+            [0, 1, 0] => Self::Torch,
+            [1, 0, 0] => Self::TorchEast,
+            [-1, 0, 0] => Self::TorchWest,
+            [0, 0, 1] => Self::TorchSouth,
+            [0, 0, -1] => Self::TorchNorth,
+            _ => return None,
+        })
+    }
     pub fn is_targetable(self) -> bool {
         self != Self::Air
     }
     pub fn emission(self) -> u8 {
-        if self == Self::Torch { 14 } else { 0 }
+        if self.is_torch() { 14 } else { 0 }
     }
     /// Original linear RGBA vertex colors, independent of any texture assets.
     pub fn color(self) -> [f32; 4] {
@@ -45,7 +76,11 @@ impl Block {
             Self::Stone => [0.32, 0.35, 0.38, 1.0],
             Self::Wood => [0.24, 0.12, 0.035, 1.0],
             Self::Leaves => [0.075, 0.29, 0.045, 1.0],
-            Self::Torch => [1.0, 0.65, 0.12, 1.0],
+            Self::Torch
+            | Self::TorchEast
+            | Self::TorchWest
+            | Self::TorchSouth
+            | Self::TorchNorth => [1.0, 0.65, 0.12, 1.0],
         }
     }
 }

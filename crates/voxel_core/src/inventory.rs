@@ -49,7 +49,11 @@ impl Item {
             Block::Stone => Self::Stone,
             Block::Wood => Self::Wood,
             Block::Leaves => Self::Leaves,
-            Block::Torch => Self::Torch,
+            Block::Torch
+            | Block::TorchEast
+            | Block::TorchWest
+            | Block::TorchSouth
+            | Block::TorchNorth => Self::Torch,
         })
     }
     pub fn build(self) -> BuildBlock {
