@@ -1,5 +1,8 @@
 # Slice21 performance comparison
 
+The initial sections record Slice21 commit `6d07e85`. The later sun/moon polish
+has a separate [paired comparison](celestial-polish/README.md) against that commit.
+
 Accepted baseline: `ab36403bd5742438499c645d1bdb6e19cd4a1317` (Slice20).
 Linux X11/Xvfb, 960×640, Mesa25.0.7 llvmpipe LLVM19.1.7 Vulkan CPU, Rust1.99.1.
 No physical Radeon/Windows GPU result is implied. Builds, tests and captures ran

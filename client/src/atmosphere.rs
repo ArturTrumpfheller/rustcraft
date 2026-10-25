@@ -38,7 +38,8 @@ impl AtmosphereUniform {
         let twilight = (1. - (sun.y / 0.25).abs()).max(0.);
         Self {
             sun: sun.extend(light),
-            celestial: Vec4::new((1. - day) * (1. - twilight), 0.042, 0.034, 0.),
+            // Preserve the projection; enlarge both original side lengths by 18%.
+            celestial: Vec4::new((1. - day) * (1. - twilight), 0.042 * 1.18, 0.034 * 1.18, 0.),
             zenith: Vec3::new(0.003, 0.006, 0.018)
                 .lerp(Vec3::new(0.07, 0.28, 1.25), day)
                 .extend(0.5),

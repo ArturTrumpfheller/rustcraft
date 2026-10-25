@@ -88,7 +88,9 @@ triangle with depth testing and no depth writes, prepass or shadows. Hand/UI
 materials stay outside terrain fog.
 
 The square sun rises at **east +X**, reaches +Y at noon and sets at west −X.
-The square moon follows the opposite direction. Their world-space centers do
+The square moon follows the opposite direction. The visual-polish follow-up
+increases both original projected side lengths by **18%** (sun half-size
+0.042→0.04956, moon 0.034→0.04012). Their world-space centers do
 not depend on camera position/yaw or render origin; their quads face the view.
 A body below the horizon disappears. Stable sparse hashed **world directions**
 produce original stars, faded out through twilight and near the horizon; there
@@ -113,7 +115,7 @@ Reinhard tonemapping and vertical FOV120°. The deliberately wide diagnostic vie
 keeps the east horizon and overhead bodies in the same frame. Sunset's sun is
 behind this east-facing camera; its warm sky remains visible. The second night
 image is time18500, 25 real seconds after midnight, retaining every setting and
-emitter. The cave pair uses camera (8,2.8,−7) toward (8,2.8,−18), FOV78°,
+emitter. The cave pair uses camera (8,2.8,−7) toward (8,2.8,−18), FOV 78°,
 torches at (6,1,−12) and (10,1,−16), and otherwise identical settings. No image
 has been brightened, composited or retouched. The interior pair is pixel-identical,
 as expected where fixed block light dominates the small remaining sky component.
@@ -188,3 +190,63 @@ without adding gameplay shortcuts. Run a normal 20-minute cycle for transitions.
 
 Headless Ubuntu/Windows CI and software-rendered cloud X11 do not replace these
 physical desktop checks. No Slice22 gameplay or release publication is included.
+
+## Sun/moon visual polish before merge
+
+The owner reports the Slice21 baseline working correctly on **Void Linux with an
+AMD RX 9060 XT at approximately 240 FPS, VSync disabled**, with stable gameplay and
+excellent performance. This is an owner-reported native result preceding this
+visual-only follow-up; no specific compositor/backend was reported.
+
+The moon now uses an original 16×16 pixel-art map with four restrained off-white,
+gray and blue-gray shades. Asymmetric stepped crater rims/basins are authored in
+`client/src/atmosphere.wesl`: sixteen u32 rows, two bits/pixel, plus a four-color
+scene-linear palette. The adjacent unpacked row comments are the editable art
+source. This is original RustCraft work, MIT OR Apache-2.0; no Minecraft pixels,
+images or source were copied. Integer floor/clamp/bit-shift lookup selects one
+color per cell. It adds no image, sampler, material, bind group, uniform bytes or
+per-frame CPU allocations. Only visible moon fragments perform the lookup; the
+CPU update path and the 80-byte shared uniform retain their previous layout.
+
+Coverage and art UVs share the existing square projection. Both bodies fade
+only below the world horizon before the existing visibility cutoff, avoiding a
+last-strip pop where the finite terrain edge exposes sky below it. This does not alter celestial centers, trajectories,
+orientation, time, sky/fog palettes, star positions, lighting or terrain work.
+The projected 18% side increase is independent of resolution/aspect ratio; a
+regression test covers six viewports, three FOVs and representative cycle times.
+The pixel pattern has no interpolation, mipmaps, noise or per-fragment loops.
+
+The gallery retains every existing default/argument and adds optional diagnostic
+`--size=WIDTHxHEIGHT` and `--focus=sun|moon`. Focus uses FOV 78° and points the
+camera at the requested body once at setup; it is not a gameplay control or an
+animated tracking camera. A nonparallel up vector handles the noon/midnight
+zenith without a singular look-at matrix. Example commands:
+
+```sh
+cargo run --locked -p rustcraft --example day_night_gallery -- plains 2 --time=6000 --focus=sun --size=1280x720
+cargo run --locked -p rustcraft --example day_night_gallery -- plains 2 --time=18000 --focus=moon --size=1280x720
+cargo run --locked -p rustcraft --example day_night_gallery -- plains 2 --time=12000 --focus=sun --size=1280x720
+```
+
+Focused production-renderer references use the same original fixture, camera
+position, FOV 78° and Reinhard exposure. Noon and midnight look straight up;
+the sunset view faces west. The three moon resolutions retain the same angular
+size and crisp point-sampled craters; 960×720 also checks 4:3 against 16:9. The
+updated eight-image comparison above keeps its original matched cameras/settings.
+
+- [Noon sun,1280×720](images/slice21/slice21-polish-noon.png)
+- [Textured midnight moon,1280×720](images/slice21/slice21-polish-moon.png)
+- [Textured moon,960×720 /4:3](images/slice21/slice21-polish-moon-4-3.png)
+- [Textured moon,640×480](images/slice21/slice21-polish-moon-small.png)
+- [Sunset on the horizon](images/slice21/slice21-polish-sunset.png)
+
+The visual references and timing comparison are cloud X11/llvmpipe evidence.
+The new sizes/art remain open for the owner's native visual review in PR#38.
+
+The paired [polish timing comparison](performance/slice21/celestial-polish/README.md)
+keeps the full moon visible at FOV 78°/1280×720. Median software frame time was
+92.27→91.53ms across three runs/version, within cloud variation, with identical
+mesh/image/material counts. The actual moon footprint is 36×36 pixels at both
+1280×720 and 960×720, and 24×24 at 640×480. No additional time-driven terrain jobs
+or uniform bytes are introduced. These measurements do not claim a native GPU
+speedup or replace native visual review of the new art.

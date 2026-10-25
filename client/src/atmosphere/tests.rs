@@ -199,3 +199,51 @@ fn clock_uniform_cpu_cost() {
         );
     }
 }
+
+#[test]
+fn celestial_projection_keeps_square_pixels_and_eighteen_percent_scale_across_viewports() {
+    for [width, height] in [
+        [640, 480],
+        [960, 640],
+        [960, 720],
+        [1280, 720],
+        [1920, 1080],
+        [2560, 1080],
+    ] {
+        for fov in [45f32, 78., 120.] {
+            let projection = PerspectiveProjection {
+                fov: fov.to_radians(),
+                aspect_ratio: width as f32 / height as f32,
+                ..default()
+            }
+            .get_clip_from_view();
+            // Sky bodies compare view-plane x/depth and y/depth to the same
+            // half-size. Project their edges through Bevy's actual camera matrix.
+            let pixel_span = |half_size: f32| {
+                let lo = projection.project_point3(Vec3::new(-half_size, -half_size, -1.));
+                let hi = projection.project_point3(Vec3::new(half_size, half_size, -1.));
+                (hi - lo).truncate() * Vec2::new(width as f32, height as f32) * 0.5
+            };
+            for units in [0, 6000, 11900, 12000, 12100, 18000, 23999] {
+                let clock = voxel_core::time::WorldTime::from_parts(0, units * 3).unwrap();
+                let parameters = AtmosphereUniform::at_time(2, clock);
+                assert_eq!(
+                    parameters.sun.truncate(),
+                    Vec3::from_array(clock.sun_direction())
+                );
+                assert_eq!(parameters.sun.w, clock.daylight());
+                for (before, after) in [
+                    (0.042, parameters.celestial.y),
+                    (0.034, parameters.celestial.z),
+                ] {
+                    let previous = pixel_span(before);
+                    let current = pixel_span(after);
+                    assert!(current.is_finite());
+                    assert!((current.x - current.y).abs() < 0.001);
+                    assert!((current.x / previous.x - 1.18).abs() < 0.00001);
+                    assert!((current.y / previous.y - 1.18).abs() < 0.00001);
+                }
+            }
+        }
+    }
+}

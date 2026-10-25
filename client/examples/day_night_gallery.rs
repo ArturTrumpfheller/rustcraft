@@ -26,6 +26,7 @@ struct Options {
     cycle: bool,
     clock: voxel_core::time::WorldTime,
     advance: bool,
+    focus: Option<String>,
 }
 fn main() {
     let args: Vec<_> = std::env::args().skip(1).collect();
@@ -50,6 +51,24 @@ fn main() {
     assert!(units < 24000);
     let clock = voxel_core::time::WorldTime::from_parts(0, units * 3).unwrap();
     let advance = args.iter().any(|a| a == "--advance-time");
+    // Optional visual-review controls; the existing gallery defaults stay intact.
+    let resolution =
+        args.iter()
+            .find_map(|a| a.strip_prefix("--size="))
+            .map_or([960, 640], |size| {
+                let (w, h) = size.split_once('x').expect("size WIDTHxHEIGHT");
+                [w.parse().expect("width"), h.parse().expect("height")]
+            });
+    assert!((320..=3840).contains(&resolution[0]) && (240..=2160).contains(&resolution[1]));
+    let focus = args
+        .iter()
+        .find_map(|a| a.strip_prefix("--focus="))
+        .map(str::to_owned);
+    assert!(
+        focus
+            .as_deref()
+            .is_none_or(|f| ["sun", "moon"].contains(&f))
+    );
     let mut app = App::new();
     app.insert_resource(Options {
         scene,
@@ -60,12 +79,13 @@ fn main() {
         cycle,
         clock,
         advance,
+        focus,
     })
     .insert_resource(ClearColor(Color::srgb(0.48, 0.72, 0.92)))
     .add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
             title: "RustCraft atmosphere gallery".into(),
-            resolution: (960, 640).into(),
+            resolution: (resolution[0], resolution[1]).into(),
             present_mode: bevy::window::PresentMode::AutoNoVsync,
             ..default()
         }),
@@ -269,13 +289,28 @@ fn setup(
         "forest" => (Vec3::new(8., 3.5, 13.), Vec3::new(8., 3.5, -20.)),
         _ => (Vec3::new(0., 2.8, 8.), Vec3::new(10., 9.8, 8.)),
     };
-    let transform = Transform::from_translation(eye).looking_at(target, Vec3::Y);
+    let transform = if let Some(focus) = &options.focus {
+        let direction = Vec3::from_array(if focus == "sun" {
+            options.clock.sun_direction()
+        } else {
+            options.clock.moon_direction()
+        });
+        // A zenith-facing diagnostic camera needs a nonparallel up vector.
+        let up = if direction.y.abs() > 0.99 {
+            Vec3::NEG_Z
+        } else {
+            Vec3::Y
+        };
+        Transform::from_translation(eye).looking_at(eye + direction, up)
+    } else {
+        Transform::from_translation(eye).looking_at(target, Vec3::Y)
+    };
     run.base = transform;
     commands.spawn((
         GalleryCamera,
         Camera3d::default(),
         Projection::Perspective(PerspectiveProjection {
-            fov: if options.scene == "cave" {
+            fov: if options.focus.is_some() || options.scene == "cave" {
                 78f32
             } else {
                 120f32

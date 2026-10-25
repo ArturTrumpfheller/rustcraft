@@ -1459,3 +1459,24 @@ verified the visible F3 clock and accepted held torch, and saved player v2.
 Pause/F5 snapshots remained exactly day0/step8157 across a wait; after resume
 and another F5 the clock reached step8360. The legacy world root stayed
 byte-identical. This is cloud software-renderer evidence, not native acceptance.
+
+
+### Slice21 sun/moon visual polish
+
+The follow-up keeps PR#38 open and enlarges both projected sides by 18%, adds an
+original 16×16 four-shade point-sampled moon and fades the last below-horizon
+strip before the original visibility cutoff. Timing, sky/fog/star parameters,
+lighting, persistence and terrain work stay unchanged. Local all-target Clippy,
+fmt, workspace tests (180 client +199 core passed; three opt-in cost tests
+ignored), build and texture checks passed; the final embedded shader also ran
+through the atmosphere suite and actual renderer captures. Projection coverage
+spans six resolutions, three FOVs and representative day/horizon/night times.
+Production captures cover noon, sunset, the last strip before disappearance,
+moonrise and midnight at 1280×720,960×720 and 640×480. The baseline comparison
+harness was compile-checked with the extended gallery adapter.
+
+[Updated images and provenance](DAY_NIGHT.md#sunmoon-visual-polish-before-merge)
+and the [paired performance data](performance/slice21/celestial-polish/README.md)
+include exact settings and limits. The owner's Void/RX 9060 XT baseline result
+(~240 FPS, VSync disabled) precedes these visual changes; native visual review
+of the polish remains open.

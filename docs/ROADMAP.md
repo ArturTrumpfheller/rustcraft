@@ -71,7 +71,8 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 - [ ] Mining progress, tools and basic crafting
 - [ ] Trees, ores and resource collection
 - [x] Persistent fixed-step day/night, procedural sun/moon/stars and independent rendered sky/block light
-- [ ] Native Slice21 Void X11/Wayland and Windows acceptance — see [checklist](DAY_NIGHT.md)
+- [x] Slice21 baseline accepted on native Void Linux / RX9060 XT (~240 FPS, VSync off; owner report)
+- [ ] Slice21 sun/moon polish visual acceptance; explicit X11/Wayland and Windows acceptance — see [checklist](DAY_NIGHT.md)
 - [ ] First mobs
 
 ## v0.4 — Beta-inspired systems

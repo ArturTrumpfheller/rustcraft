@@ -59,7 +59,7 @@ if __name__ == '__main__':
         shutil.copyfile(ROOT/'crates/voxel_core/examples/day_night_bench.rs',core/'examples/day_night_bench.rs')
         old = artifacts(['cargo','build','--offline','--manifest-path',str(core/'Cargo.toml')])
         fixture = (ROOT/'client/examples/day_night_gallery.rs').read_text().replace('voxel_core::time::WorldTime','ReferenceTime')
-        fixture += '\n#[derive(Clone,Copy,Default)]\nstruct ReferenceTime;\nimpl ReferenceTime { fn from_parts(_:u64,_:u32)->Option<Self>{Some(Self)} fn advance(&mut self,_:u32){} }\nimpl AtmosphereUniform { fn at_time(radius:i32,_:ReferenceTime)->Self{Self::for_radius(radius)} }\n'
+        fixture += '\n#[derive(Clone,Copy,Default)]\nstruct ReferenceTime(u32);\nimpl ReferenceTime { fn from_parts(_:u64,step:u32)->Option<Self>{Some(Self(step))} fn advance(&mut self,_:u32){} fn sun_direction(self)->[f32;3]{let a=f64::from(self.0)/72000.0*std::f64::consts::TAU;[a.cos() as f32,a.sin() as f32,0.]} fn moon_direction(self)->[f32;3]{self.sun_direction().map(|v|-v)} }\nimpl AtmosphereUniform { fn at_time(radius:i32,_:ReferenceTime)->Self{Self::for_radius(radius)} }\n'
         source = baseline / 'client/examples/day_night_gallery.rs'
         source.parent.mkdir()
         source.write_text(fixture)
