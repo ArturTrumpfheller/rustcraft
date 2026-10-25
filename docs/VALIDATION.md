@@ -1415,3 +1415,25 @@ Normal-client X11 software smoke additionally observed world loading, held block
 empty hand, inventory, hotbar/crosshair, Pause, save/return to title and reopening
 the same isolated test world. Captures are linked in SKY_FOG. No shader or pipeline
 errors occurred; Xvfb/software-driver warnings were expected.
+
+## Slice 19 — F3 and gameplay polish
+
+Base main is the accepted Slice 18 merge `f381ce196bb3162fa3e834b412b943375d24facf`.
+The five locked format/Clippy/test/build/texture commands pass on Rust 1.99.1;
+329 tests pass (164 client,165 core). One CPU-cost benchmark is ignored in the
+normal suite and was explicitly run successfully. No dependency/lockfile change.
+Ground walking/sprinting/sneaking measure 4.317000/5.612000/1.295000 blocks/s after
+warmup at 30/60/144 render FPS, including normalized diagonals and exact final-state
+replay. Physics uses the same fixed 60-Hz core. Existing collision, ledge, jump,
+FOV, streaming and lifecycle coverage remains active.
+
+New coverage includes F3 press/hold, unavailable/finite frame data, negative/far
+coordinates independent of render origin, bounded resize/text updates, immediate
+cleanup hiding and retained assets; tick-for-tick neutral inventory falling and
+landing; modal-held movement/jump rearming; real Pause/settings/focus freezes,
+contextual backgrounds and A/B/A resource reclamation.
+
+Production-client software X11 screenshots, raw movement/course/CPU-cost output,
+resource accounting, exact acceptance commands and limitations are collected in
+[the Slice 19 guide](DEBUG_GAMEPLAY.md). Xvfb/Mesa evidence is not native Void/
+Windows GPU, Wayland or high-DPI acceptance. Those checks remain for the owner.

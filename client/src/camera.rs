@@ -188,20 +188,27 @@ fn read_input(
 ) {
     let keyboard = &commands.keys;
     let bindings = &commands.bindings;
-    input.active = windows
+    let focused = windows.single().is_ok_and(|(window, _)| window.focused);
+    let captured = windows
         .single()
-        .is_ok_and(|(window, cursor)| window.focused && cursor.grab_mode != CursorGrabMode::None);
-    if commands.flow.as_ref().is_some_and(|f| !f.playing())
-        || inventory.is_some_and(|i| i.open || i.transition)
-        || save.is_some_and(|status| status.closing)
-    {
-        input.active = false;
-    }
+        .is_ok_and(|(_, cursor)| cursor.grab_mode != CursorGrabMode::None);
+    let inventory_modal = inventory.as_ref().is_some_and(|i| i.open || i.transition);
+    let session_running = commands.flow.as_ref().is_none_or(|f| f.playing())
+        && !save.is_some_and(|status| status.closing);
+    // A free cursor alone still freezes the standalone prototype. Inventory is
+    // explicitly non-pausing; focus and lifecycle barriers always take priority.
+    input.simulation_active = focused && session_running && (captured || inventory_modal);
+    input.active = focused && session_running && captured && !inventory_modal;
     if !input.active {
+        commands.gestures.block_held_movement(keyboard, bindings);
         commands
             .gestures
             .update(keyboard, bindings, commands.time.elapsed(), false);
-        *input = ControllerInput::default();
+        let simulation_active = input.simulation_active;
+        *input = ControllerInput {
+            simulation_active,
+            ..default()
+        };
         return;
     }
     // Do not apply pre-capture hover motion to the freshly captured view.
@@ -219,6 +226,9 @@ fn read_input(
         *view = ViewAngles::default();
         input.reset_pending = true;
     }
+    if input.captured_this_frame {
+        commands.gestures.block_held_movement(keyboard, bindings);
+    }
     let enabled = !input.captured_this_frame
         && !input.reset_pending
         && !commands.player.awaiting_spawn
@@ -226,7 +236,9 @@ fn read_input(
     commands
         .gestures
         .update(keyboard, bindings, commands.time.elapsed(), enabled);
-    input.command = bindings.command(keyboard, f64::from(view.yaw));
+    input.command = commands
+        .gestures
+        .command(keyboard, bindings, f64::from(view.yaw));
     input.command.sprint |= commands.gestures.double_tap_sprint;
     input.command.jump = enabled && commands.gestures.jump_ready && keyboard.pressed(bindings.jump);
     if enabled && commands.gestures.jump_ready {
@@ -252,7 +264,7 @@ fn sync_camera(
 ) {
     // A single fixed tick of interpolation latency smooths translation even at
     // render rates above/below 60 Hz; mouse rotation remains immediate.
-    let alpha = if input.active {
+    let alpha = if input.simulation_active {
         f64::from(fixed_time.overstep_fraction())
     } else {
         1.0

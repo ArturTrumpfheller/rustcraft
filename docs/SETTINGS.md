@@ -40,7 +40,7 @@ correction retains its intended projected size. No physics or targeting change.
 Key capture uses portable physical letters A–Z, digits0–9, Space, left/right
 Shift/Ctrl/Alt. Conflicts reject the candidate without replacing the old binding;
 choose a free key to rearrange assignments. Enter/arrows/Tab stay reserved for
-navigation, F5 for save. Escape always remains emergency pause/inventory-close
+navigation, F3 for debug and F5 for save. Escape always remains emergency pause/inventory-close
 and cancels capture; only the Pause action may own Escape in the file. A custom
 Pause key also works. Standardbelegung resets keys in the draft; Allgemein →
 Alle Standardwerte prepares a complete reset, committed only by Apply. Mouse

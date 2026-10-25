@@ -332,3 +332,24 @@ render-origin space. UI/menu/viewmodel layers keep their existing materials and
 depth order. Session cleanup reclaims the mesh/entity/material; the shared shader
 module remains global. No atmospheric world scan, worker, remesh, texture or
 additional render pass is introduced. See [formulas, costs and evidence](SKY_FOG.md).
+
+## Slice 19 diagnostics and simulation/input policy
+
+`ControllerInput.simulation_active` permits the existing fixed 60-Hz physics tick;
+`active` separately permits gameplay commands. Focused inventory ticks use neutral
+`MovementInput`, allowing gravity, collision and braking without UI-driven movement,
+jump, respawn or edits. The camera uses simulation activity for interpolation.
+Pause/settings, focus loss and lifecycle finalization freeze physics. Modal-held
+movement/sprint/sneak and jump keys require release before reuse; no synthetic
+keyboard events are injected. Focus loss with inventory open enters Pause and
+retains the inventory until explicit resume.
+
+`debug_ui` owns one global retained mesh/material/surface and an isolated overlay
+camera (order9, no color clear); the menu camera remains order10. Session cleanup
+immediately hides/resets diagnostics, while global assets are reused across A/B/A.
+F3 only acts in focused Playing outside inventory. Text/glyph geometry refresh at
+5Hz plus toggle; a reusable buffer holds bounded diagnostics. World f64 feet,
+Euclidean signed block/chunk/local coordinates and constant-time chunk/map lengths
+are the sources. FPS uses valid real frame intervals with a 0.5s EMA; startup displays
+unavailable data explicitly. No render-origin coordinate, save path, world scan,
+new asset per frame, renderer feature or dependency is added.

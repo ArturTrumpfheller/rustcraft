@@ -607,3 +607,79 @@ fn sprint_fov_keeps_inventory_meshes_and_assets_retained_and_modal_blocks_held_j
     frame(&mut app);
     assert!(app.world().resource::<PlayerState>().body.velocity[1] > 0.);
 }
+
+#[test]
+fn airborne_inventory_uses_neutral_fixed_physics_lands_and_rearms_controls_after_release() {
+    let (_dir, mut app) = app();
+    click(&mut app, MouseButton::Left);
+    let start = [3.5, 12., 10.5];
+    {
+        let mut p = app.world_mut().resource_mut::<PlayerState>();
+        p.body = voxel_core::physics::Player::new(start);
+        p.body.velocity = [1., -1., 0.];
+        p.previous_position = start;
+    }
+    for k in [KeyCode::KeyW, KeyCode::Space, KeyCode::ControlLeft] {
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(k);
+    }
+    key(&mut app, KeyCode::KeyE);
+    let before = app.world().resource::<PlayerState>().body;
+    let view = app.world().resource::<crate::camera::ViewPose>().direction;
+    let revision = app.world().resource::<VoxelWorld>().0.revision();
+    let mut expected = before;
+    let cfg = app.world().resource::<crate::player::PlayerSettings>().0;
+    for _ in 0..120 {
+        expected.tick(
+            &app.world().resource::<VoxelWorld>().0,
+            voxel_core::physics::MovementInput::default(),
+            &cfg,
+        );
+        app.world_mut()
+            .resource_mut::<AccumulatedMouseMotion>()
+            .delta = Vec2::splat(100.);
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Right);
+        frame(&mut app);
+        // App uses the existing fixed60 Hz timer; compare with one neutral core tick.
+        assert_eq!(app.world().resource::<PlayerState>().body, expected);
+    }
+    assert!(expected.grounded);
+    assert_eq!(expected.position[1], 4.);
+    assert_eq!(expected.velocity, [0.; 3]);
+    assert_eq!(
+        app.world().resource::<crate::camera::ViewPose>().direction,
+        view
+    );
+    assert_eq!(app.world().resource::<VoxelWorld>().0.revision(), revision);
+    key(&mut app, KeyCode::Escape);
+    assert!(!app.world().resource::<GameInventory>().open);
+    for _ in 0..10 {
+        frame(&mut app);
+    }
+    assert_eq!(
+        app.world().resource::<PlayerState>().body,
+        expected,
+        "held modal keys stay blocked until released"
+    );
+    for k in [KeyCode::KeyW, KeyCode::Space, KeyCode::ControlLeft] {
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .release(k);
+    }
+    frame(&mut app);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyW);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::Space);
+    frame(&mut app);
+    assert!(app.world().resource::<PlayerState>().body.velocity[1] > 0.);
+    assert!(app.world().resource::<PlayerState>().body.velocity[2] < 0.);
+}

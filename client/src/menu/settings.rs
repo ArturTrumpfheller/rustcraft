@@ -77,6 +77,10 @@ impl Default for Editor {
     }
 }
 impl Editor {
+    pub(super) fn opened_from_pause(&self) -> bool {
+        self.origin == ClientState::Paused
+    }
+
     pub fn stamp(&self) -> String {
         format!(
             "{:?}/{}/{:?}/{:?}/{}/{}/{:?}",

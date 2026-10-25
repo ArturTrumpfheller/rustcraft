@@ -1,0 +1,7 @@
+cargo test --locked -p rustcraft overlay_cpu_cost_and_retained_buffer_size -- --ignored --nocapture
+CPU-only dev MinimalPlugins App, no renderer, 20ms synthetic render step.
+Median of five 500-update batches after warmup. Whole App dispatch included.
+DEBUG_CPU enabled=false median_ns_per_app_update=328253 meshes=1 materials=1
+DEBUG_CPU enabled=true median_ns_per_app_update=495829 meshes=1 materials=1
+DEBUG_GEOMETRY vertices=14972 indices=22458 logical_bytes=688712
+No claim of native GPU frame cost; geometry excludes driver/allocator overhead.

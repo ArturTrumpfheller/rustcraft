@@ -90,6 +90,7 @@ fn setup(
         Mesh3d(meshes.add(Canvas::default().mesh())),
         MeshMaterial3d(materials.add(StandardMaterial {
             unlit: true,
+            alpha_mode: AlphaMode::Blend,
             ..default()
         })),
         RenderLayers::layer(LAYER),
@@ -268,13 +269,13 @@ fn button_text_size(rect: [f32; 4], label: &str) -> f32 {
     normal.min((rect[2] - 10.) / (label.to_uppercase().chars().count().max(1) as f32 * 6. - 1.))
 }
 #[derive(Default)]
-struct Canvas {
+pub(crate) struct Canvas {
     positions: Vec<[f32; 3]>,
     colors: Vec<[f32; 4]>,
     indices: Vec<u32>,
 }
 impl Canvas {
-    fn rect(&mut self, x: f32, y: f32, w: f32, h: f32, c: [f32; 4]) {
+    pub(crate) fn rect(&mut self, x: f32, y: f32, w: f32, h: f32, c: [f32; 4]) {
         let n = self.positions.len() as u32;
         // All quads share a plane, painted in order with tiny depth increments.
         let z = n as f32 * 0.00001;
@@ -319,7 +320,7 @@ impl Canvas {
         self.text(tx + size, ty - size, label, size, [0.015, 0.018, 0.022, 1.]);
         self.text(tx, ty, label, size, style.text);
     }
-    fn text(&mut self, x: f32, y: f32, text: &str, size: f32, c: [f32; 4]) {
+    pub(crate) fn text(&mut self, x: f32, y: f32, text: &str, size: f32, c: [f32; 4]) {
         for (i, ch) in text.to_uppercase().chars().enumerate() {
             for (row, bits) in crate::save_hud::glyph(ch).into_iter().enumerate() {
                 for col in 0..5 {
@@ -345,7 +346,7 @@ impl Canvas {
             c,
         );
     }
-    fn mesh(self) -> Mesh {
+    pub(crate) fn mesh(self) -> Mesh {
         let count = self.positions.len();
         Mesh::new(
             PrimitiveTopology::TriangleList,
@@ -366,6 +367,11 @@ struct Pages<'w> {
     preferences: Res<'w, crate::settings::Preferences>,
     labels: Res<'w, key_labels::KeyLabels>,
 }
+fn world_backdrop(flow: &ClientFlow, editor: &settings::Editor) -> bool {
+    flow.state == ClientState::Paused
+        || (flow.state == ClientState::Settings && editor.opened_from_pause())
+}
+
 fn draw(
     pages: Pages,
     mut nav: ResMut<Navigation>,
@@ -433,24 +439,27 @@ fn draw(
     let mut c = Canvas::default();
     let copper = [0.64, 0.69, 0.75, 1.];
     let cream = [0.94, 0.95, 0.96, 1.];
+    let translucent = world_backdrop(&flow, &editor);
     c.rect(
         -half.x,
         -half.y,
         half.x * 2.,
         half.y * 2.,
-        [0.008, 0.011, 0.016, 1.],
+        [0.008, 0.011, 0.016, if translucent { 0.45 } else { 1. }],
     );
-    // Authored slate mosaic, deliberately unrelated to game texture packs.
-    for row in 0..(half.y * 2. / 12.).ceil() as i32 {
-        for col in 0..(half.x * 2. / 16.).ceil() as i32 {
-            let shade = 0.010 + ((col * 13 + row * 7 + col * row) % 5) as f32 * 0.001;
-            c.rect(
-                -half.x + col as f32 * 16.,
-                -half.y + row as f32 * 12.,
-                15.,
-                11.,
-                [shade, shade * 1.12, shade * 1.32, 1.],
-            );
+    // Title/catalog retain their opaque authored slate mosaic.
+    if !translucent {
+        for row in 0..(half.y * 2. / 12.).ceil() as i32 {
+            for col in 0..(half.x * 2. / 16.).ceil() as i32 {
+                let shade = 0.010 + ((col * 13 + row * 7 + col * row) % 5) as f32 * 0.001;
+                c.rect(
+                    -half.x + col as f32 * 16.,
+                    -half.y + row as f32 * 12.,
+                    15.,
+                    11.,
+                    [shade, shade * 1.12, shade * 1.32, 1.],
+                );
+            }
         }
     }
     if flow.state == ClientState::Settings {

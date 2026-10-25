@@ -61,8 +61,8 @@ There are no per-frame mesh/material/image allocations or environment lights.
 ## Motion and limits
 
 - Idle is still. Ground travel drives phase (2 radians/metre), independent of keys
-  or rendering FPS; pushing a wall stops it. Walk and sprint share the measured
-  sway amplitude, with sprint advancing faster because distance increases faster.
+  or rendering FPS; pushing a wall stops it. Walk and sprint share the bounded
+  sway envelope, with sprint advancing faster because distance increases faster.
   Sway rotates about the camera, not each cube's centre. Sneak suppresses gait sway
   and lowers the resting pose slightly; jump/fall/landing offsets remain bounded.
 - A350-ms visual action includes the held cube's roughly50-ms lowering lead-in and
@@ -83,3 +83,59 @@ There are no per-frame mesh/material/image allocations or environment lights.
 World/player formats, generators, IDs, physics, streaming, textures and input
 bindings remain unchanged. See [validation](VALIDATION.md) and the
 [isolated Void Fish checklist](PLATFORMS.md#slice-12-viewmodel-test-fish).
+
+## Slice 19 native-feedback refinement
+
+The owner accepted the F3, inventory, menus and movement speeds on Void Linux,
+but reported excessive viewmodel bob. The follow-up halves horizontal gait sway
+0.040 → 0.020, vertical sway 0.055 → 0.0275 and roll 0.035 → 0.0175 radians.
+The small gait biases are also halved; landing offset falls 0.045 → 0.030.
+Named `BOB_*` / `LANDING_OFFSET` constants in `viewmodel.rs` keep these tunable.
+Distance-driven rhythm, exponential entry/exit smoothing, crouch and vertical-air
+response remain unchanged. Sprint adds cadence, not a larger amplitude.
+The shared transform affects held blocks and empty hands; no full-camera bob is
+introduced. The 350-ms mining/placing swing, its fitted curves and feedback are
+unchanged, as are physics speeds 4.317 / 5.612 / 1.295 blocks/s.
+
+Tests cover idle/walk/sprint/stop/sneak/fall/landing transitions at 30/60/144 FPS,
+a visible but reduced projected arm excursion, both model types, retained assets
+and existing action timing/pose regressions. Native acceptance of this revised
+feel remains open in PR36. Compare the same scene and route on Void: idle → walk
+→ sprint → stop, then jump/land, with a block and an empty slot; mine/place in both.
+A matched rendered before/after clip was not produced in this follow-up.
+
+## Slice 19 gait-cadence correction
+
+Native Void feedback after the amplitude reduction identified rapid vertical
+oscillations. `abs(cos(2 * phase))` produces four vertical bounces per lateral
+cycle; `abs(cos(phase))` produces two, aligned with the alternating lateral
+extrema. The centre crossings are low points; the left/right extrema are high
+points. This preserves the reduced vertical range and removes the extra bounces
+between centre and extremum. Both arm and held block use this shared transform.
+
+`GAIT_RADIANS_PER_BLOCK` stays at 2.0: cadence follows actual travelled distance,
+so sprint increases rhythm without amplifying it. With the existing speeds:
+
+| Mode | Previous vertical cadence | Corrected vertical cadence |
+| --- | --- | --- |
+| Walk, 4.317 blocks/s | 5.497 Hz | 2.748 Hz |
+| Sprint, 5.612 blocks/s | 7.145 Hz | 3.573 Hz |
+
+These are analytical steady-motion frequencies (`speed * 2 / pi` after correction),
+not a measurement of Minecraft Java. All reduced amplitude/bias constants, landing,
+crouch, air response, action rig, camera and sprint FOV remain unchanged.
+Regression tests count vertical peaks across ten seconds at 30/60/144 FPS after
+warmup (27 walk / 35 sprint peaks, boundary-limited finite windows), compare poses
+at shared timestamps, verify alternating trajectory extrema, amplitude bounds
+and stationary settling. Existing interaction/landing/model/resource tests pass.
+
+![Matched analytical gait comparison](images/slice19-gait-cadence.svg)
+
+The graph uses identical distance, phase and amplitude envelopes before/after;
+it is an analytical curve comparison, not rendered gameplay footage. It was drawn
+with authoring-only Matplotlib; no runtime dependencies or bundled fonts added.
+The legitimate Java Demo captures documented above are historical references and
+are not present in this workspace. No new direct Java A/B comparison or exact
+Java cadence claim is made. Native visual acceptance of this rhythm remains open:
+repeat the same flat route with fixed FOV and a held block, then an empty hand,
+walking/sprinting/stopping, followed by jump/land, sneak and mine/place.

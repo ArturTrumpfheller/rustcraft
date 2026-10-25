@@ -56,6 +56,7 @@ fn app() -> App {
             viewmodel::ViewmodelPlugin,
             SessionPlugin,
             crate::menu::MenuPlugin,
+            crate::debug_ui::DebugUiPlugin,
         ));
     app.world_mut().spawn((
         Window {
@@ -148,7 +149,7 @@ fn title_first_has_no_world_lock_workers_or_gameplay_camera() {
     assert!(!has_world(app.world()));
     assert!(!app.world().contains_resource::<persistence::SaveSession>());
     assert!(!app.world().contains_resource::<Loading>());
-    assert_eq!(camera_count(&mut app), 1);
+    assert_eq!(camera_count(&mut app), 2);
     assert_eq!(fs::read_dir(&dir.0).unwrap().count(), 0);
     let (store, _, _) = SaveStore::open(&dir.0).unwrap();
     drop(store);
@@ -160,7 +161,7 @@ fn repeated_sessions_save_edits_inventory_release_lock_and_reclaim_assets() {
     let baseline = assets(&app);
     for index in 0..3 {
         open(&mut app, &dir);
-        assert_eq!(camera_count(&mut app), 3); // world, hand/UI overlay, menu
+        assert_eq!(camera_count(&mut app), 4); // world, hand/UI, menu, debug
         assert!(SaveStore::open(&dir.0).is_err());
         let pos = BlockPos([1, 31, 1]);
         if index > 0 {
@@ -198,8 +199,14 @@ fn repeated_sessions_save_edits_inventory_release_lock_and_reclaim_assets() {
         }
         let slots = inv.contents.slots().to_owned();
         let held = inv.contents.cursor();
+        key(&mut app, KeyCode::F3);
         leave(&mut app);
-        assert_eq!(camera_count(&mut app), 1);
+        assert!(
+            !app.world()
+                .resource::<crate::debug_ui::DebugOverlay>()
+                .enabled
+        );
+        assert_eq!(camera_count(&mut app), 2);
         assert_eq!(assets(&app), baseline);
         assert!(!app.world().contains_resource::<persistence::SaveSession>());
         assert!(!app.world().contains_resource::<streaming::StreamState>());
@@ -222,6 +229,23 @@ fn inventory_escape_pause_focus_resume_and_click_guard_use_real_schedules() {
     let mut app = app();
     let dir = Directory::new();
     open(&mut app, &dir);
+    key(&mut app, KeyCode::F3);
+    assert!(
+        app.world()
+            .resource::<crate::debug_ui::DebugOverlay>()
+            .enabled
+    );
+    assert!(app.world().resource::<player::ControllerInput>().active);
+    assert!(
+        app.world()
+            .resource::<player::ControllerInput>()
+            .simulation_active
+    );
+    let entity = window(&mut app);
+    assert_eq!(
+        app.world().get::<CursorOptions>(entity).unwrap().grab_mode,
+        CursorGrabMode::Locked
+    );
     key(&mut app, KeyCode::KeyE);
     assert!(app.world().resource::<inventory_ui::GameInventory>().open);
     key(&mut app, KeyCode::Escape);
@@ -444,7 +468,7 @@ fn managed_world_a_b_a_without_restart_preserves_all_state_and_reclaims_assets()
         assert!(catalog.archive(id).is_err());
         leave(&mut app);
         assert_eq!(assets(&app), baseline);
-        assert_eq!(camera_count(&mut app), 1);
+        assert_eq!(camera_count(&mut app), 2);
         assert!(!has_world(app.world()));
         assert!(catalog.open(id).is_ok());
     }
@@ -556,4 +580,54 @@ fn atmosphere_is_world_only_and_reclaimed_across_session_and_settings_transition
         assert_eq!(app.world().resource::<Assets<SkyMaterial>>().len(), 0);
         assert_eq!(assets(&app), baseline);
     }
+}
+
+#[test]
+fn airborne_pause_settings_and_inventory_focus_loss_freeze_until_explicit_resume() {
+    let mut app = app();
+    let dir = Directory::new();
+    open(&mut app, &dir);
+    app.world_mut()
+        .resource_mut::<player::PlayerState>()
+        .body
+        .position[1] = 24.;
+    frame(&mut app);
+    key(&mut app, KeyCode::Escape);
+    let paused = app.world().resource::<player::PlayerState>().body;
+    assert_eq!(state(&app), ClientState::Paused);
+    assert!(
+        !app.world()
+            .resource::<player::ControllerInput>()
+            .simulation_active
+    );
+    key(&mut app, KeyCode::ArrowDown);
+    key(&mut app, KeyCode::Enter);
+    assert_eq!(state(&app), ClientState::Settings);
+    for _ in 0..60 {
+        frame(&mut app);
+    }
+    assert_eq!(app.world().resource::<player::PlayerState>().body, paused);
+    key(&mut app, KeyCode::Escape);
+    assert_eq!(state(&app), ClientState::Paused);
+    key(&mut app, KeyCode::Escape);
+    assert_eq!(state(&app), ClientState::Playing);
+    key(&mut app, KeyCode::KeyE);
+    let entity = window(&mut app);
+    app.world_mut().get_mut::<Window>(entity).unwrap().focused = false;
+    frame(&mut app);
+    assert_eq!(state(&app), ClientState::Paused);
+    let frozen = app.world().resource::<player::PlayerState>().body;
+    for focused in [false, true] {
+        app.world_mut().get_mut::<Window>(entity).unwrap().focused = focused;
+        for _ in 0..20 {
+            frame(&mut app);
+        }
+        assert_eq!(app.world().resource::<player::PlayerState>().body, frozen);
+    }
+    key(&mut app, KeyCode::Escape);
+    assert_eq!(state(&app), ClientState::Playing);
+    assert!(app.world().resource::<inventory_ui::GameInventory>().open);
+    frame(&mut app);
+    assert!(app.world().resource::<player::PlayerState>().body.position[1] < frozen.position[1]);
+    leave(&mut app);
 }

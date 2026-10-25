@@ -47,3 +47,69 @@ fn english_title_and_pause_navigation_fit_supported_viewports() {
     }
     assert_eq!(entries(&ClientFlow::default())[0].0, "Singleplayer");
 }
+
+#[test]
+fn backdrop_context_alpha_and_camera_preserve_world_and_opaque_buttons() {
+    let mut app = App::new();
+    app.init_resource::<Assets<Mesh>>()
+        .init_resource::<Assets<StandardMaterial>>()
+        .add_systems(Startup, setup);
+    app.update();
+    let w = app.world_mut();
+    let camera = w
+        .query_filtered::<&Camera, With<MenuCamera>>()
+        .single(w)
+        .unwrap();
+    assert_eq!(camera.order, 10);
+    assert!(matches!(camera.clear_color, ClearColorConfig::None));
+    let handle = w
+        .query_filtered::<&MeshMaterial3d<StandardMaterial>, With<MenuSurface>>()
+        .single(w)
+        .unwrap();
+    assert_eq!(
+        w.resource::<Assets<StandardMaterial>>()
+            .get(&handle.0)
+            .unwrap()
+            .alpha_mode,
+        AlphaMode::Blend
+    );
+    let mut editor = settings::Editor::default();
+    for (state, expected) in [
+        (ClientState::Title, false),
+        (ClientState::Worlds, false),
+        (ClientState::Paused, true),
+        (ClientState::Settings, false),
+        (ClientState::Loading, false),
+        (ClientState::Saving, false),
+    ] {
+        assert_eq!(
+            world_backdrop(&ClientFlow { state, ..default() }, &editor),
+            expected
+        );
+    }
+    // Use the real Options entry to establish the editor's paused origin.
+    w.init_resource::<ButtonInput<KeyCode>>();
+    w.init_resource::<ButtonInput<MouseButton>>();
+    w.init_resource::<ClientFlow>();
+    w.init_resource::<crate::settings::Preferences>();
+    w.init_resource::<settings::Editor>();
+    w.init_resource::<Navigation>();
+    w.resource_mut::<ClientFlow>().state = ClientState::Paused;
+    settings::open(w);
+    editor = w.remove_resource::<settings::Editor>().unwrap();
+    assert!(world_backdrop(w.resource::<ClientFlow>(), &editor));
+    for focused in [false, true] {
+        for hovered in [false, true] {
+            let mut canvas = Canvas::default();
+            canvas.button(
+                [-100., 0., 200., 20.],
+                "Back to Game",
+                focused,
+                hovered,
+                false,
+                true,
+            );
+            assert!(canvas.colors.iter().all(|c| c[3] == 1.));
+        }
+    }
+}

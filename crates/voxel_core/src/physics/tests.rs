@@ -148,7 +148,7 @@ fn movement_accelerates_brakes_and_normalizes_diagonals_and_sprint() {
             },
             60,
         );
-        near(straight.velocity[0], if sprint { 8.0 } else { 5.0 });
+        near(straight.velocity[0], if sprint { 5.612 } else { 4.317 });
         near(
             diagonal.velocity[0].hypot(diagonal.velocity[2]),
             straight.velocity[0],
@@ -461,7 +461,11 @@ fn clearance_tolerance_permits_roundoff_but_rejects_real_penetration() {
 fn tuned_speeds_acceleration_braking_and_turning_are_bounded() {
     let world = world_with(floor());
     let cfg = PhysicsConfig::default();
-    for (sprint, sneak, speed) in [(false, false, 5.), (true, false, 8.), (true, true, 1.8)] {
+    for (sprint, sneak, speed) in [
+        (false, false, 4.317),
+        (true, false, 5.612),
+        (true, true, 1.295),
+    ] {
         let mut p = Player::new([0.5, 1., 0.5]);
         let command = MovementInput {
             direction: [1., 0.],
@@ -571,7 +575,8 @@ fn sneak_slides_along_a_ledge_and_traverses_chunk_seams_without_snagging() {
         sneak: true,
         ..Default::default()
     };
-    run(&mut p, &world, command, 1200);
+    // Match the old seam-crossing distance at the slower 1.295 sneak target.
+    run(&mut p, &world, command, 1680);
     assert!(p.grounded && p.position[2] > 3. && p.position[0] < 1.3);
     near(p.position[1], 1.);
 }
@@ -692,12 +697,22 @@ fn twenty_block_movement_profile_records_speed_and_time_comparisons() {
         ground_braking: 60.,
         ..Default::default()
     };
+    let previous = PhysicsConfig {
+        walk_speed: 5.,
+        sprint_speed: 8.,
+        sneak_speed: 1.8,
+        sprint_jump_boost: 1.2,
+        ..Default::default()
+    };
     for (label, config, sprint, sneak, expected_ticks) in [
         ("Slice10 walk", old, false, false, 281),
         ("Slice10 sprint", old, true, false, 217),
-        ("Slice11 walk", PhysicsConfig::default(), false, false, 242),
-        ("Slice11 sprint", PhysicsConfig::default(), true, false, 154),
-        ("Slice11 sneak", PhysicsConfig::default(), false, true, 668),
+        ("Slice11 walk", previous, false, false, 242),
+        ("Slice11 sprint", previous, true, false, 154),
+        ("Slice11 sneak", previous, false, true, 668),
+        ("Slice19 walk", PhysicsConfig::default(), false, false, 280),
+        ("Slice19 sprint", PhysicsConfig::default(), true, false, 216),
+        ("Slice19 sneak", PhysicsConfig::default(), false, true, 927),
     ] {
         let mut p = Player::new([0.5, 1., 0.5]);
         let command = MovementInput {
@@ -847,10 +862,10 @@ fn sprint_jump_bonus_is_capped_normalized_and_has_no_standing_sneak_wall_or_roof
             p.tick(&world, command, &cfg);
             let speed = p.velocity[0].hypot(p.velocity[2]);
             maximum = maximum.max(speed);
-            assert!(speed <= 9.2 + 1e-8);
+            assert!(speed <= 6.4538 + 1e-8);
             assert_clear(&p, &world);
         }
-        near(maximum, 9.2);
+        near(maximum, 6.4538);
     }
     let mut standing = Player::new([0.5, 1., 0.5]);
     standing.tick(
@@ -877,7 +892,7 @@ fn sprint_jump_bonus_is_capped_normalized_and_has_no_standing_sneak_wall_or_roof
             },
             &cfg,
         );
-        assert!(p.velocity[0] <= if sneak { 1.8 + 1e-8 } else { 8. });
+        assert!(p.velocity[0] <= if sneak { 1.295 + 1e-8 } else { 8. });
     }
     for pending in [false, true] {
         let mut world = if pending {

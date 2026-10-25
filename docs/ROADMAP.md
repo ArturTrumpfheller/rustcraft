@@ -10,6 +10,15 @@ Slice15 adds persistent user settings; see [SETTINGS](SETTINGS.md) for exact opt
 - [x] Title/pause settings, versioned configuration, FOV/mouse/keys, live radius and safe display preview
 - [ ] Native Slice15 Void/Windows GPU, compositor and DPI acceptance
 
+Slice19 adds F3 diagnostics, non-pausing inventory, contextual pause/settings
+scrims and Java-like ground movement speeds. See [testing guide](DEBUG_GAMEPLAY.md).
+
+- [x] Bounded retained F3 pixel overlay with authoritative signed coordinates
+- [x] Separate fixed simulation from gameplay input; inventory falls/lands, Pause freezes
+- [x] Contextual 45% pause/settings scrim with opaque title/catalog settings
+- [x] Measured 4.317 / 5.612 / 1.295 blocks/s and normalized 30/60/144-FPS replay
+- [ ] Native Slice19 Void X11/Wayland and Windows acceptance
+
 ## v0.1 — Classic-style prototype
 
 Slice 12 adds an original first-person arm, atlas-textured selected block and
@@ -48,7 +57,8 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 - [x] Vertex voxel AO, conservative greedy compatibility and diagonal edit invalidation (native acceptance pending)
 - [ ] Native Slice17 Void X11/Wayland and Windows AO acceptance — see [checklist](AMBIENT_OCCLUSION.md)
 - [x] Procedural daylight gradient and radius-dependent terrain fog with dark-cave protection
-- [ ] Native Slice18 Void X11/Wayland and Windows sky/fog visual and performance acceptance — see [checklist](SKY_FOG.md)
+- [x] Slice18 owner acceptance on native Void Linux
+- [ ] Remaining Slice18 Windows / explicit X11+Wayland sky/fog acceptance — see [checklist](SKY_FOG.md)
 - [ ] Dense-region/bulk-edit profiling and further native GPU optimization
 
 ## v0.3 — Alpha-inspired survival

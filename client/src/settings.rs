@@ -58,7 +58,7 @@ pub(crate) const LABELS: [&str; 19] = [
     "Hotbar 8",
     "Hotbar 9",
 ];
-// Deliberately bounded portable physical-key vocabulary. Navigation and F5 stay reserved.
+// Deliberately bounded portable physical-key vocabulary. Navigation, F3 debug and F5 save stay reserved.
 pub(crate) fn key_options() -> Vec<KeyCode> {
     use KeyCode::*;
     vec![

@@ -1,6 +1,7 @@
 mod atmosphere;
 mod camera;
 mod controls;
+mod debug_ui;
 mod interaction;
 mod inventory_ui;
 mod menu;
@@ -61,6 +62,7 @@ fn main() {
             viewmodel::ViewmodelPlugin,
             session::SessionPlugin,
             menu::MenuPlugin,
+            debug_ui::DebugUiPlugin,
         ))
         .run();
 }

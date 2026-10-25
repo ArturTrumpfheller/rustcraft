@@ -82,7 +82,10 @@ impl Default for PlayerState {
 #[derive(Resource, Default)]
 pub(crate) struct ControllerInput {
     pub command: MovementInput,
+    /// Whether gameplay commands are accepted (cursor captured, no modal).
     pub active: bool,
+    /// Whether fixed physics advances, independently of gameplay commands.
+    pub simulation_active: bool,
     pub captured_this_frame: bool,
     // Edges survive frames with no fixed tick, and are consumed only once even
     // when a slow render frame runs several physics ticks.
@@ -98,10 +101,11 @@ fn simulate_player(
 ) {
     player.previous_position = player.body.position;
     player.previous_crouched = player.body.crouched;
-    if !input.active {
+    if !input.simulation_active {
         return;
-    } // Local single-player pause while cursor is free.
-    if std::mem::take(&mut input.reset_pending) || player.body.position[1] < RECOVERY_Y {
+    }
+    let reset = std::mem::take(&mut input.reset_pending);
+    if (input.active && reset) || player.body.position[1] < RECOVERY_Y {
         *player = safe_spawn(&world.0, &config.0);
         input.jump_pending = false;
         return;
@@ -132,8 +136,13 @@ fn simulate_player(
             input.jump_pending = false;
         }
     }
-    let mut command = input.command;
-    command.jump |= std::mem::take(&mut input.jump_pending);
+    let mut command = if input.active {
+        input.command
+    } else {
+        MovementInput::default()
+    };
+    let jump = std::mem::take(&mut input.jump_pending);
+    command.jump |= input.active && jump;
     player.body.tick(&world.0, command, &config.0);
 }
 

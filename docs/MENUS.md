@@ -14,10 +14,16 @@ copper/slate/cream frames and bitmap title are authored geometry, not imported a
 Escape closes inventory first (including its all-or-nothing held-stack return),
 then opens Pause. **Fortsetzen** or Escape resumes with mouse capture. **Zurück zum
 Hauptmenü** and **Beenden** save before leaving. Focus loss pauses normal gameplay;
-an already-open inventory remains its own paused modal. Returning focus alone
-does not resume. Mouse motion/clicks from menu activation cannot edit blocks.
+inventory physics also freezes on focus loss and the Pause page appears. Returning
+focus alone does not resume. An open inventory is retained behind Pause and resumes
+neutral physics only after an explicit return to the game. Mouse motion/clicks from menu activation cannot edit blocks.
 Physics, player input, targeting/edits and hand motion are inactive while paused.
-The existing hotbar/inventory and hand are otherwise unchanged.
+The existing hotbar/inventory and hand keep their resource ownership and layout.
+Since Slice19, inventory alone accepts only UI input while fixed physics continues.
+Pause and Options entered from Pause use a 45% dark scrim; buttons remain opaque.
+Title, world management and Options entered from Title retain the opaque mosaic.
+The menu camera keeps `ClearColorConfig::None`; its retained material uses alpha
+blending. No terrain/sky/viewmodel shader or world color-buffer clear changes.
 
 ![Pause menu](images/slice13-pause.png)
 

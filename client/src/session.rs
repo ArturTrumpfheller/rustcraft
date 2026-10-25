@@ -192,6 +192,7 @@ fn install(world: &mut World, loaded: Loaded) {
     world.insert_resource(persistence::SaveFeedback::default());
     world.insert_resource(viewmodel::HandAction::default());
     camera::reset(world);
+    crate::debug_ui::reset(world);
     interaction::reset(world);
     let meshes: std::collections::HashSet<_> = world.resource::<Assets<Mesh>>().ids().collect();
     let materials: std::collections::HashSet<_> =
@@ -284,6 +285,7 @@ fn cleanup(world: &mut World) {
     world.insert_resource(persistence::SaveFeedback::default());
     world.insert_resource(viewmodel::HandAction::default());
     camera::reset(world);
+    crate::debug_ui::reset(world);
     interaction::reset(world);
 }
 fn advance(world: &mut World) {
@@ -341,7 +343,7 @@ fn modal_input(
         return;
     };
     if flow.playing()
-        && (!window.focused && !inventory.open
+        && (!window.focused
             || ((keys.just_pressed(bindings.menu) || keys.just_pressed(KeyCode::Escape))
                 && !inventory.open
                 && !inventory.transition))

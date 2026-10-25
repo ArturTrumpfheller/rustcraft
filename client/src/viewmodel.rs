@@ -297,6 +297,15 @@ fn setup(
     });
 }
 
+// Viewmodel-only gait tuning; interaction swing coefficients remain separate.
+const GAIT_RADIANS_PER_BLOCK: f32 = 2.0;
+const BOB_HORIZONTAL: f32 = 0.020;
+const BOB_VERTICAL: f32 = 0.0275;
+const BOB_ROLL: f32 = 0.0175;
+const BOB_HORIZONTAL_BIAS: f32 = 0.003;
+const BOB_VERTICAL_BIAS: f32 = 0.0025;
+const LANDING_OFFSET: f32 = 0.030;
+
 #[derive(Default)]
 struct Motion {
     previous: Option<[f64; 3]>,
@@ -343,12 +352,12 @@ impl Motion {
             0.
         };
         if grounded && distance <= 4. {
-            self.phase = (self.phase + distance * 2.) % std::f32::consts::TAU;
+            self.phase = (self.phase + distance * GAIT_RADIANS_PER_BLOCK) % std::f32::consts::TAU;
         }
         self.bob += (amount - self.bob) * blend;
         self.crouch += (f32::from(crouched) - self.crouch) * blend;
         if self.previous_vy < -0.5 && (grounded || vy > 0.) {
-            self.landing = 0.045;
+            self.landing = LANDING_OFFSET;
         }
         self.previous_vy = vy;
         self.landing *= (-14. * dt).exp();
@@ -370,9 +379,11 @@ impl Motion {
         } else {
             0.
         };
+        // Two vertical footfalls per lateral stride; doubling phase here would
+        // create four bounces per stride and an unnaturally rapid vertical gait.
         let offset = Vec3::new(
-            (self.phase.sin() * 0.04 - 0.006) * self.bob,
-            -((self.phase * 2.).cos().abs() * 0.055 + 0.005) * self.bob
+            (self.phase.sin() * BOB_HORIZONTAL - BOB_HORIZONTAL_BIAS) * self.bob,
+            -(self.phase.cos().abs() * BOB_VERTICAL + BOB_VERTICAL_BIAS) * self.bob
                 - self.crouch * 0.025
                 - self.landing
                 - (vy as f32 * 0.002).clamp(-0.02, 0.02),
@@ -380,7 +391,7 @@ impl Motion {
         );
         (
             offset,
-            Quat::from_rotation_z(self.phase.sin() * self.bob * 0.035),
+            Quat::from_rotation_z(self.phase.sin() * self.bob * BOB_ROLL),
         )
     }
 }

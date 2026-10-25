@@ -6,33 +6,32 @@ world/player format, block IDs, generator, mesh or streaming policy changes.
 
 ## Tuning and controls
 
-| Mode | Slice 10 speed | Slice 11 speed | 20 blocks from rest, old → new |
+| Mode | Current steady speed | 20 blocks from rest | 100 blocks from rest |
 | --- | --- | --- | --- |
-| Walk, WASD | 4.3 | 5.0 blocks/s | 4.683 → 4.033 s |
-| Sprint, Left Ctrl or double-W | 5.6 | 8.0 blocks/s | 3.617 → 2.567 s |
-| Sneak, Left Shift + WASD | — | 1.8 blocks/s | — → 11.133 s |
-| Sprint + held Space | — | at most 9.2 blocks/s | — → 2.500 s |
+| Walk, WASD | 4.317 blocks/s | 4.667 s | 23.200 s |
+| Sprint, Left Ctrl or double-W | 5.612 blocks/s | 3.600 s | 17.867 s |
+| Sneak, Left Shift + WASD | 1.295 blocks/s | — | — |
+| Sprint + held Space | capped at 6.4538 blocks/s | 3.333 s | 15.733 s |
 
-The deterministic flat-floor test includes acceleration and rounds arrival up to
-one simulation tick. The double-W gesture is armed before starting the measured
-course; it produces exactly the same sprint command as Ctrl. These are simulated travel times, not wall-clock benchmarks
-or native gameplay acceptance. Sprint is now 60% faster than walk (previously
-30.2%); walking itself is 16.3% faster. Diagonals normalize before target speed.
+Slice 19 adopts approximate Minecraft Java normal flat-ground speeds, in metres
+per second. One second of warmup followed by four seconds of measured fixed ticks
+achieves exactly 4.317000 / 5.612000 / 1.295000, cardinal and diagonal, at 30/60/144
+render FPS; complete end states are identical. Course times include acceleration
+and round arrival up to a simulation tick, so averages differ from steady speed.
 
-Ground acceleration is 65 blocks/s² (was 55), braking 75 (was 60). From rest,
-walk/sprint/sneak reach target in 5/8/2 ticks (83/133/33 ms); walk/sprint release
-stops within 4/7 ticks (67/117 ms). Turning approaches the new velocity with the
-same bounded vector acceleration. Air acceleration stays 12, gravity 24,
-jump impulse 8.5 and terminal fall speed 55. Releasing direction in the air
-preserves horizontal momentum. Sneaking in the air adjusts the desired velocity
-only through ordinary air control: no midair speed snap or fall cancellation.
+Ground acceleration stays65 blocks/s², braking75, air acceleration12, gravity24,
+jump impulse8.5 and terminal fall speed55. Ground targets are reached within4/6/2
+ticks (walk/sprint/sneak); releasing walk/sprint stops within4/5 ticks. Releasing
+direction in air preserves horizontal momentum; ordinary bounded air control,
+collision, support, jump cadence and ledge protection remain unchanged.
 
 `client::controls::MovementBindings` centralizes locomotion keys and produces
 simulation commands. Slice15 uses this resource for persistent rebinding;
 see [SETTINGS](SETTINGS.md). E, 1–9/wheel, mouse clicks, Escape and F5 retain their
-existing adapters. Shift-click transfers while inventory is open, with simulation
-paused; it cannot change the body posture. Capture frames discard jump/respawn
-edges and pre-capture pointer motion; held movement starts normally.
+existing adapters. Shift-click transfers while inventory is open cannot drive
+posture or movement. Inventory sends neutral commands to running physics, including
+gravity and normal ground braking. Capture/modal transitions discard gameplay
+edges and pre-capture motion; held movement/jump must be released before reuse.
 
 ## Sprint activation, jumping and FOV
 
@@ -53,26 +52,21 @@ until released. This prevents a menu-held key from becoming a surprise launch.
 A crouched jump still deliberately bypasses the ledge guard.
 
 A supported sprint launch with directional input, at least walk-speed run-up and
-0.5 blocks of overhead clearance earns **+1.2 blocks/s**, capped at **9.2**.
+0.5 blocks of overhead clearance earns **+0.8418 blocks/s**, capped at **6.4538**.
+This scales the old+1.2 /8.0 sprint tuning proportionally, retaining 15% launch
+headroom rather than increasing the relative bonus as ground sprint slows.
 The bonus follows actual horizontal momentum, requires input aligned with it,
 and is rejected if the boosted next horizontal step hits a solid/pending barrier.
 No bonus for stationary/non-sprint/sneak launches or blocked low ceilings. Earned
 speed is retained by sprint air control; vector turning cannot stack additional
 speed. Every bonus requires another real grounded launch. Ground movement heads
-back toward8.0; releasing sprint/sneaking in air uses normal bounded air control.
+back toward5.612; releasing sprint/sneaking in air uses normal bounded air control.
 
-Reproducible 100-block flat course from rest, fixed60 Hz:
-
-| Input | Time | Average including startup |
-| --- | --- | --- |
-| Walk | 20.033 s | 4.992 blocks/s |
-| Ctrl or latched double-W sprint | 12.567 s | 7.958 blocks/s |
-| Sprint + held Space | 11.200 s | 8.929 blocks/s |
-
-Continuous hops are about12.2% faster over this course, without runaway gain.
-Short courses gain less because the first jump from rest earns no launch bonus.
-Run `cargo test --locked -p voxel_core flat_course_sprint_jumping -- --nocapture`
-to reproduce. These are simulation timings, not an FPS/GPU benchmark.
+The 100-block course now averages 4.310 blocks/s walking,5.597 sprinting and6.356
+sprint-hopping. Hops remain about13.6% faster than normal sprint, within the existing
+16% regression bound. Run `cargo test --locked -p voxel_core flat_course_sprint_jumping
+-- --nocapture` (as one command) to reproduce. See [Slice 19](DEBUG_GAMEPLAY.md) for
+speed replay commands and native acceptance; these are simulation, not GPU timings.
 
 Moving sprint widens perspective FOV by **9% relative to the existing base**;
 the current default45° becomes49.05°. Ctrl while stationary does nothing.
@@ -81,8 +75,8 @@ sneak, menus or focus loss. A long-frame visual step is limited to50 ms of easin
 normal30/60/144-FPS responses match. External base-FOV edits are respected,
 including exact baseline restoration; projection aspect/near/far and floating
 origin stay independent. HUD/hotbar scale tracks projection through transforms,
-with no new meshes/materials/images or per-frame asset rebuilds. There is no
-settings UI yet; the gain/response are named constants in `client::camera`.
+with no new meshes/materials/images or per-frame asset rebuilds. The settings UI supplies the base FOV; the gain/response remain named constants
+in `client::camera`.
 
 ## Posture, support and edges
 

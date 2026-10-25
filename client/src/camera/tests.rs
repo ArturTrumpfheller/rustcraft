@@ -321,6 +321,15 @@ fn final_save_pauses_controls_and_a_canceled_close_can_resume() {
         .closing = false;
     tick(&mut app);
     assert!(app.world().resource::<ControllerInput>().active);
+    assert_eq!(
+        body(&app).position,
+        original.position,
+        "held movement is disarmed across save pause"
+    );
+    release(&mut app, KeyCode::KeyW);
+    tick(&mut app);
+    key(&mut app, KeyCode::KeyW);
+    tick(&mut app);
     assert_ne!(body(&app).position, original.position);
     assert!(
         body(&app).grounded,
@@ -492,13 +501,13 @@ fn default_ctrl_sprint_shift_sneak_conflict_and_rebinding_reach_simulation() {
     for _ in 0..12 {
         tick(&mut app);
     }
-    assert!((body(&app).velocity[0] - 8.).abs() < 1e-8);
+    assert!((body(&app).velocity[0] - 5.612).abs() < 1e-8);
     key(&mut app, KeyCode::ShiftLeft);
     for _ in 0..3 {
         tick(&mut app);
     }
     assert!(body(&app).crouched);
-    assert!((body(&app).velocity[0] - 1.8).abs() < 1e-8);
+    assert!((body(&app).velocity[0] - 1.295).abs() < 1e-8);
     app.world_mut().resource_mut::<MovementBindings>().sneak = KeyCode::KeyC;
     tick(&mut app);
     assert!(
@@ -664,7 +673,7 @@ fn double_w_reaches_sprint_and_hold_jump_replays_identically_at_mixed_render_rat
         frame(&mut app, Duration::ZERO);
         assert!(app.world().resource::<ControllerInput>().command.sprint);
         render_frames(&mut app, fps, fps * 3);
-        assert!(body(&app).velocity[0].hypot(body(&app).velocity[2]) <= 9.2 + 1e-8);
+        assert!(body(&app).velocity[0].hypot(body(&app).velocity[2]) <= 6.4538 + 1e-8);
         results.push(body(&app));
         release(&mut app, KeyCode::KeyW);
         frame(&mut app, Duration::ZERO);
@@ -672,7 +681,9 @@ fn double_w_reaches_sprint_and_hold_jump_replays_identically_at_mixed_render_rat
     }
     assert_eq!(results[0], results[1]);
     assert_eq!(results[1], results[2]);
-    assert!(results[0].position[2] < -14.);
+    // Three seconds of hopping must cover more than ordinary sprint travel,
+    // allowing for the brief startup before the first earned launch bonus.
+    assert!(SPAWN[2] - results[0].position[2] > PhysicsConfig::default().sprint_speed * 3.);
 }
 
 #[test]
@@ -863,4 +874,66 @@ fn settings_change_sprint_base_and_mouse_sensitivity_without_changing_physics() 
     let v = app.world().resource::<ViewAngles>();
     assert!((v.pitch - pitch - 0.04).abs() < 1e-5);
     assert!((v.yaw - yaw + 0.04).abs() < 1e-5);
+}
+
+#[test]
+fn steady_ground_speeds_after_acceleration_match_at_30_60_and_144_fps() {
+    for (sprint, sneak, diagonal, target) in [
+        (false, false, false, 4.317),
+        (true, false, false, 5.612),
+        (false, true, false, 1.295),
+        (false, false, true, 4.317),
+        (true, false, true, 5.612),
+        (false, true, true, 1.295),
+    ] {
+        let mut results = Vec::new();
+        for fps in [30, 60, 144] {
+            let mut world = voxel_core::World::default();
+            for x in -24..=24 {
+                for z in -24..=24 {
+                    world
+                        .set_block(voxel_core::BlockPos([x, 0, z]), voxel_core::Block::Stone)
+                        .unwrap();
+                }
+            }
+            let mut app = test_app_with_world(world);
+            capture(&mut app);
+            let player = app.world_mut().resource_mut::<PlayerState>();
+            *player.into_inner() = PlayerState {
+                body: Player::new([-8., 1., 0.5]),
+                previous_position: [-8., 1., 0.5],
+                previous_crouched: false,
+                awaiting_spawn: false,
+            };
+            key(&mut app, KeyCode::KeyD);
+            if diagonal {
+                key(&mut app, KeyCode::KeyW);
+            }
+            if sprint {
+                key(&mut app, KeyCode::ControlLeft);
+            }
+            if sneak {
+                key(&mut app, KeyCode::ShiftLeft);
+            }
+            let mut start = [0.; 3];
+            for n in 1..=fps * 5 {
+                let end = Duration::from_secs_f64(f64::from(n) / f64::from(fps));
+                let previous = Duration::from_secs_f64(f64::from(n - 1) / f64::from(fps));
+                frame(&mut app, end - previous);
+                if n == fps {
+                    start = body(&app).position;
+                }
+            }
+            let p = body(&app);
+            let speed = (p.position[0] - start[0]).hypot(p.position[2] - start[2]) / 4.;
+            println!(
+                "STEADY_SPEED fps={fps} sprint={sprint} sneak={sneak} diagonal={diagonal} blocks_per_second={speed:.6}"
+            );
+            assert!((speed - target).abs() < 1e-7, "{speed} != {target}");
+            assert!(p.grounded);
+            results.push(p);
+        }
+        assert_eq!(results[0], results[1]);
+        assert_eq!(results[1], results[2]);
+    }
 }

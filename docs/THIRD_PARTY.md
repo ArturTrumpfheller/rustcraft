@@ -161,3 +161,12 @@ same licenses. No skybox, proprietary shader/source, third-party artwork, new
 crate, renderer feature, lockfile or toolchain change is included. Measurement
 tools use Python's standard library; Pillow/ImageMagick were capture-environment
 tools only and are not runtime dependencies or bundled assets.
+
+## Slice 19 gameplay and debug overlay
+
+Debug glyph geometry/panels, contextual scrims, input/physics tuning, tests and
+this slice's documentation are original RustCraft work, MIT OR Apache-2.0.
+The overlay reuses the original bitmap glyphs and menu canvas; no imported F3
+art, Minecraft code, font, texture, dependency, renderer feature or lockfile change.
+`slice19-*.png` captures show actual RustCraft rendering of our original assets
+under the same licenses, using Xvfb/Mesa software rendering.
