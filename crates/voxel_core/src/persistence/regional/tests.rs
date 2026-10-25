@@ -476,3 +476,74 @@ fn unknown_pending_support_dependencies_defer_edits_until_overlay_is_known() {
     }
     assert!(w.set_block(p, Block::Air).unwrap().is_some());
 }
+
+#[test]
+fn support_batch_and_inventory_survive_signed_region_eviction_and_interrupted_session_saves() {
+    use crate::{
+        inventory::{Inventory, Item},
+        support_tests::{count, mine},
+    };
+    let directions = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]];
+    for p in [BlockPos([63, 25, 63]), BlockPos([-64, 25, -64])] {
+        for fault in [
+            SaveStage::SessionPrepared,
+            SaveStage::WorldSaved,
+            SaveStage::PlayerSaved,
+        ] {
+            let d = Dir::new();
+            let (store, mut w, _) =
+                SaveStore::open_with(&d.0, || Ok(World::regional(identity()))).unwrap();
+            store.load_player(&mut w).unwrap();
+            let mut inv = Inventory::empty();
+            let center = [p.0[0].div_euclid(16), p.0[2].div_euclid(16)];
+            for x in center[0] - 1..=center[0] + 1 {
+                for z in center[1] - 1..=center[1] + 1 {
+                    load_column(&store, &mut w, [x, z]);
+                }
+            }
+            w.set_block(p, Block::Stone).unwrap();
+            for delta in directions {
+                w.set_block(
+                    p.offset(delta).unwrap(),
+                    Block::torch_on_face(delta).unwrap(),
+                )
+                .unwrap();
+            }
+            store.save_player_session(&w, &inv, true).unwrap();
+            w.mark_regions_saved(w.revision());
+            let batch = mine(&mut w, &mut inv, p).unwrap().unwrap();
+            assert_eq!(batch.changes().len(), 6);
+            for x in center[0] - 1..=center[0] + 1 {
+                for z in center[1] - 1..=center[1] + 1 {
+                    w.evict_column([x, z]);
+                }
+            }
+            w.retain_regions(&Default::default());
+            assert_eq!(w.dirty_regions(), 3);
+            assert!(
+                store
+                    .save_player_with(&w, &inv, true, |stage| if stage == fault {
+                        Err(io::Error::other("injected support-batch save interruption"))
+                    } else {
+                        Ok(())
+                    })
+                    .is_err()
+            );
+            drop(store);
+            let (store, mut got, _) =
+                SaveStore::open_with(&d.0, || panic!("must replay existing session")).unwrap();
+            let items = store.load_player(&mut got).unwrap();
+            assert_eq!(count(&items, Item::Stone), 1);
+            assert_eq!(count(&items, Item::Torch), 5);
+            for x in center[0] - 1..=center[0] + 1 {
+                for z in center[1] - 1..=center[1] + 1 {
+                    load_column(&store, &mut got, [x, z]);
+                }
+            }
+            for change in batch.changes() {
+                assert_eq!(got.block(change.position), Block::Air);
+            }
+            assert!(!d.0.join("session.pending").exists());
+        }
+    }
+}

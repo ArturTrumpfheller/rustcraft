@@ -1,6 +1,6 @@
 //! Fixed-capacity item transactions; no engine, renderer, or filesystem types.
 use crate::{
-    Block, BlockChange, World,
+    Block, EditBatch, World,
     interaction::{BuildBlock, EditAction, EditError, edit},
     physics::{PhysicsConfig, Player},
     raycast::{Ray, raycast},
@@ -282,6 +282,7 @@ pub enum InventoryEditError {
     Full,
     Empty,
 }
+/// Returns every changed cell in a bounded batch for mesh/light invalidation.
 /// Both effects commit together in RAM. No inventory mutation is published if
 /// validation/world mutation fails. Mesh jobs never collect or consume items.
 pub fn edit_inventory(
@@ -291,7 +292,7 @@ pub fn edit_inventory(
     place: bool,
     player: &Player,
     config: &PhysicsConfig,
-) -> Result<Option<BlockChange>, InventoryEditError> {
+) -> Result<Option<EditBatch>, InventoryEditError> {
     let Some(hit) = raycast(world, ray) else {
         return Ok(None);
     };
@@ -299,23 +300,41 @@ pub fn edit_inventory(
         return Err(InventoryEditError::World(EditError::NotLoaded));
     }
     let mut next = inventory.clone();
-    let action = if place {
+    let batch = if place {
         let stack = next.selected_stack().ok_or(InventoryEditError::Empty)?;
         next.slots[next.selected] = Stack::new(stack.item, stack.count - 1);
         next.changed();
-        EditAction::Place(stack.item.build())
+        edit(
+            world,
+            ray,
+            EditAction::Place(stack.item.build()),
+            player,
+            config,
+        )
+        .map_err(InventoryEditError::World)?
+        .map(EditBatch::single)
     } else {
-        let item = Item::from_block(world.block(hit.position)).ok_or(InventoryEditError::Empty)?;
-        if next.insert(item, 1) != 0 {
-            return Err(InventoryEditError::Full);
+        let Some(batch) = world
+            .plan_break(hit.position)
+            .map_err(InventoryEditError::World)?
+        else {
+            return Ok(None);
+        };
+        for change in batch.changes() {
+            let item = Item::from_block(change.before).ok_or(InventoryEditError::Empty)?;
+            if next.insert(item, 1) != 0 {
+                return Err(InventoryEditError::Full);
+            }
         }
-        EditAction::Break
+        world
+            .commit_break(batch)
+            .map_err(InventoryEditError::World)?;
+        Some(batch)
     };
-    let result = edit(world, ray, action, player, config).map_err(InventoryEditError::World)?;
-    if result.is_some() {
+    if batch.is_some() {
         *inventory = next;
     }
-    Ok(result)
+    Ok(batch)
 }
 
 #[cfg(test)]

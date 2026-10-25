@@ -1,7 +1,7 @@
 # Slice 20 — torches and dynamic voxel block light
 
 Original RustCraft source/art: MIT OR Apache-2.0. Based on accepted Slice19
-`9eec01272d463c6eaa350bcbf3345d24eba6b53f`. The owner accepted the original Slice20 lighting/rendering/persistence/performance on native Void Linux. The targeting/wall/viewmodel refinement below awaits renewed native acceptance.
+`9eec01272d463c6eaa350bcbf3345d24eba6b53f`. The owner accepted the original Slice20 and the precise-selection/wall-mount refinement on native Void Linux. Final support-collection and held-pose changes below await final native acceptance.
 
 ## Playing and support rules
 
@@ -17,15 +17,13 @@ are selectable only on their shaft/tip geometry, and do not hide neighboring cub
 or contribute AO. Placement cannot replace occupied cells. Ceiling mounts,
 particles, animated flames, sound, crafting and held moving lights are deferred.
 
-**Break the torch before mining its floor or mounting wall.** Support removal
-is refused while any standing/wall torch depends on that block. Pending neighbors
-are checked against complete authoritative overlays (frozen generators contain
-no torches); when a required overlay is unknown, retry once it loads. Support
-must be within world bounds and loaded; y=-16 cannot host a floor torch. This
-bounded single-cell policy avoids automatic multi-block removals, item drops and
-new journal transactions. Trusted imports/cache installs do not validate support;
-malformed authored worlds may contain floating torches, but their light is still
-derived deterministically. There is no automatic support repair/drop system.
+**Mining a floor or wall collects its dependent torches automatically.** The
+single action collects the support plus zero to five standing/wall torches. All
+items must fit in inventory; otherwise neither world nor inventory changes.
+Dependent chunks/regions must be available and the whole action must fit the
+dirty-region budget. Unknown frontier data can temporarily defer the operation.
+There are no dropped-item entities or implicit item loss. Trusted malformed
+imports remain preserved rather than automatically repaired.
 
 ## Light, meshes and persistence
 
@@ -165,8 +163,8 @@ env RUSTCRAFT_DATA_DIR="$torch_dir" RUSTCRAFT_LOAD_RADIUS=2 cargo run --locked -
 
 Select6, inspect icon/hand, walk through placed torches and test full/empty slots.
 Make a sealed room or enter a cave, place overlapping sources, remove one then
-all, and place/remove a complete wall. Break a support: it must refuse until the
-torch is removed. Repeat at X/Z0,±16,±64 and Y0/16. Alternate edits rapidly, change
+all, and place/remove a complete wall. Break a support: it must collect the block and all attached torches together,
+or reject everything if the complete set does not fit. Repeat at X/Z0,±16,±64 and Y0/16. Alternate edits rapidly, change
 radius1↔3, travel far enough to evict and return. Verify F5,>30-second autosave,
 Save and Quit, reopen, exact counts and restored light. Check capture/release,
 focus/pause/inventory, F3, nearest pixels/AO/fog and absence of holes/stale seams.
@@ -179,6 +177,10 @@ and CPU timing do not establish i3-13100/RX9060XT performance or native acceptan
 Keep the new directory for restarts; back up entire closed world bundles.
 
 ## Slice20 refinement: precise selection, wall mounts and held profiles
+
+The owner accepted this refinement on native Void. The earlier held-pose images
+are retained as historical comparisons; the final presentation below supersedes
+their raised ordinary block and fully visible torch.
 
 Selection, ray intersection, outline and wall model placement share
 `voxel_core::shape`: the shaft and tip are two exact boxes in an orthonormal
@@ -215,9 +217,9 @@ all mounts, signed region support seams, eviction/reload and old standing saves.
 `client::viewmodel::presentation` supplies position, scale, rotation, model-origin
 correction and swing pivot for Arm, Block and Slender categories. Torches reuse
 the standing chunk model directly, centered through their profile. Ordinary blocks
-and torches sit higher/right; the full shaft stays visible beside/above the hotbar.
-Camera X/Y lens correction retains the equipped silhouette at FOV70/78/90/100;
-X also adapts to aspect ratio to avoid narrow-window edge clipping. The original
+use the original Slice20 block pose; torches receive only a small lift and left
+lean, with their lower shaft intentionally off screen. The original camera X/Y
+FOV correction is preserved without additional aspect correction. The original
 arm profile, gait cadence/amplitude, swing timing/travel and pivot curves are kept.
 Profile selection is constant-time without frame allocations or mesh recreation.
 
@@ -284,7 +286,7 @@ assets or work on idle frames.
 python3 tools/benchmark_lighting.py --baseline d5c9c171327f611d4e5a634cad4015682390d4b0 --output /tmp/rustcraft-refinement-bench
 ```
 
-Known limits remain deliberate: no ceiling mounts, automatic support-loss drops,
+Known limits remain deliberate: no ceiling mounts or dropped-item entities,
 RGB/moving hand light or multiplayer. Removing support can be deferred at an
 unknown regional frontier; it never guesses away an unloaded dependent torch.
 Imported malformed worlds are preserved, not automatically repaired. The tilted
@@ -292,3 +294,73 @@ surface normal is exposed separately from the grid normal used for adjacent-cell
 placement. Held action animations can lower/sweep the model as before; equipped
 poses and camera/UI clearance are tested. Native Void/Windows refinement testing
 is still required even though the original Slice20 was accepted on Void.
+
+## Final support-removal transaction and held presentation
+
+One mining action preflights a fixed, deterministic batch of at most six changes:
+the hit support, then its standing,+X,-X,+Z,-Z attachments. A dependent torch is
+identified by its saved support offset; unrelated adjacent torches stay intact.
+Every changed cell must be loaded/in bounds, all required regional authority must
+be available, and the number of unique newly dirty regions plus existing dirty
+regions must stay at or below8. This aggregate check prevents a primary-region
+commit followed by failure at a neighboring region.
+
+`edit_inventory` stages the complete support/Torch item set in a small inventory
+clone, rejects any overflow, revalidates the plan and commits all world cells and
+regional overlays without independent `set_block` calls. The batch has one world
+revision; every touched region uses that revision. Geometry/light dependency
+footprints are unioned, and the client marks every returned `EditBatch` change
+before scheduling background work. Adjacent changes coalesce into the existing
+worker path; stale results cannot publish a partial source removal. The inventory
+is installed only after the infallible validated world commit. No whole-world
+clone, recursive cascade, synchronous lighting or per-action disk journal is used.
+
+The low-level single-cell `set_block`/`interaction::edit` API stays conservative
+and rejects changes that would orphan torches. Gameplay mining must use the
+inventory batch API and invalidate **all** returned changes. Saves capture the
+coherent result through existing F5/autosave/final-save snapshots and paired redo
+journals, with no ID/format change. Tests inject interruption after journal, world
+and player stages across positive/negative regional seams, then replay all Air
+edits and exact inventory counts after eviction/restart.
+
+The BLOCK profile exactly restores accepted commit`d5c9c17`: position/pivot
+(0.56,-0.52,-0.72), rotation(0,45,0), scale0.40. The extra aspect correction from
+the prior refinement is removed, restoring original FOV/aspect behavior. ARM is
+unchanged. SLENDER/Torch uses position/pivot(0.56,-0.46,-0.72), scale0.40 and
+rotation(0,35,12), with the original model-origin correction(0.5,0.35,0.5). The
+0.06 upward adjustment exposes some shaft; the bottom intentionally remains off
+screen. The **projected** tip is left of the lower shaft; this is verified with
+rendered images and tests, not inferred from an angle's sign. The model/textures,
+Slice19 bob coefficients and shared swing timing/travel remain unchanged.
+
+Native final check: mine a support with one standing torch, one wall torch and
+all five attachments, including signed chunk/region seams. A nearly full inventory
+with space for the support but too few torches must reject everything. Free enough
+space and retry: collect exactly1 support +N torches, preserve unrelated light,
+save/reopen and leave/return across eviction. Rapid edits must settle without
+stale lighting or holes. Compare ordinary blocks to the original equipped pose;
+inspect the modest, left-leaning, partly off-screen torch at FOV70/78/90/100.
+
+### Final matched FOV78 comparison
+
+| Item | Original Slice20 (`d5c9c17`) | Final |
+| --- | --- | --- |
+| Grass block | [Original](images/slice20-final/original-grass-fov78.png) | [Restored](images/slice20-final/updated-grass-fov78.png) |
+| Torch | [Original](images/slice20-final/original-torch-fov78.png) | [Modest lift / left lean](images/slice20-final/updated-torch-fov78.png) |
+
+Captured from the actual original binary built in a clean detached`d5c9c17`
+worktree and the updated application, using two identical disposable copies of
+the same seed42 world/settings,1280×720,FOV78, radius1, matching camera and hotbar.
+The original and restored grass screenshots have **identical pixels over the
+entire image**. The updated torch shows some wooden shaft while its bottom remains
+off screen; visual inspection confirms the tip leans left relative to the shaft.
+FOV70/78/90/100 and16:9,3:2,4:3 projection tests preserve the exact original block
+lens/pose and check the torch's visible shaft, partial crop and leftward screen
+lean. Captures use Xvfb X11/Mesa llvmpipe Vulkan, not a native AMD benchmark.
+
+Local validation:173 client +192 core tests passed; format, all-target Clippy,
+locked workspace build and texture artifact checks passed. Existing wall mounting,
+precise selection, lighting, greedy meshing, scene/worker safeguards and save
+fixtures remain covered. No geometry, texture, ID, format, generator, lighting
+buffer, bob coefficient or shared swing curve changed in this final adjustment.
+[Validation evidence](performance/slice20-final/validation.txt).

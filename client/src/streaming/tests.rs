@@ -1463,3 +1463,106 @@ fn torch_worker_measurements() {
         }
     }
 }
+
+#[test]
+fn support_batches_invalidate_all_chunks_coalesce_and_reject_stale_worker_light() {
+    use voxel_core::inventory::{Inventory, Item, edit_inventory};
+    use voxel_core::{
+        physics::{PhysicsConfig, Player},
+        raycast::Ray,
+    };
+    let mut app = app(1);
+    drain(&mut app);
+    for x in 12..=20 {
+        for y in 18..=26 {
+            for z in 4..=12 {
+                let p = BlockPos([x, y, z]);
+                let b = if x == 12 || x == 20 || y == 18 || y == 26 || z == 4 || z == 12 {
+                    Block::Stone
+                } else {
+                    Block::Air
+                };
+                if app.world().resource::<VoxelWorld>().0.block(p) != b {
+                    edit(&mut app, p, b);
+                }
+            }
+        }
+    }
+    let p = BlockPos([15, 21, 8]);
+    let deltas = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]];
+    edit(&mut app, p, Block::Stone);
+    for d in deltas {
+        edit(
+            &mut app,
+            p.offset(d).unwrap(),
+            Block::torch_on_face(d).unwrap(),
+        );
+    }
+    edit(&mut app, BlockPos([18, 19, 10]), Block::Torch);
+    drain(&mut app);
+    let old = app.world().resource::<StreamState>().lights.clone();
+    let discarded = app.world().resource::<StreamState>().discarded;
+    let tx = blocked_column(&mut app, [1, 0]);
+    let mut inv = Inventory::empty();
+    for n in 0..20 {
+        let batch = edit_inventory(
+            &mut app.world_mut().resource_mut::<VoxelWorld>().0,
+            &mut inv,
+            Ray {
+                origin: [15.5, 21.5, 8.5],
+                direction: [0., -1., 0.],
+                reach: 0.,
+            },
+            false,
+            &Player::new([0., 30., 0.]),
+            &PhysicsConfig::default(),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(batch.changes().len(), 6);
+        for &change in batch.changes() {
+            app.world_mut().resource_mut::<DirtyChunks>().mark(change);
+        }
+        if n < 19 {
+            edit(&mut app, p, Block::Stone);
+            for d in deltas {
+                edit(
+                    &mut app,
+                    p.offset(d).unwrap(),
+                    Block::torch_on_face(d).unwrap(),
+                );
+            }
+        }
+    }
+    assert_eq!(
+        inv.slots()
+            .iter()
+            .flatten()
+            .filter(|s| s.item() == Item::Torch)
+            .map(|s| u32::from(s.count()))
+            .sum::<u32>(),
+        100
+    );
+    app.update();
+    assert_eq!(app.world().resource::<StreamState>().lights, old);
+    tx.send(()).unwrap();
+    wait_finished(&app);
+    app.update();
+    assert_eq!(
+        app.world().resource::<StreamState>().discarded,
+        discarded + 1
+    );
+    assert_eq!(app.world().resource::<StreamState>().lights, old);
+    drain(&mut app);
+    for d in deltas {
+        assert_eq!(
+            app.world()
+                .resource::<VoxelWorld>()
+                .0
+                .block(p.offset(d).unwrap()),
+            Block::Air
+        );
+    }
+    assert_eq!(light_at(&app, BlockPos([16, 21, 8])) >> 4, 8);
+    assert!(app.world().resource::<StreamState>().dirty.is_empty());
+}

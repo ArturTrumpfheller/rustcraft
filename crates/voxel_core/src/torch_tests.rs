@@ -164,6 +164,7 @@ fn placement_uses_clicked_face_and_every_torch_collects_the_same_item() {
         let change = edit_inventory(&mut w, &mut inv, ray, true, &body, &cfg)
             .unwrap()
             .unwrap();
+        let change = change.changes()[0];
         assert_eq!(change.position, support.offset(normal).unwrap());
         assert_eq!(change.after, Block::torch_on_face(normal).unwrap());
         assert_eq!(inv.selected_stack().unwrap().count(), 31);

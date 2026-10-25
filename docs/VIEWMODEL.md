@@ -1,6 +1,6 @@
 # First-person viewmodel (Slice 12, PR #29 visual revision)
 
-> Slice20 refinement supersedes the historical held-cube positioning below.
+> Final Slice20 restores the historical held-cube positioning below.
 > The original empty-arm calibration and Slice19 motion remain in use.
 
 ## Reference and calibration
@@ -152,12 +152,16 @@ Slender (Torch). Future tools/food can add profiles without modifying bob/swing
 math. The original motion step and held/arm swing curves retain their timing,
 travel and angles; equipped poses are independent inputs to that animation.
 
-Blocks are higher/right with slightly reduced scale and more depth, keeping their
-whole silhouette on screen. Slender items use their own proportionate scale and
-origin correction; the torch reuses the unmodified core standing model, showing
-its wooden shaft and tip above/beside the hotbar. There is no moving light source.
-The empty arm profile stays unchanged. Camera X/Y FOV correction and camera-X
-aspect correction preserve equipped screen bounds at FOV70/78/90/100 and16:9,3:2,
-4:3. Animation may deliberately lower or sweep a model during an action; static
-equipped silhouette/hotbar clearance and near-plane safety are regression-tested.
-No per-frame allocations, per-item rendering entity or new texture/material.
+Final Slice20 restores the BLOCK profile exactly to the original`d5c9c17`
+position/pivot(0.56,-0.52,-0.72), rotation(0,45,0), scale0.40. The original camera
+X/Y FOV correction is retained; the later extra camera-X aspect correction is
+removed so ordinary blocks match at every original aspect ratio. ARM is unchanged.
+
+Only SLENDER/Torch is tuned: position/pivot(0.56,-0.46,-0.72), rotation(0,35,12),
+scale0.40, origin(0.5,0.35,0.5). This is a small lift of0.06 from the initial
+Slice20 pose. Its lower shaft remains below the screen; some wood and the bright
+tip remain visible. Projected tip/base tests confirm a left lean at FOV70/78/90/100.
+The whole model need not fit above the hotbar. Original mesh/texture data, arm
+proportions, bob cadence/amplitude and action curves are unchanged. Ordinary
+blocks are compared against the frozen original transform/lens at16:9,3:2,4:3.
+No per-frame allocation, per-item rendering entity or new texture/material.

@@ -564,11 +564,7 @@ fn update(
     // Correct the lens in camera X/Y only, BEFORE each child's rotation. Unlike
     // scaling the model uniformly this keeps its perspective and screen bounds.
     let correction = (p.fov * 0.5).tan() / (70_f32.to_radians() * 0.5).tan();
-    *transform = Transform::from_scale(Vec3::new(
-        correction * (p.aspect_ratio / (16. / 9.)),
-        correction,
-        1.,
-    ));
+    *transform = Transform::from_scale(Vec3::new(correction, correction, 1.));
     let mut pose = model_pose(Presentation::for_item(selected), &models.motion);
     pose.translation = rotation * pose.translation + offset * MODEL_DEPTH_SCALE;
     pose.rotation = rotation * pose.rotation;

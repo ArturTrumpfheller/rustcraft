@@ -20,19 +20,19 @@ impl Presentation {
     }
 }
 pub(super) const BLOCK: Presentation = Presentation {
-    position: Vec3::new(0.73, -0.25, -0.92),
+    position: Vec3::new(0.56, -0.52, -0.72),
     angles: Vec3::new(0., 45., 0.),
-    scale: 0.36,
+    scale: 0.40,
     origin: Vec3::ZERO,
-    pivot: Vec3::new(0.73, -0.25, -0.92),
+    pivot: Vec3::new(0.56, -0.52, -0.72),
     held: true,
 };
 pub(super) const SLENDER: Presentation = Presentation {
-    position: Vec3::new(0.72, -0.18, -0.82),
-    angles: Vec3::new(0., 35., -15.),
-    scale: 0.65,
-    origin: Vec3::new(0.5, 0.34375, 0.5),
-    pivot: Vec3::new(0.72, -0.18, -0.82),
+    position: Vec3::new(0.56, -0.46, -0.72),
+    angles: Vec3::new(0., 35., 12.),
+    scale: 0.40,
+    origin: Vec3::new(0.5, 0.35, 0.5),
+    pivot: Vec3::new(0.56, -0.46, -0.72),
     held: true,
 };
 pub(super) const ARM: Presentation = Presentation {

@@ -79,9 +79,11 @@ pub enum EditError {
     NoPlacementFace,
     Unsupported,
     SupportsTorch,
+    StaleEdit,
 }
 
-/// Empty/no-target clicks return Ok(None); rejected operations leave the world
+/// Single-cell primitive; inventory-backed gameplay uses `inventory::edit_inventory`
+/// for support-removal batches. Empty/no-target clicks return Ok(None); rejected operations leave the world
 /// untouched. The caller supplies the displayed eye ray and authoritative body.
 pub fn edit(
     world: &mut World,

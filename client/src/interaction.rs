@@ -176,7 +176,9 @@ fn edit_and_target(
         ctx.editor.rejection = result.as_ref().err().copied();
         if let Ok(Some(change)) = result {
             ctx.inventory.message = "";
-            ctx.dirty.mark(change);
+            for &changed in change.changes() {
+                ctx.dirty.mark(changed);
+            }
         }
     }
     ctx.editor.target = raycast(&ctx.world.0, ray).filter(|hit| ctx.world.0.ready(hit.position));

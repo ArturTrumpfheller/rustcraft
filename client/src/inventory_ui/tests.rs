@@ -738,3 +738,57 @@ fn torch_real_clicks_select_place_collect_and_save_without_refilling() {
     assert_eq!(inv.slots()[5].unwrap().count(), 31);
     assert_eq!(inv.selected(), 5);
 }
+
+#[test]
+fn mining_support_in_real_schedule_collects_dependent_torches_and_paired_save_reopens_all_air() {
+    let (dir, mut app) = app();
+    let p = BlockPos([0, 5, 7]);
+    for delta in [[0, 1, 0], [1, 0, 0]] {
+        let change = app
+            .world_mut()
+            .resource_mut::<VoxelWorld>()
+            .0
+            .set_block(
+                p.offset(delta).unwrap(),
+                Block::torch_on_face(delta).unwrap(),
+            )
+            .unwrap()
+            .unwrap();
+        app.world_mut()
+            .resource_mut::<crate::scene::DirtyChunks>()
+            .mark(change);
+    }
+    click(&mut app, MouseButton::Left); // Capture only.
+    let stone = total(&app, Item::Stone);
+    let torches = total(&app, Item::Torch);
+    click(&mut app, MouseButton::Left);
+    assert_eq!(total(&app, Item::Stone), stone + 1);
+    assert_eq!(total(&app, Item::Torch), torches + 2);
+    for delta in [[0, 0, 0], [0, 1, 0], [1, 0, 0]] {
+        assert_eq!(
+            app.world()
+                .resource::<VoxelWorld>()
+                .0
+                .block(p.offset(delta).unwrap()),
+            Block::Air
+        );
+    }
+    save(&mut app);
+    drop(app);
+    let (store, mut w, _) = SaveStore::open(&dir.0).unwrap();
+    let inv = store.load_player(&mut w).unwrap();
+    assert_eq!(voxel_core::inventory::Item::Torch.id(), 6);
+    let count = |item| {
+        inv.slots()
+            .iter()
+            .flatten()
+            .filter(|s| s.item() == item)
+            .map(|s| u32::from(s.count()))
+            .sum::<u32>()
+    };
+    assert_eq!(count(Item::Stone), stone + 1);
+    assert_eq!(count(Item::Torch), torches + 2);
+    for delta in [[0, 0, 0], [0, 1, 0], [1, 0, 0]] {
+        assert_eq!(w.block(p.offset(delta).unwrap()), Block::Air);
+    }
+}

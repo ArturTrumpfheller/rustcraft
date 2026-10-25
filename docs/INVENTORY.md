@@ -133,10 +133,10 @@ on that wall, and underside clicks fail. The selected stack loses exactly one on
 a successful world change. Torch cells are occupied for placement, transparent
 for both light channels, noncolliding for walking and targetable only on their shared shaft/tip selection shape.
 Left click collects exactly one; a full inventory rejects mining unchanged.
-Floors and mounting walls cannot be removed until their dependent torches are
-collected. Pending neighbor dependencies require a complete known edit overlay;
-unknown overlays defer the edit. This bounded single-cell policy avoids
-implicit multi-block drops/journal changes. No automatic support-loss drops exist.
+Mining a floor or mounting wall automatically collects that block and every
+attached torch. The complete item set must fit; otherwise the operation fails
+without changing any cell, slot, revision or dirty flag. Unknown authority or
+unloaded dependent chunks defer the whole operation; no dropped items exist.
 
 The icon uses two small quads (shaft/tip) and the same original atlas slot7; the
 held model reuses the world twelve-quad model. One additional retained hand mesh
@@ -149,3 +149,15 @@ items or stacks. Mining any orientation collects one Torch. Support protection
 checks the floor and four neighboring wall attachments, including authoritative
 overlays for evicted/pending torch cells. Unknown overlays defer edits without
 consuming or granting items. The paired save/journal protocol is unchanged.
+
+### Bounded support collection
+
+`edit_inventory` returns `Option<EditBatch>` (one to six `BlockChange`s). Callers
+must invalidate every change. Ordinary placement/mining still returns a one-entry
+batch, while low-level single-cell mutation keeps its prior signature. The core
+plans support plus its five possible dependents in fixed order, preflights all
+positions and aggregate dirty-region capacity, stages every collected stack, then
+revalidates and commits one world revision followed by the staged inventory.
+A full inventory can reject support mining even when the support alone would fit.
+There is no partial collection, item loss or duplicate grant on retry. Existing
+save snapshots/journals capture the resulting world and inventory together.

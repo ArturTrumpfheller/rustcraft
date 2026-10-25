@@ -904,7 +904,7 @@ fn calibrated_walk_and_sprint_cadence_match_at_30_60_144_fps() {
 }
 
 #[test]
-fn equipped_block_and_complete_torch_stay_visible_above_or_beside_hotbar_at_all_requested_fovs() {
+fn restored_blocks_match_slice20_reference_and_torch_is_subtle_left_leaning_at_requested_fovs() {
     let mut app = app();
     capture(&mut app);
     for slot in [0, 5] {
@@ -912,8 +912,8 @@ fn equipped_block_and_complete_torch_stay_visible_above_or_beside_hotbar_at_all_
             .resource_mut::<GameInventory>()
             .contents
             .select(slot);
-        let mut reference: Option<Vec<Vec2>> = None;
         for aspect in [16. / 9., 3. / 2., 4. / 3.] {
+            let mut reference: Option<Vec<Vec2>> = None;
             for degrees in [70f32, 78., 90., 100.] {
                 let w = app.world_mut();
                 let mut q = w.query_filtered::<&mut Projection, With<FirstPersonCamera>>();
@@ -921,6 +921,8 @@ fn equipped_block_and_complete_torch_stay_visible_above_or_beside_hotbar_at_all_
                     p.fov = degrees.to_radians();
                     p.aspect_ratio = aspect;
                 }
+                app.world_mut().resource_mut::<PlayerState>().body.velocity = [0.; 3];
+                app.world_mut().resource_mut::<Models>().motion = Motion::default();
                 frame(&mut app, Duration::ZERO);
                 let w = app.world();
                 let models = w.resource::<Models>();
@@ -935,33 +937,60 @@ fn equipped_block_and_complete_torch_stay_visible_above_or_beside_hotbar_at_all_
                 else {
                     panic!()
                 };
-                let points: Vec<_> = vertices
-                    .iter()
-                    .map(|v| {
-                        let p = matrix.transform_point3(Vec3::from_array(*v));
-                        assert!(p.z < -0.16);
-                        Vec2::new(p.x / aspect, -p.y)
-                            / (-2. * p.z * (degrees.to_radians() * 0.5).tan())
-                            + Vec2::splat(0.5)
-                    })
-                    .collect();
-                for p in &points {
+                let project = |matrix: Mat4, v: [f32; 3]| {
+                    let p = matrix.transform_point3(Vec3::from_array(v));
+                    assert!(p.z < -0.16);
+                    Vec2::new(p.x / aspect, -p.y) / (-2. * p.z * (degrees.to_radians() * 0.5).tan())
+                        + Vec2::splat(0.5)
+                };
+                let points: Vec<_> = vertices.iter().map(|&v| project(matrix, v)).collect();
+                if slot == 0 {
+                    // Frozen accepted d5c9c17 equipped pose/lens. This also
+                    // detects unwanted aspect correction, scale or edge shifts.
+                    let lens =
+                        (degrees.to_radians() * 0.5).tan() / (70f32.to_radians() * 0.5).tan();
+                    let original = Mat4::from_scale(Vec3::new(lens, lens, 1.))
+                        * Transform::from_xyz(0.56 * 3., -0.52 * 3., -0.72 * 3.)
+                            .with_rotation(Quat::from_rotation_y(45f32.to_radians()))
+                            .with_scale(Vec3::splat(0.40 * 3.))
+                            .to_matrix();
                     assert!(
-                        (0.52..0.98).contains(&p.x) && (0.35..0.98).contains(&p.y),
-                        "slot {slot} FOV {degrees}: {p:?}"
+                        vertices
+                            .iter()
+                            .zip(&points)
+                            .all(|(&v, p)| project(original, v).distance(*p) < 1e-6)
                     );
-                }
-                if slot == 5 {
-                    let shaft = &points[..24];
-                    let height = shaft.iter().map(|p| p.y).fold(f32::NEG_INFINITY, f32::max)
-                        - shaft.iter().map(|p| p.y).fold(f32::INFINITY, f32::min);
+                } else {
                     assert!(
-                        height > 0.15,
-                        "shaft must be recognizable, not just the tip"
+                        points.iter().any(|p| p.y > 1.),
+                        "torch must remain partly off screen"
                     );
                     assert!(
-                        points.iter().all(|p| p.y < 0.88 || p.x > 0.80),
-                        "hotbar clearance"
+                        points[..24].iter().any(|p| p.y < 0.98),
+                        "visible wooden shaft, not just tip"
+                    );
+                    let top: Vec<_> = vertices
+                        .iter()
+                        .zip(&points)
+                        .filter(|(v, _)| v[1] == 0.6875)
+                        .map(|(_, p)| *p)
+                        .collect();
+                    let base: Vec<_> = vertices
+                        .iter()
+                        .zip(&points)
+                        .filter(|(v, _)| v[1] == 0.)
+                        .map(|(_, p)| *p)
+                        .collect();
+                    let mean = |points: &[Vec2]| {
+                        points.iter().copied().sum::<Vec2>() / points.len() as f32
+                    };
+                    assert!(
+                        mean(&top).x < mean(&base).x - 0.003,
+                        "screen-space lean must be LEFT"
+                    );
+                    assert!(
+                        (0.75..0.93).contains(&mean(&top).y),
+                        "only a modest upward adjustment"
                     );
                 }
                 if let Some(old) = &reference {

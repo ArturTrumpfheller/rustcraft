@@ -332,3 +332,11 @@ record's existing bounds/ID/order/checksum validation. Otherwise a valid wall
 support that sorts after its torch could make decoding depend on record order.
 This preserves exact old data and permits trusted malformed imports without
 repairing/mutating files. Gameplay placement still validates loaded support.
+
+Final Slice20 support mining is an in-memory transaction of one support and up to
+five dependent torches. All cells/regions and the aggregate8-dirty-region limit
+are validated before commit; inventory must fit every collected item. Touched
+regions receive one revision and the save worker snapshots them with the updated
+inventory through the unchanged paired journal. No block/item IDs, envelopes,
+checksums or recovery stages change. Interrupted-save tests at journal/world/
+player stages replay complete removal and counts over signed region boundaries.

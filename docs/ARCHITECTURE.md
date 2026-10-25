@@ -387,3 +387,16 @@ Orientation affects geometry alone; emission/opacity/channel buffers and worker
 revision/dirty/publication rules are unchanged. The Bevy selection mesh updates
 only on shape changes. Independent viewmodel presentation profiles provide item
 pose/scale/rotation/origin without changing motion or allocating each frame.
+
+### Final Slice20 bounded support-removal transaction
+
+`World::plan_break` captures at most six validated removals in stack-backed
+`EditBatch`. `edit_inventory` stages all collected items, then `commit_break`
+revalidates the same authority/region budget and publishes the whole batch with
+one world/region revision. The commit path is separate from fallible single-cell
+mutation, unioning every geometry/light token without cloning the world. Raw
+`set_block` remains single-cell and conservatively protects attachments; gameplay
+uses the batch API. The Bevy adapter invalidates all returned changes in the same
+input system so background jobs coalesce and retain existing stale-result/atomic
+publication guarantees. Existing coherent save snapshots and paired session redo
+journals persist all regional Air edits plus inventory, without format changes.
