@@ -14,7 +14,8 @@ fn fragment(in: VertexOutput, @builtin(front_facing) front: bool) -> FragmentOut
     var pbr = pbr_input_from_vertex_output(in, front, false);
     // Quantized UV scroll retains the original pixel grid. No mesh updates.
     let scroll = floor(effect.x * 4.0) / 16.0;
-    let uv = fract(in.uv + vec2<f32>(scroll * 0.25, scroll));
+    // Side UV V increases downward, so negative sampling motion flows downward.
+    let uv = fract(in.uv + vec2<f32>(scroll * 0.25, -scroll));
     let texel = textureSampleLevel(water, water_sampler, uv, 0.0);
     let brightness = max(in.color.r * atmosphere.sun.w, in.color.g);
     let color = vec4<f32>(texel.rgb * brightness, in.color.a);
