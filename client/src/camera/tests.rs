@@ -476,7 +476,7 @@ fn floating_origin_keeps_far_camera_and_chunk_transforms_precise_without_changin
         )
         .uvs;
         assert_eq!(uv, &bevy::mesh::VertexAttributeValues::Float32x2(expected));
-        assert_eq!(app.world().resource::<Assets<Image>>().len(), 1);
+        assert_eq!(app.world().resource::<Assets<Image>>().len(), 2);
     }
 }
 #[test]
@@ -996,4 +996,116 @@ fn clock_fixed_schedule_agrees_at_30_60_and_144_render_fps() {
     assert_eq!(results[0], results[1]);
     assert_eq!(results[0], results[2]);
     assert_eq!(results[0].step(), 3600);
+}
+
+#[test]
+fn fluid_gate_inventory_focus_pause_and_resume_have_no_catchup() {
+    let mut app = test_app();
+    capture(&mut app);
+    app.world_mut()
+        .resource_mut::<VoxelWorld>()
+        .0
+        .set_block(
+            voxel_core::BlockPos([0, 20, 0]),
+            voxel_core::Block::WaterSource,
+        )
+        .unwrap();
+    for _ in 0..12 {
+        tick(&mut app);
+    }
+    let processed = app
+        .world()
+        .resource::<VoxelWorld>()
+        .0
+        .fluid_updates()
+        .total_processed;
+    assert!(processed > 0);
+    let mut inv = crate::inventory_ui::GameInventory::default();
+    inv.open = true;
+    app.insert_resource(inv);
+    for _ in 0..12 {
+        tick(&mut app);
+    }
+    assert!(
+        app.world()
+            .resource::<VoxelWorld>()
+            .0
+            .fluid_updates()
+            .total_processed
+            > processed
+    );
+    let window = window(&mut app);
+    app.world_mut().get_mut::<Window>(window).unwrap().focused = false;
+    let before = app
+        .world()
+        .resource::<VoxelWorld>()
+        .0
+        .fluid_updates()
+        .total_processed;
+    for _ in 0..120 {
+        tick(&mut app);
+    }
+    assert_eq!(
+        app.world()
+            .resource::<VoxelWorld>()
+            .0
+            .fluid_updates()
+            .total_processed,
+        before
+    );
+    app.world_mut().get_mut::<Window>(window).unwrap().focused = true;
+    tick(&mut app);
+    assert_eq!(
+        app.world()
+            .resource::<VoxelWorld>()
+            .0
+            .fluid_updates()
+            .total_processed,
+        before
+    );
+    app.world_mut()
+        .resource_mut::<crate::inventory_ui::GameInventory>()
+        .open = false;
+    for _ in 0..120 {
+        tick(&mut app);
+    }
+    assert_eq!(
+        app.world()
+            .resource::<VoxelWorld>()
+            .0
+            .fluid_updates()
+            .total_processed,
+        before
+    );
+}
+
+#[test]
+fn fluid_fixed_schedule_is_independent_of_render_fps() {
+    let mut outcomes = Vec::new();
+    for fps in [30, 60, 144] {
+        let mut app = test_app();
+        capture(&mut app);
+        app.world_mut()
+            .resource_mut::<VoxelWorld>()
+            .0
+            .set_block(
+                voxel_core::BlockPos([0, 20, 0]),
+                voxel_core::Block::WaterSource,
+            )
+            .unwrap();
+        let mut previous = Duration::ZERO;
+        for i in 1..=fps * 10 {
+            let end = Duration::from_secs_f64(f64::from(i) / f64::from(fps));
+            frame(&mut app, end - previous);
+            previous = end;
+        }
+        frame(&mut app, Duration::from_millis(10));
+        let world = &app.world().resource::<VoxelWorld>().0;
+        outcomes.push((
+            voxel_core::persistence::encode(world).unwrap(),
+            world.fluid_updates().total_processed,
+        ));
+    }
+    assert_eq!(outcomes[0], outcomes[1]);
+    assert_eq!(outcomes[0], outcomes[2]);
 }

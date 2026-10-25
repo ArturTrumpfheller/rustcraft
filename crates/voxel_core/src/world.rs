@@ -77,6 +77,7 @@ pub struct StreamIdentity {
 pub struct World {
     pub time: crate::time::WorldTime,
     chunks: BTreeMap<ChunkPos, Chunk>,
+    pub(crate) fluids: crate::fluid::FluidUpdates,
     revision: u64,
     // Transient output dependencies, not persisted and retained across eviction.
     // Geometry plus bounded full-height skylight dependencies advance on edits.
@@ -210,6 +211,9 @@ impl World {
         debug_assert!(self.identity.is_none() && self.in_bounds(p));
         let (cp, lp) = p.split();
         if self.chunks.entry(cp).or_default().set(lp, block) {
+            if block.fluid().is_some() {
+                self.wake_fluid(p);
+            }
             self.revision = self.revision.wrapping_add(1);
         }
     }
@@ -229,6 +233,7 @@ impl World {
             "legacy snapshots must not be evicted"
         );
         self.chunks.retain(|p, _| [p.0[0], p.0[2]] != column);
+        self.fluids.evict(column);
     }
     pub fn save_snapshot(&self) -> Self {
         if self.identity.is_none() {
@@ -236,6 +241,7 @@ impl World {
         }
         Self {
             chunks: BTreeMap::new(),
+            fluids: Default::default(),
             time: self.time,
             revision: self.revision,
             mesh_revisions: BTreeMap::new(),
@@ -408,8 +414,24 @@ impl World {
     }
 
     fn apply_batch(&mut self, batch: EditBatch) {
+        self.apply_changes(batch.changes());
+    }
+
+    pub(crate) fn fluid_region_dirty(&self, p: RegionPos) -> bool {
+        self.regions.get(&p).is_some_and(|r| r.dirty)
+    }
+
+    pub(crate) fn fluid_edit_allowed(&self, p: BlockPos) -> bool {
+        self.regional.is_none()
+            || self
+                .regions
+                .get(&RegionPos::of(p))
+                .is_some_and(|r| r.dirty || self.dirty_regions() < MAX_DIRTY_REGIONS)
+    }
+
+    pub(crate) fn apply_changes(&mut self, changes: &[BlockChange]) {
         let revision = self.revision.wrapping_add(1);
-        for change in batch.changes() {
+        for change in changes {
             let (chunk, local) = change.position.split();
             self.chunks
                 .entry(chunk)
@@ -427,12 +449,35 @@ impl World {
                 Arc::make_mut(&mut self.edits).insert(change.position, change.after);
             }
         }
+        for change in changes {
+            if change.before.fluid().is_some()
+                || change.after.fluid().is_some()
+                || crate::fluid::NEIGHBORS
+                    .iter()
+                    .filter_map(|&d| change.position.offset(d))
+                    .any(|p| self.ready(p) && self.block(p).fluid().is_some())
+            {
+                self.wake_fluid(change.position);
+            }
+        }
         self.revision = revision;
         if self.identity.is_some() {
             let mut affected = BTreeSet::new();
-            for change in batch.changes() {
-                affected.extend(crate::lighting::affected(change.position));
-                affected.extend(change.affected_chunks());
+            for change in changes {
+                if change.before.is_opaque() != change.after.is_opaque()
+                    || change.before.emission() != change.after.emission()
+                {
+                    affected.extend(crate::lighting::affected(change.position));
+                }
+                for dx in -1..=1 {
+                    for dy in -1..=1 {
+                        for dz in -1..=1 {
+                            if let Some(p) = change.position.offset([dx, dy, dz]) {
+                                affected.insert(p.split().0);
+                            }
+                        }
+                    }
+                }
             }
             for p in affected {
                 self.mesh_revisions.insert(p, revision);
@@ -442,9 +487,14 @@ impl World {
 
     /// Trusted import/cache install, not an edit API. Stream workers must apply
     /// the overlay and validate local dependencies before installing this data.
+    pub(crate) fn insert_mesh_chunk(&mut self, position: ChunkPos, chunk: Chunk) {
+        self.chunks.insert(position, chunk);
+    }
+
     pub fn insert_chunk(&mut self, position: ChunkPos, chunk: Chunk) {
         if self.chunks.get(&position) != Some(&chunk) {
             self.chunks.insert(position, chunk);
+            self.wake_installed_fluids(position);
             if self.identity.is_none() {
                 self.revision = self.revision.wrapping_add(1);
             }

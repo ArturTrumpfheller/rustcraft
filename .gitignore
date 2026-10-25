@@ -31,3 +31,7 @@ Thumbs.db
 world.lock
 
 # Keep Cargo.lock under version control for the game application.
+
+# Local benchmark worktrees, captures and Python compiler caches
+/work/
+__pycache__/

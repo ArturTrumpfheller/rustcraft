@@ -121,6 +121,7 @@ struct Diagnostics<'w> {
     inventory: Res<'w, crate::inventory_ui::GameInventory>,
     input: Res<'w, crate::player::ControllerInput>,
     renders: Option<Res<'w, crate::scene::ChunkRenders>>,
+    fluids: Option<Res<'w, crate::player::FluidRuntime>>,
 }
 fn update(
     mut overlay: ResMut<DebugOverlay>,
@@ -182,7 +183,7 @@ fn update(
     overlay.text.clear();
     let _ = writeln!(
         overlay.text,
-        "RUSTCRAFT {} / DEV SLICE 21",
+        "RUSTCRAFT {} / DEV SLICE 22",
         env!("CARGO_PKG_VERSION")
     );
     if let Some(seconds) = overlay.frame_seconds {
@@ -223,7 +224,16 @@ fn update(
         data.world.as_ref().unwrap().0.chunk_count(),
         data.renders.as_ref().map_or(0, |r| r.0.len())
     );
-    let clock = data.world.as_ref().unwrap().0.time;
+    let world = &data.world.as_ref().unwrap().0;
+    let _ = writeln!(
+        overlay.text,
+        "WATER: {} / PENDING: {} / TICK: {} / {:.3} MS",
+        world.water_cells(),
+        world.fluid_updates().pending(),
+        world.fluid_updates().processed,
+        data.fluids.as_ref().map_or(0., |f| f.milliseconds)
+    );
+    let clock = world.time;
     let _ = writeln!(
         overlay.text,
         "DAY: {} / TIME: {:.0} / DAYLIGHT: {:.2}",

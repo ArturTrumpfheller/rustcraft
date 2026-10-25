@@ -217,6 +217,7 @@ fn generator_v2_column_golden_contract_includes_expanded_negative_and_positive_t
                                 Block::TorchWest => 8,
                                 Block::TorchSouth => 9,
                                 Block::TorchNorth => 10,
+                                _ => panic!("frozen generator must not emit fluids"),
                             };
                             hash.update(&[id]);
                         }

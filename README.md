@@ -23,7 +23,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 21**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 22**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -80,6 +80,15 @@ the moon and sparse stars appear at night, and torches retain their light.
 Time changes two shared material uniforms without relighting or remeshing terrain.
 F3 shows day/time/daylight. See [architecture, eight matched screenshots, costs,
 format compatibility and native tests](docs/DAY_NIGHT.md).
+
+## Water foundation (Slice 22)
+
+New worlds receive 32 Water Sources in hotbar slot7. Water falls, spreads up to
+seven blocks, reacts to edits and recedes after source removal. It survives
+regional streaming and journaled saves. A separate translucent animated surface
+uses the existing independent light channels; enter water to slow movement and
+hold Jump to swim upward. Pause/Options/focus freeze flow; inventory continues it.
+See [water architecture, screenshots, measurements and manual tests](docs/WATER.md).
 
 ## Sky and distance fog (Slice 18)
 
@@ -217,7 +226,7 @@ world. Generator v3 and generators v1/v2 for historical saves remain frozen.
 Display names can repeat; internal directory IDs are unique and never renamed.
 See [safe multi-world management](docs/WORLDS.md).
 
-Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, transparency, water, biomes, ore distribution or emitted light from generated blocks. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
+Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, leaf transparency, biomes, ore distribution or emitted light from generated blocks. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
 
 New v4 worlds save **seed + generator version + world identity** in a manifest and all edits in regional overlays, including explicit Air. Unmodified chunks reproduce locally from that identity. Loaded chunks and clean region maps are disposable caches; unsaved region maps remain pinned in RAM until successfully saved. v1/v2 saves remain full snapshots with no seed metadata and never gain generated terrain. The [generation contract](docs/WORLDGEN.md) explains deterministic arithmetic, limits and future extension.
 

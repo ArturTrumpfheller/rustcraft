@@ -16,6 +16,15 @@ pub enum Block {
     TorchWest,
     TorchSouth,
     TorchNorth,
+    WaterSource,
+    Water1,
+    Water2,
+    Water3,
+    Water4,
+    Water5,
+    Water6,
+    Water7,
+    WaterFalling,
 }
 
 impl Block {
@@ -25,13 +34,13 @@ impl Block {
 
     /// Physical collision is independent of rendering, targeting and lighting.
     pub fn is_collidable(self) -> bool {
-        self != Self::Air && !self.is_torch()
+        self != Self::Air && !self.is_torch() && self.fluid().is_none()
     }
     pub fn is_opaque(self) -> bool {
-        self != Self::Air && !self.is_torch()
+        self != Self::Air && !self.is_torch() && self.fluid().is_none()
     }
     pub fn is_cube(self) -> bool {
-        self != Self::Air && !self.is_torch()
+        self != Self::Air && !self.is_torch() && self.fluid().is_none()
     }
     pub fn is_torch(self) -> bool {
         matches!(
@@ -62,7 +71,7 @@ impl Block {
         })
     }
     pub fn is_targetable(self) -> bool {
-        self != Self::Air
+        self != Self::Air && self.fluid().is_none_or(|f| f.is_source())
     }
     pub fn emission(self) -> u8 {
         if self.is_torch() { 14 } else { 0 }
@@ -71,6 +80,7 @@ impl Block {
     pub fn color(self) -> [f32; 4] {
         match self {
             Self::Air => [0.0; 4],
+            b if b.fluid().is_some() => [0.06, 0.25, 0.72, 0.65],
             Self::Grass => [0.18, 0.42, 0.07, 1.0],
             Self::Dirt => [0.28, 0.13, 0.06, 1.0],
             Self::Stone => [0.32, 0.35, 0.38, 1.0],
@@ -81,14 +91,15 @@ impl Block {
             | Self::TorchWest
             | Self::TorchSouth
             | Self::TorchNorth => [1.0, 0.65, 0.12, 1.0],
+            _ => unreachable!("water handled above"),
         }
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub struct BlockPos(pub [i32; 3]);
 
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub struct ChunkPos(pub [i32; 3]);
 
 /// A validated coordinate within a chunk; invalid array indexing is unrepresentable.
@@ -149,17 +160,22 @@ impl ChunkPos {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Chunk {
     blocks: Vec<Block>,
+    water_cells: usize,
 }
 
 impl Default for Chunk {
     fn default() -> Self {
         Self {
             blocks: vec![Block::Air; VOLUME],
+            water_cells: 0,
         }
     }
 }
 
 impl Chunk {
+    pub fn water_cells(&self) -> usize {
+        self.water_cells
+    }
     pub fn get(&self, position: LocalPos) -> Block {
         self.blocks[position.index()]
     }
@@ -169,6 +185,8 @@ impl Chunk {
         if *cell == block {
             return false;
         }
+        self.water_cells -= usize::from(cell.fluid().is_some());
+        self.water_cells += usize::from(block.fluid().is_some());
         *cell = block;
         true
     }

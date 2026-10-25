@@ -1108,7 +1108,7 @@ fn unrelated_regional_edit_survives_accepted_worker_overlay_and_voxel_install() 
 fn assert_textured_residency(app: &mut App) {
     let w = app.world_mut();
     let material = w.resource::<TerrainMaterial>().0.clone();
-    assert_eq!(w.resource::<Assets<Image>>().len(), 1);
+    assert_eq!(w.resource::<Assets<Image>>().len(), 2);
     assert_eq!(
         w.resource::<Assets<crate::terrain_material::TerrainSurface>>()
             .len(),
@@ -1623,4 +1623,80 @@ fn clock_progression_at_all_radii_never_relights_remeshes_or_grows_assets() {
         go(&mut app, [-4, -4]);
         assert_eq!(app.world().resource::<VoxelWorld>().0.time, clock);
     }
+}
+
+#[test]
+fn water_only_jobs_reuse_applied_lighting_and_opaque_assets_then_evict_cleanly() {
+    let mut app = app(1);
+    drain(&mut app);
+    let before_light = app.world().resource::<StreamState>().light_cells;
+    let handles: Vec<_> = app
+        .world()
+        .resource::<ChunkRenders>()
+        .0
+        .iter()
+        .map(|(&p, r)| (p, r.mesh.clone()))
+        .collect();
+    let buffers: Vec<_> = handles
+        .iter()
+        .map(|(_, h)| {
+            app.world()
+                .resource::<Assets<Mesh>>()
+                .get(h)
+                .unwrap()
+                .attribute(Mesh::ATTRIBUTE_POSITION)
+                .unwrap()
+                .clone()
+        })
+        .collect();
+    for block in [
+        Block::WaterSource,
+        Block::Water2,
+        Block::Air,
+        Block::WaterSource,
+    ] {
+        let change = app
+            .world_mut()
+            .resource_mut::<VoxelWorld>()
+            .0
+            .set_block(BlockPos([0, 25, 0]), block)
+            .unwrap()
+            .unwrap();
+        app.world_mut()
+            .resource_mut::<DirtyChunks>()
+            .2
+            .extend(change.affected_chunks());
+        drain(&mut app);
+        assert_eq!(
+            app.world().resource::<StreamState>().light_cells,
+            before_light
+        );
+        for ((p, h), positions) in handles.iter().zip(&buffers) {
+            assert_eq!(&app.world().resource::<ChunkRenders>().0[p].mesh, h);
+            assert_eq!(
+                app.world()
+                    .resource::<Assets<Mesh>>()
+                    .get(h)
+                    .unwrap()
+                    .attribute(Mesh::ATTRIBUTE_POSITION)
+                    .unwrap(),
+                positions
+            );
+        }
+    }
+    let count = app.world().resource::<ChunkRenders>().1.len();
+    assert!(count > 0);
+    let water: Vec<_> = app
+        .world()
+        .resource::<ChunkRenders>()
+        .1
+        .values()
+        .map(|r| r.mesh.clone())
+        .collect();
+    go(&mut app, [3, 0]);
+    assert!(
+        water
+            .iter()
+            .all(|h| app.world().resource::<Assets<Mesh>>().get(h).is_none())
+    );
 }

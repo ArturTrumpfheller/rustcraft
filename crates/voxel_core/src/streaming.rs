@@ -185,7 +185,7 @@ pub fn mesh_snapshot(world: &World, targets: &BTreeSet<ChunkPos>) -> World {
         for y in -1..2 {
             let p = ChunkPos([c[0], y, c[1]]);
             if let Some(chunk) = world.chunk(p) {
-                snapshot.insert_chunk(p, chunk.clone());
+                snapshot.insert_mesh_chunk(p, chunk.clone());
             }
         }
     }
@@ -219,7 +219,7 @@ fn lit_source(
         for y in -1..2 {
             let p = ChunkPos([c[0], y, c[1]]);
             if source.chunk(p).is_none() {
-                source.insert_chunk(p, chunks[(y + 1) as usize].clone());
+                source.insert_mesh_chunk(p, chunks[(y + 1) as usize].clone());
             }
         }
     }
@@ -301,6 +301,42 @@ pub fn remesh_lit(
     let start = Instant::now();
     let (source, generated) = lit_source(generator, snapshot, &edits, targets, cache);
     lit_batch(&source, targets, previous, force, generated, start)
+}
+
+/// Water-only geometry publication reuses exact applied light and skips solid greedy meshing.
+pub fn remesh_water(
+    generator: &Generator,
+    snapshot: World,
+    edits: EditSnapshot,
+    targets: &BTreeSet<ChunkPos>,
+    cache: &mut TerrainCache,
+    previous: &BTreeMap<ChunkPos, crate::lighting::ChunkLight>,
+) -> MeshBatchResult {
+    let start = Instant::now();
+    let (source, generated) = lit_source(generator, snapshot, &edits, targets, cache);
+    let meshes = targets
+        .iter()
+        .map(|&p| {
+            (
+                p,
+                ChunkMesh {
+                    water_only: true,
+                    water: crate::water_mesh::mesh_water_cached(&source, p, &previous[&p]),
+                    ..Default::default()
+                },
+            )
+        })
+        .collect();
+    MeshBatchResult {
+        meshes,
+        lights: BTreeMap::new(),
+        lighting: LightMetrics {
+            generated_columns: generated,
+            ..Default::default()
+        },
+        sampled_border_cells: generated * 3 * 4096,
+        elapsed: start.elapsed(),
+    }
 }
 
 #[cfg(test)]

@@ -231,7 +231,16 @@ impl Batch {
             }
             return;
         }
-        self.rect(p, Vec2::splat(16.), 1., [1.; 4]);
+        self.rect(
+            p,
+            Vec2::splat(16.),
+            1.,
+            if item == Item::WaterSource {
+                [0.1, 0.4, 1., 1.]
+            } else {
+                [1.; 4]
+            },
+        );
         let tile = face_tile(item.build().block(), [0, 0, 1]).unwrap_or(Tile::Stone);
         self.uvs.extend([
             tile.uv([0, 1]),

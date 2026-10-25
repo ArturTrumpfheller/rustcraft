@@ -73,7 +73,7 @@ struct HeldBlock;
 struct Arm;
 #[derive(Resource)]
 struct Models {
-    blocks: [Handle<Mesh>; 6],
+    blocks: [Handle<Mesh>; 7],
     root: Entity,
     block: Entity,
     arm: Entity,
@@ -126,7 +126,16 @@ fn cube(block: Option<Block>) -> Mesh {
         };
         uvs.push(
             block
-                .and_then(|b| face_tile(b, normal))
+                .and_then(|b| {
+                    face_tile(
+                        if b == Block::WaterSource {
+                            Block::Stone
+                        } else {
+                            b
+                        },
+                        normal,
+                    )
+                })
                 .map_or(local.map(f32::from), |t| t.uv(local)),
         );
         let shade = if n[1] > 0. {
@@ -139,7 +148,11 @@ fn cube(block: Option<Block>) -> Mesh {
             0.68
         };
         // Muted constant fill: readable in caves without adding lights/shadows.
-        colors.push([shade * 0.55, shade * 0.55, shade * 0.55, 1.]);
+        colors.push(if block == Some(Block::WaterSource) {
+            [shade * 0.08, shade * 0.3, shade, 1.]
+        } else {
+            [shade * 0.55, shade * 0.55, shade * 0.55, 1.]
+        });
     }
     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
     mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
@@ -276,6 +289,7 @@ fn setup(
         Block::Wood,
         Block::Leaves,
         Block::Torch,
+        Block::WaterSource,
     ]
     .map(|b| meshes.add(cube(Some(b))));
     let root = commands

@@ -23,6 +23,7 @@ pub enum Tile {
 pub fn face_tile(block: Block, normal: [i32; 3]) -> Option<Tile> {
     Some(match block {
         Block::Air => return None,
+        b if b.fluid().is_some() => return None,
         Block::Grass if normal == [0, 1, 0] => Tile::GrassTop,
         Block::Grass if normal == [0, -1, 0] => Tile::Dirt,
         Block::Grass => Tile::GrassSide,
@@ -36,6 +37,7 @@ pub fn face_tile(block: Block, normal: [i32; 3]) -> Option<Tile> {
         | Block::TorchWest
         | Block::TorchSouth
         | Block::TorchNorth => Tile::Torch,
+        _ => unreachable!("water handled above"),
     })
 }
 

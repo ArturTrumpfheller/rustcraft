@@ -95,7 +95,7 @@ fn repeated_boundary_edits_update_neighbors_and_reuse_assets_even_when_empty() {
         );
         edit_cell(&mut app, [16, 1, 1], voxel_core::Block::Stone);
     }
-    assert_eq!(app.world().resource::<Assets<Image>>().len(), 1);
+    assert_eq!(app.world().resource::<Assets<Image>>().len(), 2);
     assert_eq!(app.world().resource::<Assets<TerrainSurface>>().len(), 1);
     assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
     assert_eq!(app.world().resource::<ChunkRenders>().0.len(), 2);
@@ -158,7 +158,7 @@ fn all_materials_share_one_opaque_texture_and_mesh_layout_is_compact() {
         edit_cell(&mut app, [i as i32 * 3, 1, 1], b);
     }
     let world = app.world_mut();
-    assert_eq!(world.resource::<Assets<Image>>().len(), 1);
+    assert_eq!(world.resource::<Assets<Image>>().len(), 2);
     assert_eq!(world.resource::<Assets<TerrainSurface>>().len(), 1);
     let terrain = &world.resource::<TerrainMaterial>().0;
     let material = world
@@ -346,5 +346,37 @@ fn live_fog_radius_changes_update_one_shared_material_without_remeshing() {
             .fog
             .y,
         48.
+    );
+}
+
+#[test]
+fn water_uses_retained_separate_blended_meshes_and_releases_empty_surfaces() {
+    let mut app = terrain_app();
+    let cp = ChunkPos([0; 3]);
+    edit_cell(&mut app, [2, 2, 2], voxel_core::Block::WaterSource);
+    let water = app.world().resource::<ChunkRenders>().1[&cp].mesh.clone();
+    let material = app.world().resource::<TerrainMaterial>().2.clone();
+    assert_eq!(
+        app.world()
+            .resource::<Assets<crate::terrain_material::WaterSurface>>()
+            .get(&material)
+            .unwrap()
+            .base
+            .alpha_mode,
+        AlphaMode::Blend
+    );
+    for _ in 0..20 {
+        edit_cell(&mut app, [3, 2, 2], voxel_core::Block::Water1);
+        assert_eq!(app.world().resource::<ChunkRenders>().1[&cp].mesh, water);
+        edit_cell(&mut app, [3, 2, 2], voxel_core::Block::Air);
+    }
+    edit_cell(&mut app, [2, 2, 2], voxel_core::Block::Air);
+    assert!(app.world().resource::<ChunkRenders>().1.is_empty());
+    assert!(app.world().resource::<Assets<Mesh>>().get(&water).is_none());
+    assert_eq!(
+        app.world()
+            .resource::<Assets<crate::terrain_material::WaterSurface>>()
+            .len(),
+        1
     );
 }

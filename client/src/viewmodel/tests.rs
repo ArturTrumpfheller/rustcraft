@@ -144,7 +144,7 @@ fn overlay_clears_world_depth_and_ui_is_on_the_same_layer_in_front_of_hand() {
         .iter(w)
         .filter(|(_, l)| l.is_some_and(|l| *l == RenderLayers::layer(OVERLAY_LAYER)))
         .count();
-    assert_eq!(count, 9); // arm + block + 4 inventory + 2 crosshair + save HUD
+    assert_eq!(count, 10); // arm + block + 4 inventory + 2 crosshair + save HUD + water tint
 }
 
 #[test]
@@ -158,6 +158,7 @@ fn selection_tracks_numbers_scroll_loaded_inventory_transfers_and_stack_depletio
         (KeyCode::Digit4, Item::Wood),
         (KeyCode::Digit5, Item::Leaves),
         (KeyCode::Digit6, Item::Torch),
+        (KeyCode::Digit7, Item::WaterSource),
     ] {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
@@ -336,7 +337,7 @@ fn repeated_selection_animation_fov_resize_and_rebase_keep_assets_bounded() {
         bytes += m.count_vertices() * 48 + m.indices().unwrap().len() * 4;
     }
     bytes += 24 * 48 + 36 * 4;
-    assert_eq!(bytes, 10368);
+    assert_eq!(bytes, 11664);
     for n in 0..600 {
         app.world_mut()
             .resource_mut::<GameInventory>()

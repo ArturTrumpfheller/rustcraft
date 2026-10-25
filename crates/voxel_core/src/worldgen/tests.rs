@@ -296,6 +296,7 @@ fn local_v3_far_golden_columns_are_order_independent() {
                                 Block::TorchWest => 8,
                                 Block::TorchSouth => 9,
                                 Block::TorchNorth => 10,
+                                _ => panic!("frozen generator must not emit fluids"),
                             }]);
                         }
                     }

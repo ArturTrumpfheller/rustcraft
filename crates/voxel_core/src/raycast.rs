@@ -62,7 +62,7 @@ pub fn raycast(world: &World, ray: Ray) -> Option<RayHit> {
     let mut normal = [0; 3];
     loop {
         let block = world.block(cell);
-        if block.is_cube() {
+        if block.is_cube() || block == crate::Block::WaterSource {
             return Some(RayHit {
                 position: cell,
                 normal,

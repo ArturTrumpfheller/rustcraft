@@ -1,0 +1,6 @@
+scene,water_cells,ticks,updates,tick_p50_us,tick_p95_us,tick_max_us,idle_ns,terrain_meshes,water_meshes,mesh_bytes,mesh_ms
+dry,0,1,0,0.396,0.396,0.396,9,50,0,217496,3.526
+pool,9,3,52,5.379,10.114,10.114,4,50,4,235312,3.346
+waterfall,175,17,890,4.995,28.035,28.035,4,50,4,292608,3.830
+several,397,10,1987,50.545,66.924,66.924,4,50,4,340400,3.735
+boundary,113,8,568,16.501,22.700,22.700,4,50,4,254864,3.227

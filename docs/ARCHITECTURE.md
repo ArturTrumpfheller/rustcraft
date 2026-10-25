@@ -418,3 +418,16 @@ adds the world-relative sun/moon and stable sparse stars. No clock tick queries
 blocks, invalidates light caches or schedules terrain work. Existing stale
 rejection and atomic connected publication are unchanged. See [DAY_NIGHT](DAY_NIGHT.md)
 for equations, compatibility, costs, screenshots and native acceptance.
+
+## Slice 22 water
+
+`voxel_core::fluid` owns the packed one-byte block extension, validated water
+state and bounded event-driven batch relaxation. Sources and flowing levels are
+persisted through the existing regional overlays/journal; generator versions are
+frozen. Chunk install/eviction wakes/prunes only local requests. The client shares
+physics' pause gate, runs water at5 Hz and coalesces water-only mesh dirtiness.
+Water-only streamed work reuses exact applied light, avoiding solid greedy work
+and light floods. Separate retained `WaterMesh`/`WaterSurface` assets implement
+animated alpha-blended surfaces; the original terrain vertex layout is intact.
+See [WATER](WATER.md) for bounds, save compatibility, movement, sorting limits,
+measurements and native acceptance.

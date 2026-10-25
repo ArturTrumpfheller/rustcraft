@@ -357,7 +357,7 @@ fn rebase_scene(
     }
     origin.0 = next;
     if let Some(renders) = renders {
-        for (p, r) in &renders.0 {
+        for (p, r) in renders.0.iter().chain(&renders.1) {
             if let Ok(mut t) = transforms.get_mut(r.entity) {
                 t.translation = Vec3::from_array(std::array::from_fn(|a| {
                     (f64::from(p.0[a]) * 16. - next[a]) as f32

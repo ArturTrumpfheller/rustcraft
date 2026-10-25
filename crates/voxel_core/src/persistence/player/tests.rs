@@ -1,5 +1,6 @@
 use super::*;
 use crate::inventory::{Click, Item};
+use std::{collections::BTreeMap, sync::Arc};
 struct Temp(PathBuf);
 impl Temp {
     fn new() -> Self {
@@ -136,7 +137,7 @@ fn valid_checksums_do_not_bypass_slot_counts_ids_or_selection_validation() {
     let w = crate::streaming::new_large_world(42);
     let root = encode(&w).unwrap();
     let b = player_bytes(Binding::new(&w), &root, &Inventory::starter(), w.time);
-    for (pos, value) in [(64, 9), (65, 7), (67, 0), (67, 65), (65, 0)] {
+    for (pos, value) in [(64, 9), (65, 8), (67, 0), (67, 65), (65, 0)] {
         let mut bad = b.clone();
         bad[pos] = value;
         let crc = checksum(&bad);
@@ -406,4 +407,105 @@ fn clock_validation_rejects_repaired_checksum_invalid_ticks_reserved_and_version
         max,
     );
     assert_eq!(decode_player(&b).unwrap().3, max);
+}
+
+#[test]
+fn regional_water_and_inventory_journal_replay_then_persistent_source_removal() {
+    use crate::{
+        Block, BlockPos, Chunk, ChunkPos, LocalPos, fluid::FluidConfig, regions::RegionPos,
+    };
+    for stage in [
+        SaveStage::SessionPrepared,
+        SaveStage::WorldSaved,
+        SaveStage::PlayerSaved,
+    ] {
+        let t = Temp::new();
+        let (store, mut w, _) =
+            SaveStore::open_with(&t.0, || Ok(crate::streaming::new_large_world(42))).unwrap();
+        let inv = store.load_player(&mut w).unwrap();
+        for cx in [3, 4] {
+            w.install_region(RegionPos([cx / 4, 0]), Arc::new(BTreeMap::new()));
+            for cy in -1..2 {
+                let mut c = Chunk::default();
+                if cy == 0 {
+                    for x in 0..16 {
+                        for z in 0..16 {
+                            c.set(LocalPos::new([x, 0, z]).unwrap(), Block::Stone);
+                        }
+                    }
+                }
+                w.insert_chunk(ChunkPos([cx, cy, 0]), c);
+            }
+        }
+        w.set_block(BlockPos([63, 1, 8]), Block::WaterSource)
+            .unwrap();
+        let mut changes = Vec::new();
+        for _ in 0..200 {
+            w.tick_fluids(FluidConfig::default(), &mut changes);
+            if w.fluid_updates().pending() == 0 {
+                break;
+            }
+        }
+        assert_eq!(w.block(BlockPos([64, 1, 8])), Block::Water1);
+        let expected = w.overlay_snapshot();
+        assert!(
+            store
+                .save_player_with(&w, &inv, true, |s| if s == stage {
+                    Err(io::Error::other("fluid journal interruption"))
+                } else {
+                    Ok(())
+                })
+                .is_err()
+        );
+        drop(store);
+        let (store, mut restored, _) = SaveStore::open(&t.0).unwrap();
+        let got = store.load_player(&mut restored).unwrap();
+        assert_eq!(got.slots(), inv.slots());
+        let id = restored.region_identity().unwrap();
+        for p in [RegionPos([0, 0]), RegionPos([1, 0])] {
+            let edits = store.read_region(id, p).unwrap();
+            assert_eq!(
+                &edits,
+                &expected.regions().find(|(rp, _)| *rp == p).unwrap().1
+            );
+            restored.install_region(p, edits);
+        }
+        // Install exactly persisted authority; no generator is invoked for this fixture.
+        for cx in [3, 4] {
+            for cy in -1..2 {
+                let cp = ChunkPos([cx, cy, 0]);
+                let mut c = w.chunk(cp).unwrap().clone();
+                for (&p, &b) in restored
+                    .overlay_snapshot()
+                    .regions()
+                    .find(|(rp, _)| *rp == RegionPos([cx / 4, 0]))
+                    .unwrap()
+                    .1
+                    .iter()
+                    .filter(|(p, _)| p.split().0 == cp)
+                {
+                    c.set(p.split().1, b);
+                }
+                restored.insert_chunk(cp, c);
+            }
+        }
+        restored
+            .set_block(BlockPos([63, 1, 8]), Block::Air)
+            .unwrap();
+        for _ in 0..200 {
+            restored.tick_fluids(FluidConfig::default(), &mut changes);
+            if restored.fluid_updates().pending() == 0 {
+                break;
+            }
+        }
+        assert_eq!(restored.water_cells(), 0);
+        store.save_player_session(&restored, &got, true).unwrap();
+        drop(store);
+        let (store, mut empty, _) = SaveStore::open(&t.0).unwrap();
+        store.load_player(&mut empty).unwrap();
+        assert_eq!(
+            store.read_region(id, RegionPos([0, 0])).unwrap()[&BlockPos([63, 1, 8])],
+            Block::Air
+        );
+    }
 }

@@ -381,7 +381,7 @@ fn retained_ui_reuses_four_meshes_one_atlas_and_two_materials_across_idle_and_mo
         materials
     );
     assert_eq!(app.world().resource::<Assets<Image>>().len(), image);
-    assert_eq!(image, 1);
+    assert_eq!(image, 2);
     assert_eq!(app.world().resource::<UiAssets>().meshes, handles);
 }
 
@@ -502,7 +502,7 @@ fn moving_a_held_stack_changes_only_its_transform_not_mesh_or_image_assets() {
     }
     assert_eq!(app.world().resource::<UiAssets>().rebuilds, before);
     assert_eq!(app.world().resource::<Assets<Mesh>>().len(), count);
-    assert_eq!(app.world().resource::<Assets<Image>>().len(), 1);
+    assert_eq!(app.world().resource::<Assets<Image>>().len(), 2);
     let cursor = app.world().resource::<UiAssets>().cursor;
     assert_eq!(
         *app.world().get::<Visibility>(cursor).unwrap(),
@@ -559,7 +559,7 @@ fn repeated_real_input_break_place_cycles_conserve_items_and_reuse_render_assets
     }
     save(&mut app);
     assert_eq!(app.world().resource::<Assets<Mesh>>().len(), meshes);
-    assert_eq!(app.world().resource::<Assets<Image>>().len(), 1);
+    assert_eq!(app.world().resource::<Assets<Image>>().len(), 2);
 }
 
 #[test]

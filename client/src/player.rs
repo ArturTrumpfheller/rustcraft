@@ -39,6 +39,8 @@ impl Plugin for PlayerPlugin {
         app.insert_resource(Time::<Fixed>::from_hz(PHYSICS_HZ))
             .init_resource::<PlayerSettings>()
             .init_resource::<PlayerState>()
+            .init_resource::<FluidRuntime>()
+            .init_resource::<crate::scene::DirtyChunks>()
             .init_resource::<ControllerInput>()
             .add_systems(
                 Startup,
@@ -52,7 +54,12 @@ impl Plugin for PlayerPlugin {
             )
             .add_systems(
                 FixedUpdate,
-                (simulate_player, advance_world_time).run_if(crate::session::has_world),
+                (
+                    simulate_fluids.before(simulate_player),
+                    simulate_player,
+                    advance_world_time,
+                )
+                    .run_if(crate::session::has_world),
             );
     }
 }
@@ -184,4 +191,55 @@ fn initialize_player(
     } else {
         *player = safe_spawn(&world.0, &settings.0);
     }
+}
+
+#[derive(Resource)]
+pub(crate) struct FluidRuntime {
+    pub config: voxel_core::fluid::FluidConfig,
+    phase: u8,
+    changes: Vec<voxel_core::BlockChange>,
+    pub milliseconds: f64,
+}
+impl Default for FluidRuntime {
+    fn default() -> Self {
+        Self {
+            config: voxel_core::fluid::FluidConfig::default(),
+            phase: 0,
+            changes: Vec::with_capacity(256),
+            milliseconds: 0.,
+        }
+    }
+}
+fn simulate_fluids(
+    input: Res<ControllerInput>,
+    mut world: ResMut<VoxelWorld>,
+    mut runtime: ResMut<FluidRuntime>,
+    mut dirty: ResMut<crate::scene::DirtyChunks>,
+) {
+    if !input.simulation_active {
+        runtime.phase = 0;
+        return;
+    }
+    runtime.phase += 1;
+    if runtime.phase < 12 {
+        return;
+    }
+    runtime.phase = 0;
+    let start = std::time::Instant::now();
+    let config = runtime.config;
+    world.0.tick_fluids(config, &mut runtime.changes);
+    // All fluid cells transmit exactly the same light as Air. Only geometry
+    // changes; actual solid/torch edits still invalidate independent light fields.
+    for change in &runtime.changes {
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                for dz in -1..=1 {
+                    if let Some(p) = change.position.offset([dx, dy, dz]) {
+                        dirty.2.insert(p.split().0);
+                    }
+                }
+            }
+        }
+    }
+    runtime.milliseconds = start.elapsed().as_secs_f64() * 1000.;
 }

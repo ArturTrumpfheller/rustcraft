@@ -151,7 +151,7 @@ fn edit_and_target(
         displayed_body.crouched = ctx.view.crouched;
         let overlaps_view = matches!(action, EditAction::Place(block) if block.block().is_collidable())
             && raycast(&ctx.world.0, ray)
-                .and_then(|hit| hit.adjacent)
+                .and_then(|hit| voxel_core::interaction::placement_position(&ctx.world.0, hit))
                 .is_some_and(|p| displayed_body.intersects_block(p, &config));
         let result = if overlaps_view {
             Err(EditError::IntersectsPlayer)

@@ -5,6 +5,9 @@ use crate::{CHUNK_SIZE, ChunkPos, LocalPos, World};
 /// Engine-neutral mesh buffers. Vertices are local to the chunk origin.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ChunkMesh {
+    /// A water-only worker result leaves the retained opaque surface untouched.
+    pub water_only: bool,
+    pub water: crate::water_mesh::WaterMesh,
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
     pub uvs: Vec<[f32; 2]>,
@@ -16,13 +19,13 @@ pub struct ChunkMesh {
     pub indices: Vec<u32>,
 }
 
-struct Face {
-    normal: [i32; 3],
-    corners: [[u8; 3]; 4],
+pub(crate) struct Face {
+    pub(crate) normal: [i32; 3],
+    pub(crate) corners: [[u8; 3]; 4],
 }
 
 // Counter-clockwise when viewed from outside the solid block.
-const FACES: [Face; 6] = [
+pub(crate) const FACES: [Face; 6] = [
     Face {
         normal: [1, 0, 0],
         corners: [[1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1]],
@@ -66,7 +69,10 @@ pub fn mesh_chunk_lit(
     position: ChunkPos,
     light: &crate::lighting::Skylight,
 ) -> ChunkMesh {
-    let mut mesh = ChunkMesh::default();
+    let mut mesh = ChunkMesh {
+        water: crate::water_mesh::mesh_water(world, position, light),
+        ..Default::default()
+    };
     let Some(chunk) = world.chunk(position) else {
         return mesh;
     };

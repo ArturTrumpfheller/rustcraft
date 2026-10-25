@@ -18,6 +18,7 @@ pub enum Item {
     Wood,
     Leaves,
     Torch,
+    WaterSource,
 }
 impl Item {
     pub fn id(self) -> u16 {
@@ -28,6 +29,7 @@ impl Item {
             Self::Wood => 4,
             Self::Leaves => 5,
             Self::Torch => 6,
+            Self::WaterSource => 7,
         }
     }
     pub fn from_id(id: u16) -> Option<Self> {
@@ -38,12 +40,14 @@ impl Item {
             4 => Self::Wood,
             5 => Self::Leaves,
             6 => Self::Torch,
+            7 => Self::WaterSource,
             _ => return None,
         })
     }
     pub fn from_block(b: Block) -> Option<Self> {
         Some(match b {
             Block::Air => return None,
+            Block::WaterSource => Self::WaterSource,
             Block::Grass => Self::Grass,
             Block::Dirt => Self::Dirt,
             Block::Stone => Self::Stone,
@@ -54,6 +58,7 @@ impl Item {
             | Block::TorchWest
             | Block::TorchSouth
             | Block::TorchNorth => Self::Torch,
+            _ => return None,
         })
     }
     pub fn build(self) -> BuildBlock {
@@ -64,6 +69,7 @@ impl Item {
             Self::Wood => BuildBlock::Wood,
             Self::Leaves => BuildBlock::Leaves,
             Self::Torch => BuildBlock::Torch,
+            Self::WaterSource => BuildBlock::WaterSource,
         }
     }
 }
@@ -121,6 +127,7 @@ impl Inventory {
             Item::Wood,
             Item::Leaves,
             Item::Torch,
+            Item::WaterSource,
         ]
         .into_iter()
         .enumerate()
@@ -340,8 +347,8 @@ pub fn edit_inventory(
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn total(i: &Inventory) -> [u32; 6] {
-        let mut n = [0; 6];
+    fn total(i: &Inventory) -> [u32; 7] {
+        let mut n = [0; 7];
         for s in i.slots.iter().copied().chain([i.cursor]).flatten() {
             n[s.item.id() as usize - 1] += u32::from(s.count);
         }
@@ -381,7 +388,7 @@ mod tests {
         assert_eq!(i.cursor().unwrap().item(), Item::Wood);
         assert_eq!(i.slots()[0].unwrap().item(), Item::Dirt);
         assert!(i.return_cursor());
-        assert_eq!(total(&i), [0, 5, 0, 3, 0, 0]);
+        assert_eq!(total(&i), [0, 5, 0, 3, 0, 0, 0]);
     }
     #[test]
     fn randomized_clicks_conserve_every_item_and_keep_stack_bounds() {

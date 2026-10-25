@@ -165,6 +165,7 @@ struct SessionAssets {
     meshes: Vec<AssetId<Mesh>>,
     materials: Vec<AssetId<StandardMaterial>>,
     terrain: Vec<AssetId<crate::terrain_material::TerrainSurface>>,
+    water: Vec<AssetId<crate::terrain_material::WaterSurface>>,
     images: Vec<AssetId<Image>>,
 }
 fn install(world: &mut World, loaded: Loaded) {
@@ -183,6 +184,7 @@ fn install(world: &mut World, loaded: Loaded) {
     world.insert_resource(loaded.spawn);
     world.insert_resource(player::PlayerState::default());
     world.insert_resource(player::ControllerInput::default());
+    world.insert_resource(player::FluidRuntime::default());
     world.insert_resource(controls::MovementGestures::default());
     world.insert_resource(scene::RenderOrigin::default());
     world.insert_resource(scene::DirtyChunks::default());
@@ -201,9 +203,18 @@ fn install(world: &mut World, loaded: Loaded) {
         .resource::<Assets<crate::terrain_material::TerrainSurface>>()
         .ids()
         .collect();
+    let water: std::collections::HashSet<_> = world
+        .resource::<Assets<crate::terrain_material::WaterSurface>>()
+        .ids()
+        .collect();
     let images: std::collections::HashSet<_> = world.resource::<Assets<Image>>().ids().collect();
     world.run_schedule(SessionSetup);
     world.insert_resource(SessionAssets {
+        water: world
+            .resource::<Assets<crate::terrain_material::WaterSurface>>()
+            .ids()
+            .filter(|id| !water.contains(id))
+            .collect(),
         meshes: world
             .resource::<Assets<Mesh>>()
             .ids()
@@ -248,6 +259,7 @@ fn cleanup(world: &mut World) {
         .resource::<scene::ChunkRenders>()
         .0
         .values()
+        .chain(world.resource::<scene::ChunkRenders>().1.values())
         .map(|r| r.mesh.id())
         .collect();
     let assets = world.remove_resource::<SessionAssets>().unwrap_or_default();
@@ -266,6 +278,11 @@ fn cleanup(world: &mut World) {
     }
     for id in assets.materials {
         world.resource_mut::<Assets<StandardMaterial>>().remove(id);
+    }
+    for id in assets.water {
+        world
+            .resource_mut::<Assets<crate::terrain_material::WaterSurface>>()
+            .remove(id);
     }
     for id in assets.terrain {
         world

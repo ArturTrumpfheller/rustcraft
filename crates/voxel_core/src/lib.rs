@@ -1,6 +1,7 @@
-//! Engine-independent voxel storage, coordinates and surface generation.
+//! Engine-independent voxel storage, coordinates, fluids and surface generation.
 
 mod chunk;
+pub mod fluid;
 pub mod interaction;
 pub mod inventory;
 pub mod lighting;
@@ -13,6 +14,7 @@ pub mod shape;
 pub mod streaming;
 pub mod texture;
 pub mod time;
+pub mod water_mesh;
 mod world;
 pub mod worldgen;
 

@@ -28,6 +28,34 @@ pub(crate) fn atlas_image() -> Image {
     image
 }
 
+/// Original 16x16 ripple tile, authored algorithmically; MIT OR Apache-2.0.
+#[allow(dead_code)] // Shared module in the historical terrain-only galleries.
+pub(crate) fn water_image() -> Image {
+    let mut pixels = Vec::with_capacity(1024);
+    for y in 0..16 {
+        for x in 0..16 {
+            let ripple = ((x * 3 + y * 5 + (x * y) % 7) % 13) as u8;
+            pixels.extend_from_slice(&[38 + ripple, 91 + ripple * 2, 184 + ripple * 3, 255]);
+        }
+    }
+    let mut image = Image::new(
+        Extent3d {
+            width: 16,
+            height: 16,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        pixels,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+    );
+    image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+        lod_max_clamp: 0.,
+        ..ImageSamplerDescriptor::nearest()
+    });
+    image
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

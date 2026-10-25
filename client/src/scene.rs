@@ -22,23 +22,42 @@ impl Default for VoxelWorld {
 }
 
 #[derive(Resource, Default)]
-pub(crate) struct DirtyChunks(pub BTreeSet<ChunkPos>, pub BTreeSet<ChunkPos>);
+pub(crate) struct DirtyChunks(
+    pub BTreeSet<ChunkPos>,
+    pub BTreeSet<ChunkPos>,
+    pub BTreeSet<ChunkPos>,
+);
 impl DirtyChunks {
     pub fn mark(&mut self, change: voxel_core::BlockChange) {
-        self.0.extend(change.affected_chunks());
-        self.1
-            .extend(voxel_core::lighting::affected(change.position));
+        let relight = change.before.is_opaque() != change.after.is_opaque()
+            || change.before.emission() != change.after.emission();
+        if !relight && (change.before.fluid().is_some() || change.after.fluid().is_some()) {
+            self.2.extend(change.affected_chunks());
+        } else {
+            self.0.extend(change.affected_chunks());
+        }
+        if relight {
+            self.1
+                .extend(voxel_core::lighting::affected(change.position));
+        }
     }
 }
 
 #[derive(Resource, Default)]
-pub(crate) struct ChunkRenders(pub BTreeMap<ChunkPos, ChunkRender>);
+pub(crate) struct ChunkRenders(
+    pub BTreeMap<ChunkPos, ChunkRender>,
+    pub BTreeMap<ChunkPos, ChunkRender>,
+);
 pub(crate) struct ChunkRender {
     pub entity: Entity,
     pub mesh: Handle<Mesh>,
 }
 #[derive(Resource)]
-pub(crate) struct TerrainMaterial(pub Handle<TerrainSurface>, pub Handle<Image>);
+pub(crate) struct TerrainMaterial(
+    pub Handle<TerrainSurface>,
+    pub Handle<Image>,
+    pub Handle<crate::terrain_material::WaterSurface>,
+);
 
 impl Plugin for VoxelScenePlugin {
     fn build(&self, app: &mut App) {
@@ -50,6 +69,7 @@ impl Plugin for VoxelScenePlugin {
         }
         app.init_resource::<Assets<Image>>()
             .init_resource::<Assets<TerrainSurface>>()
+            .init_resource::<Assets<crate::terrain_material::WaterSurface>>()
             .init_resource::<Assets<crate::atmosphere::SkyMaterial>>()
             .init_resource::<RenderOrigin>()
             .init_resource::<DirtyChunks>()
@@ -79,7 +99,11 @@ impl Plugin for VoxelScenePlugin {
             )
             .add_systems(
                 PostUpdate,
-                update_atmosphere.run_if(crate::session::has_world),
+                (
+                    update_atmosphere,
+                    update_underwater.after(crate::camera::ViewSync),
+                )
+                    .run_if(crate::session::has_world),
             );
     }
 }
@@ -109,11 +133,23 @@ pub(crate) fn upsert_stream_mesh(
     meshes: &mut Assets<Mesh>,
     renders: &mut ChunkRenders,
     position: ChunkPos,
-    surface: voxel_core::ChunkMesh,
-    material: &Handle<TerrainSurface>,
+    mut surface: voxel_core::ChunkMesh,
+    material: &TerrainMaterial,
     origin: &RenderOrigin,
 ) {
-    if surface.indices.is_empty() {
+    if surface.water_only || surface.indices.is_empty() {
+        upsert_water(
+            commands,
+            meshes,
+            renders,
+            position,
+            std::mem::take(&mut surface.water),
+            &material.2,
+            origin,
+        );
+        if surface.water_only {
+            return;
+        }
         if let Some(render) = renders.0.remove(&position) {
             commands.entity(render.entity).despawn();
             meshes.remove(&render.mesh);
@@ -129,10 +165,21 @@ pub(crate) fn upsert_chunk(
     meshes: &mut Assets<Mesh>,
     renders: &mut ChunkRenders,
     position: ChunkPos,
-    surface: voxel_core::ChunkMesh,
-    material: &Handle<TerrainSurface>,
+    mut surface: voxel_core::ChunkMesh,
+    material: &TerrainMaterial,
     origin: &RenderOrigin,
 ) {
+    if !surface.water.indices.is_empty() || renders.1.contains_key(&position) {
+        upsert_water(
+            commands,
+            meshes,
+            renders,
+            position,
+            std::mem::take(&mut surface.water),
+            &material.2,
+            origin,
+        );
+    }
     let (mesh, visibility) = convert_mesh(surface);
     if let Some(render) = renders.0.get(&position) {
         *meshes.get_mut(&render.mesh).expect("retained terrain mesh") = mesh;
@@ -148,7 +195,7 @@ pub(crate) fn upsert_chunk(
             crate::session::SessionEntity,
             Name::new(format!("Voxel chunk {:?}", position.0)),
             Mesh3d(handle.clone()),
-            MeshMaterial3d(material.clone()),
+            MeshMaterial3d(material.0.clone()),
             visibility,
             Transform::from_translation(Vec3::from_array(std::array::from_fn(|axis| {
                 (f64::from(position.0[axis]) * CHUNK_SIZE as f64 - origin.0[axis]) as f32
@@ -164,10 +211,12 @@ pub(crate) fn upsert_chunk(
     );
 }
 
+#[allow(clippy::too_many_arguments)] // ECS setup owns both retained material asset stores.
 fn spawn_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<TerrainSurface>>,
+    mut water_materials: ResMut<Assets<crate::terrain_material::WaterSurface>>,
     mut images: ResMut<Assets<Image>>,
     world: Res<VoxelWorld>,
     mut renders: ResMut<ChunkRenders>,
@@ -188,6 +237,22 @@ fn spawn_scene(
             atmosphere: crate::atmosphere::AtmosphereUniform::for_radius(2),
         },
     });
+    let water_texture = images.add(crate::terrain_texture::water_image());
+    let water = water_materials.add(crate::terrain_material::WaterSurface {
+        base: StandardMaterial {
+            alpha_mode: AlphaMode::Blend,
+            unlit: true,
+            cull_mode: None,
+            double_sided: true,
+            ..default()
+        },
+        extension: crate::terrain_material::WaterEffect {
+            texture: water_texture,
+            atmosphere: crate::atmosphere::AtmosphereUniform::for_radius(2),
+            effect: Vec4::ZERO,
+        },
+    });
+    let material = TerrainMaterial(material, atlas, water);
     let initial_targets: BTreeSet<_> = world.0.chunks().map(|(p, _)| p).collect();
     let initial_light = if world.0.identity().is_none() && !initial_targets.is_empty() {
         Some(voxel_core::lighting::Skylight::for_chunks(
@@ -215,7 +280,7 @@ fn spawn_scene(
         );
     }
 
-    commands.insert_resource(TerrainMaterial(material, atlas));
+    commands.insert_resource(material);
     commands.insert_resource(GlobalAmbientLight {
         color: Color::WHITE,
         brightness: 0.0,
@@ -289,27 +354,30 @@ fn rebuild_dirty_chunks(
                         &mut scene.renders,
                         p,
                         m,
-                        &scene.material.0,
+                        &scene.material,
                         &scene.origin,
                     );
                 }
                 dirty.0.clear();
                 dirty.1.clear();
+                dirty.2.clear();
             }
             Ok(_) => {}
             Err(_) => warn!("Legacy lighting worker stopped; retaining dirty meshes for retry"),
         }
     }
-    if legacy.job.is_none() && (!dirty.0.is_empty() || !dirty.1.is_empty()) {
+    if legacy.job.is_none() && (!dirty.0.is_empty() || !dirty.1.is_empty() || !dirty.2.is_empty()) {
         let targets: BTreeSet<_> = dirty
             .0
             .union(&dirty.1)
+            .chain(dirty.2.iter())
             .filter(|p| world.0.chunk(**p).is_some())
             .copied()
             .collect();
         if targets.is_empty() {
             dirty.0.clear();
             dirty.1.clear();
+            dirty.2.clear();
             return;
         }
         let snapshot = world.0.clone();
@@ -398,9 +466,11 @@ impl AtmosphereSettings<'_> {
         )
     }
 }
+#[allow(clippy::too_many_arguments)] // ECS setup includes the lightweight camera tint.
 fn spawn_atmosphere(
     mut commands: Commands,
-    camera: Query<(), With<crate::camera::FirstPersonCamera>>,
+    camera: Query<Entity, With<crate::camera::FirstPersonCamera>>,
+    standard: Option<ResMut<Assets<StandardMaterial>>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<crate::atmosphere::SkyMaterial>>,
     mut terrain: ResMut<Assets<TerrainSurface>>,
@@ -409,6 +479,27 @@ fn spawn_atmosphere(
 ) {
     if camera.is_empty() {
         return;
+    }
+    if let Some(mut standard) = standard {
+        let tint = commands
+            .spawn((
+                crate::session::SessionEntity,
+                UnderwaterTint,
+                Mesh3d(meshes.add(Rectangle::new(2., 2.))),
+                MeshMaterial3d(standard.add(StandardMaterial {
+                    base_color: Color::srgba(0.04, 0.22, 0.65, 0.16),
+                    alpha_mode: AlphaMode::Blend,
+                    unlit: true,
+                    ..default()
+                })),
+                bevy::camera::visibility::RenderLayers::layer(crate::viewmodel::OVERLAY_LAYER),
+                Transform::from_xyz(0., 0., -0.3),
+                Visibility::Hidden,
+            ))
+            .id();
+        if let Ok(camera) = camera.single() {
+            commands.entity(camera).add_child(tint);
+        }
     }
     let params = settings.parameters();
     if let Some(mut m) = terrain.get_mut(&handle.0) {
@@ -426,11 +517,27 @@ fn update_atmosphere(
     sky: Option<Res<crate::atmosphere::SkyAssets>>,
     mut terrain: ResMut<Assets<TerrainSurface>>,
     mut materials: ResMut<Assets<crate::atmosphere::SkyMaterial>>,
+    mut water: ResMut<Assets<crate::terrain_material::WaterSurface>>,
+    renders: Res<ChunkRenders>,
 ) {
     let Some(handle) = handle else {
         return;
     };
     let params = settings.parameters();
+    let animation = settings
+        .world
+        .as_ref()
+        .map_or(0., |w| (w.0.time.units() / 20.) as f32);
+    if !renders.1.is_empty()
+        && water
+            .get(&handle.2)
+            .is_some_and(|m| m.extension.atmosphere != params || m.extension.effect.x != animation)
+        && let Some(mut material) = water.get_mut(&handle.2)
+    {
+        material.extension.atmosphere = params;
+        material.extension.effect.x = animation;
+    }
+
     crate::atmosphere::update_materials(
         params,
         &handle.0,
@@ -438,4 +545,74 @@ fn update_atmosphere(
         &mut terrain,
         &mut materials,
     );
+}
+
+fn upsert_water(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    renders: &mut ChunkRenders,
+    position: ChunkPos,
+    surface: voxel_core::water_mesh::WaterMesh,
+    material: &Handle<crate::terrain_material::WaterSurface>,
+    origin: &RenderOrigin,
+) {
+    if surface.indices.is_empty() {
+        if let Some(r) = renders.1.remove(&position) {
+            commands.entity(r.entity).despawn();
+            meshes.remove(&r.mesh);
+        }
+        return;
+    }
+    let mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, surface.positions)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, surface.normals)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, surface.uvs)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, surface.colors)
+    .with_inserted_indices(Indices::U32(surface.indices));
+    if let Some(r) = renders.1.get(&position) {
+        *meshes.get_mut(&r.mesh).expect("retained water mesh") = mesh;
+        commands.entity(r.entity).remove::<Aabb>();
+        return;
+    }
+    let mesh = meshes.add(mesh);
+    let entity = commands
+        .spawn((
+            crate::session::SessionEntity,
+            Mesh3d(mesh.clone()),
+            MeshMaterial3d(material.clone()),
+            Transform::from_translation(Vec3::from_array(std::array::from_fn(|a| {
+                (f64::from(position.0[a]) * 16. - origin.0[a]) as f32
+            }))),
+        ))
+        .id();
+    renders.1.insert(position, ChunkRender { entity, mesh });
+}
+
+#[derive(Component)]
+struct UnderwaterTint;
+fn update_underwater(
+    world: Res<VoxelWorld>,
+    view: Option<Res<crate::camera::ViewPose>>,
+    camera: Query<&Projection, With<crate::camera::FirstPersonCamera>>,
+    mut tint: Query<(&mut Transform, &mut Visibility), With<UnderwaterTint>>,
+) {
+    let Some(view) = view else {
+        return;
+    };
+    let Ok(Projection::Perspective(p)) = camera.single() else {
+        return;
+    };
+    for (mut t, mut visibility) in &mut tint {
+        let submerged = voxel_core::physics::submerged(&world.0, view.eye);
+        *visibility = if submerged {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        };
+        let h = 0.3 * (p.fov * 0.5).tan();
+        t.scale = Vec3::new(h * p.aspect_ratio * 1.02, h * 1.02, 1.);
+    }
 }
