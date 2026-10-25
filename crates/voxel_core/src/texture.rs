@@ -17,6 +17,7 @@ pub enum Tile {
     Bark,
     EndGrain,
     Leaves,
+    Torch,
 }
 
 pub fn face_tile(block: Block, normal: [i32; 3]) -> Option<Tile> {
@@ -30,6 +31,11 @@ pub fn face_tile(block: Block, normal: [i32; 3]) -> Option<Tile> {
         Block::Wood if normal[1] != 0 => Tile::EndGrain,
         Block::Wood => Tile::Bark,
         Block::Leaves => Tile::Leaves,
+        Block::Torch
+        | Block::TorchEast
+        | Block::TorchWest
+        | Block::TorchSouth
+        | Block::TorchNorth => Tile::Torch,
     })
 }
 

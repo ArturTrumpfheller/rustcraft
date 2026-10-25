@@ -145,7 +145,7 @@ impl Player {
                 for z in (min[2] + CONTACT_EPSILON).floor() as i32
                     ..=(max[2] - CONTACT_EPSILON).floor() as i32
                 {
-                    if world.block(BlockPos([x, y, z])).is_solid() {
+                    if world.block(BlockPos([x, y, z])).is_collidable() {
                         return false;
                     }
                 }
@@ -380,7 +380,7 @@ impl Player {
             for z in first[2]..=last[2] {
                 for x in first[0]..=last[0] {
                     let block = [x, y, z];
-                    if !world.block(BlockPos(block)).is_solid() {
+                    if !world.block(BlockPos(block)).is_collidable() {
                         continue;
                     }
                     let face = f64::from(block[axis]);
@@ -422,7 +422,7 @@ pub fn spawn_position(world: &World, config: &PhysicsConfig, preferred: [f64; 3]
                 }
                 for y in (world_min[1]..world_max[1]).rev() {
                     let ground = world.block(BlockPos([x, y, z]));
-                    if !ground.is_solid() {
+                    if !ground.is_collidable() {
                         continue;
                     }
                     if matches!(ground, crate::Block::Wood | crate::Block::Leaves) {

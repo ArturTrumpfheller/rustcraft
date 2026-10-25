@@ -1314,3 +1314,255 @@ fn settings_radius_changes_reclaim_assets_and_discard_an_inflight_outside_result
         assert_eq!(world.resource::<VoxelWorld>().0.block(p), Block::Air);
     }
 }
+
+#[test]
+fn torch_seam_batches_reject_stale_light_and_retain_other_sources() {
+    let mut app = app(1);
+    drain(&mut app);
+    for x in -4..=4 {
+        for y in 20..=28 {
+            for z in 4..=12 {
+                let p = BlockPos([x, y, z]);
+                let b = if x == -4 || x == 4 || y == 20 || y == 28 || z == 4 || z == 12 {
+                    Block::Stone
+                } else {
+                    Block::Air
+                };
+                if app.world().resource::<VoxelWorld>().0.block(p) != b {
+                    edit(&mut app, p, b);
+                }
+            }
+        }
+    }
+    drain(&mut app);
+    let sample = BlockPos([0, 21, 8]);
+    let a = BlockPos([-1, 21, 8]);
+    let b = BlockPos([2, 21, 8]);
+    assert_eq!(light_at(&app, sample), 0);
+    let previous = app.world().resource::<StreamState>().lights.clone();
+    let before = app.world().resource::<StreamState>().discarded;
+    let tx = blocked_column(&mut app, [1, 0]);
+    for _ in 0..20 {
+        edit(&mut app, a, Block::Torch);
+        edit(&mut app, a, Block::Air);
+    }
+    edit(&mut app, a, Block::Torch);
+    edit(&mut app, b, Block::Torch);
+    app.update();
+    assert_eq!(app.world().resource::<StreamState>().lights, previous);
+    tx.send(()).unwrap();
+    wait_finished(&app);
+    app.update();
+    assert_eq!(app.world().resource::<StreamState>().discarded, before + 1);
+    assert_eq!(app.world().resource::<StreamState>().lights, previous);
+    drain(&mut app);
+    assert_eq!(light_at(&app, sample) >> 4, 13);
+    edit(&mut app, a, Block::Air);
+    drain(&mut app);
+    assert_eq!(light_at(&app, sample) >> 4, 12);
+    // Opaque partition changes are also light dependencies across the seam.
+    for y in 21..28 {
+        for z in 5..12 {
+            edit(&mut app, BlockPos([0, y, z]), Block::Stone);
+        }
+    }
+    drain(&mut app);
+    assert_eq!(light_at(&app, a) >> 4, 0);
+    edit(&mut app, sample, Block::Air);
+    drain(&mut app);
+    assert_eq!(light_at(&app, a) >> 4, 11);
+    edit(&mut app, b, Block::Air);
+    drain(&mut app);
+    assert_eq!(light_at(&app, a) >> 4, 0);
+    assert!(app.world().resource::<StreamState>().dirty.is_empty());
+}
+
+#[test]
+#[ignore = "CPU-only lighting worker measurement; run alone with --ignored --nocapture"]
+fn torch_worker_measurements() {
+    println!(
+        "radius,scene,elapsed_ms,worker_ms,remeshes,jobs,dirty_peak,max_dirty_ms,max_update_ms,light_cache_bytes"
+    );
+    for radius in 1..=3 {
+        let mut app = app(radius);
+        drain(&mut app);
+        for x in -12..=12 {
+            for y in 20..=27 {
+                for z in -6..=6 {
+                    let p = BlockPos([x, y, z]);
+                    let b = if x == -12 || x == 12 || y == 20 || y == 27 || z == -6 || z == 6 {
+                        Block::Stone
+                    } else {
+                        Block::Air
+                    };
+                    if app.world().resource::<VoxelWorld>().0.block(p) != b {
+                        edit(&mut app, p, b);
+                    }
+                }
+            }
+        }
+        drain(&mut app);
+        for scene in ["none", "one", "several", "many", "repeated", "seam"] {
+            let mut points = Vec::new();
+            match scene {
+                "none" => points.push((BlockPos([0, 27, 0]), Block::Wood)),
+                "one" => points.push((BlockPos([2, 21, 0]), Block::Torch)),
+                "several" => {
+                    for x in [0, 4, 6] {
+                        points.push((BlockPos([x, 21, 0]), Block::Torch));
+                    }
+                }
+                "many" => {
+                    for x in (-10..11).step_by(2) {
+                        for z in (-4..5).step_by(2) {
+                            points.push((BlockPos([x, 21, z]), Block::Torch));
+                        }
+                    }
+                }
+                "repeated" => {
+                    for _ in 0..40 {
+                        points.push((BlockPos([2, 21, 0]), Block::Air));
+                        points.push((BlockPos([2, 21, 0]), Block::Torch));
+                    }
+                }
+                "seam" => {
+                    points.push((BlockPos([-1, 21, 0]), Block::Torch));
+                }
+                _ => unreachable!(),
+            }
+            let (before_worker, before_mesh, before_jobs) = {
+                let state = app.world().resource::<StreamState>();
+                (state.worker_time, state.remeshed_chunks, state.completed)
+            };
+            {
+                let mut s = app.world_mut().resource_mut::<StreamState>();
+                s.max_dirty_latency = Duration::ZERO;
+                s.max_update = Duration::ZERO;
+            }
+            let start = Instant::now();
+            for (p, b) in points {
+                if app.world().resource::<VoxelWorld>().0.block(p) != b {
+                    edit(&mut app, p, b);
+                }
+            }
+            app.update();
+            let peak = app.world().resource::<StreamState>().dirty.len();
+            drain(&mut app);
+            let elapsed = start.elapsed();
+            let s = app.world().resource::<StreamState>();
+            let bytes: usize = s.lights.values().map(|c| c.0.len()).sum();
+            println!(
+                "{radius},{scene},{:.3},{:.3},{},{},{peak},{:.3},{:.3},{bytes}",
+                elapsed.as_secs_f64() * 1000.,
+                (s.worker_time - before_worker).as_secs_f64() * 1000.,
+                s.remeshed_chunks - before_mesh,
+                s.completed - before_jobs,
+                s.max_dirty_latency.as_secs_f64() * 1000.,
+                s.max_update.as_secs_f64() * 1000.
+            );
+        }
+    }
+}
+
+#[test]
+fn support_batches_invalidate_all_chunks_coalesce_and_reject_stale_worker_light() {
+    use voxel_core::inventory::{Inventory, Item, edit_inventory};
+    use voxel_core::{
+        physics::{PhysicsConfig, Player},
+        raycast::Ray,
+    };
+    let mut app = app(1);
+    drain(&mut app);
+    for x in 12..=20 {
+        for y in 18..=26 {
+            for z in 4..=12 {
+                let p = BlockPos([x, y, z]);
+                let b = if x == 12 || x == 20 || y == 18 || y == 26 || z == 4 || z == 12 {
+                    Block::Stone
+                } else {
+                    Block::Air
+                };
+                if app.world().resource::<VoxelWorld>().0.block(p) != b {
+                    edit(&mut app, p, b);
+                }
+            }
+        }
+    }
+    let p = BlockPos([15, 21, 8]);
+    let deltas = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]];
+    edit(&mut app, p, Block::Stone);
+    for d in deltas {
+        edit(
+            &mut app,
+            p.offset(d).unwrap(),
+            Block::torch_on_face(d).unwrap(),
+        );
+    }
+    edit(&mut app, BlockPos([18, 19, 10]), Block::Torch);
+    drain(&mut app);
+    let old = app.world().resource::<StreamState>().lights.clone();
+    let discarded = app.world().resource::<StreamState>().discarded;
+    let tx = blocked_column(&mut app, [1, 0]);
+    let mut inv = Inventory::empty();
+    for n in 0..20 {
+        let batch = edit_inventory(
+            &mut app.world_mut().resource_mut::<VoxelWorld>().0,
+            &mut inv,
+            Ray {
+                origin: [15.5, 21.5, 8.5],
+                direction: [0., -1., 0.],
+                reach: 0.,
+            },
+            false,
+            &Player::new([0., 30., 0.]),
+            &PhysicsConfig::default(),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(batch.changes().len(), 6);
+        for &change in batch.changes() {
+            app.world_mut().resource_mut::<DirtyChunks>().mark(change);
+        }
+        if n < 19 {
+            edit(&mut app, p, Block::Stone);
+            for d in deltas {
+                edit(
+                    &mut app,
+                    p.offset(d).unwrap(),
+                    Block::torch_on_face(d).unwrap(),
+                );
+            }
+        }
+    }
+    assert_eq!(
+        inv.slots()
+            .iter()
+            .flatten()
+            .filter(|s| s.item() == Item::Torch)
+            .map(|s| u32::from(s.count()))
+            .sum::<u32>(),
+        100
+    );
+    app.update();
+    assert_eq!(app.world().resource::<StreamState>().lights, old);
+    tx.send(()).unwrap();
+    wait_finished(&app);
+    app.update();
+    assert_eq!(
+        app.world().resource::<StreamState>().discarded,
+        discarded + 1
+    );
+    assert_eq!(app.world().resource::<StreamState>().lights, old);
+    drain(&mut app);
+    for d in deltas {
+        assert_eq!(
+            app.world()
+                .resource::<VoxelWorld>()
+                .0
+                .block(p.offset(d).unwrap()),
+            Block::Air
+        );
+    }
+    assert_eq!(light_at(&app, BlockPos([16, 21, 8])) >> 4, 8);
+    assert!(app.world().resource::<StreamState>().dirty.is_empty());
+}

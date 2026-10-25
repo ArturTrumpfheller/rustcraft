@@ -12,15 +12,15 @@ import struct
 import zlib
 
 ROOT = Path(__file__).resolve().parent.parent / 'assets' / 'terrain'
-NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'bark', 'end_grain', 'leaves']
+NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'bark', 'end_grain', 'leaves', 'torch']
 
 
-def png(width, height, data):
+def png(width, height, data, compression=0):
     def chunk(kind, payload):
         return struct.pack('>I', len(payload)) + kind + payload + struct.pack('>I', zlib.crc32(kind + payload))
     scan = b''.join(b'\0' + data[y * width * 4:(y + 1) * width * 4] for y in range(height))
     return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0))
-            + chunk(b'IDAT', zlib.compress(scan, level=0)) + chunk(b'IEND', b''))
+            + chunk(b'IDAT', zlib.compress(scan, level=compression)) + chunk(b'IEND', b''))
 
 
 def generate():

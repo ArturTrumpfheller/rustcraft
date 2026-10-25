@@ -353,3 +353,50 @@ Euclidean signed block/chunk/local coordinates and constant-time chunk/map lengt
 are the sources. FPS uses valid real frame intervals with a 0.5s EMA; startup displays
 unavailable data explicitly. No render-origin coordinate, save path, world scan,
 new asset per frame, renderer feature or dependency is added.
+
+## Slice 20 block light and non-cube blocks
+
+`Block` separates collision, light opacity, cube geometry, targeting and emission.
+Torch is noncolliding, transparent, targetable and emits14; `is_solid` remains a
+collision compatibility alias. Placement checks Air occupancy separately. Single-
+cell support validation in `World::set_block` rejects removing a torch's floor or mounting wall
+until the torch is collected, keeping the existing inventory/save transaction.
+
+The existing `Skylight` worker field now retains two independent scalar channels.
+Skylight sampling through `level` stays unchanged; `block_level` reports artificial
+light and `combined_level` returns their maximum. Both use the same bounded
+opacity scan/FIFO and captured full-height neighborhood. Exact 18³ cached samples
+pack both nibbles into the original byte, so resident light-cache memory and
+worker publication/dependency rules remain unchanged. Nonzero artificial sources
+allocate one additional temporary byte per domain cell; no-source jobs skip it.
+
+Greedy terrain keys use combined integer brightness plus existing tile/AO keys.
+Twelve-quad torch models share each chunk mesh/material; the tip has full vertex
+brightness. Inventory and hand reuse slot7 without terrain entities or point lights.
+Emission and independent sampling provide an extension point for future sources;
+RGB channels and tinting are intentionally deferred. See TORCHES/LIGHTING.
+
+### Slice20 selection and orientation refinement
+
+The core shared `shape` module supplies static shaft/tip boxes plus an orthonormal
+mount transform. DDA tests those boxes and continues through empty cell space;
+meshing and client outline use the same transform. World block IDs7–10 encode
+four wall mounts and map back to Torch item6. Support validation protects all
+five attachments with authoritative overlay checks for pending neighbors.
+Orientation affects geometry alone; emission/opacity/channel buffers and worker
+revision/dirty/publication rules are unchanged. The Bevy selection mesh updates
+only on shape changes. Independent viewmodel presentation profiles provide item
+pose/scale/rotation/origin without changing motion or allocating each frame.
+
+### Final Slice20 bounded support-removal transaction
+
+`World::plan_break` captures at most six validated removals in stack-backed
+`EditBatch`. `edit_inventory` stages all collected items, then `commit_break`
+revalidates the same authority/region budget and publishes the whole batch with
+one world/region revision. The commit path is separate from fallible single-cell
+mutation, unioning every geometry/light token without cloning the world. Raw
+`set_block` remains single-cell and conservatively protects attachments; gameplay
+uses the batch API. The Bevy adapter invalidates all returned changes in the same
+input system so background jobs coalesce and retain existing stale-result/atomic
+publication guarantees. Existing coherent save snapshots and paired session redo
+journals persist all regional Air edits plus inventory, without format changes.

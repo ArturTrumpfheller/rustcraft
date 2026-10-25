@@ -376,3 +376,174 @@ fn far_start_preparation_reads_saved_region_before_any_physics_or_mesh() {
     assert_eq!(w.cached_regions(), 1);
     assert!(w.chunk(ChunkPos([0, 0, 0])).is_none());
 }
+
+#[test]
+fn torches_survive_region_seams_eviction_reload_and_removal() {
+    let d = Dir::new();
+    let (store, mut w, _) = SaveStore::open_with(&d.0, || Ok(World::regional(identity()))).unwrap();
+    let torches = [BlockPos([-65, 25, -1]), BlockPos([-64, 25, -1])];
+    for p in torches {
+        load_column(&store, &mut w, [p.0[0].div_euclid(16), -1]);
+        w.set_block(p.offset([0, -1, 0]).unwrap(), Block::Stone)
+            .unwrap();
+        w.set_block(p, Block::Torch).unwrap();
+    }
+    let snap = w.save_snapshot();
+    store.save(&snap).unwrap();
+    w.mark_regions_saved(snap.revision());
+    for c in [[-5, -1], [-4, -1]] {
+        w.evict_column(c);
+    }
+    w.retain_regions(&Default::default());
+    assert_eq!(w.cached_regions(), 0);
+    for p in torches {
+        load_column(&store, &mut w, [p.0[0].div_euclid(16), -1]);
+        assert_eq!(w.block(p), Block::Torch);
+    }
+    drop(store);
+    let (store, mut w, _) = SaveStore::open_with(&d.0, || panic!("must reopen")).unwrap();
+    for p in torches {
+        load_column(&store, &mut w, [p.0[0].div_euclid(16), -1]);
+        assert_eq!(w.block(p), Block::Torch);
+        w.set_block(p, Block::Air).unwrap();
+    }
+    store.save(&w).unwrap();
+    drop(store);
+    let (store, mut w, _) = SaveStore::open_with(&d.0, || panic!("must reopen")).unwrap();
+    for p in torches {
+        load_column(&store, &mut w, [p.0[0].div_euclid(16), -1]);
+        assert_eq!(w.block(p), Block::Air);
+    }
+}
+
+#[test]
+fn wall_mounts_survive_signed_region_seams_eviction_reload_and_protect_pending_support() {
+    let d = Dir::new();
+    let (store, mut w, _) = SaveStore::open_with(&d.0, || Ok(World::regional(identity()))).unwrap();
+    let cases = [
+        (BlockPos([64, 25, 2]), Block::TorchEast),
+        (BlockPos([-65, 25, 2]), Block::TorchWest),
+        (BlockPos([2, 25, 64]), Block::TorchSouth),
+        (BlockPos([2, 25, -65]), Block::TorchNorth),
+    ];
+    for (p, b) in cases {
+        let s = p.offset(b.torch_support().unwrap()).unwrap();
+        for pos in [p, s] {
+            load_column(
+                &store,
+                &mut w,
+                [pos.0[0].div_euclid(16), pos.0[2].div_euclid(16)],
+            );
+        }
+        w.set_block(s, Block::Stone).unwrap();
+        w.set_block(p, b).unwrap();
+        w.evict_column([p.0[0].div_euclid(16), p.0[2].div_euclid(16)]);
+        assert_eq!(
+            w.set_block(s, Block::Air),
+            Err(crate::interaction::EditError::SupportsTorch)
+        );
+    }
+    store.save(&w).unwrap();
+    drop(store);
+    let (store, mut w, _) =
+        SaveStore::open_with(&d.0, || panic!("must load existing world")).unwrap();
+    for (p, b) in cases {
+        let c = [p.0[0].div_euclid(16), p.0[2].div_euclid(16)];
+        load_column(&store, &mut w, c);
+        assert_eq!(w.block(p), b);
+        w.evict_column(c);
+        w.retain_regions(&Default::default());
+        load_column(&store, &mut w, c);
+        assert_eq!(w.block(p), b);
+    }
+}
+
+#[test]
+fn unknown_pending_support_dependencies_defer_edits_until_overlay_is_known() {
+    let d = Dir::new();
+    let (store, mut w, _) = SaveStore::open_with(&d.0, || Ok(World::regional(identity()))).unwrap();
+    store.prepare_regional_column(&mut w, [0, 0]).unwrap();
+    streaming::prepare_column(&mut w, [0, 0]).unwrap();
+    let p = BlockPos([0, -15, 0]);
+    let revision = w.revision();
+    assert_eq!(
+        w.set_block(p, Block::Air),
+        Err(crate::interaction::EditError::NotLoaded)
+    );
+    assert_eq!(w.revision(), revision);
+    for c in [[-1, 0], [0, -1]] {
+        store.prepare_regional_column(&mut w, c).unwrap();
+    }
+    assert!(w.set_block(p, Block::Air).unwrap().is_some());
+}
+
+#[test]
+fn support_batch_and_inventory_survive_signed_region_eviction_and_interrupted_session_saves() {
+    use crate::{
+        inventory::{Inventory, Item},
+        support_tests::{count, mine},
+    };
+    let directions = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]];
+    for p in [BlockPos([63, 25, 63]), BlockPos([-64, 25, -64])] {
+        for fault in [
+            SaveStage::SessionPrepared,
+            SaveStage::WorldSaved,
+            SaveStage::PlayerSaved,
+        ] {
+            let d = Dir::new();
+            let (store, mut w, _) =
+                SaveStore::open_with(&d.0, || Ok(World::regional(identity()))).unwrap();
+            store.load_player(&mut w).unwrap();
+            let mut inv = Inventory::empty();
+            let center = [p.0[0].div_euclid(16), p.0[2].div_euclid(16)];
+            for x in center[0] - 1..=center[0] + 1 {
+                for z in center[1] - 1..=center[1] + 1 {
+                    load_column(&store, &mut w, [x, z]);
+                }
+            }
+            w.set_block(p, Block::Stone).unwrap();
+            for delta in directions {
+                w.set_block(
+                    p.offset(delta).unwrap(),
+                    Block::torch_on_face(delta).unwrap(),
+                )
+                .unwrap();
+            }
+            store.save_player_session(&w, &inv, true).unwrap();
+            w.mark_regions_saved(w.revision());
+            let batch = mine(&mut w, &mut inv, p).unwrap().unwrap();
+            assert_eq!(batch.changes().len(), 6);
+            for x in center[0] - 1..=center[0] + 1 {
+                for z in center[1] - 1..=center[1] + 1 {
+                    w.evict_column([x, z]);
+                }
+            }
+            w.retain_regions(&Default::default());
+            assert_eq!(w.dirty_regions(), 3);
+            assert!(
+                store
+                    .save_player_with(&w, &inv, true, |stage| if stage == fault {
+                        Err(io::Error::other("injected support-batch save interruption"))
+                    } else {
+                        Ok(())
+                    })
+                    .is_err()
+            );
+            drop(store);
+            let (store, mut got, _) =
+                SaveStore::open_with(&d.0, || panic!("must replay existing session")).unwrap();
+            let items = store.load_player(&mut got).unwrap();
+            assert_eq!(count(&items, Item::Stone), 1);
+            assert_eq!(count(&items, Item::Torch), 5);
+            for x in center[0] - 1..=center[0] + 1 {
+                for z in center[1] - 1..=center[1] + 1 {
+                    load_column(&store, &mut got, [x, z]);
+                }
+            }
+            for change in batch.changes() {
+                assert_eq!(got.block(change.position), Block::Air);
+            }
+            assert!(!d.0.join("session.pending").exists());
+        }
+    }
+}

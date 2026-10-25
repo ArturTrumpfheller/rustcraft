@@ -291,6 +291,11 @@ fn local_v3_far_golden_columns_are_order_independent() {
                                 Block::Stone => 3,
                                 Block::Wood => 4,
                                 Block::Leaves => 5,
+                                Block::Torch => 6,
+                                Block::TorchEast => 7,
+                                Block::TorchWest => 8,
+                                Block::TorchSouth => 9,
+                                Block::TorchNorth => 10,
                             }]);
                         }
                     }

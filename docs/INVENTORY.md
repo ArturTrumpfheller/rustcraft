@@ -12,12 +12,12 @@ its UI are original RustCraft code/art, MIT OR Apache-2.0.
 ## Model and controls
 
 `voxel_core::inventory` owns **nine hotbar + 27 main slots** and a temporary held
-cursor stack, each stack capped at 64. Five explicit item IDs map to the existing
-Grass/Dirt/Stone/Wood/Leaves blocks. Private stack fields/validated constructors
+cursor stack, each stack capped at 64. Six explicit item IDs map to
+Grass/Dirt/Stone/Wood/Leaves/Torch (IDs 1–6). Private stack fields/validated constructors
 prevent invalid counts; inventory operations use no Bevy or filesystem types.
 
-Starter: Grass/Dirt/Stone 64 each, Wood/Leaves 32 each in slots 1–5, all other slots
-empty. It is granted once per world's player initialization, not per restart.
+Starter: Grass/Dirt/Stone 64 each, Wood/Leaves/Torch 32 each in slots 1–6,
+all other slots empty. Existing initialized inventories are never refilled. It is granted once per world's player initialization, not per restart.
 Mining returns the corresponding item (Grass remains Grass); a full inventory
 rejects mining atomically. There are no world drops, crafting, armor, offhand,
 mouse dragging or automatic pickup entities yet.
@@ -125,3 +125,39 @@ lock. Creating another world grants only that world's initial starter; switching
 back loads the prior slots/selection/held cursor through the existing session
 barrier. Legacy import preserves whole bundles and their immutable player/world
 identity; it does not refill or remap inventories. See [WORLDS](WORLDS.md).
+
+## Slice 20 torches
+
+Slot6 of a fresh starter holds 32 torches (stable item/block ID6). Right click on top places on a loaded solid floor; horizontal face clicks mount
+on that wall, and underside clicks fail. The selected stack loses exactly one only after
+a successful world change. Torch cells are occupied for placement, transparent
+for both light channels, noncolliding for walking and targetable only on their shared shaft/tip selection shape.
+Left click collects exactly one; a full inventory rejects mining unchanged.
+Mining a floor or mounting wall automatically collects that block and every
+attached torch. The complete item set must fit; otherwise the operation fails
+without changing any cell, slot, revision or dirty flag. Unknown authority or
+unloaded dependent chunks defer the whole operation; no dropped items exist.
+
+The icon uses two small quads (shaft/tip) and the same original atlas slot7; the
+held model reuses the world twelve-quad model. One additional retained hand mesh
+adds 2,592 logical bytes (six block models plus arm total10,368 bytes). No held
+light emission. See [save extension](SAVE_FORMAT.md#slice-20-additive-material-registry-extension)
+and [native testing](TORCHES.md).
+
+Wall block IDs7–10 are orientations of Torch item6, not additional inventory
+items or stacks. Mining any orientation collects one Torch. Support protection
+checks the floor and four neighboring wall attachments, including authoritative
+overlays for evicted/pending torch cells. Unknown overlays defer edits without
+consuming or granting items. The paired save/journal protocol is unchanged.
+
+### Bounded support collection
+
+`edit_inventory` returns `Option<EditBatch>` (one to six `BlockChange`s). Callers
+must invalidate every change. Ordinary placement/mining still returns a one-entry
+batch, while low-level single-cell mutation keeps its prior signature. The core
+plans support plus its five possible dependents in fixed order, preflights all
+positions and aggregate dirty-region capacity, stages every collected stack, then
+revalidates and commits one world revision followed by the staged inventory.
+A full inventory can reject support mining even when the support alone would fit.
+There is no partial collection, item loss or duplicate grant on retry. Existing
+save snapshots/journals capture the resulting world and inventory together.

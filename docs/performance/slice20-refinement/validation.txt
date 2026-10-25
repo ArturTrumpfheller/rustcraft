@@ -1,0 +1,28 @@
+Slice20 targeting/wall/viewmodel refinement — 2026-10-25
+Base: d5c9c171327f611d4e5a634cad4015682390d4b0 (previous PR37 head)
+Rust1.99.1 / Bevy0.20.0 / Linux x86-64
+
+PASS cargo fmt --all -- --check
+PASS cargo clippy --locked --workspace --all-targets -- -D warnings
+PASS cargo test --locked --workspace
+  rustcraft: 171 passed, 0 failed, 2 ignored (explicit timing tests)
+  voxel_core: 186 passed, 0 failed; doctests: 0
+PASS cargo build --locked --workspace
+PASS python3 tools/generate_textures.py --check
+PASS cargo build --locked -p rustcraft --example lighting_gallery
+PASS python3 -m py_compile tools/benchmark_lighting.py tools/capture_lighting.py
+PASS git diff --check
+PASS 59 dedicated persistence tests, including old fixtures/corruption/recovery,
+     standing-ID compatibility, orientation snapshots and signed regional seams.
+PASS all requested FOV70/78/90/100 and16:9,3:2,4:3 equipped-pose bounds tests.
+PASS orientation-only worker-core edit: identical light cache, one geometry remesh.
+PASS isolated offline release comparison against previous Slice20 head (CSVs).
+
+Five production terrain/selection gallery captures, all four wall orientations;
+actual application held Torch/Block comparison at1280x720,FOV78 with hotbar.
+Cloud adapter: llvmpipe (LLVM19.1.7), Mesa25.0.7, Vulkan, Xvfb X11.
+Normal save and application quit completed in the isolated graphical fixture.
+No new dependencies/features/textures; original quad counts/light-buffer sizes.
+The owner accepted original Slice20 on native Void. This refinement still needs
+native Void/Windows desktop testing; no new physical GPU/frame-time claim.
+Read current Ubuntu/Windows GitHub Actions outcome from PR37.

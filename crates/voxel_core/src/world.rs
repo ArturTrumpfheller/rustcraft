@@ -22,6 +22,29 @@ pub struct BlockChange {
     pub after: Block,
 }
 
+/// Bounded authoritative result of one player action: support plus five torches.
+/// Fixed stack storage; all changed positions must be invalidated by the caller.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct EditBatch {
+    changes: [BlockChange; 6],
+    len: u8,
+}
+impl EditBatch {
+    pub fn single(change: BlockChange) -> Self {
+        Self {
+            changes: [change; 6],
+            len: 1,
+        }
+    }
+    pub fn changes(&self) -> &[BlockChange] {
+        &self.changes[..usize::from(self.len)]
+    }
+    fn push(&mut self, change: BlockChange) {
+        self.changes[usize::from(self.len)] = change;
+        self.len += 1;
+    }
+}
+
 impl BlockChange {
     /// One-cell geometry/AO footprint, including edge- and corner-sharing chunks.
     /// An interior edit affects one chunk; an edge/corner edit at most eight.
@@ -180,6 +203,15 @@ impl World {
         );
         Arc::clone(&self.edits)
     }
+    /// Validated full-snapshot import. Gameplay support checks must not depend
+    /// on record order (a wall support can sort after its torch).
+    pub(crate) fn restore_snapshot_block(&mut self, p: BlockPos, block: Block) {
+        debug_assert!(self.identity.is_none() && self.in_bounds(p));
+        let (cp, lp) = p.split();
+        if self.chunks.entry(cp).or_default().set(lp, block) {
+            self.revision = self.revision.wrapping_add(1);
+        }
+    }
     pub(crate) fn restore_edit(&mut self, p: BlockPos, block: Block) {
         // Validated persistence import; does not materialize chunks or dirty state.
         Arc::make_mut(&mut self.edits).insert(p, block);
@@ -244,6 +276,29 @@ impl World {
         if before == block {
             return Ok(None);
         }
+        // Single-cell support policy: reject support removal until its torch
+        // is collected. No implicit multi-cell edits or unjournaled item drops.
+        if let Some(offset) = block.torch_support() {
+            let support = position.offset(offset).ok_or(EditError::Unsupported)?;
+            if !self.in_bounds(support) {
+                return Err(EditError::Unsupported);
+            }
+            if !self.ready(support) {
+                return Err(EditError::NotLoaded);
+            }
+            if !self.block(support).is_collidable() {
+                return Err(EditError::Unsupported);
+            }
+        }
+        if before.is_collidable()
+            && !block.is_collidable()
+            && self
+                .dependent_torches(position)?
+                .iter()
+                .any(Option::is_some)
+        {
+            return Err(EditError::SupportsTorch);
+        }
         if self.regional.is_some() {
             let r = self
                 .regions
@@ -253,31 +308,134 @@ impl World {
                 return Err(EditError::SaveRequired);
             }
         }
-        let (chunk, local) = position.split();
-        self.chunks.entry(chunk).or_default().set(local, block);
-        if self.regional.is_some() {
-            let r = self.regions.get_mut(&RegionPos::of(position)).unwrap();
-            Arc::make_mut(&mut r.edits).insert(position, block);
-            r.dirty = true;
-            r.revision = self.revision.wrapping_add(1);
-        } else if self.identity.is_some() {
-            Arc::make_mut(&mut self.edits).insert(position, block);
-        }
-        self.revision = self.revision.wrapping_add(1);
         let change = BlockChange {
             position,
             before,
             after: block,
         };
-        if self.identity.is_some() {
-            for p in crate::lighting::affected(position)
-                .union(&change.affected_chunks())
-                .copied()
-            {
-                self.mesh_revisions.insert(p, self.revision);
+        self.apply_batch(EditBatch::single(change));
+        Ok(Some(change))
+    }
+
+    /// Inspect at most five attachments. Known overlays can prove pending
+    /// neighbors contain no torch; an actual dependent must be loaded to edit.
+    fn dependent_torches(&self, position: BlockPos) -> Result<[Option<BlockPos>; 5], EditError> {
+        let mut result = [None; 5];
+        let mut count = 0;
+        for delta in [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]] {
+            let Some(neighbor) = position.offset(delta).filter(|p| self.in_bounds(*p)) else {
+                continue;
+            };
+            let candidate = if self.ready(neighbor) {
+                self.block(neighbor)
+            } else if self.regional.is_some() {
+                // Frozen generators contain no torches; full overlays are authoritative.
+                self.regions
+                    .get(&RegionPos::of(neighbor))
+                    .ok_or(EditError::NotLoaded)?
+                    .edits
+                    .get(&neighbor)
+                    .copied()
+                    .unwrap_or(Block::Air)
+            } else {
+                self.edits.get(&neighbor).copied().unwrap_or(Block::Air)
+            };
+            if candidate.torch_support() == Some(delta.map(|v| -v)) {
+                result[count] = Some(neighbor);
+                count += 1;
             }
         }
-        Ok(Some(change))
+        Ok(result)
+    }
+
+    /// Preflight a deterministic bounded removal. No authoritative state changes.
+    pub(crate) fn plan_break(&self, position: BlockPos) -> Result<Option<EditBatch>, EditError> {
+        if !self.in_bounds(position) {
+            return Err(EditError::OutOfBounds);
+        }
+        if !self.ready(position) {
+            return Err(EditError::NotLoaded);
+        }
+        let before = self.block(position);
+        if before == Block::Air {
+            return Ok(None);
+        }
+        let mut batch = EditBatch::single(BlockChange {
+            position,
+            before,
+            after: Block::Air,
+        });
+        if before.is_collidable() {
+            for p in self.dependent_torches(position)?.into_iter().flatten() {
+                if !self.ready(p) {
+                    return Err(EditError::NotLoaded);
+                }
+                batch.push(BlockChange {
+                    position: p,
+                    before: self.block(p),
+                    after: Block::Air,
+                });
+            }
+        }
+        if self.regional.is_some() {
+            let mut touched = [None; 6];
+            let mut clean = 0;
+            for change in batch.changes() {
+                let p = RegionPos::of(change.position);
+                let region = self.regions.get(&p).ok_or(EditError::NotLoaded)?;
+                if !region.dirty && !touched.contains(&Some(p)) {
+                    touched[clean] = Some(p);
+                    clean += 1;
+                }
+            }
+            if self.dirty_regions() + clean > MAX_DIRTY_REGIONS {
+                return Err(EditError::SaveRequired);
+            }
+        }
+        Ok(Some(batch))
+    }
+
+    /// Revalidate before a no-fail commit. No callbacks, disk I/O or independent
+    /// set_block commits occur between validation and publishing the whole batch.
+    pub(crate) fn commit_break(&mut self, batch: EditBatch) -> Result<(), EditError> {
+        if self.plan_break(batch.changes()[0].position)? != Some(batch) {
+            return Err(EditError::StaleEdit);
+        }
+        self.apply_batch(batch);
+        Ok(())
+    }
+
+    fn apply_batch(&mut self, batch: EditBatch) {
+        let revision = self.revision.wrapping_add(1);
+        for change in batch.changes() {
+            let (chunk, local) = change.position.split();
+            self.chunks
+                .entry(chunk)
+                .or_default()
+                .set(local, change.after);
+            if self.regional.is_some() {
+                let r = self
+                    .regions
+                    .get_mut(&RegionPos::of(change.position))
+                    .expect("validated region");
+                Arc::make_mut(&mut r.edits).insert(change.position, change.after);
+                r.dirty = true;
+                r.revision = revision;
+            } else if self.identity.is_some() {
+                Arc::make_mut(&mut self.edits).insert(change.position, change.after);
+            }
+        }
+        self.revision = revision;
+        if self.identity.is_some() {
+            let mut affected = BTreeSet::new();
+            for change in batch.changes() {
+                affected.extend(crate::lighting::affected(change.position));
+                affected.extend(change.affected_chunks());
+            }
+            for p in affected {
+                self.mesh_revisions.insert(p, revision);
+            }
+        }
     }
 
     /// Trusted import/cache install, not an edit API. Stream workers must apply

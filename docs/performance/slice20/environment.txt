@@ -1,0 +1,4 @@
+Linux-6.18.55-x86_64-with-glibc2.41
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+Baseline 9eec01272d463c6eaa350bcbf3345d24eba6b53f
+CPU-only; no GPU/frame-time claim.

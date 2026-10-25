@@ -49,7 +49,12 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 - [ ] Further coordinate expansion and opt-in legacy migration
 - [ ] More interesting terrain and caves
 - [x] Initial voxel skylight and bounded light/mesh updates
-- [ ] Emitted block light / torches
+- [x] Emitted block light / persistent standing/wall torches, bounded worker updates and matched fixtures
+- [x] Slice20 original lighting/rendering/persistence/performance accepted on native Void Linux
+- [x] Precise torch selection, four wall mounts and item-presentation profiles
+- [x] Slice20 precise selection/wall mounting/lighting/saving refinement accepted on native Void
+- [x] Atomic inventory-backed support removal with all dependent torches; original block pose restored
+- [ ] Final Slice20 support-removal/held-pose native acceptance — see [checklist](TORCHES.md)
 - [x] Initial fixed inventory/item model
 - [ ] General reusable item/block registry, tools and crafting
 - [x] Initial profiling, matched baseline comparisons and explicit active/dirty memory budgets

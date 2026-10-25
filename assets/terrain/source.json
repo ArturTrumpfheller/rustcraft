@@ -207,6 +207,35 @@
         "2344322112222343",
         "2233221122222232"
       ]
+    },
+    {
+      "name": "torch",
+      "palette": {
+        "a": "#ff9d27",
+        "b": "#ffe68a",
+        "c": "#ffd34d",
+        "d": "#aa6a30",
+        "e": "#704422",
+        "f": "#c58b46"
+      },
+      "rows": [
+        "aaaabbbccbbbaaaa",
+        "aacccbbbbbbcccaa",
+        "aaacccbbbbcccaaa",
+        "aaaaccccccccaaaa",
+        "deffddedffddeffd",
+        "eddfdeeddfdeddfd",
+        "deffddedffddeffd",
+        "deffddedffddeffd",
+        "eddfdeeddfdeddfd",
+        "deffddedffddeffd",
+        "deffddedffddeffd",
+        "eddfdeeddfdeddfd",
+        "deffddedffddeffd",
+        "deffddedffddeffd",
+        "eddfdeeddfdeddfd",
+        "deffddedffddeffd"
+      ]
     }
   ]
 }

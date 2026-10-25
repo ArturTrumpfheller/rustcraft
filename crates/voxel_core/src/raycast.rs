@@ -18,7 +18,10 @@ pub struct Ray {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RayHit {
     pub position: BlockPos,
+    /// Grid face used for adjacent-cell placement.
     pub normal: [i32; 3],
+    /// Exact outward selection-surface normal (tilted for wall torches).
+    pub surface_normal: [f64; 3],
     pub distance: f64,
     pub adjacent: Option<BlockPos>,
 }
@@ -58,10 +61,12 @@ pub fn raycast(world: &World, ray: Ray) -> Option<RayHit> {
     let mut distance = 0.0;
     let mut normal = [0; 3];
     loop {
-        if world.block(cell).is_solid() {
+        let block = world.block(cell);
+        if block.is_cube() {
             return Some(RayHit {
                 position: cell,
                 normal,
+                surface_normal: normal.map(f64::from),
                 distance,
                 adjacent: if normal == [0; 3] {
                     None
@@ -69,6 +74,47 @@ pub fn raycast(world: &World, ray: Ray) -> Option<RayHit> {
                     cell.offset(normal)
                 },
             });
+        }
+        if block.is_torch() {
+            let frame = block.shape_transform();
+            let local = frame.inverse_point(std::array::from_fn(|a| {
+                ray.origin[a] - f64::from(cell.0[a])
+            }));
+            let vector = frame.inverse_vector(direction);
+            let mut nearest: Option<(f64, [f64; 3])> = None;
+            for bounds in block.selection_boxes() {
+                if let Some((d, n)) = intersect_box(*bounds, local, vector)
+                    && d + EPSILON >= distance
+                    && d <= ray.reach + EPSILON
+                    && nearest.is_none_or(|(old, _)| d < old)
+                {
+                    nearest = Some((d, n));
+                }
+            }
+            if let Some((d, n)) = nearest {
+                let surface_normal = frame.vector(n);
+                let mut grid = [0; 3];
+                let mut axis = 0;
+                for a in 1..3 {
+                    if surface_normal[a].abs() > surface_normal[axis].abs() + EPSILON {
+                        axis = a;
+                    }
+                }
+                if surface_normal[axis] != 0. {
+                    grid[axis] = if surface_normal[axis] > 0. { 1 } else { -1 };
+                }
+                return Some(RayHit {
+                    position: cell,
+                    normal: grid,
+                    surface_normal,
+                    distance: d,
+                    adjacent: if grid == [0; 3] {
+                        None
+                    } else {
+                        cell.offset(grid)
+                    },
+                });
+            }
         }
         let mut axis = 0;
         for candidate in 1..3 {
@@ -85,6 +131,40 @@ pub fn raycast(world: &World, ray: Ray) -> Option<RayHit> {
         normal[axis] = -step[axis];
         next[axis] += stride[axis];
     }
+}
+
+fn intersect_box(
+    bounds: crate::shape::SelectionBox,
+    origin: [f64; 3],
+    direction: [f64; 3],
+) -> Option<(f64, [f64; 3])> {
+    let mut enter = 0f64;
+    let mut exit = f64::INFINITY;
+    let mut normal = [0.; 3];
+    for a in 0..3 {
+        if direction[a] == 0. {
+            if origin[a] < bounds.min[a] || origin[a] > bounds.max[a] {
+                return None;
+            }
+            continue;
+        }
+        let mut lo = (bounds.min[a] - origin[a]) / direction[a];
+        let mut hi = (bounds.max[a] - origin[a]) / direction[a];
+        let sign = if direction[a] > 0. { -1. } else { 1. };
+        if lo > hi {
+            std::mem::swap(&mut lo, &mut hi);
+        }
+        if lo > enter + EPSILON {
+            enter = lo;
+            normal = [0.; 3];
+            normal[a] = sign;
+        }
+        exit = exit.min(hi);
+        if enter > exit + EPSILON {
+            return None;
+        }
+    }
+    (exit >= 0.).then_some((enter, normal))
 }
 
 #[cfg(test)]

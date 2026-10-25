@@ -35,7 +35,7 @@ The CRC covers header bytes `[0,20)` followed by the entire payload `[24,end)`, 
 | 4 | Wood, v2 only |
 | 5 | Leaves, v2 only |
 
-IDs 1 and 2 also retain their exact v1 meaning. Version 1 strictly rejects IDs 4/5; version 2 accepts 1–5. Both new materials are solid and opaque. Air is implicit in both versions.
+IDs 1 and 2 also retain their exact v1 meaning. Version 1 strictly rejects IDs 4/5; version 2 originally accepted 1–5; Slice20 additionally accepts 6 (Torch). Both new materials are solid and opaque. Air is implicit in both versions.
 
 Every record must be within X/Z [-32,32), Y [-16,32). Duplicate/unsorted coordinates, ID 0 or unknown IDs, invalid magic/version, inconsistent counts/lengths, checksum errors, truncation and trailing bytes are rejected. The maximum is 196,608 records and **2,752,536 bytes**, enforced before disk reads allocate an unbounded buffer. This finite-volume limit is part of both versions. Trusted imports outside the volume cannot be saved, including out-of-bounds empty chunks.
 
@@ -49,7 +49,7 @@ v1 and v2 share the header/record/CRC layout and full-snapshot semantics. **Load
 
 After meaningful edits, the normal F5/autosave/final-save protocol validates the old v1 primary, backs its exact bytes up, and commits a complete v2 snapshot. Even if only old materials remain, current saves use v2. A failed upgrade follows the same recovery policy as any save and never truncates the old primary. The ordinary backup retains only one generation: a subsequent save may replace that legacy backup with v2. Keep an external directory copy if rollback to an older client is important. Older v1-only clients safely reject v2; there is no automatic downgrade.
 
-Version 2 adds only explicit IDs 4/5, not metadata, larger bounds or changed terrain defaults. There is **no implicit v1/v2-to-v3 migration**. The store refuses changing identity/mode/seed when replacing an existing primary. IDs must never be reassigned. Future dimensions, bounds or material semantics require another version and an explicit migration policy. Unknown versions/IDs stop loading without rewriting files. Seeded generation changes only truly new worlds, never existing snapshots.
+Version 2 adds only explicit IDs 4/5, not metadata, larger bounds or changed terrain defaults. There is **no implicit v1/v2-to-v3 migration**. The store refuses changing identity/mode/seed when replacing an existing primary. IDs must never be reassigned. Future dimensions, bounds or changes to existing material semantics require another version and an explicit migration policy. Additive IDs follow the Slice20 policy below. Unknown versions/IDs stop loading without rewriting files. Seeded generation changes only truly new worlds, never existing snapshots.
 
 ## Streamed overlay byte contract (v3)
 
@@ -230,7 +230,7 @@ receive a time/process/counter-generated sidecar identity, not cryptographic RNG
 | 173 | 3 | Held cursor stack |
 
 Each three-byte stack is u16 item ID plus u8 count. `(0,0)` is empty; only IDs
-1 Grass, 2 Dirt, 3 Stone, 4 Wood, 5 Leaves with counts **1–64** are valid. ID0
+1 Grass, 2 Dirt, 3 Stone, 4 Wood, 5 Leaves, 6 Torch with counts **1–64** are valid. ID0
 with nonzero count, nonzero ID with zero count, unknown IDs and oversized stacks
 are rejected. Inventory revision and modal-open state are not saved. A held stack
 opens inventory on load. Player position/view/velocity remain outside this format.
@@ -299,3 +299,44 @@ Initial inventory, paired saving/replay, checksums and recovery rules above rema
 unchanged. Lighting cannot grant/consume items or change blocks. Tests compare
 legacy/v3/v4 bytes and reconstruct identical edited-world lighting after paired
 v1/v2/v3/v4 save/restart, including distant regional edits. See LIGHTING/VALIDATION.
+
+## Slice 20 additive material registry extension
+
+**Explicit policy:** append block/item ID6 = Torch without changing an envelope
+version, existing ID, generator, extent, identity, checksum or journal layout.
+This is an additive, fail-closed register extension, not a world-mode upgrade.
+Version1 stays frozen (IDs1–3); existing v1 edits use the established v2 writer.
+v2 snapshots, v3 overlays, v4 region-v1 records and player-v1 stacks accept ID6.
+The refinement appends world block IDs7 East,8 West,9 South,10 North for wall
+mounts; they all collect item6. Standing block6 and item6 keep their exact meanings.
+Unknown world IDs11+ still fail validation; player item IDs7+ remain invalid, including inside checksummed redo journals.
+Earlier tables describing IDs1–5 are the historical contracts extended here.
+
+This choice retains exact bytes for saves without torches and never rewrites
+anything on load. Old valid golden fixtures remain valid. Old readers reject
+ID6 instead of interpreting it as Air/another block; an old v4 client may read
+the unchanged manifest then stop on a torch region or player file. **Do not run
+older clients on the same directory.** Use complete closed-directory copies for
+rollback/testing; backups remain previous generations, not whole-session rollback.
+
+Torch block IDs and inventory counts travel through the existing bounded save
+snapshot and paired session redo transaction. F5, autosave, Save and Quit and
+reopening share this codec and failure/retry behavior. Supports are protected
+through single-cell edit validation; no additional drop transaction is needed.
+Lighting is derived and never encoded. Reload reconstructs it from blocks, also
+after region eviction. A freshly initialized inventory receives 32 torches once;
+existing player files retain exactly their saved contents.
+
+Full-snapshot restoration bypasses gameplay placement/support checks after each
+record's existing bounds/ID/order/checksum validation. Otherwise a valid wall
+support that sorts after its torch could make decoding depend on record order.
+This preserves exact old data and permits trusted malformed imports without
+repairing/mutating files. Gameplay placement still validates loaded support.
+
+Final Slice20 support mining is an in-memory transaction of one support and up to
+five dependent torches. All cells/regions and the aggregate8-dirty-region limit
+are validated before commit; inventory must fit every collected item. Touched
+regions receive one revision and the save worker snapshots them with the updated
+inventory through the unchanged paired journal. No block/item IDs, envelopes,
+checksums or recovery stages change. Interrupted-save tests at journal/world/
+player stages replay complete removal and counts over signed region boundaries.

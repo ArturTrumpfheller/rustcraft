@@ -1,0 +1,39 @@
+Final Slice20 support collection / held pose — 2026-10-25
+Base: 211dadf345381001a36eb18c2b345c5926725d82
+Held-block reference: d5c9c171327f611d4e5a634cad4015682390d4b0
+Rust1.99.1 / Bevy0.20.0 / Linux x86-64
+
+PASS cargo fmt --all -- --check
+PASS cargo clippy --locked --workspace --all-targets -- -D warnings
+PASS cargo test --locked --workspace
+  rustcraft: 173 passed, 0 failed, 2 ignored (explicit timing tests)
+  voxel_core: 192 passed, 0 failed; doctests: 0
+PASS cargo build --locked --workspace
+PASS python3 tools/generate_textures.py --check
+PASS git diff --check
+PASS targeted support / view-profile / real-input tests
+
+Support cases: no torch, each standing/wall orientation, several/four/five
+attachments; exact counts; capacity for support but insufficient torches;
+capacity for torches but insufficient support; exact-fit success; repeated
+batches; stale plan rejection; signed X/Y/Z chunk seams; aggregate dirty-region
+limit; unavailable dependent rejection; unrelated light retained; last light
+removed; all changed chunks marked, rapid edits coalesced and stale worker light
+rejected. Paired save faults after journal/world/player stages replay the whole
+removal and inventory over positive/negative region seams after eviction.
+Production path clones only staged inventory and required regional COW maps;
+no whole-world clone or synchronous flood. One world revision per whole batch.
+
+Original d5c9c17 binary built from a clean detached worktree for matched captures.
+Same seed42 world copies,1280x720,FOV78,radius1,camera/hotbar/software adapter.
+Original and updated Grass: entire screenshot pixel-identical.
+Torch: visual left lean, modest lift, visible wood, bottom remains off screen.
+Projection tests at FOV70/78/90/100 and16:9,3:2,4:3 check original block pose/lens.
+Adapter: llvmpipe (LLVM19.1.7), Mesa25.0.7, Vulkan; Xvfb X11.
+Both visual sessions saved and quit normally.
+
+No changes to block/item IDs, save codecs/formats, model/texture/atlas data,
+lighting propagation/buffers, ray/selection geometry, generators or dependencies.
+Native testing accepted the prior refinement on Void; these final changes still
+need final native acceptance. No physical GPU/frame-time result claimed.
+Read current Ubuntu/Windows GitHub Actions outcome from PR37.

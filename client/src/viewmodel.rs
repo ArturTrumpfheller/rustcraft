@@ -18,6 +18,9 @@ use bevy::{
 };
 use voxel_core::{Block, inventory::Item, texture::face_tile};
 
+mod presentation;
+use presentation::Presentation;
+
 pub(crate) const OVERLAY_LAYER: usize = 1;
 // Uniformly scale camera-space position AND geometry: identical projected
 // pixels, but even the nearest swing vertex remains behind the existing UI.
@@ -70,7 +73,7 @@ struct HeldBlock;
 struct Arm;
 #[derive(Resource)]
 struct Models {
-    blocks: [Handle<Mesh>; 5],
+    blocks: [Handle<Mesh>; 6],
     root: Entity,
     block: Entity,
     arm: Entity,
@@ -80,6 +83,24 @@ struct Models {
 
 // Cuboid topology comes from Bevy; art UVs use the existing original atlas.
 fn cube(block: Option<Block>) -> Mesh {
+    if block == Some(Block::Torch) {
+        let core = voxel_core::torch_mesh();
+        let tile = voxel_core::texture::Tile::Torch.uv([0, 0]);
+        let uv = core
+            .uvs
+            .iter()
+            .map(|p| [tile[0] + p[0] * 16. / 128., tile[1] + p[1] * 16. / 64.])
+            .collect::<Vec<_>>();
+        return Mesh::new(
+            bevy::render::render_resource::PrimitiveTopology::TriangleList,
+            RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, core.positions)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, core.normals)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uv)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, core.colors)
+        .with_inserted_indices(bevy::mesh::Indices::U32(core.indices));
+    }
     let mut mesh = Mesh::from(Cuboid::new(1., 1., 1.));
     let VertexAttributeValues::Float32x3(positions) =
         mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap()
@@ -254,6 +275,7 @@ fn setup(
         Block::Stone,
         Block::Wood,
         Block::Leaves,
+        Block::Torch,
     ]
     .map(|b| meshes.add(cube(Some(b))));
     let root = commands
@@ -399,7 +421,8 @@ impl Motion {
 // Independently authored visual-fit coefficients, not verified Java source
 // constants. Reference images/limitations and normalized landmarks: VIEWMODEL.md.
 const SWING_SECONDS: f32 = 0.35;
-fn model_pose(block: bool, motion: &Motion) -> Transform {
+fn model_pose(profile: Presentation, motion: &Motion) -> Transform {
+    let block = profile.held;
     let elapsed = motion.swing * SWING_SECONDS;
     // The recorded Java held cube first lowers, then swings while returning to
     // its equipped pose. Keep that lead-in separate from the 300-ms arc.
@@ -414,22 +437,16 @@ fn model_pose(block: bool, motion: &Motion) -> Transform {
     let lift = (t.sqrt() * std::f32::consts::TAU).sin();
     let recovery = (t * std::f32::consts::PI).sin();
     let late = (t * t * std::f32::consts::PI).sin();
-    let (position, angles, size, pivot, swing_angles) = if block {
-        (
-            Vec3::new(0.56, -0.52, -0.72),
-            Vec3::new(0., 45., 0.),
-            0.40,
-            Vec3::new(0.56, -0.52, -0.72),
-            Vec3::new(-75. * strike, -20. * late, -20. * strike),
-        )
+    let (position, angles, size, pivot) = (
+        profile.position,
+        profile.angles,
+        profile.scale,
+        profile.pivot,
+    );
+    let swing_angles = if block {
+        Vec3::new(-75. * strike, -20. * late, -20. * strike)
     } else {
-        (
-            Vec3::new(0.609, -0.641, -0.80),
-            Vec3::new(-46.5, 19.4, -23.9),
-            1.,
-            Vec3::new(0.65, -0.90, -0.45),
-            Vec3::new(-7.5 * late, 63.8 * strike, strike),
-        )
+        Vec3::new(-7.5 * late, 63.8 * strike, strike)
     };
     let euler = |angles: Vec3| {
         Quat::from_euler(
@@ -459,7 +476,7 @@ fn model_pose(block: bool, motion: &Motion) -> Transform {
         )
     };
     let position = pivot + swing_rotation * (position - pivot) + travel;
-    Transform::from_translation(position * MODEL_DEPTH_SCALE)
+    Transform::from_translation((position - rotation * (profile.origin * size)) * MODEL_DEPTH_SCALE)
         .with_rotation(rotation)
         .with_scale(Vec3::splat(size * MODEL_DEPTH_SCALE))
 }
@@ -548,7 +565,7 @@ fn update(
     // scaling the model uniformly this keeps its perspective and screen bounds.
     let correction = (p.fov * 0.5).tan() / (70_f32.to_radians() * 0.5).tan();
     *transform = Transform::from_scale(Vec3::new(correction, correction, 1.));
-    let mut pose = model_pose(selected.is_some(), &models.motion);
+    let mut pose = model_pose(Presentation::for_item(selected), &models.motion);
     pose.translation = rotation * pose.translation + offset * MODEL_DEPTH_SCALE;
     pose.rotation = rotation * pose.rotation;
     if selected.is_some() {

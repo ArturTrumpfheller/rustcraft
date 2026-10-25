@@ -157,6 +157,7 @@ fn selection_tracks_numbers_scroll_loaded_inventory_transfers_and_stack_depletio
         (KeyCode::Digit3, Item::Stone),
         (KeyCode::Digit4, Item::Wood),
         (KeyCode::Digit5, Item::Leaves),
+        (KeyCode::Digit6, Item::Torch),
     ] {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
@@ -335,7 +336,7 @@ fn repeated_selection_animation_fov_resize_and_rebase_keep_assets_bounded() {
         bytes += m.count_vertices() * 48 + m.indices().unwrap().len() * 4;
     }
     bytes += 24 * 48 + 36 * 4;
-    assert_eq!(bytes, 7776);
+    assert_eq!(bytes, 10368);
     for n in 0..600 {
         app.world_mut()
             .resource_mut::<GameInventory>()
@@ -595,13 +596,41 @@ fn swing_is_a_timed_pivoted_arc_and_never_replays_hidden_actions() {
     }
     for block in [true, false] {
         let mut motion = Motion::default();
-        let idle = model_pose(block, &motion);
+        let idle = model_pose(
+            if block {
+                presentation::BLOCK
+            } else {
+                presentation::ARM
+            },
+            &motion,
+        );
         motion.swing = 0.25;
-        let strike = model_pose(block, &motion);
+        let strike = model_pose(
+            if block {
+                presentation::BLOCK
+            } else {
+                presentation::ARM
+            },
+            &motion,
+        );
         motion.swing = 0.75;
-        let recovery = model_pose(block, &motion);
+        let recovery = model_pose(
+            if block {
+                presentation::BLOCK
+            } else {
+                presentation::ARM
+            },
+            &motion,
+        );
         motion.swing = 1.;
-        let end = model_pose(block, &motion);
+        let end = model_pose(
+            if block {
+                presentation::BLOCK
+            } else {
+                presentation::ARM
+            },
+            &motion,
+        );
         assert!(strike.rotation.angle_between(idle.rotation) > 0.5);
         assert!(strike.translation.x < idle.translation.x - 0.1);
         assert!(strike.translation.distance(recovery.translation) > 0.1);
@@ -609,7 +638,14 @@ fn swing_is_a_timed_pivoted_arc_and_never_replays_hidden_actions() {
         assert!(end.rotation.angle_between(idle.rotation) < 0.001);
         for n in 0..=100 {
             motion.swing = n as f32 / 100.;
-            let pose = model_pose(block, &motion);
+            let pose = model_pose(
+                if block {
+                    presentation::BLOCK
+                } else {
+                    presentation::ARM
+                },
+                &motion,
+            );
             assert!(pose.translation.is_finite() && pose.rotation.is_finite());
             assert!(pose.translation.z < -0.3 && pose.translation.length() < 6.);
         }
@@ -638,37 +674,34 @@ fn projected(mesh: &Mesh, pose: Transform, size: Vec2) -> Vec<Vec2> {
         .collect()
 }
 #[test]
-fn idle_silhouettes_match_measured_wide_arm_and_grass_reference_landmarks() {
-    for (block, landmarks) in [
-        (false, [[602., 374.], [658., 338.], [737., 383.]]),
-        (true, [[559., 392.], [618., 349.], [828., 392.]]),
-    ] {
-        let mesh = if block {
-            cube(Some(Block::Grass))
-        } else {
-            arm_mesh()
+fn unchanged_arm_keeps_its_measured_silhouette_and_motion_clearance() {
+    let mesh = arm_mesh();
+    let points = projected(
+        &mesh,
+        model_pose(presentation::ARM, &Motion::default()),
+        Vec2::new(854., 480.),
+    );
+    for landmark in [[602., 374.], [658., 338.], [737., 383.]] {
+        assert!(
+            points
+                .iter()
+                .any(|p| p.distance(Vec2::from_array(landmark)) < 3.)
+        );
+    }
+    for n in 0..=100 {
+        let motion = Motion {
+            swing: n as f32 / 100.,
+            ..default()
         };
-        let pose = model_pose(block, &Motion::default());
-        let points = projected(&mesh, pose, Vec2::new(854., 480.));
-        for point in landmarks {
-            assert!(
-                points
-                    .iter()
-                    .any(|p| p.distance(Vec2::from_array(point)) < 3.),
-                "{block}: {point:?} in {points:?}"
-            );
-        }
-        for n in 0..=100 {
-            let motion = Motion {
-                swing: n as f32 / 100.,
-                ..default()
-            };
-            projected(&mesh, model_pose(block, &motion), Vec2::new(854., 480.));
-        }
+        projected(
+            &mesh,
+            model_pose(presentation::ARM, &motion),
+            Vec2::new(854., 480.),
+        );
     }
     let points = projected(
-        &arm_mesh(),
-        model_pose(false, &Motion::default()),
+        &mesh,
+        model_pose(presentation::ARM, &Motion::default()),
         Vec2::new(854., 640.),
     );
     assert!(
@@ -707,7 +740,7 @@ fn reduced_walk_sway_has_a_small_visible_range_and_sprint_increases_rhythm_not_s
         };
         let (offset, rotation) =
             motion.step(0., [0.; 3], &body(true, false, 0.), &HandAction::default());
-        let mut pose = model_pose(false, &motion);
+        let mut pose = model_pose(presentation::ARM, &motion);
         pose.translation = rotation * pose.translation + offset * MODEL_DEPTH_SCALE;
         pose.rotation = rotation * pose.rotation;
         let p = projected(&arm_mesh(), pose, Vec2::new(854., 480.));
@@ -865,6 +898,106 @@ fn calibrated_walk_and_sprint_cadence_match_at_30_60_144_fps() {
             for (a, b) in traces[0].iter().zip(trace) {
                 assert!(a.0.distance(b.0) < 1e-4);
                 assert!(a.1.angle_between(b.1) < 0.001);
+            }
+        }
+    }
+}
+
+#[test]
+fn restored_blocks_match_slice20_reference_and_torch_is_subtle_left_leaning_at_requested_fovs() {
+    let mut app = app();
+    capture(&mut app);
+    for slot in [0, 5] {
+        app.world_mut()
+            .resource_mut::<GameInventory>()
+            .contents
+            .select(slot);
+        for aspect in [16. / 9., 3. / 2., 4. / 3.] {
+            let mut reference: Option<Vec<Vec2>> = None;
+            for degrees in [70f32, 78., 90., 100.] {
+                let w = app.world_mut();
+                let mut q = w.query_filtered::<&mut Projection, With<FirstPersonCamera>>();
+                if let Projection::Perspective(p) = &mut *q.single_mut(w).unwrap() {
+                    p.fov = degrees.to_radians();
+                    p.aspect_ratio = aspect;
+                }
+                app.world_mut().resource_mut::<PlayerState>().body.velocity = [0.; 3];
+                app.world_mut().resource_mut::<Models>().motion = Motion::default();
+                frame(&mut app, Duration::ZERO);
+                let w = app.world();
+                let models = w.resource::<Models>();
+                let matrix = w.get::<Transform>(models.root).unwrap().to_matrix()
+                    * w.get::<Transform>(models.block).unwrap().to_matrix();
+                let mesh = w
+                    .resource::<Assets<Mesh>>()
+                    .get(&w.get::<Mesh3d>(models.block).unwrap().0)
+                    .unwrap();
+                let VertexAttributeValues::Float32x3(vertices) =
+                    mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap()
+                else {
+                    panic!()
+                };
+                let project = |matrix: Mat4, v: [f32; 3]| {
+                    let p = matrix.transform_point3(Vec3::from_array(v));
+                    assert!(p.z < -0.16);
+                    Vec2::new(p.x / aspect, -p.y) / (-2. * p.z * (degrees.to_radians() * 0.5).tan())
+                        + Vec2::splat(0.5)
+                };
+                let points: Vec<_> = vertices.iter().map(|&v| project(matrix, v)).collect();
+                if slot == 0 {
+                    // Frozen accepted d5c9c17 equipped pose/lens. This also
+                    // detects unwanted aspect correction, scale or edge shifts.
+                    let lens =
+                        (degrees.to_radians() * 0.5).tan() / (70f32.to_radians() * 0.5).tan();
+                    let original = Mat4::from_scale(Vec3::new(lens, lens, 1.))
+                        * Transform::from_xyz(0.56 * 3., -0.52 * 3., -0.72 * 3.)
+                            .with_rotation(Quat::from_rotation_y(45f32.to_radians()))
+                            .with_scale(Vec3::splat(0.40 * 3.))
+                            .to_matrix();
+                    assert!(
+                        vertices
+                            .iter()
+                            .zip(&points)
+                            .all(|(&v, p)| project(original, v).distance(*p) < 1e-6)
+                    );
+                } else {
+                    assert!(
+                        points.iter().any(|p| p.y > 1.),
+                        "torch must remain partly off screen"
+                    );
+                    assert!(
+                        points[..24].iter().any(|p| p.y < 0.98),
+                        "visible wooden shaft, not just tip"
+                    );
+                    let top: Vec<_> = vertices
+                        .iter()
+                        .zip(&points)
+                        .filter(|(v, _)| v[1] == 0.6875)
+                        .map(|(_, p)| *p)
+                        .collect();
+                    let base: Vec<_> = vertices
+                        .iter()
+                        .zip(&points)
+                        .filter(|(v, _)| v[1] == 0.)
+                        .map(|(_, p)| *p)
+                        .collect();
+                    let mean = |points: &[Vec2]| {
+                        points.iter().copied().sum::<Vec2>() / points.len() as f32
+                    };
+                    assert!(
+                        mean(&top).x < mean(&base).x - 0.003,
+                        "screen-space lean must be LEFT"
+                    );
+                    assert!(
+                        (0.75..0.93).contains(&mean(&top).y),
+                        "only a modest upward adjustment"
+                    );
+                }
+                if let Some(old) = &reference {
+                    assert!(points.iter().zip(old).all(|(a, b)| a.distance(*b) < 1e-5));
+                } else {
+                    reference = Some(points);
+                }
             }
         }
     }

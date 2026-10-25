@@ -217,6 +217,20 @@ impl Batch {
         self.indices.extend([n, n + 1, n + 2, n, n + 2, n + 3]);
     }
     fn icon(&mut self, p: Vec2, item: Item) {
+        if item == Item::Torch {
+            let tile = Tile::Torch.uv([0, 0]);
+            for (offset, size, v0, v1) in [
+                (Vec2::new(6.5, 0.), Vec2::new(3., 11.), 0.25, 1.),
+                (Vec2::new(5.5, 11.), Vec2::new(5., 5.), 0., 0.25),
+            ] {
+                self.rect(p + offset, size, 1., [1.; 4]);
+                self.uvs.extend(
+                    [[0., v1], [1., v1], [1., v0], [0., v0]]
+                        .map(|uv| [tile[0] + uv[0] * 16. / 128., tile[1] + uv[1] * 16. / 64.]),
+                );
+            }
+            return;
+        }
         self.rect(p, Vec2::splat(16.), 1., [1.; 4]);
         let tile = face_tile(item.build().block(), [0, 0, 1]).unwrap_or(Tile::Stone);
         self.uvs.extend([

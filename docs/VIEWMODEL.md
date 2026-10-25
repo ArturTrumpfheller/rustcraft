@@ -1,5 +1,8 @@
 # First-person viewmodel (Slice 12, PR #29 visual revision)
 
+> Final Slice20 restores the historical held-cube positioning below.
+> The original empty-arm calibration and Slice19 motion remain in use.
+
 ## Reference and calibration
 
 The target is modern Minecraft Java's **wide standard arm**, not the slim model.
@@ -139,3 +142,26 @@ are not present in this workspace. No new direct Java A/B comparison or exact
 Java cadence claim is made. Native visual acceptance of this rhythm remains open:
 repeat the same flat route with fixed FOV and a held block, then an empty hand,
 walking/sprinting/stopping, followed by jump/land, sneak and mine/place.
+
+## Slice20 item presentation profiles
+
+`viewmodel/presentation.rs` owns a small `Presentation` value: equipped position,
+Euler rotation, scale, optional model-origin correction, swing pivot and held/arm
+category. `for_item` currently chooses Arm (empty), Block (ordinary blocks) or
+Slender (Torch). Future tools/food can add profiles without modifying bob/swing
+math. The original motion step and held/arm swing curves retain their timing,
+travel and angles; equipped poses are independent inputs to that animation.
+
+Final Slice20 restores the BLOCK profile exactly to the original`d5c9c17`
+position/pivot(0.56,-0.52,-0.72), rotation(0,45,0), scale0.40. The original camera
+X/Y FOV correction is retained; the later extra camera-X aspect correction is
+removed so ordinary blocks match at every original aspect ratio. ARM is unchanged.
+
+Only SLENDER/Torch is tuned: position/pivot(0.56,-0.46,-0.72), rotation(0,35,12),
+scale0.40, origin(0.5,0.35,0.5). This is a small lift of0.06 from the initial
+Slice20 pose. Its lower shaft remains below the screen; some wood and the bright
+tip remain visible. Projected tip/base tests confirm a left lean at FOV70/78/90/100.
+The whole model need not fit above the hotbar. Original mesh/texture data, arm
+proportions, bob cadence/amplitude and action curves are unchanged. Ordinary
+blocks are compared against the frozen original transform/lens at16:9,3:2,4:3.
+No per-frame allocation, per-item rendering entity or new texture/material.
