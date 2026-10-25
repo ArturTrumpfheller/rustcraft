@@ -103,3 +103,39 @@ and existing action timing/pose regressions. Native acceptance of this revised
 feel remains open in PR36. Compare the same scene and route on Void: idle → walk
 → sprint → stop, then jump/land, with a block and an empty slot; mine/place in both.
 A matched rendered before/after clip was not produced in this follow-up.
+
+## Slice 19 gait-cadence correction
+
+Native Void feedback after the amplitude reduction identified rapid vertical
+oscillations. `abs(cos(2 * phase))` produces four vertical bounces per lateral
+cycle; `abs(cos(phase))` produces two, aligned with the alternating lateral
+extrema. The centre crossings are low points; the left/right extrema are high
+points. This preserves the reduced vertical range and removes the extra bounces
+between centre and extremum. Both arm and held block use this shared transform.
+
+`GAIT_RADIANS_PER_BLOCK` stays at 2.0: cadence follows actual travelled distance,
+so sprint increases rhythm without amplifying it. With the existing speeds:
+
+| Mode | Previous vertical cadence | Corrected vertical cadence |
+| --- | --- | --- |
+| Walk, 4.317 blocks/s | 5.497 Hz | 2.748 Hz |
+| Sprint, 5.612 blocks/s | 7.145 Hz | 3.573 Hz |
+
+These are analytical steady-motion frequencies (`speed * 2 / pi` after correction),
+not a measurement of Minecraft Java. All reduced amplitude/bias constants, landing,
+crouch, air response, action rig, camera and sprint FOV remain unchanged.
+Regression tests count vertical peaks across ten seconds at 30/60/144 FPS after
+warmup (27 walk / 35 sprint peaks, boundary-limited finite windows), compare poses
+at shared timestamps, verify alternating trajectory extrema, amplitude bounds
+and stationary settling. Existing interaction/landing/model/resource tests pass.
+
+![Matched analytical gait comparison](images/slice19-gait-cadence.svg)
+
+The graph uses identical distance, phase and amplitude envelopes before/after;
+it is an analytical curve comparison, not rendered gameplay footage. It was drawn
+with authoring-only Matplotlib; no runtime dependencies or bundled fonts added.
+The legitimate Java Demo captures documented above are historical references and
+are not present in this workspace. No new direct Java A/B comparison or exact
+Java cadence claim is made. Native visual acceptance of this rhythm remains open:
+repeat the same flat route with fixed FOV and a held block, then an empty hand,
+walking/sprinting/stopping, followed by jump/land, sneak and mine/place.

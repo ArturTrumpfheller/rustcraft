@@ -777,3 +777,95 @@ fn subtle_gait_transitions_and_landing_match_at_30_60_144_fps() {
         }
     }
 }
+
+#[test]
+fn gait_has_two_even_footfalls_per_lateral_stride_with_reduced_amplitudes() {
+    let mut heights = Vec::new();
+    for n in 0..=128 {
+        let phase = n as f32 * std::f32::consts::TAU / 128.;
+        let mut motion = Motion {
+            phase,
+            bob: 1.,
+            ..default()
+        };
+        let (offset, rotation) =
+            motion.step(0., [0.; 3], &body(true, false, 0.), &HandAction::default());
+        assert!(offset.x >= -0.02301 && offset.x <= 0.01701);
+        assert!(offset.y >= -0.03001 && offset.y <= -0.00249);
+        assert!(rotation.angle_between(Quat::IDENTITY) <= 0.0176);
+        heights.push(offset.y);
+    }
+    // Low at the centre crossings, high at alternating left/right extrema.
+    // This rejects the old four-bounce path even if amplitudes remain small.
+    for i in [0, 64, 128] {
+        assert!((heights[i] + 0.030).abs() < 1e-6);
+    }
+    for i in [32, 96] {
+        assert!((heights[i] + 0.0025).abs() < 1e-6);
+    }
+    assert!(heights[..=32].windows(2).all(|w| w[1] >= w[0]));
+    assert!(heights[32..=64].windows(2).all(|w| w[1] <= w[0]));
+}
+
+#[test]
+fn calibrated_walk_and_sprint_cadence_match_at_30_60_144_fps() {
+    for (speed, expected_hz) in [(4.317, 2.7483), (5.612, 3.5727)] {
+        let mut traces = Vec::new();
+        for fps in [30, 60, 144] {
+            let mut motion = Motion::default();
+            motion.reset([0.; 3], 0);
+            let mut y = Vec::new();
+            let mut boundaries = Vec::new();
+            // Warm up one second, then measure ten seconds of actual travelled distance.
+            for n in 1..=fps * 11 {
+                let (offset, rotation) = motion.step(
+                    1. / fps as f32,
+                    [speed * f64::from(n) / f64::from(fps), 0., 0.],
+                    &body(true, false, 0.),
+                    &HandAction::default(),
+                );
+                if n > fps {
+                    y.push(offset.y);
+                }
+                if n % fps == 0 {
+                    boundaries.push((offset, rotation));
+                }
+            }
+            let peaks = y.windows(3).filter(|w| w[1] >= w[0] && w[1] > w[2]).count();
+            let measured = peaks as f64 / 10.;
+            assert!(
+                (measured - expected_hz).abs() < 0.11,
+                "speed={speed} fps={fps} measured={measured}"
+            );
+            println!(
+                "GAIT speed={speed} fps={fps} vertical_peaks={peaks} measured_hz={measured:.3}"
+            );
+            // Stopping eases to a stationary pose and remains still afterwards.
+            let feet = [speed * 11., 0., 0.];
+            for _ in 0..fps * 2 {
+                motion.step(
+                    1. / fps as f32,
+                    feet,
+                    &body(true, false, 0.),
+                    &HandAction::default(),
+                );
+            }
+            let phase = motion.phase;
+            let (idle, rotation) = motion.step(
+                1. / fps as f32,
+                feet,
+                &body(true, false, 0.),
+                &HandAction::default(),
+            );
+            assert!(idle.length() < 1e-6 && rotation.angle_between(Quat::IDENTITY) < 1e-5);
+            assert_eq!(phase, motion.phase);
+            traces.push(boundaries);
+        }
+        for trace in &traces[1..] {
+            for (a, b) in traces[0].iter().zip(trace) {
+                assert!(a.0.distance(b.0) < 1e-4);
+                assert!(a.1.angle_between(b.1) < 0.001);
+            }
+        }
+    }
+}
