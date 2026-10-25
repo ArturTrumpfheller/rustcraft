@@ -318,7 +318,12 @@ fn save_failure_retains_session_lock_and_changes_until_explicit_retry() {
         .resource_mut::<inventory_ui::GameInventory>()
         .contents
         .select(8);
-    fs::create_dir(dir.0.join("player.rcp.bak")).unwrap();
+    // Clock-only autosaves can already have produced a previous generation.
+    let backup = dir.0.join("player.rcp.bak");
+    if backup.exists() {
+        fs::remove_file(&backup).unwrap();
+    }
+    fs::create_dir(&backup).unwrap();
     app.world_mut()
         .resource_mut::<ClientFlow>()
         .save(Destination::Title);
@@ -569,7 +574,7 @@ fn atmosphere_is_world_only_and_reclaimed_across_session_and_settings_transition
                 .unwrap()
                 .extension
                 .atmosphere,
-            AtmosphereUniform::for_radius(radius)
+            AtmosphereUniform::at_time(radius, app.world().resource::<scene::VoxelWorld>().0.time)
         );
         key(&mut app, KeyCode::Escape);
         assert_eq!(state(&app), ClientState::Paused);

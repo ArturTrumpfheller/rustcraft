@@ -1437,3 +1437,46 @@ Production-client software X11 screenshots, raw movement/course/CPU-cost output,
 resource accounting, exact acceptance commands and limitations are collected in
 [the Slice 19 guide](DEBUG_GAMEPLAY.md). Xvfb/Mesa evidence is not native Void/
 Windows GPU, Wayland or high-DPI acceptance. Those checks remain for the owner.
+
+## Slice21 day/night
+
+Final local locked workspace checks: fmt, all-target Clippy with warnings denied,
+tests (179 client +199 core passed; three opt-in cost tests ignored by default),
+build and original texture artifact check passed. The new ignored clock/uniform
+cost test was also run explicitly. Coverage includes exact fixed-step replay,
+rollover, legacy player reads, corruption, crash-stage journal recovery,
+time-only autosave/F5/final save, newer ticks during an in-flight snapshot,
+F3 reporting, radius/travel and zero time-driven terrain work/asset growth.
+
+Eight production-shader X11/software Vulkan captures and three-process paired
+radii1–3 measurements against accepted Slice20 are in [DAY_NIGHT](DAY_NIGHT.md)
+and [raw performance data](performance/slice21/README.md). The software renderer
+shows median frame cost +13.9% / +14.8% / +16.8%; native GPU acceptance remains
+open. No claim of native Void/Windows or Radeon performance is made.
+
+Production-client software X11 smoke: loaded a copied Slice20 player v1/world,
+verified the visible F3 clock and accepted held torch, and saved player v2.
+Pause/F5 snapshots remained exactly day0/step8157 across a wait; after resume
+and another F5 the clock reached step8360. The legacy world root stayed
+byte-identical. This is cloud software-renderer evidence, not native acceptance.
+
+
+### Slice21 sun/moon visual polish
+
+The follow-up keeps PR#38 open and enlarges both projected sides by 18%, adds an
+original 16×16 four-shade point-sampled moon and fades the last below-horizon
+strip before the original visibility cutoff. Timing, sky/fog/star parameters,
+lighting, persistence and terrain work stay unchanged. Local all-target Clippy,
+fmt, workspace tests (180 client +199 core passed; three opt-in cost tests
+ignored), build and texture checks passed; the final embedded shader also ran
+through the atmosphere suite and actual renderer captures. Projection coverage
+spans six resolutions, three FOVs and representative day/horizon/night times.
+Production captures cover noon, sunset, the last strip before disappearance,
+moonrise and midnight at 1280×720,960×720 and 640×480. The baseline comparison
+harness was compile-checked with the extended gallery adapter.
+
+[Updated images and provenance](DAY_NIGHT.md#sunmoon-visual-polish-before-merge)
+and the [paired performance data](performance/slice21/celestial-polish/README.md)
+include exact settings and limits. The owner's Void/RX 9060 XT baseline result
+(~240 FPS, VSync disabled) precedes these visual changes; native visual review
+of the polish remains open.

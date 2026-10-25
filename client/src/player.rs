@@ -52,8 +52,15 @@ impl Plugin for PlayerPlugin {
             )
             .add_systems(
                 FixedUpdate,
-                simulate_player.run_if(crate::session::has_world),
+                (simulate_player, advance_world_time).run_if(crate::session::has_world),
             );
+    }
+}
+
+// Shares the pre-fixed-loop physics gate: inventory runs; menus and focus pause.
+fn advance_world_time(input: Res<ControllerInput>, mut world: ResMut<VoxelWorld>) {
+    if input.simulation_active {
+        world.0.time.advance(1);
     }
 }
 

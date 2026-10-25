@@ -258,6 +258,7 @@ fn edits_during_in_flight_snapshot_remain_dirty_and_close_saves_the_latest_revis
         store.save(&snapshot)
     });
     app.world_mut().resource_mut::<SaveSession>().job = Some(SaveJob {
+        time: Default::default(),
         revision,
         inventory_revision: None,
         handle,
@@ -656,6 +657,7 @@ fn a_completed_old_player_snapshot_never_clears_newer_inventory_edits() {
         store.save_player_session(&snapshot, &inv, false)
     });
     app.world_mut().resource_mut::<SaveSession>().job = Some(SaveJob {
+        time: Default::default(),
         revision,
         inventory_revision,
         handle,
@@ -735,6 +737,7 @@ fn return_to_title_waits_for_inflight_save_and_newer_inventory_revision() {
         store.save_player_session(&snapshot, &inv, false)
     });
     app.world_mut().resource_mut::<SaveSession>().job = Some(SaveJob {
+        time: Default::default(),
         revision,
         inventory_revision,
         handle,
@@ -763,4 +766,83 @@ fn return_to_title_waits_for_inflight_save_and_newer_inventory_revision() {
     let session = app.world().resource::<SaveSession>();
     let mut saved = decode(&fs::read(dir.0.join("world.rcw")).unwrap()).unwrap();
     assert_eq!(session.store.load_player(&mut saved).unwrap().selected(), 8);
+}
+
+#[test]
+fn time_only_changes_use_autosave_f5_and_final_save_without_rotating_world_files() {
+    let dir = TestDir::new();
+    let (store, mut world, source) = SaveStore::open(&dir.0).unwrap();
+    let inv = store.load_player(&mut world).unwrap();
+    let root = fs::read(store.path()).unwrap();
+    let session = SaveSession::with_player(store, &world, source, &inv);
+    let mut app = app_from_session(world, session, inv);
+    for (steps, mode) in [(19, 0), (37, 1), (71, 2)] {
+        app.world_mut()
+            .resource_mut::<VoxelWorld>()
+            .0
+            .time
+            .advance(steps);
+        let expected = app.world().resource::<VoxelWorld>().0.time;
+        match mode {
+            0 => frame(&mut app, Duration::from_secs(31)),
+            1 => f5(&mut app),
+            _ => close(&mut app),
+        }
+        drain(&mut app);
+        assert_eq!(app.world().resource::<SaveSession>().saved_time, expected);
+        assert_eq!(fs::read(dir.0.join("world.rcw")).unwrap(), root);
+        assert!(!dir.0.join("world.rcw.bak").exists());
+    }
+    let expected = app.world().resource::<VoxelWorld>().0.time;
+    drop(app);
+    let (store, mut world, _) = SaveStore::open(&dir.0).unwrap();
+    store.load_player(&mut world).unwrap();
+    assert_eq!(world.time, expected);
+}
+
+#[test]
+fn final_save_includes_clock_ticks_after_an_inflight_snapshot_without_any_item_or_block_edit() {
+    let dir = TestDir::new();
+    let (store, mut world, source) = SaveStore::open(&dir.0).unwrap();
+    let inventory = store.load_player(&mut world).unwrap();
+    let session = SaveSession::with_player(store, &world, source, &inventory);
+    let mut app = app_from_session(world, session, inventory);
+    drain(&mut app);
+    let snapshot = app.world().resource::<VoxelWorld>().0.save_snapshot();
+    let time = snapshot.time;
+    let revision = snapshot.revision();
+    let inv = app
+        .world()
+        .resource::<crate::inventory_ui::GameInventory>()
+        .contents
+        .clone();
+    let inventory_revision = Some(inv.revision());
+    let store = Arc::clone(&app.world().resource::<SaveSession>().store);
+    let (tx, rx) = std::sync::mpsc::channel();
+    let handle = std::thread::spawn(move || {
+        rx.recv().unwrap();
+        store.save_player_session(&snapshot, &inv, false)
+    });
+    app.world_mut().resource_mut::<SaveSession>().job = Some(SaveJob {
+        time,
+        revision,
+        inventory_revision,
+        handle,
+    });
+    app.world_mut()
+        .resource_mut::<VoxelWorld>()
+        .0
+        .time
+        .advance(199);
+    let expected = app.world().resource::<VoxelWorld>().0.time;
+    close(&mut app);
+    assert!(app.should_exit().is_none());
+    tx.send(()).unwrap();
+    drain(&mut app);
+    assert!(app.should_exit().is_some());
+    assert_eq!(app.world().resource::<SaveSession>().saved_time, expected);
+    drop(app);
+    let (store, mut restored, _) = SaveStore::open(&dir.0).unwrap();
+    store.load_player(&mut restored).unwrap();
+    assert_eq!(restored.time, expected);
 }

@@ -115,12 +115,14 @@ impl Default for SaveFeedback {
     }
 }
 struct SaveJob {
+    time: voxel_core::time::WorldTime,
     revision: u64,
     inventory_revision: Option<u64>,
     handle: JoinHandle<Result<(), SaveError>>,
 }
 #[derive(Resource)]
 pub(crate) struct SaveSession {
+    saved_time: voxel_core::time::WorldTime,
     pub(crate) store: Arc<SaveStore>,
     saved_revision: u64,
     saved_inventory_revision: Option<u64>,
@@ -143,6 +145,7 @@ impl SaveSession {
     }
     fn base(store: SaveStore, world: &World, source: LoadSource) -> Self {
         Self {
+            saved_time: world.time,
             store: Arc::new(store),
             saved_revision: world.revision(),
             saved_inventory_revision: None,
@@ -200,6 +203,7 @@ impl SaveSession {
             }) {
             Ok(handle) => {
                 self.job = Some(SaveJob {
+                    time: world.time,
                     revision: world.revision(),
                     inventory_revision,
                     handle,
@@ -226,6 +230,7 @@ impl SaveSession {
             match job.handle.join() {
                 Ok(Ok(())) => {
                     self.saved_revision = job.revision;
+                    self.saved_time = job.time;
                     if let Some(r) = job.inventory_revision {
                         self.saved_inventory_revision = Some(r);
                     }
@@ -315,7 +320,12 @@ fn update_saving(
             .as_ref()
             .is_none_or(|i| i.contents.revision() != r)
     });
-    let dirty = session.creation_pending || current != session.saved_revision || inventory_dirty;
+    let time_dirty =
+        session.saved_inventory_revision.is_some() && world.0.time != session.saved_time;
+    let dirty = session.creation_pending
+        || current != session.saved_revision
+        || inventory_dirty
+        || time_dirty;
     if ui
         .flow
         .as_ref()
@@ -373,7 +383,11 @@ fn update_saving(
     {
         "ERROR / LOAD".to_owned()
     } else {
-        session.label(dirty).to_owned()
+        // A running clock is always newer than the last snapshot. Keep the
+        // status useful for edits while time-only dirtiness still drives saves.
+        session
+            .label(session.creation_pending || current != session.saved_revision || inventory_dirty)
+            .to_owned()
     };
     for mut window in &mut ui.windows {
         let suffix = if window.title.starts_with("RustCraft [") {

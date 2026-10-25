@@ -1,5 +1,9 @@
 # Procedural daylight sky and terrain fog (Slice 18)
 
+Slice21 extends this historical baseline with a saved day/night clock, separate
+sky/block COLOR contributions, procedural celestial bodies/stars and matching
+fog gated by geometric sky exposure. See [the current contract](DAY_NIGHT.md).
+
 An original blue daylight gradient surrounds the player. Distant terrain fades
 smoothly into the same directional sky color. Nearby atlas texels, voxel skylight,
 vertex AO, face shading and gameplay remain unchanged. This is static daylight;

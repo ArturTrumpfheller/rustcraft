@@ -400,3 +400,21 @@ uses the batch API. The Bevy adapter invalidates all returned changes in the sam
 input system so background jobs coalesce and retain existing stale-result/atomic
 publication guarantees. Existing coherent save snapshots and paired session redo
 journals persist all regional Air edits plus inventory, without format changes.
+
+## Slice 21 authoritative time and presentation
+
+`World.time` owns an engine-independent u64 day/u32 fixed-step clock. The same
+60-Hz gate as physics runs it during inventory and freezes it in menus/focus
+loss. Clock mutation does not advance block/mesh revisions. The save worker
+captures it with inventory in player v2 and the existing redo journal; time-only
+saves leave world roots/regions intact. SaveSession tracks captured time
+separately from edits and handles later ticks as still unsaved.
+
+COLOR retains AO/directional sky and block brightness plus geometric sky exposure
+in the existing56-byte vertex. Greedy keys preserve both light channels. The
+shader uses max(sky*daylight,block), with fog gated by sky exposure. At most two
+retained80-byte uniforms update per frame. One procedural fullscreen sky triangle
+adds the world-relative sun/moon and stable sparse stars. No clock tick queries
+blocks, invalidates light caches or schedules terrain work. Existing stale
+rejection and atomic connected publication are unchanged. See [DAY_NIGHT](DAY_NIGHT.md)
+for equations, compatibility, costs, screenshots and native acceptance.

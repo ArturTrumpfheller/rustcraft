@@ -110,8 +110,9 @@ other sources. The existing15-block/full-height source and dirty bounds include
 the entire artificial influence radius and face sample, including signed seams.
 
 `level` still returns skylight. `block_level` returns artificial light (zero outside
-Y[-16,32)); `combined_level` returns their maximum for terrain/shaft color and the
-greedy key. Exact cached18³ bytes store both four-bit channels without increasing
+Y[-16,32)); `combined_level` remains a diagnostic maximum; Slice21 terrain retains both
+channels in the greedy key and applies max(sky*daylight,block) in the shader.
+Exact cached18³ bytes store both four-bit channels without increasing
 resident memory. The worker reuses its drained FIFO, skips the extra light-volume
 allocation when no sources exist, and includes both propagation counts in metrics.
 Existing cache/token/coalescing/atomic-publication checks apply to both channels.
@@ -126,3 +127,10 @@ The Slice20 refinement's four wall variants emit the same14 and use exactly the
 same transparent-source/channel path. Orientation-only edits change geometry
 without changing light samples; a regression verifies that cached samples are
 reused and only the forced geometry footprint is remeshed.
+
+## Slice21 rendering contract
+
+Propagation/cache bytes stay unchanged. Greedy keys retain separate sky/block
+levels; COLOR packs AO/directional sky and block brightness, sky level/15 and
+alpha. The shared clock uniform changes only the sky channel. Time never
+invalidates the cache or schedules a light/mesh job. See [DAY_NIGHT](DAY_NIGHT.md).

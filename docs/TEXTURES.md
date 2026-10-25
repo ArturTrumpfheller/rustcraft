@@ -1,5 +1,9 @@
 # Terrain texture and light modulation contract (Slices 8–10)
 
+Slice21 extends this historical baseline with a saved day/night clock, separate
+sky/block COLOR contributions, procedural celestial bodies/stars and matching
+fog gated by geometric sky exposure. See [the current contract](DAY_NIGHT.md).
+
 All art/source is original RustCraft, **MIT OR Apache-2.0**. Provenance, previews
 and regeneration: [assets/terrain](../assets/terrain/README.md). This changes only
 presentation and mesh payloads, never block IDs, generator versions or save bytes.

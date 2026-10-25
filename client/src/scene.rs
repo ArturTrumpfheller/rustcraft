@@ -384,15 +384,18 @@ fn atmosphere_radius(
 }
 #[derive(SystemParam)]
 struct AtmosphereSettings<'w> {
+    world: Option<Res<'w, VoxelWorld>>,
     stream: Option<Res<'w, crate::streaming::StreamState>>,
     preferences: Option<Res<'w, crate::settings::Preferences>>,
 }
 impl AtmosphereSettings<'_> {
     fn parameters(&self) -> crate::atmosphere::AtmosphereUniform {
-        crate::atmosphere::AtmosphereUniform::for_radius(atmosphere_radius(
-            self.stream.as_deref(),
-            self.preferences.as_deref(),
-        ))
+        crate::atmosphere::AtmosphereUniform::at_time(
+            atmosphere_radius(self.stream.as_deref(), self.preferences.as_deref()),
+            self.world
+                .as_ref()
+                .map_or_else(Default::default, |w| w.0.time),
+        )
     }
 }
 fn spawn_atmosphere(

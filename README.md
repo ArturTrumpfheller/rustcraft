@@ -9,7 +9,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Deterministic seeded terrain, rolling hills/valleys, a walkable cave network with surface entrance, and blocky trees.
 - 16³ chunks streamed in a **65,536×65,536×48** new-world rollout with local generation and regional saves; configurable load radius, bounded background generation/meshing and cache eviction.
 - Eight original 16×16 pixel textures for grass, dirt, stone, bark, end-grain, opaque leaves and torches, using one shared nearest-filtered atlas.
-- Procedural daylight sky gradient and terrain-only distance fog adapting to radius 1–3.
+- Persistent 20-minute day/night cycle, procedural square sun/moon, sparse stars and matching terrain fog.
 - Placeable, persistent standing/wall torches (hotbar 6) with worker-based voxel block light.
 - Derived 0–15 voxel skylight: dark roofs/caves, gradual entrance falloff and background updates after edits.
 - At most one surface mesh per rendered chunk; faces shared by solid blocks are removed, including at chunk boundaries.
@@ -23,7 +23,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 20**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 21**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -72,6 +72,15 @@ Pause and its Options page show the frozen world through a 45% dark scrim.
 Title/catalog/options from title retain their opaque background.
 See [Slice 19 controls, measurements, screenshots and native checklist](docs/DEBUG_GAMEPLAY.md).
 
+## Persistent day/night (Slice 21)
+
+A saved per-world clock advances at fixed 60 Hz: 24,000 logical units in 20 minutes.
+Inventory runs it; Pause, Options and focus loss freeze it. The sun rises east,
+the moon and sparse stars appear at night, and torches retain their light.
+Time changes two shared material uniforms without relighting or remeshing terrain.
+F3 shows day/time/daylight. See [architecture, eight matched screenshots, costs,
+format compatibility and native tests](docs/DAY_NIGHT.md).
+
 ## Sky and distance fog (Slice 18)
 
 The daylight sky transitions from blue overhead to a light horizon. Terrain fades
@@ -88,7 +97,9 @@ keeps textures recognizable. Subtle vertex ambient occlusion adds depth to corne
 and tree bases while preserving directional face shading and greedy correctness.
 See [AO rules, measurements and native acceptance](docs/AMBIENT_OCCLUSION.md).
 Torches emit a separate level-14 block-light field; terrain uses the stronger of
-skylight and block light. There is no day/night cycle or shadow-map effect yet.
+skylight and block light. Time scales only the sky contribution in the shader; torches stay bright at night.
+See [Slice21 clock, screenshots, measurements and native testing](docs/DAY_NIGHT.md).
+Celestial shadow maps remain deferred.
 See [Slice 20 rules, matched screenshots, measurements and native testing](docs/TORCHES.md).
 
 ![Closed original test tunnel](docs/images/slice10-cave-closed.png)
@@ -130,7 +141,7 @@ standard-library generator are **MIT OR Apache-2.0**: [asset provenance](assets/
 A single embedded 128×64 sRGB atlas/material serves all chunks, with eight texels
 of extruded padding per tile, nearest sampling and one mip. Chunk meshes retain
 face culling and async updates; greedy quads repeat each block tile using terrain-only UVs and an embedded shader.
-Derived RGBA light modulation is retained; uncompressed terrain vertices use 56 bytes. Inventory icons share that image. Intentional distant pixel shimmer is
+Separate sky/block/AO contributions share the existing COLOR attribute; uncompressed terrain vertices use 56 bytes. Inventory icons share that image. Intentional distant pixel shimmer is
 a consequence of nearest LOD0 sampling. See [texture contract](docs/TEXTURES.md)
 and [measurements/limits](docs/VALIDATION.md).
 

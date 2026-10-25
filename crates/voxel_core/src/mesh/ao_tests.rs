@@ -77,13 +77,15 @@ fn isolated_and_flat_surfaces_remain_bright_and_merge() {
     let light = Skylight::for_chunks(&w, &BTreeSet::from([cp]));
     for (q, face) in FACES.iter().enumerate() {
         assert_eq!(reference_ao(&w, BlockPos([8, 2, 8]), face), [0; 4]);
-        assert_eq!(
-            m.colors[q * 4],
-            crate::lighting::face_color(
-                light.level(BlockPos([8, 2, 8]).offset(face.normal).unwrap()),
-                face.normal
-            )
-        );
+        assert_eq!(m.colors[q * 4], {
+            let sky = light.level(BlockPos([8, 2, 8]).offset(face.normal).unwrap());
+            [
+                crate::lighting::face_color(sky, face.normal)[0],
+                crate::lighting::face_color(0, face.normal)[0],
+                f32::from(sky) / 15.,
+                1.,
+            ]
+        });
     }
     for x in 0..16 {
         for z in 0..16 {
@@ -372,6 +374,29 @@ fn visibility_halo_treats_unrepresentable_coordinates_as_air() {
                 .unwrap();
             assert_eq!(halo.corners(local, face), reference_ao(&w, p, face));
             assert_eq!(halo.corners(local, face), [0; 4]);
+        }
+    }
+}
+
+#[test]
+fn split_channels_preserve_noon_ao_and_leave_blocklight_independent_at_night() {
+    for face in &FACES {
+        for sky in 0..=15 {
+            for block in 0..=15 {
+                for occlusion in 0..=3 {
+                    let s = ao::color(sky, face.normal, occlusion)[0];
+                    let b = ao::color(block, face.normal, occlusion)[0];
+                    assert_eq!(
+                        s.max(b),
+                        ao::color(sky.max(block), face.normal, occlusion)[0]
+                    );
+                    let night = (s * 0.1).max(b);
+                    assert!(night >= b && night <= s.max(b));
+                    if block >= sky {
+                        assert_eq!(night, b);
+                    }
+                }
+            }
         }
     }
 }

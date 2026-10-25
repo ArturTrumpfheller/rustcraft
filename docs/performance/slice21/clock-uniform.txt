@@ -1,0 +1,4 @@
+CLOCK_UNIFORM radius=1 ns_per_tick_and_two_uniforms=503 terrain_assets=1 sky_assets=1
+CLOCK_UNIFORM radius=2 ns_per_tick_and_two_uniforms=500 terrain_assets=1 sky_assets=1
+CLOCK_UNIFORM radius=3 ns_per_tick_and_two_uniforms=504 terrain_assets=1 sky_assets=1
+Debug CPU-only; median of7 loops of100,000 calls. Includes tick, atmosphere math and two retained asset writes.

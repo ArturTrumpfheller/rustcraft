@@ -1,5 +1,9 @@
 # Slice 20 — torches and dynamic voxel block light
 
+Slice21 extends this historical baseline with a saved day/night clock, separate
+sky/block COLOR contributions, procedural celestial bodies/stars and matching
+fog gated by geometric sky exposure. See [the current contract](DAY_NIGHT.md).
+
 Original RustCraft source/art: MIT OR Apache-2.0. Based on accepted Slice19
 `9eec01272d463c6eaa350bcbf3345d24eba6b53f`. The owner accepted the original Slice20 and the precise-selection/wall-mount refinement on native Void Linux. Final support-collection and held-pose changes below await final native acceptance.
 

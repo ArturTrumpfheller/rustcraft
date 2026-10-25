@@ -185,7 +185,10 @@ fn nine_keys_wheel_wrap_and_empty_selection_do_not_consume_or_build() {
     );
     let before = app.world().resource::<VoxelWorld>().0.clone();
     click(&mut app, MouseButton::Right);
-    assert_eq!(app.world().resource::<VoxelWorld>().0, before);
+    assert_eq!(
+        voxel_core::persistence::encode(&app.world().resource::<VoxelWorld>().0).unwrap(),
+        voxel_core::persistence::encode(&before).unwrap()
+    );
     app.world_mut()
         .resource_mut::<AccumulatedMouseScroll>()
         .delta
@@ -237,7 +240,10 @@ fn modal_open_pauses_camera_motion_mining_jump_reset_and_escape_closes_first() {
         app.world().resource::<crate::camera::ViewPose>().direction,
         direction
     );
-    assert_eq!(app.world().resource::<VoxelWorld>().0, world);
+    assert_eq!(
+        voxel_core::persistence::encode(&app.world().resource::<VoxelWorld>().0).unwrap(),
+        voxel_core::persistence::encode(&world).unwrap()
+    );
     key(&mut app, KeyCode::Escape);
     assert!(!app.world().resource::<GameInventory>().open);
     let w = app.world_mut();
@@ -393,7 +399,10 @@ fn modal_transition_clicks_never_mine_or_place_behind_the_inventory() {
         .press(MouseButton::Left);
     frame(&mut app);
     assert!(app.world().resource::<GameInventory>().open);
-    assert_eq!(app.world().resource::<VoxelWorld>().0, before);
+    assert_eq!(
+        voxel_core::persistence::encode(&app.world().resource::<VoxelWorld>().0).unwrap(),
+        voxel_core::persistence::encode(&before).unwrap()
+    );
     app.world_mut()
         .resource_mut::<ButtonInput<KeyCode>>()
         .release(KeyCode::KeyE);
@@ -409,7 +418,10 @@ fn modal_transition_clicks_never_mine_or_place_behind_the_inventory() {
         .press(MouseButton::Right);
     frame(&mut app);
     assert!(!app.world().resource::<GameInventory>().open);
-    assert_eq!(app.world().resource::<VoxelWorld>().0, before);
+    assert_eq!(
+        voxel_core::persistence::encode(&app.world().resource::<VoxelWorld>().0).unwrap(),
+        voxel_core::persistence::encode(&before).unwrap()
+    );
     assert_eq!(app.world().resource::<GameInventory>().contents, contents);
 }
 #[test]
@@ -421,7 +433,10 @@ fn full_inventory_declines_mining_and_reports_it_without_losing_the_block() {
     click(&mut app, MouseButton::Left);
     let before = app.world().resource::<VoxelWorld>().0.clone();
     click(&mut app, MouseButton::Left);
-    assert_eq!(app.world().resource::<VoxelWorld>().0, before);
+    assert_eq!(
+        voxel_core::persistence::encode(&app.world().resource::<VoxelWorld>().0).unwrap(),
+        voxel_core::persistence::encode(&before).unwrap()
+    );
     assert_eq!(total(&app, Item::Dirt), 36 * 64);
     assert_eq!(app.world().resource::<GameInventory>().message, "NO ROOM");
     click(&mut app, MouseButton::Right);

@@ -1,0 +1,6 @@
+Linux-6.18.55-x86_64-with-glibc2.41
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+Baseline ab36403bd5742438499c645d1bdb6e19cd4a1317
+Xvfb X11; Mesa25.0.7 llvmpipe LLVM19.1.7 Vulkan CPU. No native physical-GPU performance claim.
+960x640; debug renderer, release core benchmark. 5s/120frame warmup, 300 measured frames.
+RSS peak sampled every10ms through Linux /proc.

@@ -100,7 +100,7 @@ feature/toolchain changes. Bitmap UI and terrain art retain Slice8/9 provenance.
 
 ## Slice 12 original hand and viewmodel
 
-The single-cuboid arm, original16×16 skin/slate pixels reproducibly authored in
+The single-cuboid arm, original 16×16 skin/slate pixels reproducibly authored in
 `client/src/viewmodel.rs::arm_image`, rendering/animation code, tests and docs
 are original RustCraft work, **MIT OR Apache-2.0**, including the artwork.
 Procedural Bevy cuboids use the normal dependency API. Held cubes share our
@@ -176,3 +176,17 @@ under the same licenses, using Xvfb/Mesa software rendering.
 Original RustCraft torch pixel grid, model and icon geometry, MIT OR Apache-2.0,
 authored specifically for this repository. No external artwork, dependencies or
 Minecraft assets added. Editable source and attribution: assets/terrain/README.md.
+
+## Slice 21 provenance
+
+The clock, player v2 extension, separate-channel renderer, square sun/moon, hashed
+procedural stars and comparison fixtures are project-authored MIT OR Apache-2.0.
+No third-party textures, sky images, fonts, models, crates, engine features or
+lockfile changes are added. Screenshot PNGs use the existing standard-library
+encoder; all rendered content uses original assets and production shaders.
+
+The Slice21 visual-polish moon is an independently authored 16×16 four-shade
+pixel-art design encoded as constant 2-bit rows in `client/src/atmosphere.wesl`,
+with readable source rows and palette alongside it. MIT OR Apache-2.0 under the
+root licenses; no Minecraft artwork or third-party image was used. It requires
+no new texture asset, decoder, sampler, dependency or per-frame CPU allocation.

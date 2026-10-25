@@ -8,7 +8,7 @@ use crate::{
 const ID_MAGIC: &[u8; 8] = b"RUSTPID1";
 const PLAYER_MAGIC: &[u8; 8] = b"RUSTPLY1";
 const TX_MAGIC: &[u8; 8] = b"RUSTTXN1";
-const PLAYER_SIZE: usize = 176;
+const PLAYER_SIZE: usize = 192;
 const MAX_TX: usize = 32 * 1024 * 1024;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct Binding([u8; 32]);
@@ -34,7 +34,7 @@ fn unpack<'a>(b: &'a [u8], magic: &[u8; 8], count: u32) -> Result<&'a [u8], Form
     if &b[..8] != magic {
         return Err(FormatError::Magic);
     }
-    if u32at(b, 8) != 1 {
+    if u32at(b, 8) != 1 && !(magic == PLAYER_MAGIC && u32at(b, 8) == 2) {
         return Err(FormatError::Version(u32at(b, 8)));
     }
     if u32at(b, 12) != count || u32at(b, 16) as usize != b.len() - 24 {
@@ -103,7 +103,12 @@ fn fingerprint(root: &[u8]) -> [u8; 8] {
     b[4..].copy_from_slice(&crc32fast::hash(root).to_le_bytes());
     b
 }
-fn player_bytes(binding: Binding, root: &[u8], inv: &Inventory) -> Vec<u8> {
+fn player_bytes(
+    binding: Binding,
+    root: &[u8],
+    inv: &Inventory,
+    time: crate::time::WorldTime,
+) -> Vec<u8> {
     let mut p = Vec::new();
     p.extend(binding.0);
     p.extend(fingerprint(root));
@@ -116,17 +121,35 @@ fn player_bytes(binding: Binding, root: &[u8], inv: &Inventory) -> Vec<u8> {
             p.extend([0; 3]);
         }
     }
-    pack(PLAYER_MAGIC, SLOT_COUNT as u32, &p)
+    p.extend(time.day().to_le_bytes());
+    p.extend(time.step().to_le_bytes());
+    p.extend(0u32.to_le_bytes());
+    let mut b = pack(PLAYER_MAGIC, SLOT_COUNT as u32, &p);
+    b[8..12].copy_from_slice(&2u32.to_le_bytes());
+    let crc = checksum(&b);
+    b[20..24].copy_from_slice(&crc.to_le_bytes());
+    b
 }
-fn decode_player(b: &[u8]) -> Result<(Binding, [u8; 8], Inventory), FormatError> {
-    if b.len() != PLAYER_SIZE {
+fn decode_player(
+    b: &[u8],
+) -> Result<(Binding, [u8; 8], Inventory, crate::time::WorldTime), FormatError> {
+    if b.len() != 176 && b.len() != PLAYER_SIZE {
         return Err(FormatError::Length);
     }
     let p = unpack(b, PLAYER_MAGIC, SLOT_COUNT as u32)?;
+    let time = match (u32at(b, 8), b.len()) {
+        (1, 176) => crate::time::WorldTime::default(),
+        (2, 192) if u32at(b, 188) == 0 => crate::time::WorldTime::from_parts(
+            u64::from_le_bytes(b[176..184].try_into().unwrap()),
+            u32at(b, 184),
+        )
+        .ok_or(FormatError::Length)?,
+        _ => return Err(FormatError::Length),
+    };
     let binding = Binding(p[..32].try_into().unwrap());
     let fingerprint = p[32..40].try_into().unwrap();
     let mut stacks = [None; SLOT_COUNT + 1];
-    for (i, r) in p[41..].as_chunks::<3>().0.iter().enumerate() {
+    for (i, r) in p[41..152].as_chunks::<3>().0.iter().enumerate() {
         let id = u16::from_le_bytes([r[0], r[1]]);
         stacks[i] = if id == 0 && r[2] == 0 {
             None
@@ -141,7 +164,7 @@ fn decode_player(b: &[u8]) -> Result<(Binding, [u8; 8], Inventory), FormatError>
     let slots = stacks[..SLOT_COUNT].try_into().unwrap();
     let inv =
         Inventory::from_parts(slots, cursor, usize::from(p[40])).ok_or(FormatError::Length)?;
-    Ok((binding, fingerprint, inv))
+    Ok((binding, fingerprint, inv, time))
 }
 struct Transaction {
     world: World,
@@ -221,7 +244,8 @@ fn decode_transaction(b: &[u8]) -> Result<Transaction, FormatError> {
     if !r.0.is_empty() {
         return Err(FormatError::Length);
     }
-    let (binding, fp, _) = decode_player(&player)?;
+    let (binding, fp, _, time) = decode_player(&player)?;
+    world.time = time;
     if !binding.matches(&world) || fp != fingerprint(&root) || (!dirty && n != 0) {
         return Err(FormatError::Identity);
     }
@@ -275,7 +299,7 @@ impl SaveStore {
         let file = read_limited(&self.player_path(), PLAYER_SIZE)?;
         let binding = self.binding()?;
         if let Some(b) = file {
-            let (id, fp, inv) = decode_player(&b)?;
+            let (id, fp, inv, time) = decode_player(&b)?;
             if binding != Some(id) || !id.matches(world) {
                 return Err(FormatError::Identity.into());
             }
@@ -286,6 +310,7 @@ impl SaveStore {
                     "world/player generations disagree; recover a complete backup",
                 ));
             }
+            world.time = time;
             return Ok(inv);
         }
         if binding.is_some() || self.player_path().with_extension("rcp.bak").try_exists()? {
@@ -336,7 +361,7 @@ impl SaveStore {
             read_save(&self.path())?
                 .ok_or_else(|| recovery("clean session has no durable world"))?
         };
-        let player = player_bytes(binding, &root, inventory);
+        let player = player_bytes(binding, &root, inventory, world.time);
         let bytes = transaction_bytes(world, &root, &player, world_dirty)?;
         atomic_replace(&self.pending_path(), &bytes, true, &mut hook)?;
         hook(SaveStage::SessionPrepared)?;
@@ -416,7 +441,7 @@ impl SaveStore {
         }
         match read_limited(&self.player_path(), PLAYER_SIZE)? {
             Some(b) => {
-                let (id, fp, _) = decode_player(&b)?;
+                let (id, fp, _, _) = decode_player(&b)?;
                 if binding != Some(id) || !id.matches(world) {
                     return Err(FormatError::Identity.into());
                 }

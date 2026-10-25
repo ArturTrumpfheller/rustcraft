@@ -937,3 +937,63 @@ fn steady_ground_speeds_after_acceleration_match_at_30_60_and_144_fps() {
         assert_eq!(results[1], results[2]);
     }
 }
+
+#[test]
+fn clock_runs_with_inventory_and_pauses_without_catchup_on_focus_or_free_cursor() {
+    let mut app = test_app();
+    capture(&mut app);
+    let initial = app.world().resource::<VoxelWorld>().0.time;
+    for _ in 0..60 {
+        tick(&mut app);
+    }
+    let mut expected = initial;
+    expected.advance(60);
+    assert_eq!(app.world().resource::<VoxelWorld>().0.time, expected);
+    let mut inv = crate::inventory_ui::GameInventory::default();
+    inv.open = true;
+    app.world_mut().insert_resource(inv);
+    for _ in 0..60 {
+        tick(&mut app);
+    }
+    expected.advance(60);
+    assert_eq!(app.world().resource::<VoxelWorld>().0.time, expected);
+    let w = window(&mut app);
+    app.world_mut().get_mut::<Window>(w).unwrap().focused = false;
+    for _ in 0..120 {
+        tick(&mut app);
+    }
+    assert_eq!(app.world().resource::<VoxelWorld>().0.time, expected);
+    app.world_mut().get_mut::<Window>(w).unwrap().focused = true;
+    // Inventory deliberately resumes simulation even with the free cursor.
+    tick(&mut app);
+    expected.advance(1);
+    assert_eq!(app.world().resource::<VoxelWorld>().0.time, expected);
+    app.world_mut()
+        .resource_mut::<crate::inventory_ui::GameInventory>()
+        .open = false;
+    for _ in 0..120 {
+        tick(&mut app);
+    }
+    assert_eq!(app.world().resource::<VoxelWorld>().0.time, expected);
+}
+
+#[test]
+fn clock_fixed_schedule_agrees_at_30_60_and_144_render_fps() {
+    let mut results = Vec::new();
+    for fps in [30, 60, 144] {
+        let mut app = test_app();
+        capture(&mut app);
+        // Round to nanoseconds once; compare a full second away from tick boundaries.
+        let mut previous = Duration::ZERO;
+        for i in 1..=fps * 10 {
+            let endpoint = Duration::from_secs_f64(f64::from(i) / f64::from(fps));
+            frame(&mut app, endpoint - previous);
+            previous = endpoint;
+        }
+        frame(&mut app, Duration::from_millis(10));
+        results.push(app.world().resource::<VoxelWorld>().0.time);
+    }
+    assert_eq!(results[0], results[1]);
+    assert_eq!(results[0], results[2]);
+    assert_eq!(results[0].step(), 3600);
+}

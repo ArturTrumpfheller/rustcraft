@@ -10,6 +10,8 @@ pub struct ChunkMesh {
     pub uvs: Vec<[f32; 2]>,
     /// Constant atlas tile origin per quad; uvs are now block-repeat coordinates.
     pub atlas_uvs: Vec<[f32; 2]>,
+    /// Terrain COLOR: AO/directional sky, AO/directional block, sky level/15, alpha.
+    /// Held torch_mesh() instead returns ordinary RGB for the viewmodel material.
     pub colors: Vec<[f32; 4]>,
     pub indices: Vec<u32>,
 }
@@ -76,7 +78,8 @@ pub fn mesh_chunk_lit(
     #[derive(Clone, Copy, PartialEq)]
     struct MergeKey {
         tile: crate::texture::Tile,
-        level: u8,
+        sky: u8,
+        block: u8,
         ao: u8,
     }
     let colors = ao::colors();
@@ -96,7 +99,7 @@ pub fn mesh_chunk_lit(
                         &mut mesh,
                         block,
                         p.map(|v| v as f32),
-                        light.combined_level(bp),
+                        [light.level(bp), light.block_level(bp)],
                     );
                 }
                 if !block.is_cube() {
@@ -115,9 +118,12 @@ pub fn mesh_chunk_lit(
                         active_slices[f] |= 1 << p[axis];
                         planes[f][p[axis]][p[v] * CHUNK_SIZE + p[u]] = Some(MergeKey {
                             tile: crate::texture::face_tile(block, face.normal).unwrap(),
-                            level: origin
+                            sky: origin
                                 .offset(std::array::from_fn(|a| p[a] as i32 + face.normal[a]))
-                                .map_or(0, |p| light.combined_level(p)),
+                                .map_or(0, |p| light.level(p)),
+                            block: origin
+                                .offset(std::array::from_fn(|a| p[a] as i32 + face.normal[a]))
+                                .map_or(0, |p| light.block_level(p)),
                             ao: ao::pack(occlusion.sample_index(center, ao_offsets[f])),
                         });
                     }
@@ -165,7 +171,8 @@ pub fn mesh_chunk_lit(
                         }
                         cell.is_some_and(|candidate| {
                             candidate.tile == key.tile
-                                && candidate.level == key.level
+                                && candidate.sky == key.sky
+                                && candidate.block == key.block
                                 && field
                                     .as_ref()
                                     .is_some_and(|a| a.matches(ao::unpack(candidate.ao), offset))
@@ -222,8 +229,14 @@ pub fn mesh_chunk_lit(
                         [[w, h], [w, 0.], [0., 0.], [0., h]]
                     });
                     mesh.atlas_uvs.extend([key.tile.uv([0, 0]); 4]);
-                    mesh.colors
-                        .extend(ao.map(|a| colors[f][usize::from(key.level)][usize::from(a)]));
+                    mesh.colors.extend(ao.map(|a| {
+                        [
+                            colors[f][usize::from(key.sky)][usize::from(a)][0],
+                            colors[f][usize::from(key.block)][usize::from(a)][0],
+                            f32::from(key.sky) / 15.,
+                            1.,
+                        ]
+                    }));
                     // Connect the darker opposite pair to avoid a bright crease.
                     let indices = if ao[0] + ao[2] < ao[1] + ao[3] {
                         [0, 1, 3, 1, 2, 3]
@@ -243,10 +256,19 @@ pub fn mesh_chunk_lit(
 /// Texture V 0..1/4 is the flame, V 1/4..1 is the wooden shaft.
 pub fn torch_mesh() -> ChunkMesh {
     let mut mesh = ChunkMesh::default();
-    append_torch(&mut mesh, crate::Block::Torch, [0.; 3], 15);
+    append_torch(&mut mesh, crate::Block::Torch, [0.; 3], [15, 15]);
+    for c in &mut mesh.colors {
+        let v = c[0].max(c[1]);
+        *c = [v, v, v, 1.];
+    }
     mesh
 }
-fn append_torch(mesh: &mut ChunkMesh, block: crate::Block, origin: [f32; 3], level: u8) {
+fn append_torch(
+    mesh: &mut ChunkMesh,
+    block: crate::Block,
+    origin: [f32; 3],
+    [sky, block_level]: [u8; 2],
+) {
     let transform = block.shape_transform();
     for (bounds, v0, v1, glowing) in [
         (crate::shape::TORCH_BOXES[0], 0.25, 1., false),
@@ -272,9 +294,14 @@ fn append_torch(mesh: &mut ChunkMesh, block: crate::Block, origin: [f32; 3], lev
                 .extend([crate::texture::Tile::Torch.uv([0, 0]); 4]);
             mesh.colors.extend(
                 [if glowing {
-                    [1.; 4]
+                    [1., 1., f32::from(sky) / 15., 1.]
                 } else {
-                    crate::lighting::face_color(level, face.normal)
+                    [
+                        crate::lighting::face_color(sky, face.normal)[0],
+                        crate::lighting::face_color(block_level, face.normal)[0],
+                        f32::from(sky) / 15.,
+                        1.,
+                    ]
                 }; 4],
             );
             mesh.indices.extend([0, 1, 2, 0, 2, 3].map(|i| start + i));
@@ -511,11 +538,17 @@ mod greedy_tests {
                                         .unwrap()
                                         .uv([0, 0]),
                                     super::ao_tests::reference_ao(world, bp, face).map(|a| {
-                                        ao::color(
-                                            bp.offset(face.normal).map_or(0, |p| light.level(p)),
-                                            face.normal,
-                                            a,
-                                        )
+                                        let sky =
+                                            bp.offset(face.normal).map_or(0, |p| light.level(p));
+                                        let block = bp
+                                            .offset(face.normal)
+                                            .map_or(0, |p| light.block_level(p));
+                                        [
+                                            ao::color(sky, face.normal, a)[0],
+                                            ao::color(block, face.normal, a)[0],
+                                            f32::from(sky) / 15.,
+                                            1.,
+                                        ]
                                     }),
                                 ),
                             );
@@ -853,10 +886,20 @@ mod torch_tests {
         let cp = ChunkPos([0; 3]);
         let before = mesh_chunk(&w, cp);
         w.set_block(BlockPos([0, 1, 0]), Block::Torch).unwrap();
-        // In open sky the terrain lighting and AO stay unchanged. Only the
-        // twelve-quadded non-cube model is added; its supporting face stays.
+        // Preserve hidden blocklight bands even in full sky: they become visible
+        // at night without remeshing. The supporting top remains fully covered.
         let after = mesh_chunk(&w, cp);
-        assert_eq!(after.indices.len(), before.indices.len() + 72);
+        assert!(after.indices.len() > before.indices.len() + 72);
+        let top_area: f32 = after
+            .positions
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .enumerate()
+            .filter(|(q, p)| after.normals[q * 4] == [0., 1., 0.] && p.iter().all(|p| p[1] == 1.))
+            .map(|(_, p)| (p[1][0] - p[0][0]).abs() * (p[3][2] - p[0][2]).abs())
+            .sum();
+        assert_eq!(top_area, 64.);
         for x in -8..8 {
             for z in -8..8 {
                 w.set_block(BlockPos([x, 5, z]), Block::Stone).unwrap();
@@ -880,8 +923,12 @@ mod torch_tests {
         for (p, c) in floor {
             let x = p.iter().map(|p| p[0] as i32).min().unwrap();
             let z = p.iter().map(|p| p[2] as i32).min().unwrap();
-            let expected =
-                crate::lighting::face_color(light.combined_level(BlockPos([x, 1, z])), [0, 1, 0]);
+            let expected = [
+                crate::lighting::face_color(light.level(BlockPos([x, 1, z])), [0, 1, 0])[0],
+                crate::lighting::face_color(light.block_level(BlockPos([x, 1, z])), [0, 1, 0])[0],
+                f32::from(light.level(BlockPos([x, 1, z]))) / 15.,
+                1.,
+            ];
             assert_eq!(c, &[expected; 4]);
         }
     }
@@ -899,10 +946,10 @@ mod wall_torch_tests {
             crate::Block::TorchNorth,
         ] {
             let mut m = ChunkMesh::default();
-            append_torch(&mut m, block, [0.; 3], 14);
+            append_torch(&mut m, block, [0.; 3], [14, 14]);
             assert_eq!(m.positions.len(), 48);
             assert_eq!(m.indices.len(), 72);
-            assert!(m.colors[24..].iter().all(|c| *c == [1.; 4]));
+            assert!(m.colors[24..].iter().all(|c| *c == [1., 1., 14. / 15., 1.]));
             assert!(
                 m.positions
                     .iter()
