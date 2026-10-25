@@ -12,12 +12,12 @@ its UI are original RustCraft code/art, MIT OR Apache-2.0.
 ## Model and controls
 
 `voxel_core::inventory` owns **nine hotbar + 27 main slots** and a temporary held
-cursor stack, each stack capped at 64. Five explicit item IDs map to the existing
-Grass/Dirt/Stone/Wood/Leaves blocks. Private stack fields/validated constructors
+cursor stack, each stack capped at 64. Six explicit item IDs map to
+Grass/Dirt/Stone/Wood/Leaves/Torch (IDs 1–6). Private stack fields/validated constructors
 prevent invalid counts; inventory operations use no Bevy or filesystem types.
 
-Starter: Grass/Dirt/Stone 64 each, Wood/Leaves 32 each in slots 1–5, all other slots
-empty. It is granted once per world's player initialization, not per restart.
+Starter: Grass/Dirt/Stone 64 each, Wood/Leaves/Torch 32 each in slots 1–6,
+all other slots empty. Existing initialized inventories are never refilled. It is granted once per world's player initialization, not per restart.
 Mining returns the corresponding item (Grass remains Grass); a full inventory
 rejects mining atomically. There are no world drops, crafting, armor, offhand,
 mouse dragging or automatic pickup entities yet.
@@ -125,3 +125,20 @@ lock. Creating another world grants only that world's initial starter; switching
 back loads the prior slots/selection/held cursor through the existing session
 barrier. Legacy import preserves whole bundles and their immutable player/world
 identity; it does not refill or remap inventories. See [WORLDS](WORLDS.md).
+
+## Slice 20 torches
+
+Slot6 of a fresh starter holds 32 torches (stable item/block ID6). Right click
+places on a loaded solid floor; the selected stack loses exactly one only after
+a successful world change. Torch cells are occupied for placement, transparent
+for both light channels, noncolliding for walking and targetable across the cell.
+Left click collects exactly one; a full inventory rejects mining unchanged.
+Supports cannot be removed until the torch is collected, including when their
+upper neighbor is pending (defer the edit). This bounded single-cell policy avoids
+implicit multi-block drops/journal changes. No automatic support-loss drops exist.
+
+The icon uses two small quads (shaft/tip) and the same original atlas slot7; the
+held model reuses the world twelve-quad model. One additional retained hand mesh
+adds 2,592 logical bytes (six block models plus arm total10,368 bytes). No held
+light emission. See [save extension](SAVE_FORMAT.md#slice-20-additive-material-registry-extension)
+and [native testing](TORCHES.md).

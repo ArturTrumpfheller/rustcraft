@@ -52,7 +52,7 @@ fn selection_slots_only_offer_solid_blocks() {
         assert!(!choice.name().is_empty());
     }
     assert_eq!(BuildBlock::from_slot(0), None);
-    assert_eq!(BuildBlock::from_slot(6), None);
+    assert_eq!(BuildBlock::from_slot(7), None);
 }
 
 #[test]
@@ -257,4 +257,63 @@ fn placing_past_the_editable_box_is_rejected_without_allocating_storage() {
         Err(EditError::OutOfBounds)
     );
     assert_eq!(world, before);
+}
+
+#[test]
+fn torch_properties_support_and_targeting_are_separate() {
+    use crate::inventory::{Inventory, Item, edit_inventory};
+    assert_eq!(Item::Torch.id(), 6);
+    assert_eq!(Item::from_id(6), Some(Item::Torch));
+    assert_eq!(BuildBlock::from_slot(6), Some(BuildBlock::Torch));
+    assert_eq!(Block::Torch.emission(), 14);
+    assert!(!Block::Torch.is_collidable());
+    assert!(!Block::Torch.is_opaque());
+    assert!(!Block::Torch.is_cube());
+    assert!(Block::Torch.is_targetable());
+    let cfg = PhysicsConfig::default();
+    let p = BlockPos([0, 1, 0]);
+    let mut w = World::default();
+    assert_eq!(w.set_block(p, Block::Torch), Err(EditError::Unsupported));
+    w.set_block(BlockPos([0, 0, 0]), Block::Stone).unwrap();
+    let mut inv = Inventory::starter();
+    inv.select(5);
+    let down = Ray {
+        origin: [0.5, 3., 0.5],
+        direction: [0., -1., 0.],
+        reach: 5.,
+    };
+    let body = Player::new([0.5, 1., 0.5]); // Non-colliding torch can overlap player.
+    assert!(
+        edit_inventory(&mut w, &mut inv, down, true, &body, &cfg)
+            .unwrap()
+            .is_some()
+    );
+    assert_eq!(w.block(p), Block::Torch);
+    assert_eq!(inv.selected_stack().unwrap().count(), 31);
+    assert!(body.fits_in_world(&w, &cfg));
+    assert_eq!(raycast(&w, down).unwrap().position, p);
+    assert_eq!(
+        w.set_block(BlockPos([0, 0, 0]), Block::Air),
+        Err(EditError::SupportsTorch)
+    );
+    // Duplicate direct assignments do not create changes; failed gameplay
+    // placement on top of a torch must not consume another inventory item.
+    assert!(w.set_block(p, Block::Torch).unwrap().is_none());
+    let before = inv.clone();
+    assert!(edit_inventory(&mut w, &mut inv, down, true, &body, &cfg).is_err());
+    assert_eq!(inv, before);
+    edit_inventory(&mut w, &mut inv, down, false, &body, &cfg)
+        .unwrap()
+        .unwrap();
+    assert_eq!(inv.selected_stack().unwrap().count(), 32);
+    assert_eq!(w.block(p), Block::Air);
+    assert!(
+        w.set_block(BlockPos([0, 0, 0]), Block::Air)
+            .unwrap()
+            .is_some()
+    );
+    assert_eq!(
+        w.set_block(BlockPos([0, -16, 0]), Block::Torch),
+        Err(EditError::Unsupported)
+    );
 }

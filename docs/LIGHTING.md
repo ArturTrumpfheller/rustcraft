@@ -98,3 +98,26 @@ reduced strength in darkness. It never changes these 0–15 light samples or the
 propagation. Packed merge keys include corner AO and permit constant and exactly
 matching affine fields to grow. Geometry forcing includes the one-cell diagonal chunk footprint, even
 when exact cached light is unchanged. Existing source/region bounds are sufficient.
+
+## Slice 20 independent artificial channel
+
+The earlier sections describe the preserved sky model. `Skylight` now also
+computes block light in an independent0–15 buffer from `Block::emission` (Torch14).
+A six-neighbor bounded FIFO takes strongest contribution and subtracts1 per step;
+opaque cells and pending data block it, Air/Torch pass it. Removing sources or
+walls starts a fresh bounded derivation, preventing residual light and retaining
+other sources. The existing15-block/full-height source and dirty bounds include
+the entire artificial influence radius and face sample, including signed seams.
+
+`level` still returns skylight. `block_level` returns artificial light (zero outside
+Y[-16,32)); `combined_level` returns their maximum for terrain/shaft color and the
+greedy key. Exact cached18³ bytes store both four-bit channels without increasing
+resident memory. The worker reuses its drained FIFO, skips the extra light-volume
+allocation when no sources exist, and includes both propagation counts in metrics.
+Existing cache/token/coalescing/atomic-publication checks apply to both channels.
+
+Torch geometry is transparent to AO and face culling; its original tip keeps full
+vertex brightness. Neutral scalar lighting preserves sunny colors without a new
+RGB architecture. Future emissive blocks can supply scalar emission through the
+same API; adding color would extend independent samples/merge keys explicitly.
+[Rules, images, measured overhead, memory and native checklist](TORCHES.md).

@@ -11,13 +11,31 @@ pub enum Block {
     Stone,
     Wood,
     Leaves,
+    Torch,
 }
 
 impl Block {
     pub fn is_solid(self) -> bool {
-        self != Self::Air
+        self.is_collidable()
     }
 
+    /// Physical collision is independent of rendering, targeting and lighting.
+    pub fn is_collidable(self) -> bool {
+        !matches!(self, Self::Air | Self::Torch)
+    }
+    pub fn is_opaque(self) -> bool {
+        !matches!(self, Self::Air | Self::Torch)
+    }
+    pub fn is_cube(self) -> bool {
+        !matches!(self, Self::Air | Self::Torch)
+    }
+    /// Targeting uses the cell, deliberately more forgiving than the thin model.
+    pub fn is_targetable(self) -> bool {
+        self != Self::Air
+    }
+    pub fn emission(self) -> u8 {
+        if self == Self::Torch { 14 } else { 0 }
+    }
     /// Original linear RGBA vertex colors, independent of any texture assets.
     pub fn color(self) -> [f32; 4] {
         match self {
@@ -27,6 +45,7 @@ impl Block {
             Self::Stone => [0.32, 0.35, 0.38, 1.0],
             Self::Wood => [0.24, 0.12, 0.035, 1.0],
             Self::Leaves => [0.075, 0.29, 0.045, 1.0],
+            Self::Torch => [1.0, 0.65, 0.12, 1.0],
         }
     }
 }

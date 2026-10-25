@@ -212,6 +212,7 @@ fn generator_v2_column_golden_contract_includes_expanded_negative_and_positive_t
                                 Block::Stone => 3,
                                 Block::Wood => 4,
                                 Block::Leaves => 5,
+                                Block::Torch => 6,
                             };
                             hash.update(&[id]);
                         }

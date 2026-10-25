@@ -152,7 +152,7 @@ fn edit_and_target(
         let mut displayed_body = body;
         displayed_body.position = ctx.view.feet;
         displayed_body.crouched = ctx.view.crouched;
-        let overlaps_view = matches!(action, EditAction::Place(_))
+        let overlaps_view = matches!(action, EditAction::Place(block) if block.block().is_collidable())
             && raycast(&ctx.world.0, ray)
                 .and_then(|hit| hit.adjacent)
                 .is_some_and(|p| displayed_body.intersects_block(p, &config));

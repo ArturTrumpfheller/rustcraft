@@ -171,3 +171,12 @@ Place a large stone surface and check all six directions, grass and log faces.
 Save/close/restart and confirm edits and inventory. In a separate seeded world,
 walk through trees and cave entrances and switch radius 1↔3 through Options.
 Repeat on X11 and Wayland and record GPU/driver/backend and frame times.
+
+## Slice 20 combined lighting
+
+The scalar light merge key now uses `max(skylight, blocklight)` at the original
+adjacent-cell sample. Exact equal rendered brightness may merge; different light
+bands cannot merge even when their tile and AO match. AO still ignores transparent
+Torch cells and geometry never culls a cube face against one. Torch shaft/tip
+quads bypass the cube planes and join the same chunk mesh. Existing texture-repeat,
+CCW winding, diagonal selection, affine AO and floating-origin rules are unchanged.

@@ -23,6 +23,7 @@ They have no separate noncommercial, game-only or texture-pack restrictions.
 | 4 | bark | Wood ±X/±Z, grain upright | ![](bark.png) |
 | 5 | end_grain | Wood ±Y | ![](end_grain.png) |
 | 6 | leaves | Leaves all faces, **opaque** | ![](leaves.png) |
+| 7 | torch | Torch wooden shaft / glowing tip | ![](torch.png) |
 
 ## Editing and reproduction
 
@@ -58,3 +59,7 @@ equal width. Nearest min/mag/mipmap, LOD0 only, clamp addressing, one mip and no
 anisotropy prevent cross-tile filtering. The tradeoff is intentional distant
 pixel shimmer; proper per-tile mipmaps/texture arrays are future work. No alpha
 cutouts, blended leaves, normal maps or dynamic-lighting changes are included.
+
+Slice20 adds an independently authored amber/gold tip and wood-grain tile in the
+previously unused slot7, under the same original-art license and source policy.
+No old tile changes; all eight slots have opaque pixels and extruded gutters.

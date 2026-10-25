@@ -136,7 +136,7 @@ fn valid_checksums_do_not_bypass_slot_counts_ids_or_selection_validation() {
     let w = crate::streaming::new_large_world(42);
     let root = encode(&w).unwrap();
     let b = player_bytes(Binding::new(&w), &root, &Inventory::starter());
-    for (pos, value) in [(64, 9), (65, 6), (67, 0), (67, 65), (65, 0)] {
+    for (pos, value) in [(64, 9), (65, 7), (67, 0), (67, 65), (65, 0)] {
         let mut bad = b.clone();
         bad[pos] = value;
         let crc = checksum(&bad);

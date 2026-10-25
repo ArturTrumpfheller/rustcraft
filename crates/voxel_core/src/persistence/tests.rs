@@ -121,7 +121,7 @@ fn malformed_headers_ids_coordinates_and_record_order_are_rejected() {
     let mut bytes = valid.clone();
     bytes[16..20].copy_from_slice(&0_u32.to_le_bytes());
     assert_eq!(decode(&bytes), Err(FormatError::Length));
-    for id in [0_u16, 6, 65535] {
+    for id in [0_u16, 7, 65535] {
         let mut bytes = valid.clone();
         bytes[HEADER_SIZE + 12..].copy_from_slice(&id.to_le_bytes());
         repair_checksum(&mut bytes);
@@ -425,7 +425,7 @@ fn v3_identity_empty_overlay_golden_fixture_and_strict_metadata_validation() {
         decode(&air).unwrap().edits()[&BlockPos([0, -15, 0])],
         Block::Air
     );
-    for id in [6_u16, 65535] {
+    for id in [7_u16, 65535] {
         let mut bad = air.clone();
         bad[52..54].copy_from_slice(&id.to_le_bytes());
         repair_checksum(&mut bad);
@@ -506,5 +506,44 @@ fn save_store_refuses_implicit_identity_mode_or_seed_migration() {
             assert_eq!(fs::read(store.path()).unwrap(), bytes);
             assert!(!store.backup_path().exists());
         }
+    }
+}
+
+#[test]
+fn torch_snapshot_and_finite_overlay_roundtrip_without_reinterpreting_old_ids() {
+    for mut w in [World::default(), crate::streaming::new_world(42)] {
+        if w.identity().is_some() {
+            crate::streaming::prepare_spawn(&mut w).unwrap();
+        }
+        let support = BlockPos([1, 24, 0]);
+        let torch = BlockPos([1, 25, 0]);
+        w.set_block(support, Block::Stone).unwrap();
+        w.set_block(torch, Block::Torch).unwrap();
+        let bytes = encode(&w).unwrap();
+        let mut loaded = decode(&bytes).unwrap();
+        assert_eq!(encode(&loaded).unwrap(), bytes);
+        if loaded.identity().is_some() {
+            crate::streaming::prepare_spawn(&mut loaded).unwrap();
+        }
+        assert_eq!(loaded.block(torch), Block::Torch);
+        let targets = std::collections::BTreeSet::from([torch.split().0]);
+        assert_eq!(
+            crate::lighting::Skylight::for_chunks(&loaded, &targets).block_level(torch),
+            14
+        );
+    }
+    assert_eq!(stored_block(6, 1), Err(FormatError::BlockId(6)));
+    assert_eq!(stored_block(7, 2), Err(FormatError::BlockId(7)));
+    for (id, block) in [
+        (0, Block::Air),
+        (1, Block::Grass),
+        (2, Block::Dirt),
+        (3, Block::Stone),
+        (4, Block::Wood),
+        (5, Block::Leaves),
+        (6, Block::Torch),
+    ] {
+        assert_eq!(block_id(block), id);
+        assert_eq!(stored_block(id, STREAM_FORMAT_VERSION), Ok(block));
     }
 }

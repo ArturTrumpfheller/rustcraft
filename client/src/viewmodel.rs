@@ -70,7 +70,7 @@ struct HeldBlock;
 struct Arm;
 #[derive(Resource)]
 struct Models {
-    blocks: [Handle<Mesh>; 5],
+    blocks: [Handle<Mesh>; 6],
     root: Entity,
     block: Entity,
     arm: Entity,
@@ -80,6 +80,30 @@ struct Models {
 
 // Cuboid topology comes from Bevy; art UVs use the existing original atlas.
 fn cube(block: Option<Block>) -> Mesh {
+    if block == Some(Block::Torch) {
+        let core = voxel_core::torch_mesh();
+        let tile = voxel_core::texture::Tile::Torch.uv([0, 0]);
+        let uv = core
+            .uvs
+            .iter()
+            .map(|p| [tile[0] + p[0] * 16. / 128., tile[1] + p[1] * 16. / 64.])
+            .collect::<Vec<_>>();
+        return Mesh::new(
+            bevy::render::render_resource::PrimitiveTopology::TriangleList,
+            RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+        )
+        .with_inserted_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            core.positions
+                .iter()
+                .map(|p| [p[0] - 0.5, p[1] - 0.35, p[2] - 0.5])
+                .collect::<Vec<_>>(),
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, core.normals)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uv)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, core.colors)
+        .with_inserted_indices(bevy::mesh::Indices::U32(core.indices));
+    }
     let mut mesh = Mesh::from(Cuboid::new(1., 1., 1.));
     let VertexAttributeValues::Float32x3(positions) =
         mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap()
@@ -254,6 +278,7 @@ fn setup(
         Block::Stone,
         Block::Wood,
         Block::Leaves,
+        Block::Torch,
     ]
     .map(|b| meshes.add(cube(Some(b))));
     let root = commands

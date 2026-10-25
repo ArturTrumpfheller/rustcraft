@@ -56,6 +56,7 @@ fn block_id(block: Block) -> u16 {
         Block::Stone => 3,
         Block::Wood => 4,
         Block::Leaves => 5,
+        Block::Torch => 6,
     }
 }
 fn stored_block(id: u16, version: u32) -> Result<Block, FormatError> {
@@ -66,6 +67,9 @@ fn stored_block(id: u16, version: u32) -> Result<Block, FormatError> {
         3 => Ok(Block::Stone),
         4 if version >= 2 => Ok(Block::Wood),
         5 if version >= 2 => Ok(Block::Leaves),
+        // Additive stable registry extension; old readers reject ID 6. v1
+        // remains frozen. No envelope/identity/journal or old-ID reinterpretation.
+        6 if version >= 2 => Ok(Block::Torch),
         _ => Err(FormatError::BlockId(id)),
     }
 }
@@ -129,7 +133,7 @@ pub fn encode(world: &World) -> Result<Vec<u8>, FormatError> {
                         return Err(FormatError::Coordinates);
                     }
                     let block = chunk.get(local);
-                    if block.is_solid() {
+                    if block != Block::Air {
                         records.push((p, block_id(block)));
                     }
                 }

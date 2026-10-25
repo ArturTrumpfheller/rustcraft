@@ -244,6 +244,31 @@ impl World {
         if before == block {
             return Ok(None);
         }
+        // Single-cell support policy: reject support removal until its torch
+        // is collected. No implicit multi-cell edits or unjournaled item drops.
+        if block == Block::Torch {
+            let support = position.offset([0, -1, 0]).ok_or(EditError::Unsupported)?;
+            if !self.in_bounds(support) {
+                return Err(EditError::Unsupported);
+            }
+            if !self.ready(support) {
+                return Err(EditError::NotLoaded);
+            }
+            if !self.block(support).is_collidable() {
+                return Err(EditError::Unsupported);
+            }
+        }
+        if before.is_collidable()
+            && !block.is_collidable()
+            && let Some(above) = position.offset([0, 1, 0]).filter(|p| self.in_bounds(*p))
+        {
+            if !self.ready(above) {
+                return Err(EditError::NotLoaded);
+            }
+            if self.block(above) == Block::Torch {
+                return Err(EditError::SupportsTorch);
+            }
+        }
         if self.regional.is_some() {
             let r = self
                 .regions

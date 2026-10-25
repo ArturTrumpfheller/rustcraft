@@ -58,7 +58,7 @@ pub fn raycast(world: &World, ray: Ray) -> Option<RayHit> {
     let mut distance = 0.0;
     let mut normal = [0; 3];
     loop {
-        if world.block(cell).is_solid() {
+        if world.block(cell).is_targetable() {
             return Some(RayHit {
                 position: cell,
                 normal,

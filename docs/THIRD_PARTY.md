@@ -170,3 +170,9 @@ The overlay reuses the original bitmap glyphs and menu canvas; no imported F3
 art, Minecraft code, font, texture, dependency, renderer feature or lockfile change.
 `slice19-*.png` captures show actual RustCraft rendering of our original assets
 under the same licenses, using Xvfb/Mesa software rendering.
+
+## Slice 20 torch art
+
+Original RustCraft torch pixel grid, model and icon geometry, MIT OR Apache-2.0,
+authored specifically for this repository. No external artwork, dependencies or
+Minecraft assets added. Editable source and attribution: assets/terrain/README.md.

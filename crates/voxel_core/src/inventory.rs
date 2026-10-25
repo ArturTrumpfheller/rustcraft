@@ -17,6 +17,7 @@ pub enum Item {
     Stone,
     Wood,
     Leaves,
+    Torch,
 }
 impl Item {
     pub fn id(self) -> u16 {
@@ -26,6 +27,7 @@ impl Item {
             Self::Stone => 3,
             Self::Wood => 4,
             Self::Leaves => 5,
+            Self::Torch => 6,
         }
     }
     pub fn from_id(id: u16) -> Option<Self> {
@@ -35,6 +37,7 @@ impl Item {
             3 => Self::Stone,
             4 => Self::Wood,
             5 => Self::Leaves,
+            6 => Self::Torch,
             _ => return None,
         })
     }
@@ -46,6 +49,7 @@ impl Item {
             Block::Stone => Self::Stone,
             Block::Wood => Self::Wood,
             Block::Leaves => Self::Leaves,
+            Block::Torch => Self::Torch,
         })
     }
     pub fn build(self) -> BuildBlock {
@@ -55,6 +59,7 @@ impl Item {
             Self::Stone => BuildBlock::Stone,
             Self::Wood => BuildBlock::Wood,
             Self::Leaves => BuildBlock::Leaves,
+            Self::Torch => BuildBlock::Torch,
         }
     }
 }
@@ -111,6 +116,7 @@ impl Inventory {
             Item::Stone,
             Item::Wood,
             Item::Leaves,
+            Item::Torch,
         ]
         .into_iter()
         .enumerate()
@@ -311,8 +317,8 @@ pub fn edit_inventory(
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn total(i: &Inventory) -> [u32; 5] {
-        let mut n = [0; 5];
+    fn total(i: &Inventory) -> [u32; 6] {
+        let mut n = [0; 6];
         for s in i.slots.iter().copied().chain([i.cursor]).flatten() {
             n[s.item.id() as usize - 1] += u32::from(s.count);
         }
@@ -352,7 +358,7 @@ mod tests {
         assert_eq!(i.cursor().unwrap().item(), Item::Wood);
         assert_eq!(i.slots()[0].unwrap().item(), Item::Dirt);
         assert!(i.return_cursor());
-        assert_eq!(total(&i), [0, 5, 0, 3, 0]);
+        assert_eq!(total(&i), [0, 5, 0, 3, 0, 0]);
     }
     #[test]
     fn randomized_clicks_conserve_every_item_and_keep_stack_bounds() {
@@ -495,5 +501,47 @@ mod transaction_regressions {
             Err(InventoryEditError::World(EditError::NotLoaded))
         );
         assert_eq!(inv, before);
+    }
+}
+
+#[cfg(test)]
+mod torch_transactions {
+    use super::*;
+    use crate::{BlockPos, Chunk, ChunkPos};
+    #[test]
+    fn torch_full_inventory_failed_support_and_pending_edits_preserve_everything() {
+        let mut w = World::default();
+        let p = BlockPos([0, 1, 0]);
+        w.set_block(BlockPos([0, 0, 0]), Block::Stone).unwrap();
+        w.set_block(p, Block::Torch).unwrap();
+        let ray = Ray {
+            origin: [0.5, 1.5, 3.],
+            direction: [0., 0., -1.],
+            reach: 5.,
+        };
+        let body = Player::new([8., 1., 8.]);
+        let cfg = PhysicsConfig::default();
+        let mut inv = Inventory::empty();
+        inv.insert(Item::Stone, 36 * 64);
+        let before = inv.clone();
+        let revision = w.revision();
+        assert_eq!(
+            edit_inventory(&mut w, &mut inv, ray, false, &body, &cfg),
+            Err(InventoryEditError::Full)
+        );
+        assert_eq!(inv, before);
+        assert_eq!(w.revision(), revision);
+        assert_eq!(w.block(p), Block::Torch);
+        let mut pending = crate::streaming::new_world(42);
+        pending.insert_chunk(ChunkPos([0, 1, 0]), Chunk::default());
+        assert_eq!(
+            pending.set_block(BlockPos([0, 16, 0]), Block::Torch),
+            Err(EditError::NotLoaded)
+        );
+        assert_eq!(pending.block(BlockPos([0, 16, 0])), Block::Air);
+        assert_eq!(
+            pending.set_block(BlockPos([0, 32, 0]), Block::Torch),
+            Err(EditError::OutOfBounds)
+        );
     }
 }

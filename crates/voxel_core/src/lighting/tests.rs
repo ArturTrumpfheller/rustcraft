@@ -452,3 +452,124 @@ fn saved_world_v1_v2_v3_v4_items_and_far_lighting_reconstruct_after_restart() {
         assert_eq!(computed(&w), expected);
     }
 }
+
+#[test]
+fn torch_attenuation_overlap_removal_and_sky_are_independent() {
+    let mut w = room([0, 0, 0]);
+    let a = BlockPos([2, 1, 4]);
+    let b = BlockPos([6, 1, 4]);
+    let targets = BTreeSet::from([ChunkPos([0; 3])]);
+    w.set_block(a, Block::Torch).unwrap();
+    let one = Skylight::for_chunks(&w, &targets);
+    for x in 1..8 {
+        for y in 1..8 {
+            for z in 1..8 {
+                let p = BlockPos([x, y, z]);
+                let d = (x - 2).abs() + (y - 1).abs() + (z - 4).abs();
+                assert_eq!(one.block_level(p), (14 - d).max(0) as u8);
+                assert_eq!(one.level(p), 0);
+                assert_eq!(one.combined_level(p), one.block_level(p));
+            }
+        }
+    }
+    w.set_block(b, Block::Torch).unwrap();
+    let both = Skylight::for_chunks(&w, &targets);
+    assert_eq!(both.block_level(BlockPos([4, 1, 4])), 12);
+    w.set_block(a, Block::Air).unwrap();
+    let remaining = Skylight::for_chunks(&w, &targets);
+    assert_eq!(remaining.block_level(a), 10);
+    assert_eq!(remaining.block_level(b), 14);
+    w.set_block(b, Block::Air).unwrap();
+    let dark = Skylight::for_chunks(&w, &targets);
+    assert!(dark.block_levels.is_empty());
+    assert_eq!(dark.block_level(a), 0);
+    // A torch is transparent to both channels; open sky must stay exactly 15.
+    w.set_block(BlockPos([2, 8, 4]), Block::Air).unwrap();
+    w.set_block(a, Block::Torch).unwrap();
+    let sky = Skylight::for_chunks(&w, &targets);
+    assert_eq!(sky.level(a), 15);
+    assert_eq!(sky.level(BlockPos([2, 2, 4])), 15);
+    assert_eq!(sky.combined_level(a), 15);
+}
+
+#[test]
+fn sealed_wall_blocks_light_and_opening_restores_it_without_leaks() {
+    let mut w = room([0, 0, 0]);
+    w.set_block(BlockPos([2, 1, 4]), Block::Torch).unwrap();
+    for y in 1..8 {
+        for z in 1..8 {
+            w.set_block(BlockPos([4, y, z]), Block::Stone).unwrap();
+        }
+    }
+    let targets = BTreeSet::from([ChunkPos([0; 3])]);
+    let blocked = Skylight::for_chunks(&w, &targets);
+    assert_eq!(blocked.block_level(BlockPos([5, 1, 4])), 0);
+    assert_eq!(blocked.block_level(BlockPos([4, 1, 4])), 0);
+    assert_eq!(blocked.block_level(BlockPos([9, 1, 4])), 0);
+    let hole = BlockPos([4, 1, 4]);
+    w.set_block(hole, Block::Air).unwrap();
+    assert_eq!(
+        Skylight::for_chunks(&w, &targets).block_level(BlockPos([5, 1, 4])),
+        11
+    );
+    w.set_block(hole, Block::Leaves).unwrap();
+    assert_eq!(
+        Skylight::for_chunks(&w, &targets).block_level(BlockPos([5, 1, 4])),
+        0
+    );
+}
+
+#[test]
+fn torch_signed_seams_match_single_and_batched_light_and_insertion_order() {
+    for origin in [[-4, -4, -4], [12, 12, 12], [-20, -4, -20]] {
+        let mut w = room(origin);
+        let torch = BlockPos([origin[0] + 3, origin[1] + 1, origin[2] + 3]);
+        w.set_block(torch, Block::Torch).unwrap();
+        let targets = w.chunks().map(|(p, _)| p).collect();
+        let shared = Skylight::for_chunks(&w, &targets);
+        for (p, _) in w.chunks() {
+            assert_eq!(
+                Skylight::for_chunks(&w, &BTreeSet::from([p])).chunk(p),
+                shared.chunk(p)
+            );
+        }
+        let mut reversed = World::default();
+        for (p, c) in w.chunks().collect::<Vec<_>>().into_iter().rev() {
+            reversed.insert_chunk(p, c.clone());
+        }
+        assert_eq!(
+            Skylight::for_chunks(&reversed, &targets).block_levels,
+            shared.block_levels
+        );
+        assert_eq!(
+            shared.chunk(torch.split().0),
+            Skylight::for_chunks(&w, &targets).chunk(torch.split().0)
+        );
+    }
+}
+
+#[test]
+fn torch_height_limits_attenuation_radius_and_pending_barriers() {
+    for y in [MIN_Y + 1, MAX_Y - 1] {
+        let mut w = World::default();
+        w.set_block(BlockPos([0, y - 1, 0]), Block::Stone).unwrap();
+        w.set_block(BlockPos([0, y, 0]), Block::Torch).unwrap();
+        let l = Skylight::for_chunks(&w, &BTreeSet::from([ChunkPos([0, 0, 0])]));
+        for x in 0..=15 {
+            assert_eq!(
+                l.block_level(BlockPos([x, y, 0])),
+                14u8.saturating_sub(x as u8)
+            );
+        }
+        assert_eq!(l.block_level(BlockPos([0, MAX_Y, 0])), 0);
+        assert_eq!(l.block_level(BlockPos([0, MIN_Y - 1, 0])), 0);
+    }
+    let mut pending = crate::streaming::new_world(42);
+    let mut c = Chunk::default();
+    c.set(LocalPos::new([15, 1, 8]).unwrap(), Block::Torch);
+    pending.insert_chunk(ChunkPos([0; 3]), c);
+    let l = Skylight::for_chunks(&pending, &BTreeSet::from([ChunkPos([0; 3])]));
+    assert_eq!(l.block_level(BlockPos([15, 1, 8])), 14);
+    assert_eq!(l.block_level(BlockPos([16, 1, 8])), 0);
+    assert_eq!(l.block_level(BlockPos([17, 1, 8])), 0);
+}

@@ -15,5 +15,5 @@ mod world;
 pub mod worldgen;
 
 pub use chunk::{Block, BlockPos, CHUNK_SIZE, Chunk, ChunkPos, LocalPos};
-pub use mesh::{ChunkMesh, mesh_chunk, mesh_chunk_lit};
+pub use mesh::{ChunkMesh, mesh_chunk, mesh_chunk_lit, torch_mesh};
 pub use world::{BlockChange, EDIT_MAX, EDIT_MIN, StreamIdentity, World, demo_world};

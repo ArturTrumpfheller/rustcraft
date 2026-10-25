@@ -8,8 +8,9 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 
 - Deterministic seeded terrain, rolling hills/valleys, a walkable cave network with surface entrance, and blocky trees.
 - 16³ chunks streamed in a **65,536×65,536×48** new-world rollout with local generation and regional saves; configurable load radius, bounded background generation/meshing and cache eviction.
-- Seven original 16×16 pixel textures for grass, dirt, stone, bark, end-grain and opaque leaves, using one shared nearest-filtered atlas.
+- Eight original 16×16 pixel textures for grass, dirt, stone, bark, end-grain, opaque leaves and torches, using one shared nearest-filtered atlas.
 - Procedural daylight sky gradient and terrain-only distance fog adapting to radius 1–3.
+- Placeable, persistent floor torches (hotbar 6) with worker-based voxel block light.
 - Derived 0–15 voxel skylight: dark roofs/caves, gradual entrance falloff and background updates after edits.
 - At most one surface mesh per rendered chunk; faces shared by solid blocks are removed, including at chunk boundaries.
 - Mouse look, responsive yaw-relative WASD walking, Ctrl sprint, Shift crouch with safe ledges, grounded jumping and safe respawn.
@@ -22,7 +23,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 19**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 20**. **World edits, inventory and selected hotbar slot survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -86,7 +87,9 @@ lets light enter and sealing them removes it again. A small cave brightness floo
 keeps textures recognizable. Subtle vertex ambient occlusion adds depth to corners
 and tree bases while preserving directional face shading and greedy correctness.
 See [AO rules, measurements and native acceptance](docs/AMBIENT_OCCLUSION.md).
-There is no day/night cycle, torch/block light or shadow-map effect yet.
+Torches emit a separate level-14 block-light field; terrain uses the stronger of
+skylight and block light. There is no day/night cycle or shadow-map effect yet.
+See [Slice 20 rules, matched screenshots, measurements and native testing](docs/TORCHES.md).
 
 ![Closed original test tunnel](docs/images/slice10-cave-closed.png)
 
@@ -106,7 +109,7 @@ old global light washout. Native GPU performance still needs acceptance.
 Nine hotbar slots remain visible at the bottom. E opens three additional rows of
 nine slots. Original pixel frames and numerals reuse our own terrain atlas for
 icons; no external UI/font images are required. New player inventories start with
-64 each of grass/dirt/stone and 32 each of wood/leaves. Mining collects blocks;
+64 each of grass/dirt/stone and 32 each of wood/leaves/torches (Torch in slot 6). Mining collects blocks;
 placing consumes the selected stack. A full inventory rejects mining without
 changing the block. This slice has no dropped items or crafting.
 
@@ -118,7 +121,7 @@ See [inventory controls, architecture and recovery limits](docs/INVENTORY.md).
 
 Grass has separate turf tops, grassy dirt sides and dirt undersides. Upright logs
 use bark on walls and end-grain on both ends. Stone and opaque leaves have their
-own tiles. The seven authored 16×16 grids use restrained earth/foliage palettes;
+own tiles. The eight authored 16×16 grids use restrained earth/foliage palettes;
 no external texture pack or Minecraft image was used. Art, editable source and
 standard-library generator are **MIT OR Apache-2.0**: [asset provenance](assets/terrain/README.md).
 
@@ -162,7 +165,7 @@ cargo run --locked -p rustcraft
 
 The first Bevy build can take several minutes. To limit CPU and memory consumption, use `CARGO_BUILD_JOBS=4 cargo run --locked -p rustcraft`. The original atlas is embedded; no external asset folder, image decoder, Python runtime, service, credentials or environment file is required. Closing the window exits the application.
 
-In the prepared Codex cloud machine, first run `. /workspace/.rustcraft-env/activate.sh` in each shell. A cloud build alone does not establish native graphical compatibility.
+In the prepared Codex cloud machine, first run `. /workspace/setup/env.sh` in each shell. A cloud build alone does not establish native graphical compatibility.
 
 ## Controls
 
@@ -188,7 +191,7 @@ In the prepared Codex cloud machine, first run `. /workspace/.rustcraft-env/acti
 
 The 0.6×1.8-block player spawns on or just above safe solid ground, with eyes 1.62 blocks above the feet. Walking accelerates toward 4.317 blocks/s; sprinting toward 5.612 and sneaking toward 1.295 blocks/s. Continuous sprint-jumps gain a bounded run-up bonus up to 6.4538 blocks/s. Sprinting smoothly widens the current base FOV by 9%. Shift lowers the body to 1.5 blocks and the eye to 1.32; standing requires headroom. Sneak guards supported ledges, but jumping or removing support still permits falling. See [movement tuning and limits](docs/MOVEMENT.md). Falling below Y=-32 automatically respawns the player. Escape or focus loss pauses the local simulation, including gravity; choose Fortsetzen or press Escape to continue. Inventory keeps gravity, collision and normal damping running at fixed 60 Hz. Pause/settings and focus loss freeze physics. Inventory/focus/capture/respawn reset double-W detection; modal-held movement and jump keys must be released before reuse.
 
-The center crosshair aims at blocks within five blocks of the displayed eye. A black outline marks the current target; the hotbar frames the selected slot and shows actual counts. Empty clicks and empty selected slots do nothing. Placement cannot replace solid blocks or intersect the current/displayed player body. Simultaneous buttons prioritize breaking. Closing inventory returns a held stack only if it all fits; otherwise NO ROOM keeps it open. Outside clicks never discard items. Normal application close saves a held stack and restores it with inventory open next time.
+The center crosshair aims at blocks within five blocks of the displayed eye. A black outline marks the current target; the hotbar frames the selected slot and shows actual counts. Empty clicks and empty selected slots do nothing. Placement cannot replace occupied cells; colliding blocks cannot intersect the current/displayed player body. Torches require a loaded solid floor underneath, allow walking through them, and remain targetable across their cell. Break the torch before mining its supporting block. Simultaneous buttons prioritize breaking. Closing inventory returns a held stack only if it all fits; otherwise NO ROOM keeps it open. Outside clicks never discard items. Normal application close saves a held stack and restores it with inventory open next time.
 
 New regional worlds permit edits within **X/Z [-32768,32768), Y [-16,32)**. Legacy v3 worlds retain **X/Z [-64,64)**; v1/v2 snapshots retain **X/Z [-32,32)** with the same Y bounds. Outside the corresponding box, edits are rejected. Pending chunks temporarily block collision/rays and reject edits until ready; they are never treated as a hole in the floor. R preserves edits/inventory and finds clear sky-exposed ground near the starting area, avoiding tree tops and unsupported columns. Loading uses the same search; player position and velocity are not saved.
 
@@ -203,7 +206,7 @@ world. Generator v3 and generators v1/v2 for historical saves remain frozen.
 Display names can repeat; internal directory IDs are unique and never renamed.
 See [safe multi-world management](docs/WORLDS.md).
 
-Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, transparency, water, biomes, ore distribution or emitted block light. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
+Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, transparency, water, biomes, ore distribution or emitted light from generated blocks. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
 
 New v4 worlds save **seed + generator version + world identity** in a manifest and all edits in regional overlays, including explicit Air. Unmodified chunks reproduce locally from that identity. Loaded chunks and clean region maps are disposable caches; unsaved region maps remain pinned in RAM until successfully saved. v1/v2 saves remain full snapshots with no seed metadata and never gain generated terrain. The [generation contract](docs/WORLDGEN.md) explains deterministic arithmetic, limits and future extension.
 

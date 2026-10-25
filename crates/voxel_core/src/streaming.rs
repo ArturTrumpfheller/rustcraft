@@ -264,7 +264,7 @@ fn lit_batch(
         lights,
         lighting: LightMetrics {
             cells: light.cells(),
-            propagated: light.propagated,
+            propagated: light.propagated + light.block_propagated,
             generated_columns: generated,
         },
         sampled_border_cells: generated * 3 * 4096,

@@ -157,6 +157,7 @@ fn selection_tracks_numbers_scroll_loaded_inventory_transfers_and_stack_depletio
         (KeyCode::Digit3, Item::Stone),
         (KeyCode::Digit4, Item::Wood),
         (KeyCode::Digit5, Item::Leaves),
+        (KeyCode::Digit6, Item::Torch),
     ] {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
@@ -335,7 +336,7 @@ fn repeated_selection_animation_fov_resize_and_rebase_keep_assets_bounded() {
         bytes += m.count_vertices() * 48 + m.indices().unwrap().len() * 4;
     }
     bytes += 24 * 48 + 36 * 4;
-    assert_eq!(bytes, 7776);
+    assert_eq!(bytes, 10368);
     for n in 0..600 {
         app.world_mut()
             .resource_mut::<GameInventory>()

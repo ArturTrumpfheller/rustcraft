@@ -1,0 +1,29 @@
+Slice20 local validation — 2026-10-25
+Base: 9eec01272d463c6eaa350bcbf3345d24eba6b53f (accepted Slice19)
+Rust 1.99.1 / Bevy 0.20.0 / Linux x86-64
+
+PASS cargo fmt --all -- --check
+PASS cargo clippy --locked --workspace --all-targets -- -D warnings
+PASS cargo test --locked --workspace
+  rustcraft: 169 passed, 0 failed, 2 ignored (explicit cost measurements)
+  voxel_core: 175 passed, 0 failed
+  doctests: 0
+PASS cargo build --locked --workspace
+PASS python3 tools/generate_textures.py --check
+PASS cargo build --locked -p rustcraft --example lighting_gallery
+PASS python3 -m py_compile tools/benchmark_lighting.py tools/capture_lighting.py
+PASS git diff --check (including staged files)
+PASS old atlas slots 0–6 byte comparison against Slice19
+PASS dark vs removed matched captures: identical PNG/pixel content
+
+PASS explicit ignored torch_worker_measurements, radii 1–3 (worker.csv)
+PASS offline release baseline/current lighting_bench comparison (three interleaved runs)
+PASS six matched-camera production-renderer screenshots (docs/images/slice20)
+Adapter: llvmpipe (LLVM 19.1.7, 256 bits), Mesa 25.0.7, Vulkan, Xvfb X11.
+No renderer errors in final graphical smoke log. X11 headless XSETTINGS/RandR
+warnings and the expected software-adapter warning were present.
+No dependency/toolchain/feature changes; no proprietary art or copied assets.
+
+Native Void X11/Wayland, Windows GUI, physical AMD performance, GPU/VRAM/RSS and
+rendered frame-time comparisons remain owner acceptance. GitHub Actions results
+must be read from the PR; local Linux checks are not Windows/Ubuntu CI results.

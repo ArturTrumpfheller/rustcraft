@@ -57,7 +57,7 @@ impl Occlusion {
                                 let local = [x, y, z].map(|v: usize| (v + 15) % 16);
                                 out.0[y * SIZE * SIZE + z * SIZE + x] = pending
                                     || chunk.is_some_and(|c| {
-                                        c.get(LocalPos::new(local).unwrap()).is_solid()
+                                        c.get(LocalPos::new(local).unwrap()).is_opaque()
                                     });
                             }
                         }

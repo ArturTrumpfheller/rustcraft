@@ -376,3 +376,42 @@ fn far_start_preparation_reads_saved_region_before_any_physics_or_mesh() {
     assert_eq!(w.cached_regions(), 1);
     assert!(w.chunk(ChunkPos([0, 0, 0])).is_none());
 }
+
+#[test]
+fn torches_survive_region_seams_eviction_reload_and_removal() {
+    let d = Dir::new();
+    let (store, mut w, _) = SaveStore::open_with(&d.0, || Ok(World::regional(identity()))).unwrap();
+    let torches = [BlockPos([-65, 25, -1]), BlockPos([-64, 25, -1])];
+    for p in torches {
+        load_column(&store, &mut w, [p.0[0].div_euclid(16), -1]);
+        w.set_block(p.offset([0, -1, 0]).unwrap(), Block::Stone)
+            .unwrap();
+        w.set_block(p, Block::Torch).unwrap();
+    }
+    let snap = w.save_snapshot();
+    store.save(&snap).unwrap();
+    w.mark_regions_saved(snap.revision());
+    for c in [[-5, -1], [-4, -1]] {
+        w.evict_column(c);
+    }
+    w.retain_regions(&Default::default());
+    assert_eq!(w.cached_regions(), 0);
+    for p in torches {
+        load_column(&store, &mut w, [p.0[0].div_euclid(16), -1]);
+        assert_eq!(w.block(p), Block::Torch);
+    }
+    drop(store);
+    let (store, mut w, _) = SaveStore::open_with(&d.0, || panic!("must reopen")).unwrap();
+    for p in torches {
+        load_column(&store, &mut w, [p.0[0].div_euclid(16), -1]);
+        assert_eq!(w.block(p), Block::Torch);
+        w.set_block(p, Block::Air).unwrap();
+    }
+    store.save(&w).unwrap();
+    drop(store);
+    let (store, mut w, _) = SaveStore::open_with(&d.0, || panic!("must reopen")).unwrap();
+    for p in torches {
+        load_column(&store, &mut w, [p.0[0].div_euclid(16), -1]);
+        assert_eq!(w.block(p), Block::Air);
+    }
+}

@@ -94,3 +94,15 @@ materials/lights, extra terrain draw calls or per-frame atlas resources are adde
 Terrain now uses block-repeat UV0 plus constant atlas-origin UV1 and an embedded
 terrain-only WESL material. Inventory and viewmodel keep the original UV scheme.
 See [greedy meshing](GREEDY_MESHING.md) for filtering, layout and validation.
+
+## Slice 20 atlas slot7
+
+The formerly diagnostic spare slot now contains an original torch tile: four
+rows of gold/amber flame and twelve rows of wood grain. All previous slot pixels,
+UVs, 128×64 dimensions, gutters, nearest sampler and opaque material stay exact.
+The non-cube model samples the shaft/tip subrectangles; the inventory icon draws
+two narrow rectangles from that tile rather than a full square. Flame vertices
+remain at full brightness in darkness, with ordinary terrain fog still applied.
+No alpha pass, PNG runtime dependency, per-torch material or light entity is added.
+Provenance: assets/terrain/README.md. The standard-library screenshot helper
+losslessly encodes PPM captures; it does not change the game image dependency set.

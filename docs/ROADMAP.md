@@ -49,7 +49,8 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 - [ ] Further coordinate expansion and opt-in legacy migration
 - [ ] More interesting terrain and caves
 - [x] Initial voxel skylight and bounded light/mesh updates
-- [ ] Emitted block light / torches
+- [x] Emitted block light / persistent floor torches, bounded worker updates and matched fixtures
+- [ ] Slice20 native Void X11/Wayland / Windows torch acceptance — see [checklist](TORCHES.md)
 - [x] Initial fixed inventory/item model
 - [ ] General reusable item/block registry, tools and crafting
 - [x] Initial profiling, matched baseline comparisons and explicit active/dirty memory budgets
