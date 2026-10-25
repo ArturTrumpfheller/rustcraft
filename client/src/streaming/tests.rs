@@ -1566,3 +1566,61 @@ fn support_batches_invalidate_all_chunks_coalesce_and_reject_stale_worker_light(
     assert_eq!(light_at(&app, BlockPos([16, 21, 8])) >> 4, 8);
     assert!(app.world().resource::<StreamState>().dirty.is_empty());
 }
+
+#[test]
+fn clock_progression_at_all_radii_never_relights_remeshes_or_grows_assets() {
+    for radius in 1..=3 {
+        let mut app = app(radius);
+        drain(&mut app);
+        let counters = |app: &App| {
+            let s = app.world().resource::<StreamState>();
+            (
+                s.completed,
+                s.remeshed_chunks,
+                s.generated_columns,
+                s.worker_time,
+                s.lights.values().map(|c| c.0.len()).sum::<usize>(),
+                app.world().resource::<Assets<Mesh>>().len(),
+                app.world().resource::<ChunkRenders>().0.len(),
+            )
+        };
+        let before = counters(&app);
+        let handles: Vec<_> = app
+            .world()
+            .resource::<ChunkRenders>()
+            .0
+            .values()
+            .map(|r| r.mesh.id())
+            .collect();
+        let revision = app.world().resource::<VoxelWorld>().0.revision();
+        for _ in 0..240 {
+            // Cross sunrise/noon/dusk/night repeatedly without a block edit.
+            app.world_mut()
+                .resource_mut::<VoxelWorld>()
+                .0
+                .time
+                .advance(1000);
+            app.update();
+        }
+        assert_eq!(counters(&app), before);
+        assert_eq!(app.world().resource::<VoxelWorld>().0.revision(), revision);
+        let after: Vec<_> = app
+            .world()
+            .resource::<ChunkRenders>()
+            .0
+            .values()
+            .map(|r| r.mesh.id())
+            .collect();
+        assert_eq!(handles, after);
+        let state = app.world().resource::<StreamState>();
+        assert!(state.job.is_none() && state.queued.is_empty() && state.dirty.is_empty());
+        println!(
+            "CLOCK_IDLE radius={radius} additional_jobs=0 additional_remeshes=0 mesh_assets={} light_cache_bytes={}",
+            before.5, before.4
+        );
+        let clock = app.world().resource::<VoxelWorld>().0.time;
+        go(&mut app, [3, 3]);
+        go(&mut app, [-4, -4]);
+        assert_eq!(app.world().resource::<VoxelWorld>().0.time, clock);
+    }
+}

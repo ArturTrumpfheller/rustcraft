@@ -176,3 +176,11 @@ under the same licenses, using Xvfb/Mesa software rendering.
 Original RustCraft torch pixel grid, model and icon geometry, MIT OR Apache-2.0,
 authored specifically for this repository. No external artwork, dependencies or
 Minecraft assets added. Editable source and attribution: assets/terrain/README.md.
+
+## Slice 21 provenance
+
+The clock, player v2 extension, separate-channel renderer, square sun/moon, hashed
+procedural stars and comparison fixtures are project-authored MIT OR Apache-2.0.
+No third-party textures, sky images, fonts, models, crates, engine features or
+lockfile changes are added. Screenshot PNGs use the existing standard-library
+encoder; all rendered content uses original assets and production shaders.

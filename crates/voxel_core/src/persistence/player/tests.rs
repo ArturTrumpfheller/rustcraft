@@ -22,9 +22,9 @@ fn player_roundtrip_and_corruption_are_strict() {
     let mut inv = Inventory::starter();
     inv.select(8);
     inv.click(0, Click::Right);
-    let b = player_bytes(id, &root, &inv);
+    let b = player_bytes(id, &root, &inv, w.time);
     assert_eq!(b.len(), PLAYER_SIZE);
-    let (_, _, decoded) = decode_player(&b).unwrap();
+    let (_, _, decoded, _) = decode_player(&b).unwrap();
     assert_eq!(decoded.slots(), inv.slots());
     assert_eq!(decoded.cursor(), inv.cursor());
     assert_eq!(decoded.selected(), 8);
@@ -135,7 +135,7 @@ fn legacy_v1_inventory_only_saves_never_upgrade_or_rewrite_world() {
 fn valid_checksums_do_not_bypass_slot_counts_ids_or_selection_validation() {
     let w = crate::streaming::new_large_world(42);
     let root = encode(&w).unwrap();
-    let b = player_bytes(Binding::new(&w), &root, &Inventory::starter());
+    let b = player_bytes(Binding::new(&w), &root, &Inventory::starter(), w.time);
     for (pos, value) in [(64, 9), (65, 7), (67, 0), (67, 65), (65, 0)] {
         let mut bad = b.clone();
         bad[pos] = value;
@@ -327,4 +327,83 @@ fn world_only_save_api_refuses_to_decouple_an_initialized_inventory() {
         .unwrap();
     assert!(s.save(&w).is_err());
     assert_eq!(fs::read(s.path()).unwrap(), bytes);
+}
+
+#[test]
+fn historical_player_defaults_without_writing_and_upgrades_only_on_save() {
+    let t = Temp::new();
+    let (s, mut w, _) = SaveStore::open(&t.0).unwrap();
+    let inv = s.load_player(&mut w).unwrap();
+    let root = fs::read(s.path()).unwrap();
+    let current = fs::read(s.player_path()).unwrap();
+    let old = pack(PLAYER_MAGIC, SLOT_COUNT as u32, &current[24..176]);
+    fs::write(s.player_path(), &old).unwrap();
+    w.time.advance(123);
+    let restored = s.load_player(&mut w).unwrap();
+    assert_eq!(w.time, crate::time::WorldTime::default());
+    assert_eq!(restored.slots(), inv.slots());
+    assert_eq!(fs::read(s.player_path()).unwrap(), old);
+    assert_eq!(fs::read(s.path()).unwrap(), root);
+    w.time.advance(1);
+    s.save_player_session(&w, &restored, false).unwrap();
+    assert_eq!(fs::read(s.path()).unwrap(), root);
+    assert_eq!(u32at(&fs::read(s.player_path()).unwrap(), 8), 2);
+}
+
+#[test]
+fn time_only_journal_replays_exact_fractional_clock_at_every_commit_boundary() {
+    for boundary in [
+        SaveStage::SessionPrepared,
+        SaveStage::WorldSaved,
+        SaveStage::PlayerSaved,
+    ] {
+        let t = Temp::new();
+        let (s, mut w, _) = SaveStore::open(&t.0).unwrap();
+        let mut inv = s.load_player(&mut w).unwrap();
+        let root = fs::read(s.path()).unwrap();
+        w.time = crate::time::WorldTime::from_parts(741, 71999).unwrap();
+        inv.select(5);
+        assert!(
+            s.save_player_with(&w, &inv, false, |stage| {
+                if stage == boundary {
+                    Err(io::Error::other("injected crash"))
+                } else {
+                    Ok(())
+                }
+            })
+            .is_err()
+        );
+        drop(s);
+        let (s, mut restored, _) = SaveStore::open(&t.0).unwrap();
+        assert_eq!(s.load_player(&mut restored).unwrap().selected(), 5);
+        assert_eq!(restored.time, w.time);
+        assert_eq!(fs::read(s.path()).unwrap(), root);
+        assert!(!s.pending_path().exists());
+    }
+}
+
+#[test]
+fn clock_validation_rejects_repaired_checksum_invalid_ticks_reserved_and_versions() {
+    let w = World::default();
+    let bytes = player_bytes(
+        Binding::new(&w),
+        &encode(&w).unwrap(),
+        &Inventory::starter(),
+        w.time,
+    );
+    for (pos, data) in [(184, 72000u32), (188, 1), (8, 3)] {
+        let mut bad = bytes.clone();
+        bad[pos..pos + 4].copy_from_slice(&data.to_le_bytes());
+        let crc = checksum(&bad);
+        bad[20..24].copy_from_slice(&crc.to_le_bytes());
+        assert!(decode_player(&bad).is_err());
+    }
+    let max = crate::time::WorldTime::from_parts(u64::MAX, 71999).unwrap();
+    let b = player_bytes(
+        Binding::new(&w),
+        &encode(&w).unwrap(),
+        &Inventory::starter(),
+        max,
+    );
+    assert_eq!(decode_player(&b).unwrap().3, max);
 }

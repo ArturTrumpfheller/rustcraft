@@ -195,7 +195,7 @@ Copying only `world.rcw` is **not a backup of a v4 world**. File-level atomicity
 Windows directory-sync limitations and losses since the last successful save on
 forced termination remain as documented above. No per-edit crash journal exists.
 
-## Player/session v1 sidecars (Slice 9; world v1–v4 unchanged)
+## Player/session sidecars (player v1/v2; world v1–v4 unchanged)
 
 The preceding world contracts remain byte-for-byte unchanged. Production clients
 now use `load_player` before spawn and `save_player_session` for all saves. The
@@ -208,7 +208,7 @@ All sidecar integers are little-endian. Common header:
 | Offset | Bytes | Meaning |
 | --- | --- | --- |
 | 0 | 8 | File magic (below) |
-| 8 | 4 | Sidecar version, exactly 1 |
+| 8 | 4 | Version: identity/journal 1; player 1 or 2 |
 | 12 | 4 | Count (36 for player, 0 for identity/journal) |
 | 16 | 4 | Exact payload byte length |
 | 20 | 4 | CRC-32 over [0,20) + [24,end), excluding checksum field |
@@ -219,7 +219,8 @@ nonce [u8;16]. Finite class requires seed/gen zero; v3 requires its frozen seed/
 v4 requires seed/gen3/nonce from manifest. Nonce must be nonzero; legacy modes
 receive a time/process/counter-generated sidecar identity, not cryptographic RNG.
 
-`player.rcp`: **176 bytes**, magic `RUSTPLY1`, count 36, payload 152:
+`player.rcp` v1: **176 bytes**, magic `RUSTPLY1`, count 36, payload 152.
+Player v2 retains the following fields and appends16 bytes (192 total, payload168):
 
 | Offset | Bytes | Meaning |
 | --- | --- | --- |
@@ -228,6 +229,9 @@ receive a time/process/counter-generated sidecar identity, not cryptographic RNG
 | 64 | 1 | Selected zero-based hotbar index, 0–8 |
 | 65 | 108 | 36 ordered slots: hotbar 0–8, then three row-major main rows |
 | 173 | 3 | Held cursor stack |
+| 176 | 8 | v2 elapsed day u64 |
+| 184 | 4 | v2 fixed step u32, strictly below72000 |
+| 188 | 4 | v2 reserved u32, must be zero |
 
 Each three-byte stack is u16 item ID plus u8 count. `(0,0)` is empty; only IDs
 1 Grass, 2 Dirt, 3 Stone, 4 Wood, 5 Leaves, 6 Torch with counts **1–64** are valid. ID0
@@ -244,7 +248,7 @@ payload:
 3. u32 regional entry count, at most eight; each entry is signed i32 rx, i32 rz,
    u32 byte length + complete encoded v4 region file. Positions must be strictly
    ordered/unique, identity and coordinates valid. Clean-world journals have none;
-4. u32 player length + complete 176-byte player file with matching binding and
+4. u32 player length + complete 176-byte v1 or192-byte v2 player file with matching binding and
    fingerprint of the embedded root; no trailing bytes.
 
 Files are bounded before reading; CRC, versions, lengths, enum/counts, nested
@@ -340,3 +344,14 @@ regions receive one revision and the save worker snapshots them with the updated
 inventory through the unchanged paired journal. No block/item IDs, envelopes,
 checksums or recovery stages change. Interrupted-save tests at journal/world/
 player stages replay complete removal and counts over signed region boundaries.
+
+### Slice21 clock compatibility
+
+Player v1 supplies day0/time1000 in RAM and stays byte-identical on read. The next
+coordinated save writes player v2. Unknown versions, mismatched lengths and
+invalid clock/reserved fields are rejected even with repaired CRC. The nested
+player determines journal replay time; identity and journal envelope versions
+stay1. World root/region bytes, generators and IDs stay unchanged. Time-only
+saves do not rotate the root or region backups. F5/autosave/final saves capture
+clock+inventory+edits in the same bounded journal, before gameplay on recovery.
+Fractional units survive (three fixed steps/unit). See [DAY_NIGHT](DAY_NIGHT.md).

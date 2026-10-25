@@ -384,6 +384,11 @@ impl SaveStore {
         self.directory.join("world.rcw.bak")
     }
     pub fn save(&self, world: &World) -> Result<(), SaveError> {
+        if world.time != crate::time::WorldTime::default() {
+            return Err(SaveError::RecoveryRequired(
+                "world clock requires coordinated save_player_session".into(),
+            ));
+        }
         if self.directory.join("player-world.rcid").try_exists()?
             || self.directory.join("player.rcp").try_exists()?
             || self.directory.join("session.pending").try_exists()?

@@ -3,7 +3,7 @@ import bevy_pbr::render::{
     pbr_types::pbr_input_new,
     pbr_functions::main_pass_post_lighting_processing,
 };
-import rustcraft::atmosphere::{AtmosphereUniform, sky_color};
+import rustcraft::atmosphere::{AtmosphereUniform, celestial_sky};
 @group(constants::MATERIAL_BIND_GROUP) @binding(0) var<uniform> atmosphere: AtmosphereUniform;
 struct SkyOutput {
     @builtin(position) position: vec4<f32>,
@@ -26,5 +26,5 @@ fn vertex(@builtin(vertex_index) index: u32) -> SkyOutput {
 fn fragment(in: SkyOutput) -> @location(0) vec4<f32> {
     var pbr = pbr_input_new();
     pbr.frag_coord = in.position;
-    return main_pass_post_lighting_processing(pbr, vec4<f32>(sky_color(atmosphere, normalize(in.ray)), 1.0));
+    return main_pass_post_lighting_processing(pbr, vec4<f32>(celestial_sky(atmosphere, normalize(in.ray), view.world_from_view[0].xyz, view.world_from_view[1].xyz, -view.world_from_view[2].xyz), 1.0));
 }

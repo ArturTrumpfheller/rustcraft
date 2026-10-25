@@ -70,7 +70,9 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 - [ ] Health, damage and respawning
 - [ ] Mining progress, tools and basic crafting
 - [ ] Trees, ores and resource collection
-- [ ] Day/night cycle and first mobs
+- [x] Persistent fixed-step day/night, procedural sun/moon/stars and independent rendered sky/block light
+- [ ] Native Slice21 Void X11/Wayland and Windows acceptance — see [checklist](DAY_NIGHT.md)
+- [ ] First mobs
 
 ## v0.4 — Beta-inspired systems
 - [ ] Biomes and improved worldgen

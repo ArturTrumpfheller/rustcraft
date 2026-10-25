@@ -1,4 +1,4 @@
-//! Retained, terrain-only daylight atmosphere. No simulation or world queries.
+//! Retained, terrain-only time-varying atmosphere. No simulation or world queries.
 use bevy::{
     asset::RenderAssetUsages,
     camera::visibility::NoFrustumCulling,
@@ -18,17 +18,35 @@ pub(crate) struct AtmosphereUniform {
     /// RGB radiance; w is the elevation (ray.y) reaching the upper-sky color.
     pub zenith: Vec4,
     pub horizon: Vec4,
-    /// Start/end in blocks, then low/full daylight thresholds in vertex RGB.
+    /// Start/end in blocks, then low/full geometric sky exposure for fog.
     pub fog: Vec4,
+    /// Unit world-space sun direction; w scales only the sky light channel.
+    pub sun: Vec4,
+    /// Star visibility, sun half-size, moon half-size, reserved.
+    pub celestial: Vec4,
 }
 impl AtmosphereUniform {
     pub fn for_radius(radius: i32) -> Self {
+        Self::at_time(radius, voxel_core::time::WorldTime::default())
+    }
+    pub fn at_time(radius: i32, time: voxel_core::time::WorldTime) -> Self {
         let end = radius.clamp(1, voxel_core::streaming::MAX_RADIUS) as f32
             * voxel_core::CHUNK_SIZE as f32;
+        let light = time.daylight();
+        let day = ((light - 0.10) / 0.90).clamp(0., 1.);
+        let sun = Vec3::from_array(time.sun_direction());
+        let twilight = (1. - (sun.y / 0.25).abs()).max(0.);
         Self {
-            zenith: Vec4::new(0.07, 0.28, 1.25, 0.5),
-            horizon: Vec4::new(0.70, 1.20, 2.0, 1.),
-            fog: Vec4::new(end * 0.55, end, 0.06, 0.28),
+            sun: sun.extend(light),
+            celestial: Vec4::new((1. - day) * (1. - twilight), 0.042, 0.034, 0.),
+            zenith: Vec3::new(0.003, 0.006, 0.018)
+                .lerp(Vec3::new(0.07, 0.28, 1.25), day)
+                .extend(0.5),
+            horizon: Vec3::new(0.012, 0.019, 0.042)
+                .lerp(Vec3::new(0.70, 1.20, 2.0), day)
+                .lerp(Vec3::new(1.15, 0.30, 0.085), twilight * 0.78)
+                .extend(1.),
+            fog: Vec4::new(end * 0.55, end, 0.0, 0.8),
         }
     }
     pub fn disabled() -> Self {

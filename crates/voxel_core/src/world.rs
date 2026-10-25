@@ -75,6 +75,7 @@ pub struct StreamIdentity {
 /// chunks are Air; streamed in-volume missing chunks are pending solid barriers.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct World {
+    pub time: crate::time::WorldTime,
     chunks: BTreeMap<ChunkPos, Chunk>,
     revision: u64,
     // Transient output dependencies, not persisted and retained across eviction.
@@ -235,6 +236,7 @@ impl World {
         }
         Self {
             chunks: BTreeMap::new(),
+            time: self.time,
             revision: self.revision,
             mesh_revisions: BTreeMap::new(),
             identity: self.identity,

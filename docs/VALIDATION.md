@@ -1437,3 +1437,25 @@ Production-client software X11 screenshots, raw movement/course/CPU-cost output,
 resource accounting, exact acceptance commands and limitations are collected in
 [the Slice 19 guide](DEBUG_GAMEPLAY.md). Xvfb/Mesa evidence is not native Void/
 Windows GPU, Wayland or high-DPI acceptance. Those checks remain for the owner.
+
+## Slice21 day/night
+
+Final local locked workspace checks: fmt, all-target Clippy with warnings denied,
+tests (179 client +199 core passed; three opt-in cost tests ignored by default),
+build and original texture artifact check passed. The new ignored clock/uniform
+cost test was also run explicitly. Coverage includes exact fixed-step replay,
+rollover, legacy player reads, corruption, crash-stage journal recovery,
+time-only autosave/F5/final save, newer ticks during an in-flight snapshot,
+F3 reporting, radius/travel and zero time-driven terrain work/asset growth.
+
+Eight production-shader X11/software Vulkan captures and three-process paired
+radii1–3 measurements against accepted Slice20 are in [DAY_NIGHT](DAY_NIGHT.md)
+and [raw performance data](performance/slice21/README.md). The software renderer
+shows median frame cost +13.9% / +14.8% / +16.8%; native GPU acceptance remains
+open. No claim of native Void/Windows or Radeon performance is made.
+
+Production-client software X11 smoke: loaded a copied Slice20 player v1/world,
+verified the visible F3 clock and accepted held torch, and saved player v2.
+Pause/F5 snapshots remained exactly day0/step8157 across a wait; after resume
+and another F5 the clock reached step8360. The legacy world root stayed
+byte-identical. This is cloud software-renderer evidence, not native acceptance.

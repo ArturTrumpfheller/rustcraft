@@ -150,8 +150,16 @@ fn retained_assets_bounded_refresh_and_authoritative_far_coordinates() {
     let mut app = app();
     app.world_mut().resource_mut::<PlayerState>().body.position = [16008.5, 12.25, -16000.001];
     app.insert_resource(crate::scene::RenderOrigin([16000., 0., -16016.]));
+    app.world_mut().resource_mut::<VoxelWorld>().0.time =
+        voxel_core::time::WorldTime::from_parts(57, 71999).unwrap();
     app.world_mut().resource_mut::<DebugOverlay>().enabled = true;
     frame(&mut app);
+    assert!(
+        app.world()
+            .resource::<DebugOverlay>()
+            .text
+            .contains("DAY: 57 / TIME: 23999 / DAYLIGHT: 0.38")
+    );
     assert!(
         app.world()
             .resource::<DebugOverlay>()

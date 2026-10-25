@@ -29,14 +29,14 @@ fn radius_bounds_cover_the_guaranteed_streamed_circle_and_preserve_interaction_r
 fn defaults_are_deterministic_finite_and_do_not_depend_on_world_coordinates() {
     let a = AtmosphereUniform::for_radius(2);
     assert_eq!(a, AtmosphereUniform::for_radius(2));
-    assert_eq!(std::mem::size_of::<AtmosphereUniform>(), 48);
+    assert_eq!(std::mem::size_of::<AtmosphereUniform>(), 80);
     for v in [a.zenith, a.horizon, a.fog] {
         assert!(v.is_finite());
     }
-    assert_eq!(a.fog.z, 0.06);
-    assert_eq!(a.fog.w, 0.28);
+    assert_eq!(a.fog.z, 0.0);
+    assert_eq!(a.fog.w, 0.8);
     for normal in [[0, 1, 0], [0, -1, 0], [1, 0, 0], [0, 0, 1]] {
-        assert!(voxel_core::lighting::face_color(0, normal)[0] <= a.fog.z);
+        assert!(voxel_core::lighting::face_color(0, normal)[0] < 0.06);
     }
     assert!(AtmosphereUniform::disabled().fog.y <= AtmosphereUniform::disabled().fog.x);
 }
@@ -124,5 +124,78 @@ fn unchanged_uniforms_do_not_modify_assets_and_radius_changes_remain_bounded() {
         );
         assert_eq!(terrain.len(), 1);
         assert_eq!(sky.len(), 1);
+    }
+}
+
+#[test]
+fn complete_clock_cycles_only_update_two_retained_uniforms() {
+    use crate::terrain_material::{AtlasRepeat, TerrainSurface};
+    let mut terrain = Assets::<TerrainSurface>::default();
+    let mut sky = Assets::<SkyMaterial>::default();
+    let initial = AtmosphereUniform::for_radius(2);
+    let t = terrain.add(TerrainSurface {
+        base: default(),
+        extension: AtlasRepeat {
+            atlas: default(),
+            atmosphere: initial,
+        },
+    });
+    let s = sky.add(SkyMaterial {
+        atmosphere: initial,
+    });
+    let mut clock = voxel_core::time::WorldTime::default();
+    for _ in 0..24000 {
+        clock.advance(3);
+        let a = AtmosphereUniform::at_time(2, clock);
+        assert_eq!(a.sun.truncate(), Vec3::from_array(clock.sun_direction()));
+        assert_eq!(a.sun.w, clock.daylight());
+        for v in [a.zenith, a.horizon, a.fog, a.sun, a.celestial] {
+            assert!(v.is_finite());
+        }
+        assert!(update_materials(a, &t, Some(&s), &mut terrain, &mut sky) <= 2);
+        assert_eq!(update_materials(a, &t, Some(&s), &mut terrain, &mut sky), 0);
+    }
+    assert_eq!(terrain.len(), 1);
+    assert_eq!(sky.len(), 1);
+    assert_eq!(terrain.get(&t).unwrap().extension.atmosphere, initial);
+}
+
+#[test]
+#[ignore = "CPU-only clock/uniform cost measurement; run alone with --ignored --nocapture"]
+fn clock_uniform_cpu_cost() {
+    use crate::terrain_material::{AtlasRepeat, TerrainSurface};
+    use std::{hint::black_box, time::Instant};
+    let mut terrain = Assets::<TerrainSurface>::default();
+    let mut sky = Assets::<SkyMaterial>::default();
+    let initial = AtmosphereUniform::for_radius(2);
+    let t = terrain.add(TerrainSurface {
+        base: default(),
+        extension: AtlasRepeat {
+            atlas: default(),
+            atmosphere: initial,
+        },
+    });
+    let s = sky.add(SkyMaterial {
+        atmosphere: initial,
+    });
+    for radius in 1..=3 {
+        let mut clock = voxel_core::time::WorldTime::default();
+        let mut costs = Vec::new();
+        for _ in 0..7 {
+            let start = Instant::now();
+            for _ in 0..100_000 {
+                clock.advance(1);
+                let p = black_box(AtmosphereUniform::at_time(radius, clock));
+                black_box(update_materials(p, &t, Some(&s), &mut terrain, &mut sky));
+            }
+            costs.push(start.elapsed().as_nanos() / 100_000);
+        }
+        costs.sort_unstable();
+        println!(
+            "CLOCK_UNIFORM radius={radius} ns_per_tick_and_two_uniforms={} terrain_assets={} sky_assets={}",
+            costs[3],
+            terrain.len(),
+            sky.len()
+        );
     }
 }

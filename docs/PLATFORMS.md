@@ -493,3 +493,11 @@ See [SETTINGS](SETTINGS.md#native-acceptance-void-glibc--fish) for isolated Fish
 Windows11 PowerShell procedures, display rollback, DPI and environment precedence.
 Windowed/borderless and portable VSync requests use Bevy platform integration;
 exclusive fullscreen and a custom FPS limiter are deliberately not offered.
+
+## Slice 21 day/night acceptance
+
+See [DAY_NIGHT](DAY_NIGHT.md#reproduction-and-native-acceptance) for isolated Void
+Fish commands, development-only time fixtures and the Void X11/Wayland and
+Windows10/11 checklist. Backends remain platform-selected; no new native
+dependencies or features. Linux cloud X11 images use software Vulkan and do not
+establish physical Radeon performance or Windows GUI acceptance.

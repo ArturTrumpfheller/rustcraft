@@ -244,3 +244,12 @@ Keep 45° vertical default and expose exact78°. Use portable presentation fallb
 modes; defer exclusive mode, toggle latches, manual UI zoom and custom FPS pacing.
 Stack PR on Slice14, preserve its fork boundary for later squash-safe transplant.
 See SETTINGS for validation and recovery contracts.
+
+## Slice 21
+
+- Persist an integer per-world 24,000-unit / 72,000-step clock; 60 Hz yields20 real minutes/day. Morning1000 is the deterministic legacy/new default.
+- Share the physics simulation gate: inventory runs time, menus/focus pause without catch-up.
+- Put time in coordinated player v2 (192 bytes); retain read-only player v1 support and world formats1–4. Time-only saves use the journal without touching world roots/regions.
+- Preserve static sky/block light separately in COLOR, compare both in greedy keys and apply a shared daylight uniform in the terrain shader. Accept measured additional torch quads and meshing work; never remesh for time.
+- Use original procedural square celestial bodies/stars, matching sky/fog colors and geometric sky exposure for cave protection. Keep time tooling in a separate example.
+- Preserve desktop backends, dependencies, original atlas and all accepted input/viewmodel behavior. Native GPU acceptance remains explicit; see DAY_NIGHT.

@@ -1,0 +1,2 @@
+DAY_NIGHT_ASSETS radius=1 quads=77 mesh_bytes=19096 vertex_stride=56 light_bytes=584064 terrain_materials=1 sky_materials=1 meshes=23 images=6
+ATMOSPHERE_FRAME scene=plains radius=1 baseline=false motion=false cycle=false frames=300 p50_ms=71.6915 p95_ms=156.5887 p99_ms=256.3566 control_p50_ns=6219 writes=0

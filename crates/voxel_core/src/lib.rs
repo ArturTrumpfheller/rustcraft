@@ -12,6 +12,7 @@ pub mod regions;
 pub mod shape;
 pub mod streaming;
 pub mod texture;
+pub mod time;
 mod world;
 pub mod worldgen;
 
