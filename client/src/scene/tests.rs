@@ -56,6 +56,51 @@ fn terrain_app() -> App {
 }
 
 #[test]
+#[ignore = "CPU-only item presentation measurement; run alone with --ignored --nocapture"]
+fn item_presentation_cpu_measurements() {
+    for count in [0, 12] {
+        let mut world = World::default();
+        for x in 0..12 {
+            let p = voxel_core::BlockPos([x, 1, 0]);
+            world
+                .set_block(voxel_core::BlockPos([x, 0, 0]), voxel_core::Block::Stone)
+                .unwrap();
+            if x < count {
+                world.set_block(p, voxel_core::Block::Torch).unwrap();
+                world.set_block(p, voxel_core::Block::WaterSource).unwrap();
+            }
+        }
+        let mut app = App::new();
+        app.init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<TerrainSurface>>()
+            .insert_resource(VoxelWorld(world))
+            .add_plugins(VoxelScenePlugin);
+        for _ in 0..60 {
+            app.update();
+        }
+        let mut samples = Vec::new();
+        for _ in 0..2000 {
+            let start = std::time::Instant::now();
+            app.update();
+            samples.push(start.elapsed().as_secs_f64() * 1e6);
+        }
+        samples.sort_by(f64::total_cmp);
+        let meshes = app.world().resource::<Assets<Mesh>>();
+        println!(
+            "ITEM_PRESENTATION count={count} update_p50_us={:.3} update_p95_us={:.3} meshes={} vertices={} entities={}",
+            samples[1000],
+            samples[1900],
+            meshes.len(),
+            meshes
+                .iter()
+                .map(|(_, m)| m.count_vertices())
+                .sum::<usize>(),
+            app.world_mut().query::<&Mesh3d>().iter(app.world()).count()
+        );
+    }
+}
+
+#[test]
 fn repeated_boundary_edits_update_neighbors_and_reuse_assets_even_when_empty() {
     let mut app = terrain_app();
     edit_cell(&mut app, [15, 1, 1], voxel_core::Block::Stone);

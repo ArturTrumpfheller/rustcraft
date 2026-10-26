@@ -19,9 +19,12 @@ pub fn corner_height(world: &World, p: BlockPos, cx: i32, cz: i32) -> f32 {
                 if world.block(q.offset([0, 1, 0]).unwrap()).fluid().is_some() || f.is_falling() {
                     return 1.;
                 }
-                let weight = if f.is_source() { 4. } else { 1. };
+                let weight = if f.is_source() { 8. } else { 1. };
                 total += f.height() * weight;
                 count += weight;
+            } else if world.block(q) == crate::Block::Air {
+                // Dry edges taper gently; shared world corners stay identical.
+                count += 1.;
             }
         }
     }

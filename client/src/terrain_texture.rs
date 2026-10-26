@@ -31,13 +31,7 @@ pub(crate) fn atlas_image() -> Image {
 /// Original 16x16 ripple tile, authored algorithmically; MIT OR Apache-2.0.
 #[allow(dead_code)] // Shared module in the historical terrain-only galleries.
 pub(crate) fn water_image() -> Image {
-    let mut pixels = Vec::with_capacity(1024);
-    for y in 0..16 {
-        for x in 0..16 {
-            let ripple = ((x * 3 + y * 5 + (x * y) % 7) % 13) as u8;
-            pixels.extend_from_slice(&[38 + ripple, 91 + ripple * 2, 184 + ripple * 3, 255]);
-        }
-    }
+    let pixels = voxel_core::item_art::water_pixels();
     let mut image = Image::new(
         Extent3d {
             width: 16,
@@ -60,6 +54,32 @@ pub(crate) fn water_image() -> Image {
 mod tests {
     use super::*;
     use bevy::image::{ImageAddressMode, ImageFilterMode};
+
+    #[test]
+    fn original_water_is_a_distinct_pixel_grid_and_both_bucket_icons_are_recognizable() {
+        use voxel_core::{inventory::Item, item_art};
+        let image = water_image();
+        assert_eq!(image.texture_descriptor.size.width, 16);
+        assert_eq!(image.texture_descriptor.size.height, 16);
+        assert_eq!(image.data.as_ref().unwrap().len(), 1024);
+        assert_eq!(image.data.as_ref().unwrap(), &item_art::water_pixels());
+        let image_for = |item| {
+            (0..16)
+                .flat_map(move |y| (0..16).map(move |x| item_art::bucket_pixel(item, x, y)))
+                .collect::<Vec<_>>()
+        };
+        let empty = image_for(Item::EmptyBucket);
+        let full = image_for(Item::WaterBucket);
+        assert_ne!(empty, full);
+        assert_eq!(empty[0], None);
+        assert_eq!(full[0], None);
+        assert!(
+            full.iter()
+                .flatten()
+                .any(|p| u16::from(p[2]) > u16::from(p[0]) * 2)
+        );
+        assert!(empty.iter().flatten().count() > 64);
+    }
 
     #[test]
     fn embedded_atlas_is_srgb_opaque_nearest_lod_zero_without_anisotropy() {

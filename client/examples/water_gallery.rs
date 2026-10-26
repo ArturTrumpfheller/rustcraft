@@ -213,6 +213,7 @@ fn setup(
     });
     // SLICE22_BEGIN
     let mut live_handles = std::collections::BTreeMap::new();
+    let mut terrain_handles = std::collections::BTreeMap::new();
     // SLICE22_END
     for (cp, _) in world
         .chunks()
@@ -256,11 +257,17 @@ fn setup(
         .with_inserted_attribute(Mesh::ATTRIBUTE_UV_1, m.atlas_uvs)
         .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, m.colors)
         .with_inserted_indices(Indices::U32(m.indices));
-        commands.spawn((
-            Mesh3d(meshes.add(mesh)),
-            MeshMaterial3d(material.clone()),
-            Transform::from_translation(Vec3::from_array(cp.0.map(|a| (a * 16) as f32))),
-        ));
+        let h = meshes.add(mesh);
+        let _e = commands
+            .spawn((
+                Mesh3d(h.clone()),
+                MeshMaterial3d(material.clone()),
+                Transform::from_translation(Vec3::from_array(cp.0.map(|a| (a * 16) as f32))),
+            ))
+            .id();
+        // SLICE22_BEGIN
+        terrain_handles.insert(cp, (_e, h));
+        // SLICE22_END
     }
     run.terrain = material;
     if !options.baseline {
@@ -319,6 +326,7 @@ fn setup(
             live_handles,
             water_material,
             fixture::source_positions(&options.scene),
+            terrain_handles,
         ));
     }
     // SLICE22_END

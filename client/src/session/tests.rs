@@ -224,6 +224,58 @@ fn repeated_sessions_save_edits_inventory_release_lock_and_reclaim_assets() {
         drop(store);
     }
 }
+
+#[test]
+fn dropped_items_survive_session_switches_without_leaking_entities_or_assets() {
+    let mut app = app();
+    let dir = Directory::new();
+    let initial = assets(&app);
+    for _ in 0..3 {
+        open(&mut app, &dir);
+        let p = BlockPos([8, 30, 8]);
+        {
+            let mut w = app.world_mut().resource_mut::<scene::VoxelWorld>();
+            w.0.set_block(BlockPos([8, 29, 8]), Block::Stone).unwrap();
+            w.0.set_block(p, Block::Torch).unwrap();
+            w.0.set_block(p, Block::WaterSource).unwrap();
+        }
+        frame(&mut app);
+        assert_eq!(
+            app.world()
+                .resource::<scene::VoxelWorld>()
+                .0
+                .dropped_items()
+                .len(),
+            1
+        );
+        let during = assets(&app);
+        for _ in 0..10 {
+            frame(&mut app);
+        }
+        assert_eq!(assets(&app), during);
+        leave(&mut app);
+        assert_eq!(assets(&app), initial);
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<SessionEntity>>()
+                .iter(app.world())
+                .count(),
+            0
+        );
+    }
+    open(&mut app, &dir);
+    let drops: Vec<_> = app
+        .world()
+        .resource::<scene::VoxelWorld>()
+        .0
+        .dropped_items()
+        .iter()
+        .collect();
+    assert_eq!(drops.len(), 1);
+    assert_eq!(drops[0].1.count(), 3);
+    leave(&mut app);
+    assert_eq!(assets(&app), initial);
+}
 #[test]
 fn inventory_escape_pause_focus_resume_and_click_guard_use_real_schedules() {
     let mut app = app();

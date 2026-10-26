@@ -197,3 +197,12 @@ no new texture asset, decoder, sampler, dependency or per-frame CPU allocation.
 `water.wesl`, fluid code, fixtures and captured `docs/images/slice22` images are
 MIT OR Apache-2.0. No imported assets, source or dependencies. Water reuses the
 existing Bevy/wgpu platform features and standard alpha blending.
+
+## Slice22 completion artwork
+
+`voxel_core::item_art` contains independently authored16×16 Empty/Water Bucket
+grids and a stepped water-ripple tile, **MIT OR Apache-2.0**, including artwork.
+UI colored pixels and thin held-item silhouettes use these same source grids.
+Dropped Torch presentation reuses our original Slice20 Torch art. No Minecraft
+asset, reference image, external texture pack, font, crate or feature was added.
+New gameplay captures retain the same project licenses.

@@ -73,7 +73,9 @@ struct HeldBlock;
 struct Arm;
 #[derive(Resource)]
 struct Models {
-    blocks: [Handle<Mesh>; 7],
+    blocks: [Handle<Mesh>; 9],
+    textured: Handle<StandardMaterial>,
+    flat: Handle<StandardMaterial>,
     root: Entity,
     block: Entity,
     arm: Entity,
@@ -126,16 +128,7 @@ fn cube(block: Option<Block>) -> Mesh {
         };
         uvs.push(
             block
-                .and_then(|b| {
-                    face_tile(
-                        if b == Block::WaterSource {
-                            Block::Stone
-                        } else {
-                            b
-                        },
-                        normal,
-                    )
-                })
+                .and_then(|b| face_tile(b, normal))
                 .map_or(local.map(f32::from), |t| t.uv(local)),
         );
         let shade = if n[1] > 0. {
@@ -148,16 +141,46 @@ fn cube(block: Option<Block>) -> Mesh {
             0.68
         };
         // Muted constant fill: readable in caves without adding lights/shadows.
-        colors.push(if block == Some(Block::WaterSource) {
-            [shade * 0.08, shade * 0.3, shade, 1.]
-        } else {
-            [shade * 0.55, shade * 0.55, shade * 0.55, 1.]
-        });
+        colors.push([shade * 0.55, shade * 0.55, shade * 0.55, 1.]);
     }
     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
     mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
     mesh.asset_usage = RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD;
     mesh
+}
+
+// Thin pixel silhouettes, double-sided and independent of block geometry.
+fn bucket_mesh(item: Item) -> Mesh {
+    let mut positions = Vec::new();
+    let mut normals = Vec::new();
+    let mut colors = Vec::new();
+    let mut indices = Vec::new();
+    for y in 0..16 {
+        for x in 0..16 {
+            if let Some([r, g, b, _]) = voxel_core::item_art::bucket_pixel(item, x, y) {
+                let n = positions.len() as u32;
+                let left = x as f32 / 16. - 0.5;
+                let bottom = (15 - y) as f32 / 16. - 0.5;
+                positions.extend([
+                    [left, bottom, 0.],
+                    [left + 1. / 16., bottom, 0.],
+                    [left + 1. / 16., bottom + 1. / 16., 0.],
+                    [left, bottom + 1. / 16., 0.],
+                ]);
+                normals.extend([[0., 0., 1.]; 4]);
+                colors.extend([Color::srgb_u8(r, g, b).to_linear().to_f32_array(); 4]);
+                indices.extend([n, n + 1, n + 2, n, n + 2, n + 3]);
+            }
+        }
+    }
+    Mesh::new(
+        bevy::render::render_resource::PrimitiveTopology::TriangleList,
+        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colors)
+    .with_inserted_indices(bevy::mesh::Indices::U32(indices))
 }
 
 // One and only one cuboid. Sleeve/skin are pixels, never extra geometry.
@@ -282,16 +305,20 @@ fn setup(
         base_color_texture: atlas,
         ..default()
     });
-    let blocks = [
-        Block::Grass,
-        Block::Dirt,
-        Block::Stone,
-        Block::Wood,
-        Block::Leaves,
-        Block::Torch,
-        Block::WaterSource,
-    ]
-    .map(|b| meshes.add(cube(Some(b))));
+    let flat = materials.add(StandardMaterial {
+        unlit: true,
+        cull_mode: None,
+        double_sided: true,
+        ..default()
+    });
+    let blocks = std::array::from_fn(|i| {
+        let item = Item::from_id(i as u16 + 1).unwrap();
+        meshes.add(if let Some(build) = item.build() {
+            cube(Some(build.block()))
+        } else {
+            bucket_mesh(item)
+        })
+    });
     let root = commands
         .spawn((
             crate::session::SessionEntity,
@@ -317,7 +344,7 @@ fn setup(
             HeldBlock,
             Visibility::Hidden,
             Mesh3d(blocks[0].clone()),
-            MeshMaterial3d(textured),
+            MeshMaterial3d(textured.clone()),
             RenderLayers::layer(OVERLAY_LAYER),
             Transform::default(),
         ))
@@ -325,6 +352,8 @@ fn setup(
     commands.entity(root).add_children(&[arm, block]);
     commands.insert_resource(Models {
         blocks,
+        textured,
+        flat,
         root,
         block,
         arm,
@@ -515,7 +544,15 @@ fn update(
     source: Query<&Projection, With<FirstPersonCamera>>,
     mut overlay: Query<&mut Projection, (With<OverlayCamera>, Without<FirstPersonCamera>)>,
     mut roots: Query<(&mut Transform, &mut Visibility), With<HandRoot>>,
-    mut blocks: Query<(&mut Mesh3d, &mut Visibility, &mut Transform), HeldFilter>,
+    mut blocks: Query<
+        (
+            &mut Mesh3d,
+            &mut Visibility,
+            &mut Transform,
+            &mut MeshMaterial3d<StandardMaterial>,
+        ),
+        HeldFilter,
+    >,
     mut arms: Query<(&mut Visibility, &mut Transform), ArmFilter>,
 ) {
     let (Some(mut models), Ok(Projection::Perspective(p))) = (models, source.single()) else {
@@ -538,7 +575,7 @@ fn update(
             Visibility::Hidden
         };
     }
-    if let Ok((mut handle, mut visibility, _)) = blocks.get_mut(models.block) {
+    if let Ok((mut handle, mut visibility, _, mut material)) = blocks.get_mut(models.block) {
         *visibility = if selected.is_some() {
             Visibility::Inherited
         } else {
@@ -547,6 +584,11 @@ fn update(
         if selected != models.selected {
             if let Some(item) = selected {
                 handle.0 = models.blocks[usize::from(item.id() - 1)].clone();
+                material.0 = if item.build().is_some() {
+                    models.textured.clone()
+                } else {
+                    models.flat.clone()
+                };
             }
             models.selected = selected;
         }
@@ -583,7 +625,7 @@ fn update(
     pose.translation = rotation * pose.translation + offset * MODEL_DEPTH_SCALE;
     pose.rotation = rotation * pose.rotation;
     if selected.is_some() {
-        if let Ok((_, _, mut block)) = blocks.get_mut(models.block) {
+        if let Ok((_, _, mut block, _)) = blocks.get_mut(models.block) {
             *block = pose;
         }
     } else if let Ok((_, mut arm)) = arms.get_mut(models.arm) {

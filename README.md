@@ -72,6 +72,15 @@ Pause and its Options page show the frozen world through a 45% dark scrim.
 Title/catalog/options from title retain their opaque background.
 See [Slice 19 controls, measurements, screenshots and native checklist](docs/DEBUG_GAMEPLAY.md).
 
+## Water gameplay (Slice 22)
+
+Use Empty/Water Buckets from the E inventory item palette. Sources spread, fall,
+recede after collection and wash away floor/wall torches into persistent items.
+Mining targets solids through water; blocks can displace it. Buckets have original
+pixel icons and thin held-item models. Existing worlds receive no automatic
+inventory refill; legacy item7 has an explicit CONVERT7 button. See
+[mechanics, saves, limitations and Void acceptance](docs/WATER.md).
+
 ## Persistent day/night (Slice 21)
 
 A saved per-world clock advances at fixed 60 Hz: 24,000 logical units in 20 minutes.
@@ -131,7 +140,8 @@ nine slots. Original pixel frames and numerals reuse our own terrain atlas for
 icons; no external UI/font images are required. New player inventories start with
 64 each of grass/dirt/stone and 32 each of wood/leaves/torches/Water Sources (Torch in slot 6, Water Source in slot 7). Mining collects blocks;
 placing consumes the selected stack. A full inventory rejects mining without
-changing the block. This slice has no dropped items or crafting.
+changing the block. Water-destroyed torches produce persistent, collectible item drops. Open E for
+the small item palette, including Empty/Water Buckets. Crafting remains deferred.
 
 ![Original Slice-9 inventory and held stack](docs/images/slice9-inventory.png)
 

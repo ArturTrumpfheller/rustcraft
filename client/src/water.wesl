@@ -13,7 +13,7 @@ import rustcraft::atmosphere::{AtmosphereUniform, terrain_fog};
 fn fragment(in: VertexOutput, @builtin(front_facing) front: bool) -> FragmentOutput {
     var pbr = pbr_input_from_vertex_output(in, front, false);
     // Quantized UV scroll retains the original pixel grid. No mesh updates.
-    let scroll = floor(effect.x * 4.0) / 16.0;
+    let scroll = floor(effect.x * 1.5) / 16.0;
     // Side UV V increases downward, so negative sampling motion flows downward.
     let uv = fract(in.uv + vec2<f32>(scroll * 0.25, -scroll));
     let texel = textureSampleLevel(water, water_sampler, uv, 0.0);

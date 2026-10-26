@@ -85,6 +85,7 @@ pub enum EditError {
     Unsupported,
     SupportsTorch,
     StaleEdit,
+    DropCapacity,
 }
 
 /// Single-cell primitive; inventory-backed gameplay uses `inventory::edit_inventory`
@@ -129,8 +130,7 @@ pub fn edit(
 #[cfg(test)]
 mod tests;
 
-/// Water occupies its hit cell when building, so solids can displace it.
-/// Breaking targets sources; ordinary flowing water is transparent to rays.
+/// Normal targeting skips water; adjacent placement may displace it.
 pub fn placement_position(world: &World, hit: crate::raycast::RayHit) -> Option<crate::BlockPos> {
     if world.block(hit.position).fluid().is_some() {
         Some(hit.position)

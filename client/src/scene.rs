@@ -1,3 +1,8 @@
+#[path = "dropped_items.rs"]
+mod dropped_items;
+pub(crate) fn cleanup_drops(world: &mut bevy::prelude::World) {
+    dropped_items::cleanup(world);
+}
 use crate::terrain_material::{AtlasRepeat, TerrainSurface};
 use bevy::{
     asset::RenderAssetUsages, camera::primitives::Aabb, ecs::system::SystemParam, mesh::Indices,
@@ -61,13 +66,15 @@ pub(crate) struct TerrainMaterial(
 
 impl Plugin for VoxelScenePlugin {
     fn build(&self, app: &mut App) {
+        dropped_items::register(app);
         if !app
             .world()
             .contains_resource::<crate::session::ClientFlow>()
         {
             app.init_resource::<VoxelWorld>();
         }
-        app.init_resource::<Assets<Image>>()
+        app.init_resource::<Assets<StandardMaterial>>()
+            .init_resource::<Assets<Image>>()
             .init_resource::<Assets<TerrainSurface>>()
             .init_resource::<Assets<crate::terrain_material::WaterSurface>>()
             .init_resource::<Assets<crate::atmosphere::SkyMaterial>>()

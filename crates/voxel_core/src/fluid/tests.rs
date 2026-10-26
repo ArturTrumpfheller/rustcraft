@@ -244,7 +244,7 @@ fn mesh_height_culling_light_and_solid_buffers() {
 }
 
 #[test]
-fn inventory_sources_displace_water_and_flowing_water_does_not_obstruct_rays() {
+fn inventory_buckets_displace_water_and_mining_targets_solids_through_all_water() {
     use crate::{inventory::*, physics::*, raycast::*};
     let mut w = flat();
     let mut i = Inventory::starter();
@@ -259,11 +259,19 @@ fn inventory_sources_displace_water_and_flowing_water_does_not_obstruct_rays() {
         .unwrap()
         .unwrap();
     assert_eq!(w.block(BlockPos([0, 1, 0])), Block::WaterSource);
-    assert_eq!(i.selected_stack().unwrap().count(), 31);
+    assert_eq!(i.selected_stack().unwrap().item(), Item::EmptyBucket);
+    assert_eq!(raycast(&w, ray).unwrap().position, BlockPos([0, 0, 0]));
+    edit_inventory(&mut w, &mut i, ray, true, &p, &PhysicsConfig::default())
+        .unwrap()
+        .unwrap();
+    assert_eq!(i.selected_stack().unwrap().item(), Item::WaterBucket);
+    put(&mut w, [0, 1, 0], Block::WaterSource);
     edit_inventory(&mut w, &mut i, ray, false, &p, &PhysicsConfig::default())
         .unwrap()
         .unwrap();
-    assert_eq!(i.selected_stack().unwrap().count(), 32);
+    assert_eq!(w.block(BlockPos([0, 1, 0])), Block::WaterSource);
+    assert_eq!(w.block(BlockPos([0, 0, 0])), Block::Air);
+    put(&mut w, [0, 0, 0], Block::Stone);
     put(&mut w, [0, 1, 0], Block::Water3);
     assert_eq!(raycast(&w, ray).unwrap().position, BlockPos([0, 0, 0]));
     i.select(2);

@@ -9,6 +9,7 @@ const ID_MAGIC: &[u8; 8] = b"RUSTPID1";
 const PLAYER_MAGIC: &[u8; 8] = b"RUSTPLY1";
 const TX_MAGIC: &[u8; 8] = b"RUSTTXN1";
 const PLAYER_SIZE: usize = 192;
+const MAX_PLAYER_SIZE: usize = 196 + crate::drops::MAX_DROPS * 15;
 const MAX_TX: usize = 32 * 1024 * 1024;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct Binding([u8; 32]);
@@ -34,7 +35,7 @@ fn unpack<'a>(b: &'a [u8], magic: &[u8; 8], count: u32) -> Result<&'a [u8], Form
     if &b[..8] != magic {
         return Err(FormatError::Magic);
     }
-    if u32at(b, 8) != 1 && !(magic == PLAYER_MAGIC && u32at(b, 8) == 2) {
+    if u32at(b, 8) != 1 && !(magic == PLAYER_MAGIC && (2..=3).contains(&u32at(b, 8))) {
         return Err(FormatError::Version(u32at(b, 8)));
     }
     if u32at(b, 12) != count || u32at(b, 16) as usize != b.len() - 24 {
@@ -130,22 +131,85 @@ fn player_bytes(
     b[20..24].copy_from_slice(&crc.to_le_bytes());
     b
 }
+// Drop ownership shares the existing player/world journal, including pickup.
+// Empty worlds retain the exact v2 envelope. v3 adds a bounded sorted item list.
+fn player_with_drops(binding: Binding, root: &[u8], inv: &Inventory, world: &World) -> Vec<u8> {
+    let mut b = player_bytes(binding, root, inv, world.time);
+    if world.drops.is_empty() {
+        return b;
+    }
+    b[8..12].copy_from_slice(&3u32.to_le_bytes());
+    b.extend((world.drops.len() as u32).to_le_bytes());
+    for (p, s) in world.drops.iter() {
+        for a in p.0 {
+            b.extend(a.to_le_bytes());
+        }
+        b.extend(s.item().id().to_le_bytes());
+        b.push(s.count());
+    }
+    let len = b.len() as u32 - 24;
+    b[16..20].copy_from_slice(&len.to_le_bytes());
+    let crc = checksum(&b);
+    b[20..24].copy_from_slice(&crc.to_le_bytes());
+    b
+}
+fn decode_drops(b: &[u8]) -> Result<crate::drops::DroppedItems, FormatError> {
+    let mut drops = crate::drops::DroppedItems::default();
+    if u32at(b, 8) != 3 {
+        return Ok(drops);
+    }
+    if b.len() < 196 || b.len() > MAX_PLAYER_SIZE {
+        return Err(FormatError::Length);
+    }
+    let n = u32at(b, 192) as usize;
+    if n > crate::drops::MAX_DROPS || b.len() != 196 + n * 15 {
+        return Err(FormatError::Length);
+    }
+    let mut previous = None;
+    for r in b[196..].as_chunks::<15>().0 {
+        let p = BlockPos(std::array::from_fn(|a| {
+            i32::from_le_bytes(r[a * 4..a * 4 + 4].try_into().unwrap())
+        }));
+        let key = (p.split().0, p);
+        if previous.is_some_and(|old| old >= key) {
+            return Err(FormatError::UnsortedOrDuplicate);
+        }
+        previous = Some(key);
+        let item = Item::from_id(u16::from_le_bytes([r[12], r[13]])).ok_or(FormatError::Length)?;
+        let stack = Stack::new(item, r[14]).ok_or(FormatError::Length)?;
+        if !drops.add(p, stack) {
+            return Err(FormatError::Length);
+        }
+    }
+    Ok(drops)
+}
+fn restore_drops(world: &mut World, b: &[u8]) -> Result<(), FormatError> {
+    let drops = decode_drops(b)?;
+    if drops.iter().any(|(p, _)| !world.in_bounds(p)) {
+        return Err(FormatError::Coordinates);
+    }
+    world.drops = drops;
+    Ok(())
+}
 fn decode_player(
     b: &[u8],
 ) -> Result<(Binding, [u8; 8], Inventory, crate::time::WorldTime), FormatError> {
-    if b.len() != 176 && b.len() != PLAYER_SIZE {
+    if b.len() != 176 && b.len() != PLAYER_SIZE && !(196..=MAX_PLAYER_SIZE).contains(&b.len()) {
         return Err(FormatError::Length);
     }
     let p = unpack(b, PLAYER_MAGIC, SLOT_COUNT as u32)?;
     let time = match (u32at(b, 8), b.len()) {
         (1, 176) => crate::time::WorldTime::default(),
-        (2, 192) if u32at(b, 188) == 0 => crate::time::WorldTime::from_parts(
-            u64::from_le_bytes(b[176..184].try_into().unwrap()),
-            u32at(b, 184),
-        )
-        .ok_or(FormatError::Length)?,
+        (2, 192) | (3, 196..=MAX_PLAYER_SIZE) if u32at(b, 188) == 0 => {
+            crate::time::WorldTime::from_parts(
+                u64::from_le_bytes(b[176..184].try_into().unwrap()),
+                u32at(b, 184),
+            )
+            .ok_or(FormatError::Length)?
+        }
         _ => return Err(FormatError::Length),
     };
+    decode_drops(b)?;
     let binding = Binding(p[..32].try_into().unwrap());
     let fingerprint = p[32..40].try_into().unwrap();
     let mut stacks = [None; SLOT_COUNT + 1];
@@ -246,6 +310,7 @@ fn decode_transaction(b: &[u8]) -> Result<Transaction, FormatError> {
     }
     let (binding, fp, _, time) = decode_player(&player)?;
     world.time = time;
+    restore_drops(&mut world, &player)?;
     if !binding.matches(&world) || fp != fingerprint(&root) || (!dirty && n != 0) {
         return Err(FormatError::Identity);
     }
@@ -296,7 +361,7 @@ impl SaveStore {
                 &read_save(&self.path())?.ok_or_else(|| recovery("world missing after replay"))?,
             )?;
         }
-        let file = read_limited(&self.player_path(), PLAYER_SIZE)?;
+        let file = read_limited(&self.player_path(), MAX_PLAYER_SIZE)?;
         let binding = self.binding()?;
         if let Some(b) = file {
             let (id, fp, inv, time) = decode_player(&b)?;
@@ -311,6 +376,7 @@ impl SaveStore {
                 ));
             }
             world.time = time;
+            restore_drops(world, &b)?;
             return Ok(inv);
         }
         if binding.is_some() || self.player_path().with_extension("rcp.bak").try_exists()? {
@@ -361,7 +427,7 @@ impl SaveStore {
             read_save(&self.path())?
                 .ok_or_else(|| recovery("clean session has no durable world"))?
         };
-        let player = player_bytes(binding, &root, inventory, world.time);
+        let player = player_with_drops(binding, &root, inventory, world);
         let bytes = transaction_bytes(world, &root, &player, world_dirty)?;
         atomic_replace(&self.pending_path(), &bytes, true, &mut hook)?;
         hook(SaveStage::SessionPrepared)?;
@@ -377,7 +443,7 @@ impl SaveStore {
         }
         // Validate the existing player before advancing any world file. A
         // corrupt/foreign primary is never overwritten, even during replay.
-        match read_limited(&self.player_path(), PLAYER_SIZE)? {
+        match read_limited(&self.player_path(), MAX_PLAYER_SIZE)? {
             Some(b) if decode_player(&b)?.0 != tx.binding => {
                 return Err(FormatError::Identity.into());
             }
@@ -401,7 +467,7 @@ impl SaveStore {
         hook(SaveStage::WorldSaved)?;
         let path = self.player_path();
         let backup = path.with_extension("rcp.bak");
-        match read_limited(&path, PLAYER_SIZE)? {
+        match read_limited(&path, MAX_PLAYER_SIZE)? {
             Some(old) => {
                 if decode_player(&old)?.0 != tx.binding {
                     return Err(FormatError::Identity.into());
@@ -439,9 +505,12 @@ impl SaveStore {
                 return Err(recovery("clean-world journal generation mismatch"));
             }
         }
-        match read_limited(&self.player_path(), PLAYER_SIZE)? {
+        match read_limited(&self.player_path(), MAX_PLAYER_SIZE)? {
             Some(b) => {
                 let (id, fp, _, _) = decode_player(&b)?;
+                if decode_drops(&b)?.iter().any(|(p, _)| !world.in_bounds(p)) {
+                    return Err(FormatError::Coordinates.into());
+                }
                 if binding != Some(id) || !id.matches(world) {
                     return Err(FormatError::Identity.into());
                 }

@@ -130,6 +130,39 @@ fn slot(app: &mut App, i: usize, button: MouseButton) {
     }
     click(app, button);
 }
+fn point_click(app: &mut App, p: Vec2) {
+    let w = app.world_mut();
+    let mut q = w.query_filtered::<&mut Window, With<PrimaryWindow>>();
+    let mut window = q.single_mut(w).unwrap();
+    let layout = Layout::new(&window);
+    window.set_cursor_position(Some(Vec2::new(
+        (p.x + layout.half.x) * layout.scale,
+        (layout.half.y - p.y) * layout.scale,
+    )));
+    click(app, MouseButton::Left);
+}
+#[test]
+fn creative_palette_adds_new_items_to_loaded_inventories_and_refuses_full_grants() {
+    let (_dir, mut app) = app();
+    app.world_mut().resource_mut::<GameInventory>().contents = Inventory::empty();
+    key(&mut app, KeyCode::KeyE);
+    point_click(&mut app, Vec2::new(3.5 * 28., 94.));
+    assert_eq!(total(&app, Item::WaterBucket), 1);
+    point_click(&mut app, Vec2::new(2.5 * 28., 94.));
+    assert_eq!(total(&app, Item::EmptyBucket), 1);
+    let mut full = Inventory::empty();
+    full.insert(Item::Stone, 36 * 64);
+    app.world_mut().resource_mut::<GameInventory>().contents = full.clone();
+    point_click(&mut app, Vec2::new(3.5 * 28., 94.));
+    assert_eq!(app.world().resource::<GameInventory>().contents, full);
+    assert_eq!(app.world().resource::<GameInventory>().message, "NO ROOM");
+    let mut legacy = Inventory::empty();
+    legacy.insert(Item::WaterSource, 2);
+    app.world_mut().resource_mut::<GameInventory>().contents = legacy;
+    point_click(&mut app, Vec2::new(91., 70.));
+    assert_eq!(total(&app, Item::WaterSource), 1);
+    assert_eq!(total(&app, Item::WaterBucket), 1);
+}
 fn total(app: &App, item: Item) -> u32 {
     let inv = &app.world().resource::<GameInventory>().contents;
     inv.slots()

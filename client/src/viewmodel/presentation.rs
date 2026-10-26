@@ -15,6 +15,7 @@ impl Presentation {
         match item {
             None => ARM,
             Some(Item::Torch) => SLENDER,
+            Some(Item::EmptyBucket | Item::WaterBucket | Item::WaterSource) => BUCKET,
             Some(_) => BLOCK,
         }
     }
@@ -42,4 +43,14 @@ pub(super) const ARM: Presentation = Presentation {
     origin: Vec3::ZERO,
     pivot: Vec3::new(0.65, -0.90, -0.45),
     held: false,
+};
+
+// Ordinary blocks, torches and the accepted arm pose remain exactly unchanged.
+pub(super) const BUCKET: Presentation = Presentation {
+    position: Vec3::new(0.56, -0.36, -0.80),
+    angles: Vec3::new(0., -15., -12.),
+    scale: 0.34,
+    origin: Vec3::ZERO,
+    pivot: Vec3::new(0.56, -0.36, -0.80),
+    held: true,
 };

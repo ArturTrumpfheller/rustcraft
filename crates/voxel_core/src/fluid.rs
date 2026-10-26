@@ -193,6 +193,7 @@ impl World {
         self.fluids.total_processed += count as u64;
         let mut regions = [None; crate::regions::MAX_DIRTY_REGIONS];
         let mut region_count = 0;
+        let mut planned_drops = 0;
         for _ in 0..count {
             let p = self.fluids.queue.pop_front().unwrap();
             self.fluids.pending.remove(&p);
@@ -200,7 +201,7 @@ impl World {
                 continue;
             }
             let before = self.block(p);
-            if before != Block::Air && before.fluid().is_none() {
+            if !before.fluid_replaceable() {
                 continue;
             }
             // Sources are permanent; no relaxation can manufacture a new one.
@@ -216,9 +217,22 @@ impl World {
             {
                 continue;
             }
-            let after = desired(self, p);
+            let desired = desired(self, p);
+            // A dry decoration stays intact until actual water arrives.
+            let after = if desired == Block::Air && before.fluid_drop().is_some() {
+                before
+            } else {
+                desired
+            };
             let region = crate::regions::RegionPos::of(p);
-            let allowed = self.fluid_edit_allowed(p)
+            let drop_allowed = before.fluid_drop().is_none_or(|item| {
+                after.fluid().is_none()
+                    || (self.drops.can_add(p, item)
+                        && (self.drops.contains(p)
+                            || self.drops.len() + planned_drops < crate::drops::MAX_DROPS))
+            });
+            let allowed = drop_allowed
+                && self.fluid_edit_allowed(p)
                 && (self.region_identity().is_none()
                     || self.fluid_region_dirty(region)
                     || regions.contains(&Some(region))
@@ -230,6 +244,12 @@ impl World {
                 {
                     regions[region_count] = Some(region);
                     region_count += 1;
+                }
+                if before.fluid_drop().is_some()
+                    && after.fluid().is_some()
+                    && !self.drops.contains(p)
+                {
+                    planned_drops += 1;
                 }
                 changes.push(BlockChange {
                     position: p,
@@ -253,7 +273,7 @@ fn supported(world: &World, p: BlockPos) -> bool {
         return true;
     }
     let b = world.block(below);
-    world.ready(below) && (b.is_collidable() || b.is_torch() || b == Block::WaterSource)
+    world.ready(below) && (b.is_collidable() || b == Block::WaterSource)
 }
 fn desired(world: &World, p: BlockPos) -> Block {
     let above = p.offset([0, 1, 0]).unwrap();

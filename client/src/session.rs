@@ -263,6 +263,7 @@ fn cleanup(world: &mut World) {
         .map(|r| r.mesh.id())
         .collect();
     let assets = world.remove_resource::<SessionAssets>().unwrap_or_default();
+    scene::cleanup_drops(world);
     inventory_ui::cleanup(world);
     viewmodel::cleanup(world);
     crate::atmosphere::cleanup(world);

@@ -1378,6 +1378,33 @@ fn torch_seam_batches_reject_stale_light_and_retain_other_sources() {
 }
 
 #[test]
+fn washing_a_torch_uses_the_relighting_path_and_preserves_water_only_optimization() {
+    let mut app = app(1);
+    drain(&mut app);
+    let p = BlockPos([0, 25, 8]);
+    edit(&mut app, BlockPos([0, 24, 8]), Block::Stone);
+    edit(&mut app, p, Block::Torch);
+    drain(&mut app);
+    assert_eq!(light_at(&app, p) >> 4, 14);
+    let before = app.world().resource::<StreamState>().light_cells;
+    edit(&mut app, p, Block::WaterSource);
+    assert!(!app.world().resource::<DirtyChunks>().1.is_empty());
+    assert!(!app.world().resource::<DirtyChunks>().0.is_empty());
+    assert!(app.world().resource::<DirtyChunks>().2.is_empty());
+    drain(&mut app);
+    assert!(app.world().resource::<StreamState>().light_cells > before);
+    assert_eq!(light_at(&app, p) >> 4, 0);
+    assert_eq!(
+        app.world().resource::<VoxelWorld>().0.dropped_items().len(),
+        1
+    );
+    let light = app.world().resource::<StreamState>().light_cells;
+    edit(&mut app, p, Block::Water2);
+    drain(&mut app);
+    assert_eq!(app.world().resource::<StreamState>().light_cells, light);
+}
+
+#[test]
 #[ignore = "CPU-only lighting worker measurement; run alone with --ignored --nocapture"]
 fn torch_worker_measurements() {
     println!(

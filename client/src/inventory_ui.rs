@@ -79,7 +79,7 @@ struct Layout {
 impl Layout {
     fn new(w: &Window) -> Self {
         let scale = (w.width() / 300.)
-            .min(w.height() / 220.)
+            .min(w.height() / 260.)
             .floor()
             .clamp(1., 4.);
         Self {
@@ -173,6 +173,46 @@ fn input(
     let Some(p) = window.cursor_position() else {
         return;
     };
+    let layout = Layout::new(window);
+    let point = layout.pointer(p);
+    if mouse.just_pressed(MouseButton::Left) {
+        if let Some(item) = Item::CREATIVE
+            .into_iter()
+            .enumerate()
+            .find_map(|(i, item)| {
+                let center = Vec2::new((i as f32 - 3.5) * 28., 94.);
+                ((point - center).abs().max_element() < 12.).then_some(item)
+            })
+        {
+            let count = if keyboard.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) {
+                item.max_stack()
+            } else {
+                1
+            };
+            state.message = if state.contents.grant(item, u16::from(count)) {
+                ""
+            } else {
+                "NO ROOM"
+            };
+            return;
+        }
+        if (point - Vec2::new(91., 70.))
+            .abs()
+            .cmplt(Vec2::new(30., 7.))
+            .all()
+            && state
+                .contents
+                .selected_stack()
+                .is_some_and(|s| s.item() == Item::WaterSource)
+        {
+            state.message = if state.contents.convert_legacy_water() {
+                ""
+            } else {
+                "NO ROOM"
+            };
+            return;
+        }
+    }
     let Some(i) = Layout::new(window).hit(p, true) else {
         return;
     };
@@ -231,23 +271,31 @@ impl Batch {
             }
             return;
         }
-        self.rect(
-            p,
-            Vec2::splat(16.),
-            1.,
-            if item == Item::WaterSource {
-                [0.1, 0.4, 1., 1.]
-            } else {
-                [1.; 4]
-            },
-        );
-        let tile = face_tile(item.build().block(), [0, 0, 1]).unwrap_or(Tile::Stone);
+        self.rect(p, Vec2::splat(16.), 1., [1.; 4]);
+        let tile = item
+            .build()
+            .and_then(|b| face_tile(b.block(), [0, 0, 1]))
+            .unwrap_or(Tile::Stone);
         self.uvs.extend([
             tile.uv([0, 1]),
             tile.uv([1, 1]),
             tile.uv([1, 0]),
             tile.uv([0, 0]),
         ]);
+    }
+    fn bucket(&mut self, p: Vec2, item: Item) {
+        for y in 0..16 {
+            for x in 0..16 {
+                if let Some([r, g, b, _]) = voxel_core::item_art::bucket_pixel(item, x, y) {
+                    self.rect(
+                        p + Vec2::new(x as f32, 15. - y as f32),
+                        Vec2::ONE,
+                        1.,
+                        Color::srgb_u8(r, g, b).to_linear().to_f32_array(),
+                    );
+                }
+            }
+        }
     }
     fn text(&mut self, p: Vec2, s: &str, color: [f32; 4]) {
         for (i, ch) in s.chars().enumerate() {
@@ -296,6 +344,10 @@ impl Batch {
 // Original editable three-by-five pixel numerals/letters, no font dependency.
 fn glyph(c: char) -> [u8; 5] {
     match c {
+        '-' => [0, 0, 7, 0, 0],
+        'A' => [2, 5, 7, 5, 5],
+        'D' => [6, 5, 5, 5, 6],
+        'K' => [5, 5, 6, 5, 5],
         '0' => [7, 5, 5, 5, 7],
         '1' => [2, 6, 2, 2, 7],
         '2' => [6, 1, 7, 4, 7],
@@ -465,7 +517,7 @@ fn draw(
     let mut held_text = Batch::default();
     let mut held_icon = Batch::default();
     let y = layout.center(0, state.open).y;
-    let height = if state.open { 175. } else { 34. };
+    let height = if state.open { 210. } else { 34. };
     let bottom = if state.open { y - 26. } else { y - 17. };
     flat.rect(
         Vec2::new(-136., bottom),
@@ -511,6 +563,46 @@ fn draw(
             [1., 0.85, 0.55, 1.],
         );
     }
+    if state.open {
+        flat.text(
+            Vec2::new(-44., 116.),
+            "ITEMS - CLICK TO ADD",
+            [0.9, 0.75, 0.5, 1.],
+        );
+        for (i, item) in Item::CREATIVE.into_iter().enumerate() {
+            let c = Vec2::new((i as f32 - 3.5) * 28., 94.);
+            flat.rect(
+                c - Vec2::splat(12.),
+                Vec2::splat(24.),
+                0.3,
+                [0.29, 0.32, 0.32, 1.],
+            );
+            flat.rect(
+                c - Vec2::splat(10.),
+                Vec2::splat(20.),
+                0.5,
+                [0.055, 0.075, 0.09, 1.],
+            );
+            if item.build().is_none() {
+                flat.bucket(c - Vec2::splat(8.), item);
+            } else {
+                icons.icon(c - Vec2::splat(8.), item);
+            }
+        }
+        if state
+            .contents
+            .selected_stack()
+            .is_some_and(|s| s.item() == Item::WaterSource)
+        {
+            flat.rect(
+                Vec2::new(61., 63.),
+                Vec2::new(60., 14.),
+                0.5,
+                [0.3, 0.22, 0.14, 1.],
+            );
+            flat.text(Vec2::new(73., 68.), "CONVERT 7", [1., 0.85, 0.55, 1.]);
+        }
+    }
     for i in 0..if state.open { SLOT_COUNT } else { HOTBAR_SLOTS } {
         let c = layout.center(i, state.open);
         let selected = i == state.contents.selected();
@@ -531,7 +623,11 @@ fn draw(
             [0.055, 0.075, 0.09, 1.],
         );
         if let Some(s) = state.contents.slots()[i] {
-            icons.icon(c - Vec2::splat(8.), s.item());
+            if s.item().build().is_none() {
+                flat.bucket(c - Vec2::splat(8.), s.item());
+            } else {
+                icons.icon(c - Vec2::splat(8.), s.item());
+            }
             flat.count(c, s.count());
         }
         if i < HOTBAR_SLOTS {
@@ -543,7 +639,11 @@ fn draw(
         }
     }
     if let Some(s) = state.contents.cursor() {
-        held_icon.icon(-Vec2::splat(8.), s.item());
+        if s.item().build().is_none() {
+            held_text.bucket(-Vec2::splat(8.), s.item());
+        } else {
+            held_icon.icon(-Vec2::splat(8.), s.item());
+        }
         held_text.count(Vec2::ZERO, s.count());
     }
     for (i, b) in [flat, icons, held_text, held_icon].into_iter().enumerate() {

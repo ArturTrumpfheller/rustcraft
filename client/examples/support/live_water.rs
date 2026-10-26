@@ -14,7 +14,11 @@ use voxel_core::{
     Block, BlockChange, BlockPos, ChunkPos, World, fluid::FluidConfig, lighting::ChunkLight,
     water_mesh::WaterMesh,
 };
-type Payload = Vec<(ChunkPos, WaterMesh)>;
+struct Payload {
+    water: Vec<(ChunkPos, WaterMesh)>,
+    terrain: Vec<(ChunkPos, voxel_core::ChunkMesh)>,
+    lights: Option<BTreeMap<ChunkPos, ChunkLight>>,
+}
 #[derive(Resource)]
 pub struct LiveWater {
     pub world: World,
@@ -22,6 +26,8 @@ pub struct LiveWater {
     pub lights: Arc<BTreeMap<ChunkPos, ChunkLight>>,
     pub handles: BTreeMap<ChunkPos, (Entity, Handle<Mesh>)>,
     pub material: Handle<WaterSurface>,
+    pub terrain_handles: BTreeMap<ChunkPos, (Entity, Handle<Mesh>)>,
+    needs_relight: bool,
     pub sources: &'static [[i32; 3]],
     job: Option<(u64, JoinHandle<Payload>)>,
     elapsed: f32,
@@ -40,6 +46,7 @@ impl LiveWater {
         handles: BTreeMap<ChunkPos, (Entity, Handle<Mesh>)>,
         material: Handle<WaterSurface>,
         sources: &'static [[i32; 3]],
+        terrain_handles: BTreeMap<ChunkPos, (Entity, Handle<Mesh>)>,
     ) -> Self {
         Self {
             world,
@@ -48,6 +55,8 @@ impl LiveWater {
             handles,
             material,
             sources,
+            terrain_handles,
+            needs_relight: false,
             job: None,
             elapsed: 0.,
             ticks: 0,
@@ -79,7 +88,32 @@ pub fn update(
         let (revision, job) = live.job.take().unwrap();
         let batch = job.join().expect("water fixture worker");
         if revision == live.world.revision() {
-            for (p, surface) in batch {
+            if let Some(lights) = batch.lights {
+                live.lights = Arc::new(lights);
+                live.needs_relight = false;
+            }
+            for (p, surface) in batch.terrain {
+                if let Some((e, h)) = live.terrain_handles.get(&p) {
+                    if surface.indices.is_empty() {
+                        commands.entity(*e).insert(Visibility::Hidden);
+                        continue;
+                    }
+                    *meshes.get_mut(h).unwrap() = Mesh::new(
+                        PrimitiveTopology::TriangleList,
+                        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+                    )
+                    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, surface.positions)
+                    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, surface.normals)
+                    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, surface.uvs)
+                    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_1, surface.atlas_uvs)
+                    .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, surface.colors)
+                    .with_inserted_indices(Indices::U32(surface.indices));
+                    commands
+                        .entity(*e)
+                        .remove::<bevy::camera::primitives::Aabb>();
+                }
+            }
+            for (p, surface) in batch.water {
                 if surface.indices.is_empty() {
                     if let Some((e, h)) = live.handles.remove(&p) {
                         commands.entity(e).despawn();
@@ -141,6 +175,9 @@ pub fn update(
         let mut changes = std::mem::take(&mut live.changes);
         live.world.tick_fluids(FluidConfig::default(), &mut changes);
         live.dirty |= !changes.is_empty();
+        live.needs_relight |= changes
+            .iter()
+            .any(|c| c.before.emission() != c.after.emission());
         live.changes = changes;
         live.sim_max_us = live.sim_max_us.max(start.elapsed().as_secs_f64() * 1e6);
         live.peak_pending = live.peak_pending.max(live.world.fluid_updates().pending());
@@ -150,8 +187,25 @@ pub fn update(
         let targets = live.targets.clone();
         let lights = Arc::clone(&live.lights);
         let revision = live.world.revision();
+        let relight = live.needs_relight;
         let worker = std::thread::spawn(move || {
-            targets
+            if relight {
+                let light = voxel_core::lighting::Skylight::for_chunks(&snapshot, &targets);
+                let lights = targets.iter().map(|&p| (p, light.chunk(p))).collect();
+                let mut terrain = Vec::new();
+                let mut water = Vec::new();
+                for p in targets {
+                    let mut mesh = voxel_core::mesh_chunk_lit(&snapshot, p, &light);
+                    water.push((p, std::mem::take(&mut mesh.water)));
+                    terrain.push((p, mesh));
+                }
+                return Payload {
+                    water,
+                    terrain,
+                    lights: Some(lights),
+                };
+            }
+            let water = targets
                 .into_iter()
                 .map(|p| {
                     (
@@ -159,7 +213,12 @@ pub fn update(
                         voxel_core::water_mesh::mesh_water_cached(&snapshot, p, &lights[&p]),
                     )
                 })
-                .collect()
+                .collect();
+            Payload {
+                water,
+                terrain: Vec::new(),
+                lights: None,
+            }
         });
         live.job = Some((revision, worker));
         live.mesh_jobs += 1;

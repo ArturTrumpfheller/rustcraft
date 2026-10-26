@@ -76,6 +76,7 @@ pub struct StreamIdentity {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct World {
     pub time: crate::time::WorldTime,
+    pub(crate) drops: crate::drops::DroppedItems,
     chunks: BTreeMap<ChunkPos, Chunk>,
     pub(crate) fluids: crate::fluid::FluidUpdates,
     revision: u64,
@@ -243,6 +244,7 @@ impl World {
             chunks: BTreeMap::new(),
             fluids: Default::default(),
             time: self.time,
+            drops: self.drops.clone(),
             revision: self.revision,
             mesh_revisions: BTreeMap::new(),
             identity: self.identity,
@@ -256,6 +258,10 @@ impl World {
             edits: Arc::clone(&self.edits),
         }
     }
+    pub(crate) fn revision_items_changed(&mut self) {
+        self.revision = self.revision.wrapping_add(1);
+    }
+
     /// Process-local change generation; never part of the save format.
     pub fn revision(&self) -> u64 {
         self.revision
@@ -315,6 +321,13 @@ impl World {
             if !r.dirty && self.dirty_regions() >= MAX_DIRTY_REGIONS {
                 return Err(EditError::SaveRequired);
             }
+        }
+        if block.fluid().is_some()
+            && before
+                .fluid_drop()
+                .is_some_and(|item| !self.drops.can_add(position, item))
+        {
+            return Err(EditError::DropCapacity);
         }
         let change = BlockChange {
             position,
@@ -432,6 +445,11 @@ impl World {
     pub(crate) fn apply_changes(&mut self, changes: &[BlockChange]) {
         let revision = self.revision.wrapping_add(1);
         for change in changes {
+            if change.after.fluid().is_some()
+                && let Some(item) = change.before.fluid_drop()
+            {
+                self.drops.spawn_one(change.position, item);
+            }
             let (chunk, local) = change.position.split();
             self.chunks
                 .entry(chunk)

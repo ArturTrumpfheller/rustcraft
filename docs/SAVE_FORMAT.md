@@ -355,3 +355,23 @@ stay1. World root/region bytes, generators and IDs stay unchanged. Time-only
 saves do not rotate the root or region backups. F5/autosave/final saves capture
 clock+inventory+edits in the same bounded journal, before gameplay on recovery.
 Fractional units survive (three fixed steps/unit). See [DAY_NIGHT](DAY_NIGHT.md).
+
+## Slice22 water-completion extension
+
+Item IDs1–6 remain unchanged; ID7 remains the inert legacy Water Source item.
+Only an explicit inventory CONVERT7 operation exchanges one for Water Bucket9.
+Empty Bucket8 stacks to16; Water Bucket9 stacks to1. Decoders validate these limits.
+
+Nonempty world item drops use player-envelope version3 inside the existing paired
+redo journal. The192-byte v2 prefix remains byte-for-byte in layout; offset8 is
+version3, payload length/CRC cover the extension. Offset192 is u32 stack count
+(max4096), followed by15-byte records: x/y/z signed little-endian i32, item u16,
+count u8. Records are strictly ordered by (Euclidean ChunkPos, BlockPos), with no
+duplicate positions, legal stack counts and cells within the bound world volume.
+Maximum file length61,636 bytes. A full item stack never silently disappears.
+
+Empty drop lists continue to write player v2; v1/v2 reads require no migration.
+World formats, generators, regional block IDs and journal protocol stay unchanged.
+Drops persist across eviction, creation/pickup share world/inventory journal replay,
+and old clients reject v3 or bucket IDs. Restore only complete consistent world
+directory copies. See WATER.md for the lifecycle and deliberate limits.

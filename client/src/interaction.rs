@@ -101,8 +101,13 @@ fn edit_and_target(
             }
         }
     }
-    if let Some(stack) = ctx.inventory.contents.selected_stack() {
-        ctx.editor.selected = stack.item().build();
+    if let Some(build) = ctx
+        .inventory
+        .contents
+        .selected_stack()
+        .and_then(|s| s.item().build())
+    {
+        ctx.editor.selected = build;
     }
     let selection = (
         ctx.inventory.contents.selected(),
@@ -117,7 +122,7 @@ fn edit_and_target(
             ctx.inventory
                 .contents
                 .selected_stack()
-                .map_or("Empty", |s| s.item().build().name())
+                .map_or("Empty", |s| s.item().name())
         );
         ctx.editor.last_selection = Some(selection);
     }
@@ -149,7 +154,13 @@ fn edit_and_target(
         let mut displayed_body = body;
         displayed_body.position = ctx.view.feet;
         displayed_body.crouched = ctx.view.crouched;
-        let overlaps_view = matches!(action, EditAction::Place(block) if block.block().is_collidable())
+        let overlaps_view = matches!(action, EditAction::Place(_))
+            && ctx
+                .inventory
+                .contents
+                .selected_stack()
+                .and_then(|s| s.item().build())
+                .is_some_and(|b| b.block().is_collidable())
             && raycast(&ctx.world.0, ray)
                 .and_then(|hit| voxel_core::interaction::placement_position(&ctx.world.0, hit))
                 .is_some_and(|p| displayed_body.intersects_block(p, &config));
@@ -181,7 +192,18 @@ fn edit_and_target(
             }
         }
     }
-    ctx.editor.target = raycast(&ctx.world.0, ray).filter(|hit| ctx.world.0.ready(hit.position));
+    let mode = if ctx
+        .inventory
+        .contents
+        .selected_stack()
+        .is_some_and(|s| s.item() == voxel_core::inventory::Item::EmptyBucket)
+    {
+        voxel_core::raycast::TargetMode::CollectSource
+    } else {
+        voxel_core::raycast::TargetMode::Blocks
+    };
+    ctx.editor.target = voxel_core::raycast::raycast_with(&ctx.world.0, ray, mode)
+        .filter(|hit| ctx.world.0.ready(hit.position));
 }
 
 #[derive(Component)]

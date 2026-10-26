@@ -1,8 +1,9 @@
-# Slice 22 — water foundation
+# Slice 22 — water gameplay and polish
 
 RustCraft's first water implementation keeps simulation in `voxel_core` and
 presentation in the Bevy client. No dependency, generator, terrain atlas, opaque
-vertex layout, world envelope, player envelope or journal protocol changes.
+vertex layout or world-envelope changes. Dropped items add a bounded player-v3
+extension inside the existing coordinated save journal.
 The original code, procedural 16×16 ripple tile and screenshots are
 MIT OR Apache-2.0. No Minecraft code, artwork or texture pack is included.
 
@@ -14,7 +15,8 @@ and **19 falling**. `fluid::Fluid` validates its small state registry and expose
 `FluidKind::Water`; the packed block variants keep dry chunk storage unchanged.
 A future lava kind needs its own explicit IDs, rules and material, rather than
 reinterpreting these values. No unused reaction, viscosity or fluid framework.
-Item IDs 1–6 are unchanged; **Water Source = item 7**.
+Item IDs 1–6 are unchanged. **Legacy Water Source = 7, Empty Bucket = 8,
+Water Bucket = 9**. ID7 is retained as an inert compatibility item; see below.
 
 Only explicit placement/import makes sources. A source remains until removed or
 replaced, supplies downward water without consumption and never converts nearby
@@ -85,7 +87,8 @@ Existing Slice21 saves load unchanged, including old player v1/v2 files and
 world v1–v4 modes. Generators 1–3 are untouched. New readers accept additive water
 IDs; **older clients reject saves containing these IDs**. Use complete closed
 world-directory copies for compatibility testing. Existing inventories are never
-refilled or overwritten; new worlds receive 32 Water Sources in hotbar slot 7.
+refilled or overwritten. New worlds receive one Water Bucket in hotbar slot 7
+and 16 Empty Buckets in slot 8; existing worlds use the inventory item palette.
 
 ## Rendering and interaction
 
@@ -93,11 +96,13 @@ Water uses a dedicated `WaterMesh` and shared blended `WaterSurface`, separate
 from opaque terrain and its greedy vertex layout. Each resident chunk has at
 most one additional water entity/mesh. Handles are retained across replacements;
 empty meshes, eviction and session teardown release them. The shared original
-16×16 blue ripple tile scrolls in quantized shader UV steps. No texture uploads,
+16×16 stepped ripple tile uses three authored blue shades and scrolls in subtle
+quantized shader UV steps (1.5 texels/s vertically). No texture uploads,
 remeshing, reflections, refraction or GPU readback are needed for animation.
 
 Surface corner heights are sampled in world coordinates from all touching water
-cells, including diagonals. Sources receive greater weight; flow progressively
+cells, including diagonals. Sources receive eightfold weight, dry Air contributes
+zero height to taper shore edges, and flow progressively
 lowers the surface. Falling/vertically covered water fills the cell height.
 Neighboring chunks compute identical shared edge heights. Water/water faces and
 opaque-adjacent faces are hidden; solid terrain retains its visible faces beneath
@@ -109,14 +114,98 @@ backface drawing for underwater views. **There is no per-face sorting or
 order-independent transparency**: intersecting waterfalls and stacked surfaces
 can blend imperfectly. No realistic optical depth or water absorption yet.
 
-Sources are ray-targetable; flowing water is transparent to targeting so players
-can mine a channel through it. Left-click a source to collect it. Right-click a
-source with a solid block to replace its occupied cell. Otherwise placement uses
-the clicked solid face, and may displace flowing water in its adjacent cell.
-Existing collision, displayed-body protection, torch support and item transaction
-rules remain. Water does not wash away torches or other non-cube decorations;
-they act as small fluid barriers for this foundational slice. Buckets/drops are
-not implemented. The temporary held source/icon is a blue build cube.
+## Buckets and targeting
+
+Empty Bucket (stack limit **16**) collects only a source with right click; flowing
+and falling water are skipped. Source removal wakes the existing recession queue.
+Water Bucket (stack limit **1**) places a source against a loaded block face or
+into a targeted torch cell, then becomes empty. A solid, an already occupied
+source, unloaded data, out-of-bounds location, save backpressure or exhausted
+drop capacity rejects the operation. Water is non-collidable and can be placed
+around the player; ordinary solid placement retains authoritative and displayed
+body-overlap protection. Buckets require a reachable surface; no mid-air placement.
+
+`raycast_with(TargetMode)` explicitly distinguishes ordinary Blocks from
+CollectSource. Normal mining ignores **all** water and can break a solid behind
+it; water is never a mineable block. Empty-bucket targeting stops at the first
+source or obstructing block/torch. Water-bucket targeting ignores water and uses
+the solid face, or the selected torch cell. Ordinary blocks can displace water
+in a valid adjacent cell. All paths retain the existing five-block reach and
+pending-world barriers. Sources under flowing water can still be collected.
+
+Inventory conversion is staged on a copy before validated world mutation. A last
+empty bucket converts in its own slot, even when every other slot is full. For
+a stack of empties, a collected Water Bucket needs a free slot; otherwise both
+inventory and source stay unchanged. Failed placement never consumes a bucket.
+Stack bounds also apply to clicks, merges, quick transfers and save validation.
+
+Buckets use original 16×16 steel/water pixel silhouettes shared by inventory and
+thin, double-sided held-item meshes (`item_art.rs`). No blue stone cube remains.
+Only buckets get a new pose; the accepted Slice20 block, torch and arm positions
+are unchanged. No downloaded/proprietary artwork or new image dependency.
+
+## Torches and dropped items
+
+`Block::fluid_replaceable` / `fluid_drop` is the small decoration policy. Air,
+existing water and all five torch orientations are eligible; arbitrary solids
+are never overwritten by flow. A dry torch remains until actual water arrives.
+Fluid ticks and bucket placement both commit torch removal, water and exactly
+one Torch item together. Repeated updates cannot drop the same torch again.
+
+Torch→water changes emission14→0: the client marks the ordinary terrain/light
+footprint, recalculates neighboring light and invalidates stale worker results.
+Water→water/Air changes keep the existing cached-light, separate-water-mesh path.
+
+`World` owns stationary item stacks, indexed by chunk and cell. Only resident
+chunks render them, using a recognizable small upright Torch model on separate
+item entities. A player within1.5 blocks collects available stack capacity; a
+full inventory leaves the remainder in the world. Pickup checks at most27 local
+chunk indices, never all saved drops or world cells. A second pickup cannot
+collect an already transferred item. Inventory-open simulation allows pickup;
+Pause, Options, focus loss and final saving stop it.
+
+There are at most **4096 dropped stacks per world**, at most64 Torches per cell.
+Repeated destruction at a cell merges its stack. At capacity, a bucket action is
+rejected and natural displacement waits in the bounded fluid queue until space
+is released. Items never expire or disappear to enforce the limit. This rare
+backpressure can temporarily preserve a torch in water's path. There is no item
+physics, current, despawn timer, mob or general mining-drop overhaul.
+
+Item entities share one lazily allocated mesh/material per session; the material
+reuses the terrain atlas. Emptying/streaming removes entities, the mesh/material
+can be reused, and session teardown explicitly releases both. Distant logical
+items survive chunk eviction and do not force chunk loads. Render-origin changes
+reposition item entities without changing authoritative cells.
+
+## Existing worlds, item selection and compatibility
+
+Open **E**: the **ITEMS - CLICK TO ADD** row offers all five blocks, Torch, Empty
+Bucket and Water Bucket. Left click adds one; Shift+left click adds that item's
+maximum stack. Grants merge/use free slots and are all-or-nothing. Full inventory
+shows **NO ROOM**. Existing slots and the held cursor are never overwritten.
+The catalog is `Item::CREATIVE`; adding future implemented items does not require
+refilling saves or introducing game modes.
+
+A saved Slice22 prototype **item ID7 keeps its original ID, count and ownership**
+on load. It is visibly named Legacy Water in the window title and cannot be
+placed or mined. Select its hotbar slot, open E, and click **CONVERT 7**: one legacy
+source item becomes one Water Bucket, only when the complete result fits. Repeat
+as desired. No implicit reinterpretation, deletion or automatic inventory refill.
+Already placed water source block IDs remain unchanged.
+
+World formats1–4 and frozen generators1–3 are unchanged. Player-v1/v2 files still
+load without being rewritten. Sessions with no dropped items retain the192-byte
+player-v2 envelope. Nonempty drops use **player v3**, with the same192-byte prefix,
+a u32 count and sorted15-byte records (x/y/z i32, item u16, count u8), bounded to
+61,636 bytes, CRC-protected and world-bound. Drops and inventory are captured in
+the **same existing session.pending journal** as world edits. Interrupted creation
+or pickup replays the same ownership once; backups retain prior generations.
+After the last item is picked up, the next save may use v2 again.
+
+Older clients cannot read player v3, bucket IDs8/9 or water blocks. Keep complete
+closed-directory backups before trying older builds; never restore only one
+world/region/player file. Forced termination can still lose changes since the
+last successfully committed save; per-click durability is outside this slice.
 
 ## Movement
 
@@ -131,9 +220,10 @@ current or automatic surface jump.
 
 ## Validation and reproduction
 
-See [measurements and exact limitations](performance/slice22/README.md) for the
-Slice21 comparison, active fill/steady CPU work, mesh bytes and software renderer
-frame/RSS observations. The standalone gallery settles fixtures before screenshots and steady runs;
+See [follow-up comparison against PR39](performance/slice22/completion/README.md)
+for the current CPU, item lifecycle and software-renderer measurements.
+The [original Slice21 comparison](performance/slice22/README.md) is retained as
+historical data, including active fill/steady work and mesh payloads. The standalone gallery settles fixtures before screenshots and steady runs;
 `--active` separately exercises expansion/recession while measuring rendered frames.
 
 ```sh
@@ -142,6 +232,7 @@ cargo clippy --locked --workspace --all-targets -- -D warnings
 cargo test --locked --workspace
 cargo build --release --locked -p rustcraft
 cargo run --release --locked -p voxel_core --example water_bench
+cargo run --release --locked -p voxel_core --example water_completion_bench
 cargo build --locked -p rustcraft --example water_gallery
 python tools/capture_water.py --output work/water-captures
 ```
@@ -164,30 +255,43 @@ env RUSTCRAFT_DATA_DIR="$water_test_dir" cargo run --release --locked -p rustcra
 # Create a new world, seed 42. Keep the same directory for the restart.
 ```
 
-1. Select **7**, place a source on flat ground; observe seven-block reach and
-   lower distant edges. Build an obstacle, dig a channel, then remove support.
-   Verify a waterfall reaches support and settles; F3 PENDING must become zero.
-2. Place two nearby sources. Remove one, then the other. Remaining supply must
-   persist; unsupported water must completely recede. Place stone into water.
-   Check normal stone/torch mining, support removal and inventory counts.
-3. Repeat at X/Z ±16 and ±64 seams, including a corner. Walk out of render
-   distance and back while flowing, remove the source, save and restart. Check
-   that removed sources never return and no permanent boundary seams remain.
-4. Enter a pool, walk/swim with held Jump, crouch, fall into a waterfall, leave
-   water and compare original walk/sprint/jump behavior. Lower eyes beneath the
-   surface; check subtle tint, readable UI, no collidable water or stuck posture.
-5. During active spreading open **E** (flow continues), **Escape/Pause**, Options
-   and switch focus (flow freezes). Resume after several seconds: no burst.
-6. Test F5, autosave and normal-close/restart during flow. Compare sources,
-   resulting flow, inventory and night torch light. Use complete disposable
-   copies to test old worlds and save failures; retain the whole directory.
-7. Repeat travel, edits, resize and world A/B switches. Mesh/material counts and
-   memory should remain bounded. Compare day/night, underwater, multiple layers
-   and waterfalls from both sides for the documented sorting limitation.
-8. With VSync off, record resolution, render radius, build, GPU/driver/backend,
-   FPS/frame P50/P95/P99 and RSS for dry, pool, waterfall, multiple active sources
-   and seam flow. Compare to the accepted native Slice21 baseline. Repeat X11,
-   Wayland and Windows where available; software Vulkan cannot predict RX9060 XT.
+1. **Existing world:** open E, obtain both buckets through ITEMS. Test single and
+   Shift-stack grants, occupied cursor and full inventory (NO ROOM, no overwrite).
+   In a copied Slice22 prototype save select legacy item7 and test CONVERT7; save
+   and reload without conversion too. IDs1–6 and existing builds must stay intact.
+2. **Buckets:** select7 in a new world, place/collect a source, watch spreading
+   and recession. Try flowing/falling water, a source behind flow, a wall blocking
+   the ray, stacked empties with no free slot, loaded boundaries and reach limits.
+   Counts must be conserved on every rejected action and after F5/restart.
+3. **Targeting:** mine stone behind sources/flow; water itself has no mining
+   target. Place stone into water, including near the player's current/displayed
+   body. Try torch faces and verify ordinary Slice20 held poses remain unchanged.
+4. **Torches/items:** wash floor and all four wall torches with flow and buckets.
+   At night check immediate loss of their emission after the worker update,
+   intact neighboring lights, one small Torch item and continued propagation.
+   Approach to pick it up; repeat with full/partially full inventory. Save before
+   pickup, after pickup and while flow is active; restart and switch world A/B/A.
+5. **Seams/visuals:** repeat at X/Z ±16 and ±64, including corners. Inspect small
+   pools, shore slopes and waterfall feet from above/below. Walk out of render
+   distance/back; no holes, growing mesh assets or resurrected sources/items.
+   Overlapping translucent surfaces may show the documented mesh-sort limitation.
+6. **Movement/time/gates:** swim with held Jump, crouch and leave the pool. Open E
+   (water/time/pickup continue), Pause/Options, or lose focus (all freeze). Resume
+   after several seconds without catch-up. Recheck normal land sprint/jump and
+   day/night light. No oxygen, drowning or survival behavior is introduced.
+7. **Saving/resources/performance:** F5, autosave and normal-close during flow;
+   use disposable full copies for save-failure testing. Repeated world switches
+   must release item/terrain/water resources. With VSync off record resolution,
+   radius, GPU/driver/backend, frame P50/P95/P99 and RSS for dry, steady/active
+   water, several washed torches, pickup and seams. Compare against this PR's
+   baseline as well as the owner's ~240-FPS Slice21 report. Repeat native Void
+   X11/Wayland and Windows; software Vulkan does not predict RX9060 XT performance.
+
+## Captured gameplay UI
+
+Actual X11/lavapipe gameplay, using our original icons and retained inventory UI:
+
+![Creative item row and saved finite inventory](images/slice22/slice22-item-selection.png)
 
 ## Captured production-shader fixtures
 

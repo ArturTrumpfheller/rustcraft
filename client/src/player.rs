@@ -58,6 +58,7 @@ impl Plugin for PlayerPlugin {
                     simulate_fluids.before(simulate_player),
                     simulate_player,
                     advance_world_time,
+                    collect_drops.after(simulate_player),
                 )
                     .run_if(crate::session::has_world),
             );
@@ -228,18 +229,26 @@ fn simulate_fluids(
     let start = std::time::Instant::now();
     let config = runtime.config;
     world.0.tick_fluids(config, &mut runtime.changes);
-    // All fluid cells transmit exactly the same light as Air. Only geometry
-    // changes; actual solid/torch edits still invalidate independent light fields.
-    for change in &runtime.changes {
-        for dx in -1..=1 {
-            for dy in -1..=1 {
-                for dz in -1..=1 {
-                    if let Some(p) = change.position.offset([dx, dy, dz]) {
-                        dirty.2.insert(p.split().0);
-                    }
-                }
-            }
-        }
+    // Emitting decorations require the full light/terrain path; ordinary fluid
+    // transitions retain the cached-light water-only optimization.
+    for &change in &runtime.changes {
+        dirty.mark(change);
     }
     runtime.milliseconds = start.elapsed().as_secs_f64() * 1000.;
+}
+
+fn collect_drops(
+    input: Res<ControllerInput>,
+    player: Res<PlayerState>,
+    mut world: ResMut<VoxelWorld>,
+    inventory: Option<ResMut<crate::inventory_ui::GameInventory>>,
+) {
+    if !input.simulation_active || player.awaiting_spawn {
+        return;
+    }
+    if let Some(mut inv) = inventory {
+        world
+            .0
+            .collect_items(player.body.position, &mut inv.contents);
+    }
 }

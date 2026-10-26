@@ -71,7 +71,7 @@ impl Block {
         })
     }
     pub fn is_targetable(self) -> bool {
-        self != Self::Air && self.fluid().is_none_or(|f| f.is_source())
+        self != Self::Air && self.fluid().is_none()
     }
     pub fn emission(self) -> u8 {
         if self.is_torch() { 14 } else { 0 }
