@@ -268,3 +268,16 @@ See SETTINGS for validation and recovery contracts.
   animation and deliberate standard mesh-level transparency limitations.
 - Add basic fixed-step drag/swimming and eye tint; retain original land physics,
   item transactions and torch support. Native acceptance remains separate.
+
+### Slice22 completion
+
+- Retain item7 as inert legacy ownership; explicitly convert one to Water Bucket9.
+  Empty Bucket8 stacks to16, full buckets to1. Do not reinterpret or refill saves.
+- Separate block/source targeting and stage finite bucket transactions before edits.
+  Wash all Torch orientations via a small fluid-decoration policy and relight emitters.
+- Cap stationary, chunk-indexed world items at4096 stacks; preserve overflow by
+  deferring fluid displacement, never expiring items. Keep item render resources
+  separate and shared. Persist ownership in bounded player-v3 journal payloads.
+- Expose an additive inventory item palette; defer game modes, physics/currents,
+  infinite-source rules, crafting and other survival systems. Preserve the solver,
+  original ordinary-block/torch poses, terrain atlas and dependency graph.

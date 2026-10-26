@@ -1,0 +1,4 @@
+WORLD_LAYOUT bytes=296
+ITEM_METRIC repeats=1000 create_p50_us=0.299 create_p95_us=0.318 pickup_p50_us=0.520 pickup_p95_us=0.546
+ITEM_FULL attempts=10000 mean_ns=591 retained_drops=1
+WATER_RESOURCE user_s=0.2048 system_s=0.0000 rss_kib=9728

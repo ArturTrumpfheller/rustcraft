@@ -85,7 +85,7 @@ fn main() {
     assert!(
         focus
             .as_deref()
-            .is_none_or(|f| ["sun", "moon"].contains(&f))
+            .is_none_or(|f| ["sun", "moon", "pool"].contains(&f))
     );
     let mut app = App::new();
     app.insert_resource(Options {
@@ -291,7 +291,9 @@ fn setup(
         Vec3::new(center + 11., 9., 14.),
         Vec3::new(center + 1., 2., 0.),
     );
-    let transform = if let Some(focus) = &options.focus {
+    let transform = if options.focus.as_deref() == Some("pool") {
+        Transform::from_xyz(2.6, 6., 3.2).looking_at(Vec3::new(0., 1., 0.), Vec3::Y)
+    } else if let Some(focus) = &options.focus {
         let direction = Vec3::from_array(if focus == "sun" {
             options.clock.sun_direction()
         } else {

@@ -66,7 +66,8 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 - [ ] Remaining Slice18 Windows / explicit X11+Wayland sky/fog acceptance — see [checklist](SKY_FOG.md)
 - [ ] Dense-region/bulk-edit profiling and further native GPU optimization
 
-- [x] Slice22 event-driven water, regional persistence, translucent surfaces, source item and basic swimming
+- [x] Slice22 event-driven water, regional persistence, translucent surfaces, bucket interactions and basic swimming
+- [x] Slice22 torch washing, persistent bounded item pickup and inventory item catalog
 - [ ] Native Slice22 Void X11/Wayland and Windows water acceptance — see [checklist](WATER.md)
 
 ## v0.3 — Alpha-inspired survival

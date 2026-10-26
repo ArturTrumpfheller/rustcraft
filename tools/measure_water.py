@@ -27,10 +27,11 @@ def main():
     p.add_argument('--before-label',default='slice21')
     p.add_argument('--after-label',default='slice22')
     p.add_argument('--active',action='store_true')
+    p.add_argument('--scenes',nargs='+',choices=['dry','pool','waterfall','several','boundary'],default=['dry','pool','waterfall','several','boundary'])
     args=p.parse_args()
     args.output.mkdir(parents=True,exist_ok=True)
     rows=[]
-    for scene in ['dry','pool','waterfall','several','boundary']:
+    for scene in args.scenes:
         for phase,binary in [(args.before_label,args.before),(args.after_label,args.after)]:
             result=subprocess.run([sys.executable,str(Path(__file__).resolve()),'--child',str(binary.resolve()),scene,'2','--time=6000',f'--frames={args.frames}',*(['--active'] if args.active else [])],capture_output=True,text=True,check=True,timeout=240)
             (args.output/f'{phase}-{scene}.txt').write_text(result.stdout+result.stderr)

@@ -161,3 +161,15 @@ revalidates and commits one world revision followed by the staged inventory.
 A full inventory can reject support mining even when the support alone would fit.
 There is no partial collection, item loss or duplicate grant on retry. Existing
 save snapshots/journals capture the resulting world and inventory together.
+
+## Slice22 completion
+
+The E inventory now has an ITEMS palette: click adds one implemented block/item,
+Shift+click adds a legal full stack without overwriting slots or the cursor.
+Empty Buckets stack to16 and Water Buckets to1; source placement/collection stages
+inventory exchange before world mutation. Water itself is no longer mined.
+Legacy item7 is retained inert and explicitly converted one at a time with
+CONVERT7. Water-washed Torch drops remain world-owned until there is pickup space.
+Their bounded player-v3 extension shares the existing paired journal, so source
+removal, drops and inventory cannot acquire independent save generations.
+See [WATER](WATER.md) for exact compatibility, item lifecycle and manual tests.

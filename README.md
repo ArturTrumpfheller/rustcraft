@@ -77,7 +77,9 @@ See [Slice 19 controls, measurements, screenshots and native checklist](docs/DEB
 Use Empty/Water Buckets from the E inventory item palette. Sources spread, fall,
 recede after collection and wash away floor/wall torches into persistent items.
 Mining targets solids through water; blocks can displace it. Buckets have original
-pixel icons and thin held-item models. Existing worlds receive no automatic
+pixel icons and thin held-item models. Flow spans seven horizontal levels;
+hold Jump to swim upward. Pause/Options/focus freeze flow; inventory continues it.
+Existing worlds receive no automatic
 inventory refill; legacy item7 has an explicit CONVERT7 button. See
 [mechanics, saves, limitations and Void acceptance](docs/WATER.md).
 
@@ -89,15 +91,6 @@ the moon and sparse stars appear at night, and torches retain their light.
 Time changes two shared material uniforms without relighting or remeshing terrain.
 F3 shows day/time/daylight. See [architecture, eight matched screenshots, costs,
 format compatibility and native tests](docs/DAY_NIGHT.md).
-
-## Water foundation (Slice 22)
-
-New worlds receive 32 Water Sources in hotbar slot7. Water falls, spreads up to
-seven blocks, reacts to edits and recedes after source removal. It survives
-regional streaming and journaled saves. A separate translucent animated surface
-uses the existing independent light channels; enter water to slow movement and
-hold Jump to swim upward. Pause/Options/focus freeze flow; inventory continues it.
-See [water architecture, screenshots, measurements and manual tests](docs/WATER.md).
 
 ## Sky and distance fog (Slice 18)
 
@@ -138,7 +131,8 @@ old global light washout. Native GPU performance still needs acceptance.
 Nine hotbar slots remain visible at the bottom. E opens three additional rows of
 nine slots. Original pixel frames and numerals reuse our own terrain atlas for
 icons; no external UI/font images are required. New player inventories start with
-64 each of grass/dirt/stone and 32 each of wood/leaves/torches/Water Sources (Torch in slot 6, Water Source in slot 7). Mining collects blocks;
+64 each of grass/dirt/stone, 32 each of wood/leaves/torches, one Water Bucket
+(slot 7) and 16 Empty Buckets (slot 8). Mining collects blocks;
 placing consumes the selected stack. A full inventory rejects mining without
 changing the block. Water-destroyed torches produce persistent, collectible item drops. Open E for
 the small item palette, including Empty/Water Buckets. Crafting remains deferred.

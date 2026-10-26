@@ -1,0 +1,4 @@
+WATER_ASSETS radius=2 quads=877 mesh_bytes=217496 vertex_stride=56 light_bytes=1161600 terrain_materials=1 sky_materials=1 meshes=59 images=7
+WATER_FRAME scene=several radius=2 baseline=false motion=false cycle=false frames=60 p50_ms=84.7522 p95_ms=94.2239 p99_ms=101.3273 control_p50_ns=6171 writes=0
+WATER_LIVE updates=14328 sim_max_us=26627.720 peak_pending=963 mesh_jobs=58 final_water_meshes=4
+WATER_RESOURCE user_s=29.4125 system_s=1.4065 rss_kib=360208

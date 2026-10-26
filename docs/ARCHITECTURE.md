@@ -431,3 +431,13 @@ and light floods. Separate retained `WaterMesh`/`WaterSurface` assets implement
 animated alpha-blended surfaces; the original terrain vertex layout is intact.
 See [WATER](WATER.md) for bounds, save compatibility, movement, sorting limits,
 measurements and native acceptance.
+
+Slice22 completion keeps the same solver. `raycast::TargetMode` separates normal
+blocks from source collection; bucket exchanges stage inventory before edits.
+`Block::fluid_drop` admits all Torch orientations while preserving solid barriers.
+`World.drops` indexes at most4096 stationary stacks by chunk/cell; local pickup
+and separate session entities preserve ownership across streaming and restarts.
+Nonempty lists use bounded player-v3 records in the same world/inventory redo
+journal; empty lists and old reads retain v2/v1 compatibility. Item palette grants
+are additive/atomic and legacy item7 conversion is explicit. Emission changes use
+the existing full lighting path; ordinary water still reuses cached light.
