@@ -133,6 +133,13 @@ the solid face, or the selected torch cell. Ordinary blocks can displace water
 in a valid adjacent cell. All paths retain the existing five-block reach and
 pending-world barriers. Sources under flowing water can still be collected.
 
+The visible block outline always uses the ordinary Blocks ray, regardless of
+the held item. It skips every water state and marks a solid/torch behind water
+when reachable. Collection still uses its independent CollectSource ray inside
+the inventory action. Previously the empty-bucket source hit was also passed
+to the normal highlighter, whose non-torch fallback drew a full cube around it;
+the water mesh and debug renderer were not the cause.
+
 Inventory conversion is staged on a copy before validated world mutation. A last
 empty bucket converts in its own slot, even when every other slot is full. For
 a stack of empties, a collected Water Bucket needs a free slot; otherwise both
@@ -143,6 +150,16 @@ Buckets use original 16×16 steel/water pixel silhouettes shared by inventory an
 thin, double-sided held-item meshes (`item_art.rs`). No blue stone cube remains.
 Only buckets get a new pose; the accepted Slice20 block, torch and arm positions
 are unchanged. No downloaded/proprietary artwork or new image dependency.
+
+The shared bucket-only equipped profile now uses position/pivot
+`(0.64, -0.46, -0.72)`, XYZ rotation `(0, -45, 25)` degrees and scale `0.68`
+(previously `(0.56, -0.36, -0.80)`, `(0, -15, -12)`, `0.34`). Its larger,
+lower silhouette enters from the lower-right screen edge, with yaw for
+perspective and roll toward the grip. Both variants retain their distinct pixel
+colors. The existing lens correction, overlay depth scaling, bob and swing are
+unchanged. Frozen-pose tests cover every original block, Torch and empty arm;
+bucket tests cover matching poses, distinct colors, lower-right projection and
+camera/HUD depth clearance through walking, sprinting and use animations.
 
 ## Torches and dropped items
 
@@ -264,7 +281,9 @@ env RUSTCRAFT_DATA_DIR="$water_test_dir" cargo run --release --locked -p rustcra
    the ray, stacked empties with no free slot, loaded boundaries and reach limits.
    Counts must be conserved on every rejected action and after F5/restart.
 3. **Targeting:** mine stone behind sources/flow; water itself has no mining
-   target. Place stone into water, including near the player's current/displayed
+   target or full-block outline, even with Empty Bucket selected. A reachable
+   solid behind water keeps its own outline; right click still collects the
+   nearer source. Place stone into water, including near the player's current/displayed
    body. Try torch faces and verify ordinary Slice20 held poses remain unchanged.
 4. **Torches/items:** wash floor and all four wall torches with flow and buckets.
    At night check immediate loss of their emission after the worker update,
@@ -288,6 +307,46 @@ env RUSTCRAFT_DATA_DIR="$water_test_dir" cargo run --release --locked -p rustcra
    X11/Wayland and Windows; software Vulkan does not predict RX9060 XT performance.
 
 ## Captured gameplay UI
+
+### Final polish (PR39)
+
+Actual unmodified production client, 1280×720, vertical FOV70°, Xvfb X11 and
+Mesa lavapipe software Vulkan. The isolated finite fixture has a grass floor,
+one source at `(0,2,7)`, a stone pedestal and two side blocks after mining the
+backing stone through water. Normal propagation and swimming remain enabled.
+No debug outlines or screenshot
+overlays are added. These captures do not establish native Void/Windows GPU or
+Wayland behavior.
+
+Source without a water selection cube:
+
+![Water source without the normal block outline](images/slice22/final-polish/water-source-no-outline.png)
+
+Empty bucket entering from the lower right:
+
+![Empty bucket held in first person](images/slice22/final-polish/empty-bucket.png)
+
+Water bucket with the same pose and distinct fill:
+
+![Water bucket held in first person](images/slice22/final-polish/water-bucket.png)
+
+The focused client regression runs the real input/target/highlight schedule:
+all three held item types still mark the solid behind water; water alone leaves
+the highlight hidden; right click collects and places the source with the
+correct inventory transitions. Existing core tests cover propagation/recession,
+torch washing, swimming, lighting, streaming and persistence.
+
+Software-client smoke checks also collected the source (stack of empties
+16→15), observed recession, placed new water (Water Bucket→Empty Bucket), used
+F5 and closed normally. Reopening the saved world/player through SaveStore
+confirmed the placed source and inventory ownership.
+
+Final-polish verification: `cargo fmt --all -- --check`,
+`cargo clippy --locked --workspace --all-targets -- -D warnings`,
+`cargo test --locked --workspace` (192 client / 224 core passed; four existing
+client measurement tests ignored), and
+`cargo build --release --locked -p rustcraft` all passed. The client total
+includes 20 viewmodel tests. No dependencies or gameplay/save formats changed.
 
 Actual X11/lavapipe gameplay, using our original icons and retained inventory UI:
 

@@ -1007,3 +1007,171 @@ fn restored_blocks_match_slice20_reference_and_torch_is_subtle_left_leaning_at_r
         }
     }
 }
+
+#[test]
+fn bucket_variants_share_the_equipped_pose_but_keep_distinct_mesh_colors() {
+    let mut app = app();
+    capture(&mut app);
+    let mut previous: Option<(Transform, Handle<Mesh>, Vec<[f32; 4]>)> = None;
+    for slot in [7, 6] {
+        // Starter inventory: empty bucket, water bucket.
+        app.world_mut()
+            .resource_mut::<GameInventory>()
+            .contents
+            .select(slot);
+        app.world_mut().resource_mut::<Models>().motion = Motion::default();
+        app.world_mut().resource_mut::<PlayerState>().body.velocity = [0.; 3];
+        frame(&mut app, Duration::ZERO);
+        let w = app.world();
+        let models = w.resource::<Models>();
+        let pose = *w.get::<Transform>(models.block).unwrap();
+        let handle = w.get::<Mesh3d>(models.block).unwrap().0.clone();
+        let mesh = w.resource::<Assets<Mesh>>().get(&handle).unwrap();
+        let VertexAttributeValues::Float32x4(colors) =
+            mesh.attribute(Mesh::ATTRIBUTE_COLOR).unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(
+            *w.get::<Visibility>(models.arm).unwrap(),
+            Visibility::Hidden
+        );
+        if let Some((old_pose, old_handle, old_colors)) = &previous {
+            assert_eq!(pose, *old_pose);
+            assert_ne!(handle, *old_handle);
+            assert_ne!(colors, old_colors);
+        }
+        previous = Some((pose, handle, colors.clone()));
+    }
+}
+
+#[test]
+fn buckets_enter_from_lower_right_and_keep_camera_and_hud_clear_during_motion() {
+    for item in [Item::EmptyBucket, Item::WaterBucket] {
+        let mesh = bucket_mesh(item);
+        for aspect in [16. / 9., 3. / 2., 4. / 3.] {
+            let size = Vec2::new(640. * aspect, 640.);
+            let points = projected(
+                &mesh,
+                model_pose(Presentation::for_item(Some(item)), &Motion::default()),
+                size,
+            );
+            let min = points
+                .iter()
+                .copied()
+                .fold(Vec2::splat(f32::INFINITY), Vec2::min)
+                / size;
+            let max = points
+                .iter()
+                .copied()
+                .fold(Vec2::splat(f32::NEG_INFINITY), Vec2::max)
+                / size;
+            assert!(min.x > 0.6 && min.y > 0.6, "clear of aim: {min:?}");
+            assert!(min.x < 0.9 && min.y < 0.85, "visible upper body: {min:?}");
+            assert!(max.y > 1., "base must enter from below the screen: {max:?}");
+            for speed in [4.317, 5.612] {
+                let mut motion = Motion::default();
+                for step in 0..120 {
+                    let feet = [speed * f64::from(step) / 60., 0., 0.];
+                    let (offset, roll) = motion.step(
+                        1. / 60.,
+                        feet,
+                        &body(true, false, 0.),
+                        &HandAction::default(),
+                    );
+                    // Include every phase of the existing use animation.
+                    motion.swing = step as f32 / 120.;
+                    let mut pose = model_pose(Presentation::for_item(Some(item)), &motion);
+                    pose.translation = roll * pose.translation + offset * MODEL_DEPTH_SCALE;
+                    pose.rotation = roll * pose.rotation;
+                    projected(&mesh, pose, size); // Asserts every vertex stays behind HUD/camera.
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn bucket_profile_changes_leave_all_existing_item_poses_unchanged() {
+    for (item, position, angles, scale, origin, pivot, held) in [
+        (
+            None,
+            Vec3::new(0.609, -0.641, -0.80),
+            Vec3::new(-46.5, 19.4, -23.9),
+            1.,
+            Vec3::ZERO,
+            Vec3::new(0.65, -0.90, -0.45),
+            false,
+        ),
+        (
+            Some(Item::Torch),
+            Vec3::new(0.56, -0.46, -0.72),
+            Vec3::new(0., 35., 12.),
+            0.40,
+            Vec3::new(0.5, 0.35, 0.5),
+            Vec3::new(0.56, -0.46, -0.72),
+            true,
+        ),
+        (
+            Some(Item::Grass),
+            Vec3::new(0.56, -0.52, -0.72),
+            Vec3::new(0., 45., 0.),
+            0.40,
+            Vec3::ZERO,
+            Vec3::new(0.56, -0.52, -0.72),
+            true,
+        ),
+        (
+            Some(Item::Dirt),
+            Vec3::new(0.56, -0.52, -0.72),
+            Vec3::new(0., 45., 0.),
+            0.40,
+            Vec3::ZERO,
+            Vec3::new(0.56, -0.52, -0.72),
+            true,
+        ),
+        (
+            Some(Item::Stone),
+            Vec3::new(0.56, -0.52, -0.72),
+            Vec3::new(0., 45., 0.),
+            0.40,
+            Vec3::ZERO,
+            Vec3::new(0.56, -0.52, -0.72),
+            true,
+        ),
+        (
+            Some(Item::Wood),
+            Vec3::new(0.56, -0.52, -0.72),
+            Vec3::new(0., 45., 0.),
+            0.40,
+            Vec3::ZERO,
+            Vec3::new(0.56, -0.52, -0.72),
+            true,
+        ),
+        (
+            Some(Item::Leaves),
+            Vec3::new(0.56, -0.52, -0.72),
+            Vec3::new(0., 45., 0.),
+            0.40,
+            Vec3::ZERO,
+            Vec3::new(0.56, -0.52, -0.72),
+            true,
+        ),
+    ] {
+        let frozen = Presentation {
+            position,
+            angles,
+            scale,
+            origin,
+            pivot,
+            held,
+        };
+        for swing in [0., 0.15, 0.4, 0.7, 0.95] {
+            let motion = Motion { swing, ..default() };
+            assert_eq!(
+                model_pose(Presentation::for_item(item), &motion),
+                model_pose(frozen, &motion)
+            );
+        }
+    }
+}

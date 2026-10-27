@@ -192,18 +192,9 @@ fn edit_and_target(
             }
         }
     }
-    let mode = if ctx
-        .inventory
-        .contents
-        .selected_stack()
-        .is_some_and(|s| s.item() == voxel_core::inventory::Item::EmptyBucket)
-    {
-        voxel_core::raycast::TargetMode::CollectSource
-    } else {
-        voxel_core::raycast::TargetMode::Blocks
-    };
-    ctx.editor.target = voxel_core::raycast::raycast_with(&ctx.world.0, ray, mode)
-        .filter(|hit| ctx.world.0.ready(hit.position));
+    // Highlight only ordinary block targets, including those behind water.
+    // Bucket collection uses its own CollectSource ray in edit_inventory.
+    ctx.editor.target = raycast(&ctx.world.0, ray).filter(|hit| ctx.world.0.ready(hit.position));
 }
 
 #[derive(Component)]
