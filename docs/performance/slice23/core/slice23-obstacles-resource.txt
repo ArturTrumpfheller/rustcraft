@@ -1,0 +1,1 @@
+user_s=0.0670 system_s=0.0041 rss_kib=12032

@@ -12,6 +12,8 @@ pub const PHYSICS_HZ: f64 = 60.0;
 pub const PHYSICS_DT: f64 = 1.0 / PHYSICS_HZ;
 const CONTACT_EPSILON: f64 = 1.0e-8;
 const SUPPORT_DISTANCE: f64 = 1.0e-6;
+const WATER_EXIT_REACH: f64 = 0.35;
+const WATER_EXIT_SPEED: f64 = 7.8;
 
 /// Controller tuning in block units and seconds. Values must be finite and
 /// positive (eye height must be less than body height). Not a Minecraft replica.
@@ -89,6 +91,9 @@ pub struct Player {
     pub velocity: [f64; 3],
     pub grounded: bool,
     pub crouched: bool,
+    // One ballistic exit attempt until landing or returning below its launch.
+    // Transient controller state; never part of world/player persistence.
+    water_exit_origin: Option<f64>,
 }
 
 impl Player {
@@ -98,6 +103,7 @@ impl Player {
             velocity: [0.0; 3],
             grounded: false,
             crouched: false,
+            water_exit_origin: None,
         }
     }
 
@@ -169,6 +175,15 @@ impl Player {
         // Never trust last tick's support after walking off a ledge or a world edit.
         self.grounded = self.velocity[1] <= 0.0 && self.supported(world, config);
         let in_water = self.in_water(world, config);
+        if self.grounded
+            || (in_water
+                && self.velocity[1] <= 0.
+                && self
+                    .water_exit_origin
+                    .is_some_and(|y| self.position[1] <= y))
+        {
+            self.water_exit_origin = None;
+        }
         if in_water {
             // Exponential drag and bounded acceleration, at the same 60-Hz step.
             let drag = (-5.0 * PHYSICS_DT).exp();
@@ -197,7 +212,17 @@ impl Player {
             self.grounded = false;
         }
         let guard_ledge = self.crouched && self.grounded && !in_water;
-        self.velocity[1] = if in_water {
+        if in_water
+            && input.jump
+            && !self.crouched
+            && self.water_exit_origin.is_none()
+            && self.water_exit_clear(world, input, config)
+        {
+            self.water_exit_origin = Some(self.position[1]);
+            self.velocity[1] = WATER_EXIT_SPEED;
+            self.grounded = false;
+        }
+        self.velocity[1] = if in_water && self.water_exit_origin.is_none() {
             (self.velocity[1] * (-4.0 * PHYSICS_DT).exp()
                 + if input.jump { 12. } else { -4. } * PHYSICS_DT)
                 .clamp(-2., 2.5)
@@ -219,6 +244,46 @@ impl Player {
             }
         }
         self.grounded = self.velocity[1] <= 0.0 && self.supported(world, config);
+    }
+
+    /// Check a nearby one-block ledge before launching. This probe never moves
+    /// the player: all actual motion still uses the ordinary Y/X/Z sweeps.
+    fn water_exit_clear(
+        &self,
+        world: &World,
+        input: MovementInput,
+        config: &PhysicsConfig,
+    ) -> bool {
+        let [x, z] = input.direction;
+        let length = x.hypot(z);
+        if !length.is_finite() || length < CONTACT_EPSILON {
+            return false;
+        }
+        let delta = [x / length * WATER_EXIT_REACH, z / length * WATER_EXIT_REACH];
+        let blocked = [(0, delta[0]), (2, delta[1])]
+            .into_iter()
+            .any(|(a, d)| (self.sweep_axis(world, config, a, d) - d).abs() > CONTACT_EPSILON);
+        if !blocked {
+            return false;
+        }
+        let rise = self.position[1].floor() + 1. - self.position[1];
+        if self.sweep_axis(world, config, 1, rise) < rise - CONTACT_EPSILON {
+            return false;
+        }
+        let mut landing = *self;
+        landing.position[1] += rise;
+        for (a, d) in [(0, delta[0]), (2, delta[1])] {
+            if (landing.sweep_axis(world, config, a, d) - d).abs() > CONTACT_EPSILON {
+                return false;
+            }
+            landing.position[a] += d;
+        }
+        let mut support = landing;
+        support.position[1] -= SUPPORT_DISTANCE;
+        landing.cache_ready(world, config)
+            && support.cache_ready(world, config)
+            && landing.fits_in_world(world, config)
+            && landing.supported(world, config)
     }
 
     /// Body overlap with actual sloped surface heights, not just water cell IDs.
@@ -494,6 +559,8 @@ pub fn spawn_position(world: &World, config: &PhysicsConfig, preferred: [f64; 3]
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod water_tests;
 
 /// Matches the two surface triangles and their shared diagonal exactly.
 pub fn submerged(world: &World, point: [f64; 3]) -> bool {

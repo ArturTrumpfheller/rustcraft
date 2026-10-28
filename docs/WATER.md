@@ -1,4 +1,4 @@
-# Slice 22 — water gameplay and polish
+# Water gameplay — Slices 22–23
 
 RustCraft's first water implementation keeps simulation in `voxel_core` and
 presentation in the Bevy client. No dependency, generator, terrain atlas, opaque
@@ -23,15 +23,15 @@ replaced, supplies downward water without consumption and never converts nearby
 flow into new sources. Downward supply has priority; a supported water cell
 supplies the strongest horizontal candidate plus one, stopping after level 7.
 A falling column hitting support starts a fresh seven-block horizontal reach at
-its foot. Strength decays along detours around obstacles. No slope-search routing
-or infinite-source mechanic is implemented.
+its foot. Strength decays along detours around obstacles. Slice23 adds bounded
+downhill routing (below); infinite-source mechanics remain deferred.
 
 Each queued cell computes from the same pre-tick state. The batch commits after
-all candidates have been examined. Edits wake the cell and its six dependencies;
+all candidates have been examined. Edits wake local and bounded route dependencies;
 actual flow changes wake their neighbors. Removing the last source causes
-unsupported levels to weaken and disappear. There are no upward dependency
-edges: downward columns and bounded horizontal levels settle without continual
-updates. Multiple sources combine by minimum level; queue budget and activation
+unsupported levels to weaken and disappear. Downward columns and bounded
+horizontal levels settle without continual updates. Multiple sources combine
+by minimum level; queue budget and activation
 order converge to the same fixed point in the tested fixtures.
 
 ## Scheduling, bounds and ownership
@@ -224,16 +224,90 @@ closed-directory backups before trying older builds; never restore only one
 world/region/player file. Forced termination can still lose changes since the
 last successfully committed save; per-click durability is outside this slice.
 
+## Downhill routing (Slice 23, Issue #40)
+
+Horizontal feeders now choose the shortest reachable downward route before
+supplying their neighbors. A direct fall still takes priority. The deterministic
+breadth-first search uses the fixed order -X, +X, -Z, +Z and combines all first
+directions belonging to equally short paths, including paths that merge. Without
+a reachable drop it retains ordinary spreading into eligible sides.
+
+The limit is **four total horizontal steps from the feeder**, or its remaining
+horizontal level range, whichever is smaller. Sources and supported falling
+water have seven steps available; horizontal level L has 7-L. Four steps give
+local channel/corner awareness without looking across a whole seven-step pool
+on each update. At most **41 distinct cells** enter the search queue. Three fixed
+81-byte grids and a 41-entry coordinate queue are stack scratch; there is no
+recursive search or heap allocation per search. Solids, permanent sources and
+unknown cells cannot be crossed. A route cannot pass an unknown floor, climb a
+step or continue horizontally past a drop. Existing flowing/falling water is
+traversable: temporary occupancy cannot close its own route and cause feedback.
+No source is ever created by relaxation. IDs and saved flow levels are unchanged.
+
+A transient, lazily allocated **one-byte-per-cell route cache** avoids repeating
+unchanged searches between ticks. Only queried resident chunks allocate a 4096-
+byte array; maximum payload at radius3 is 602,112 bytes, plus small map/allocator
+overhead. Every changed feeder level invalidates its own entry. Terrain/source
+edits invalidate and wake wet feeders in a radius-four horizontal diamond on
+the edit's plane and the plane above (the changed block can be a floor). Their
+ordinary neighbors are also queued, so obsolete branches recede. This happens
+even when no water directly touches the edited block. Water-to-water/Air changes
+retain the smaller immediate-neighbor wakeup. The FIFO, synchronous pre-tick
+reads, 5-Hz cadence, budget256 and save/drop backpressure stay authoritative.
+
+Chunk installation and eviction invalidate/wake water within the same bounded
+distance of that chunk, including diagonal corners and interior feeders beyond
+the touching face. Dry chunks skip voxel scans using their existing counters.
+Eviction frees the corresponding route arrays. Missing data remains a closed
+boundary and never triggers loading/generation; existing cells with immediate
+unknown dependencies retain Slice22's freeze-until-install behavior. Cache and
+search state are not persisted. Loading actual sources/levels wakes ordinary
+reconciliation, including partially settled saves. Settled water drains its queue
+and does no repeated route work. Worker meshing and water-only light reuse are
+unchanged.
+
+This is independently implemented Java-inspired routing, not exact Java parity:
+the four-step definition, synchronous bounded FIFO relaxation, frozen streaming
+frontiers and explicit-source-only rule are deliberate. There are still no
+infinite-source rules, player/item currents, lava or natural water generation.
+Measured costs, unfavorable comparisons and native-test limitations are recorded
+in [Slice23 performance](performance/slice23/README.md).
+
 ## Movement
 
 Water is non-collidable. Actual body overlap with the sloping surface selects
 fixed-step water drag/control: 2 blocks/s horizontal target (1 while crouched),
 slower descent capped at 2 blocks/s, and held Jump accelerates upward to 2.5.
-Leaving water immediately selects the original land/air controller constants.
+Leaving water selects the original land/air controller constants.
 Body detection uses bounded samples of overlapped cells; very thin contact at
 a sloping shore is approximate. The eye uses the mesh's triangle heights to select a subtle retained blue overlay;
 HUD/inventory remain readable. There is no oxygen, drowning, health, entity
 current or automatic surface jump.
+
+### Water-to-land exit (Slice 23)
+
+The regression was reproduced before changing movement: held Jump against a
+one-block ledge stalled at X=0.7, feet Y=1.775 in level1 water. Surface overlap
+ended before feet reached the ledge's Y=2 top; 2.5 blocks/s upward speed can rise
+only about 0.11 further under the original fixed-step gravity24. Lower levels
+lose contact earlier still. The source case alone did not expose this failure.
+
+Holding Jump and moving toward a nearby, clear **one-block ledge** now permits
+one bounded 7.8-block/s exit impulse. The probe reaches only 0.35 blocks from
+the current body center. It requires a blocked horizontal path, full vertical
+headroom, a clear raised path and actual loaded solid support at the destination.
+Crouching, no directional input, a distant surface, a two-block wall, missing
+data or a low ceiling cannot trigger it. The probe never moves the player.
+
+The existing authoritative Y/X/Z collision sweeps resolve every real movement
+step. Once launched, original gravity applies immediately, even while still
+touching water, so swim damping cannot erase the impulse. No further launch is
+available until landing or descending back into water below the launch height;
+releasing/repressing Jump in the air cannot rearm it. There is no teleport or
+automatic climbing. Without a valid ledge, the original swim acceleration and
+2.5-block/s cap remain. Surface/eye detection, body dimensions, dry gravity,
+walking/sprint/sneak, normal/sprint jumps and view/camera behavior are unchanged.
+The additional controller state is transient and changes no save format.
 
 ## Validation and reproduction
 
@@ -260,12 +334,15 @@ No saves or gameplay commands are exposed by the gallery.
 
 ## Void Linux manual acceptance (Fish)
 
+Slice23-specific reproducible routing, drainage-edit, shore and save/reload steps:
+[native acceptance checklist](performance/slice23/ACCEPTANCE.md).
+
 Use normal Void glibc X11/Wayland drivers; no forced backend. Windows10/11 uses
 the same game logic and the existing CI matrix; native GUI acceptance is separate.
 
 ```fish
 git fetch origin
-git switch feat/slice-22-water
+git switch feat/slice-23-fluid-behavior-v2
 set water_test_dir (mktemp -d /tmp/rustcraft-water.XXXXXX)
 echo $water_test_dir
 env RUSTCRAFT_DATA_DIR="$water_test_dir" cargo run --release --locked -p rustcraft

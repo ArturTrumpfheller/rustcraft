@@ -1,0 +1,5 @@
+phase,scene,radius,baseline,motion,cycle,frames,p50_ms,p95_ms,p99_ms,control_p50_ns,writes,user_s,system_s,rss_kib
+slice23,dry,2,false,false,false,60,59.5625,74.1122,142.1754,7892,0,20.0006,0.9826,354908
+slice22,dry,2,false,false,false,60,59.7827,75.4210,82.0526,7972,0,19.8480,0.8665,354528
+slice23,boundary,2,false,false,false,60,64.4015,83.1283,87.1603,8233,0,22.8861,1.0446,360036
+slice22,boundary,2,false,false,false,60,63.3581,80.4913,81.9022,8052,0,21.8275,1.0329,345872
