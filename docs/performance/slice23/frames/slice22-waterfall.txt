@@ -1,0 +1,3 @@
+WATER_ASSETS radius=2 quads=489 mesh_bytes=121272 vertex_stride=56 light_bytes=1161600 terrain_materials=1 sky_materials=1 meshes=59 images=7
+WATER_FRAME scene=waterfall radius=2 baseline=false motion=false cycle=false frames=60 p50_ms=64.5311 p95_ms=81.1837 p99_ms=84.0368 control_p50_ns=8172 writes=0
+WATER_RESOURCE user_s=22.8773 system_s=1.0613 rss_kib=358084

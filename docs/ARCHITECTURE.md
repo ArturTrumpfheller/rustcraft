@@ -1,5 +1,19 @@
 # RustCraft architecture
 
+## Slice 23 fluid behavior
+
+`voxel_core::fluid` retains synchronous event-driven relaxation and selects
+horizontal supply with a four-step, remaining-level-bounded BFS (at most41
+visited cells). A transient byte-per-cell cache reuses routes; level changes
+invalidate individual entries, terrain/source edits invalidate a radius-four
+diamond on the edit/upper plane, and chunk lifecycle changes cover the same
+expanded footprint including corners. Sources and saves keep their Slice22 IDs
+and meanings. Worker meshing, fluid budget/backpressure and rendered water are
+unchanged. `physics::Player` adds a collision-checked one-shot ballistic exit
+only for Jump toward a nearby clear one-block ledge; normal movement is intact.
+See [WATER](WATER.md) for contracts and [performance](performance/slice23/README.md)
+for matched baseline measurements and native acceptance still required.
+
 Status: **Slice14 world management**, based on main `50b2ae6`. The independent
 `voxel_core::persistence::catalog` owns safe directory IDs, metadata, complete-copy
 legacy import, validation/staging and archive. A catalog OS mutex serializes

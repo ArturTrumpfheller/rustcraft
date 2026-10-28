@@ -573,6 +573,9 @@ fn regional_water_and_inventory_journal_replay_then_persistent_source_removal() 
                 w.insert_chunk(ChunkPos([cx, cy, 0]), c);
             }
         }
+        // A routed drop across both a chunk and regional-save boundary.
+        w.set_block(BlockPos([66, -1, 8]), Block::Stone).unwrap();
+        w.set_block(BlockPos([66, 0, 8]), Block::Air).unwrap();
         w.set_block(BlockPos([63, 1, 8]), Block::WaterSource)
             .unwrap();
         let mut changes = Vec::new();
@@ -583,6 +586,8 @@ fn regional_water_and_inventory_journal_replay_then_persistent_source_removal() 
             }
         }
         assert_eq!(w.block(BlockPos([64, 1, 8])), Block::Water1);
+        assert_eq!(w.block(BlockPos([66, 0, 8])), Block::WaterFalling);
+        assert_eq!(w.block(BlockPos([62, 1, 8])), Block::Air);
         let expected = w.overlay_snapshot();
         assert!(
             store
@@ -625,6 +630,24 @@ fn regional_water_and_inventory_journal_replay_then_persistent_source_removal() 
                 restored.insert_chunk(cp, c);
             }
         }
+        for _ in 0..200 {
+            restored.tick_fluids(FluidConfig::default(), &mut changes);
+            if restored.fluid_updates().pending() == 0 {
+                break;
+            }
+        }
+        assert_eq!(restored.block(BlockPos([66, 0, 8])), Block::WaterFalling);
+        assert_eq!(restored.block(BlockPos([62, 1, 8])), Block::Air);
+        restored
+            .set_block(BlockPos([66, 0, 8]), Block::Stone)
+            .unwrap();
+        for _ in 0..200 {
+            restored.tick_fluids(FluidConfig::default(), &mut changes);
+            if restored.fluid_updates().pending() == 0 {
+                break;
+            }
+        }
+        assert_eq!(restored.block(BlockPos([62, 1, 8])), Block::Water1);
         restored
             .set_block(BlockPos([63, 1, 8]), Block::Air)
             .unwrap();

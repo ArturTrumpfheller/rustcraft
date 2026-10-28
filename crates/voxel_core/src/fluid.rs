@@ -1,7 +1,7 @@
 //! Small fluid registry and event-driven, synchronous local relaxation.
 //! Unknown cells are closed boundaries. No terrain generation or IO occurs here.
 use crate::{Block, BlockChange, BlockPos, ChunkPos, LocalPos, World};
-use std::collections::{HashSet, VecDeque};
+use std::collections::{BTreeMap, HashSet, VecDeque};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FluidKind {
@@ -101,6 +101,14 @@ pub const NEIGHBORS: [[i32; 3]; 6] = [
     [0, 0, 1],
 ];
 const SIDES: [[i32; 3]; 4] = [[-1, 0, 0], [1, 0, 0], [0, 0, -1], [0, 0, 1]];
+/// Four horizontal steps, additionally limited by the feeder's remaining levels.
+/// A radius-four diamond has only 41 cells; scratch stays on the stack.
+pub const ROUTE_DISTANCE: i32 = 4;
+const ROUTE_WIDTH: usize = (2 * ROUTE_DISTANCE + 1) as usize;
+const ROUTE_CELLS: usize = 1 + 2 * (ROUTE_DISTANCE * (ROUTE_DISTANCE + 1)) as usize;
+// Low four bits are directions, bit four means computed (including mask zero).
+// Lazily allocated only for queried resident chunks: at most 147 * 4096 bytes.
+type RouteCache = BTreeMap<ChunkPos, Box<[u8; 4096]>>;
 #[derive(Clone, Copy, Debug)]
 pub struct FluidConfig {
     pub budget: usize,
@@ -114,6 +122,7 @@ impl Default for FluidConfig {
 pub struct FluidUpdates {
     queue: VecDeque<BlockPos>,
     pending: HashSet<BlockPos>,
+    routes: RouteCache,
     pub processed: usize,
     pub changed: usize,
     pub total_processed: u64,
@@ -133,6 +142,7 @@ impl FluidUpdates {
         }
     }
     pub(crate) fn evict(&mut self, column: [i32; 2]) {
+        self.routes.retain(|c, _| [c.0[0], c.0[2]] != column);
         self.queue.retain(|p| {
             let c = p.split().0;
             [c.0[0], c.0[2]] != column
@@ -141,6 +151,12 @@ impl FluidUpdates {
             let c = p.split().0;
             [c.0[0], c.0[2]] != column
         });
+    }
+    pub(crate) fn invalidate_route(&mut self, p: BlockPos) {
+        let (cp, lp) = p.split();
+        if let Some(chunk) = self.routes.get_mut(&cp) {
+            chunk[lp.index()] = 0;
+        }
     }
 }
 impl World {
@@ -158,10 +174,33 @@ impl World {
             }
         }
     }
+    /// Terrain/source edits can change a drop on this plane or the plane above.
+    /// Wake wet feeders and their consumers, not an entire resident-world scan.
+    pub(crate) fn wake_fluid_routes(&mut self, p: BlockPos) {
+        for dy in 0..=1 {
+            for dz in -ROUTE_DISTANCE..=ROUTE_DISTANCE {
+                for dx in -ROUTE_DISTANCE..=ROUTE_DISTANCE {
+                    if dx.abs() + dz.abs() > ROUTE_DISTANCE {
+                        continue;
+                    }
+                    if let Some(n) = p.offset([dx, dy, dz])
+                        && self.ready(n)
+                        && self.block(n).fluid().is_some()
+                    {
+                        self.fluids.invalidate_route(n);
+                        self.wake_fluid(n);
+                    }
+                }
+            }
+        }
+    }
     pub(crate) fn wake_installed_fluids(&mut self, cp: ChunkPos) {
         // Only lifecycle events scan a chunk; skip dry chunks in constant time.
         // Neighbor water wakes across both faces even if the installed chunk is dry.
-        for d in [[0; 3]].into_iter().chain(NEIGHBORS) {
+        // Include nearby interior/diagonal water whose bounded route can now see
+        // into this chunk. Also used after eviction, with no missing data read.
+        for d in (-1..=1).flat_map(|y| (-1..=1).flat_map(move |z| (-1..=1).map(move |x| [x, y, z])))
+        {
             let np = ChunkPos(std::array::from_fn(|a| cp.0[a] + d[a]));
             if self.chunk(np).is_none_or(|c| c.water_cells() == 0) {
                 continue;
@@ -170,14 +209,17 @@ impl World {
                 for z in 0..16 {
                     for x in 0..16 {
                         let lp = LocalPos::new([x, y, z]).unwrap();
-                        if d != [0; 3]
-                            && !(0..3)
-                                .any(|a| d[a] != 0 && [x, y, z][a] == if d[a] > 0 { 0 } else { 15 })
-                        {
+                        let p = np.block_position(lp).unwrap();
+                        let distance = |a: usize| {
+                            let low = cp.0[a] * 16;
+                            (low - p.0[a]).max(p.0[a] - (low + 15)).max(0)
+                        };
+                        if distance(1) > 1 || distance(0) + distance(2) > ROUTE_DISTANCE {
                             continue;
                         }
                         if self.chunk(np).unwrap().get(lp).fluid().is_some() {
-                            self.wake_fluid(np.block_position(lp).unwrap());
+                            self.fluids.invalidate_route(p);
+                            self.wake_fluid(p);
                         }
                     }
                 }
@@ -191,9 +233,14 @@ impl World {
         let count = self.fluids.queue.len().min(config.budget);
         self.fluids.processed = count;
         self.fluids.total_processed += count as u64;
+        if count == 0 {
+            self.fluids.changed = 0;
+            return;
+        }
         let mut regions = [None; crate::regions::MAX_DIRTY_REGIONS];
         let mut region_count = 0;
         let mut planned_drops = 0;
+        let mut routes = std::mem::take(&mut self.fluids.routes);
         for _ in 0..count {
             let p = self.fluids.queue.pop_front().unwrap();
             self.fluids.pending.remove(&p);
@@ -217,7 +264,7 @@ impl World {
             {
                 continue;
             }
-            let desired = desired(self, p);
+            let desired = desired(self, p, &mut routes);
             // A dry decoration stays intact until actual water arrives.
             let after = if desired == Block::Air && before.fluid_drop().is_some() {
                 before
@@ -262,6 +309,9 @@ impl World {
             }
         }
         self.fluids.changed = changes.len();
+        // Restore before committing: the batch must invalidate changed levels
+        // and geometry in this cache, not an empty temporary map.
+        self.fluids.routes = routes;
         if !changes.is_empty() {
             self.apply_changes(changes);
         }
@@ -275,24 +325,115 @@ fn supported(world: &World, p: BlockPos) -> bool {
     let b = world.block(below);
     world.ready(below) && (b.is_collidable() || b == Block::WaterSource)
 }
-fn desired(world: &World, p: BlockPos) -> Block {
+fn desired(world: &World, p: BlockPos, routes: &mut RouteCache) -> Block {
     let above = p.offset([0, 1, 0]).unwrap();
     if world.in_bounds(above) && world.block(above).fluid().is_some() {
         return Block::WaterFalling;
     }
     let mut level = 8;
-    for d in SIDES {
+    for (side, d) in SIDES.into_iter().enumerate() {
         let n = p.offset(d).unwrap();
         if !world.in_bounds(n) || !supported(world, n) {
             continue;
         }
         if let Some(f) = world.block(n).fluid() {
             let candidate = if f.is_falling() { 1 } else { f.state_id() + 1 };
-            level = level.min(candidate);
+            if candidate > 7 {
+                continue;
+            }
+            let (cp, lp) = n.split();
+            let cached = &mut routes.entry(cp).or_insert_with(|| Box::new([0; 4096]))[lp.index()];
+            if *cached == 0 {
+                *cached = route_directions(world, n, f) | 16;
+            }
+            if *cached & (1 << (side ^ 1)) != 0 {
+                level = level.min(candidate);
+            }
         }
     }
     Fluid::horizontal(level).map_or(Block::Air, Fluid::block)
 }
 
+/// Geometry (including permanent sources) decides routes, never transient flow
+/// occupancy. Otherwise a wave could block its own route and oscillate.
+fn route_directions(world: &World, origin: BlockPos, fluid: Fluid) -> u8 {
+    let level = if fluid.is_falling() {
+        0
+    } else {
+        fluid.state_id()
+    };
+    let limit = ROUTE_DISTANCE.min(i32::from(7 - level));
+    if limit == 0 {
+        return 0;
+    }
+    let index = |x: i32, z: i32| {
+        ((z + ROUTE_DISTANCE) as usize) * ROUTE_WIDTH + (x + ROUTE_DISTANCE) as usize
+    };
+    let mut distances = [u8::MAX; ROUTE_WIDTH * ROUTE_WIDTH];
+    let mut directions = [0u8; ROUTE_WIDTH * ROUTE_WIDTH];
+    let mut drops = [false; ROUTE_WIDTH * ROUTE_WIDTH];
+    let mut queue = [[0i32; 2]; ROUTE_CELLS];
+    distances[index(0, 0)] = 0;
+    let (mut head, mut tail) = (0, 1);
+    let mut best = u8::MAX;
+    let mut selected = 0;
+    let mut eligible = 0;
+    while head < tail {
+        let [x, z] = queue[head];
+        head += 1;
+        let i = index(x, z);
+        let distance = distances[i];
+        if distance > best {
+            break;
+        }
+        if distance != 0 && drops[i] {
+            best = distance;
+            selected |= directions[i];
+            continue;
+        }
+        if i32::from(distance) == limit || distance == best {
+            continue;
+        }
+        for (side, [dx, _, dz]) in SIDES.into_iter().enumerate() {
+            let (nx, nz) = (x + dx, z + dz);
+            let ni = index(nx, nz);
+            if distances[ni] < distance + 1 {
+                continue;
+            }
+            let n = origin.offset([nx, 0, nz]).unwrap();
+            let below = n.offset([0, -1, 0]).unwrap();
+            if !world.in_bounds(n) || !world.ready(n) || !world.ready(below) {
+                distances[ni] = 0; // Closed cells need not be queried from each side.
+                continue;
+            }
+            let block = world.block(n);
+            if !block.fluid_replaceable() || block == Block::WaterSource {
+                distances[ni] = 0;
+                continue;
+            }
+            let mask = if distance == 0 {
+                1 << side
+            } else {
+                directions[i]
+            };
+            if distance == 0 {
+                eligible |= mask;
+            }
+            directions[ni] |= mask;
+            if distances[ni] == u8::MAX {
+                let floor = world.block(below);
+                drops[ni] =
+                    world.in_bounds(below) && !floor.is_collidable() && floor != Block::WaterSource;
+                distances[ni] = distance + 1;
+                queue[tail] = [nx, nz];
+                tail += 1;
+            }
+        }
+    }
+    if selected != 0 { selected } else { eligible }
+}
+
+#[cfg(test)]
+mod routing_tests;
 #[cfg(test)]
 mod tests;

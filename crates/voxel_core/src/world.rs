@@ -235,6 +235,9 @@ impl World {
         );
         self.chunks.retain(|p, _| [p.0[0], p.0[2]] != column);
         self.fluids.evict(column);
+        for y in -1..=1 {
+            self.wake_installed_fluids(ChunkPos([column[0], y, column[1]]));
+        }
     }
     pub fn save_snapshot(&self) -> Self {
         if self.identity.is_none() {
@@ -468,6 +471,12 @@ impl World {
             }
         }
         for change in changes {
+            self.fluids.invalidate_route(change.position);
+            if change.before.fluid_replaceable() != change.after.fluid_replaceable()
+                || (change.before == Block::WaterSource) != (change.after == Block::WaterSource)
+            {
+                self.wake_fluid_routes(change.position);
+            }
             if change.before.fluid().is_some()
                 || change.after.fluid().is_some()
                 || crate::fluid::NEIGHBORS

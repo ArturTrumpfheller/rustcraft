@@ -44,6 +44,8 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 **Exit criterion:** Start a world, walk around, place and break blocks, save, restart, and recover changes.
 
 ## v0.2 — Indev / Infdev-inspired foundations
+- [x] Slice23 bounded downhill water routing and collision-checked one-block water exit (Issue #40)
+- [ ] Slice23 native Void X11/Wayland, RX9060 XT performance and Windows GUI acceptance — see [WATER](WATER.md) and [measurements](performance/slice23/README.md)
 - [x] First bounded streaming: configurable radius, one worker, cache/GPU eviction, safe pending barriers and persistent edits
 - [x] First local large-world rollout with versioned regional storage and bounded caches
 - [ ] Further coordinate expansion and opt-in legacy migration
