@@ -23,6 +23,7 @@ pub(crate) struct TerrainRenderingPlugin;
 impl Plugin for TerrainRenderingPlugin {
     fn build(&self, app: &mut App) {
         bevy::asset::embedded_asset!(app, "terrain.wesl");
+        bevy::asset::embedded_asset!(app, "water.wesl");
         // Shared custom WESL imports need a retained, loaded module. Its
         // canonical namespace also works in the standalone rendering examples.
         app.world()
@@ -37,11 +38,32 @@ impl Plugin for TerrainRenderingPlugin {
             .resource::<AssetServer>()
             .load("embedded://rustcraft/atmosphere.wesl");
         app.insert_resource(AtmosphereShader { _shader: shader });
-        app.add_plugins(MaterialPlugin::<TerrainSurface>::default());
+        app.add_plugins((
+            MaterialPlugin::<TerrainSurface>::default(),
+            MaterialPlugin::<WaterSurface>::default(),
+        ));
     }
 }
 
 #[derive(Resource)]
 struct AtmosphereShader {
     _shader: Handle<Shader>,
+}
+
+pub(crate) type WaterSurface = ExtendedMaterial<StandardMaterial, WaterEffect>;
+#[derive(Asset, AsBindGroup, Reflect, Clone, Debug)]
+pub(crate) struct WaterEffect {
+    #[texture(100)]
+    #[sampler(101)]
+    pub texture: Handle<Image>,
+    #[uniform(102)]
+    pub atmosphere: crate::atmosphere::AtmosphereUniform,
+    /// X is animation seconds; Y is underwater tint strength for this view.
+    #[uniform(103)]
+    pub effect: Vec4,
+}
+impl MaterialExtension for WaterEffect {
+    fn fragment_shader() -> ShaderRef {
+        "embedded://rustcraft/water.wesl".into()
+    }
 }

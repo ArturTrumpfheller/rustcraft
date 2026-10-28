@@ -121,7 +121,7 @@ fn malformed_headers_ids_coordinates_and_record_order_are_rejected() {
     let mut bytes = valid.clone();
     bytes[16..20].copy_from_slice(&0_u32.to_le_bytes());
     assert_eq!(decode(&bytes), Err(FormatError::Length));
-    for id in [0_u16, 11, 65535] {
+    for id in [0_u16, 20, 65535] {
         let mut bytes = valid.clone();
         bytes[HEADER_SIZE + 12..].copy_from_slice(&id.to_le_bytes());
         repair_checksum(&mut bytes);
@@ -425,7 +425,7 @@ fn v3_identity_empty_overlay_golden_fixture_and_strict_metadata_validation() {
         decode(&air).unwrap().edits()[&BlockPos([0, -15, 0])],
         Block::Air
     );
-    for id in [11_u16, 65535] {
+    for id in [20_u16, 65535] {
         let mut bad = air.clone();
         bad[52..54].copy_from_slice(&id.to_le_bytes());
         repair_checksum(&mut bad);
@@ -533,7 +533,7 @@ fn torch_snapshot_and_finite_overlay_roundtrip_without_reinterpreting_old_ids() 
         );
     }
     assert_eq!(stored_block(6, 1), Err(FormatError::BlockId(6)));
-    assert_eq!(stored_block(11, 2), Err(FormatError::BlockId(11)));
+    assert_eq!(stored_block(20, 2), Err(FormatError::BlockId(20)));
     for (id, block) in [
         (0, Block::Air),
         (1, Block::Grass),
@@ -579,5 +579,32 @@ fn wall_ids_are_append_only_and_orientations_round_trip_all_world_modes() {
     }
     assert_eq!(stored_block(6, 2), Ok(Block::Torch));
     assert_eq!(block_id(Block::Torch), 6);
-    assert_eq!(stored_block(11, 3), Err(FormatError::BlockId(11)));
+    assert_eq!(stored_block(20, 3), Err(FormatError::BlockId(20)));
+}
+
+#[test]
+fn water_registry_is_explicit_append_only_for_every_state() {
+    let old = [
+        Block::Air,
+        Block::Grass,
+        Block::Dirt,
+        Block::Stone,
+        Block::Wood,
+        Block::Leaves,
+        Block::Torch,
+        Block::TorchEast,
+        Block::TorchWest,
+        Block::TorchSouth,
+        Block::TorchNorth,
+    ];
+    for (id, b) in old.into_iter().enumerate() {
+        assert_eq!(block_id(b), id as u16);
+        assert_eq!(stored_block(id as u16, 3).unwrap(), b);
+    }
+    for state in 0..=8 {
+        let b = crate::fluid::Fluid::from_state_id(state).unwrap().block();
+        assert_eq!(block_id(b), 11 + u16::from(state));
+        assert_eq!(stored_block(11 + u16::from(state), 2).unwrap(), b);
+        assert!(stored_block(11 + u16::from(state), 1).is_err());
+    }
 }

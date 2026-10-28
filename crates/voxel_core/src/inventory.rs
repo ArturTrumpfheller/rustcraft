@@ -18,6 +18,10 @@ pub enum Item {
     Wood,
     Leaves,
     Torch,
+    /// Legacy Slice22 item 7. Inert until explicitly converted in the inventory.
+    WaterSource,
+    EmptyBucket,
+    WaterBucket,
 }
 impl Item {
     pub fn id(self) -> u16 {
@@ -28,6 +32,9 @@ impl Item {
             Self::Wood => 4,
             Self::Leaves => 5,
             Self::Torch => 6,
+            Self::WaterSource => 7,
+            Self::EmptyBucket => 8,
+            Self::WaterBucket => 9,
         }
     }
     pub fn from_id(id: u16) -> Option<Self> {
@@ -38,12 +45,16 @@ impl Item {
             4 => Self::Wood,
             5 => Self::Leaves,
             6 => Self::Torch,
+            7 => Self::WaterSource,
+            8 => Self::EmptyBucket,
+            9 => Self::WaterBucket,
             _ => return None,
         })
     }
     pub fn from_block(b: Block) -> Option<Self> {
         Some(match b {
             Block::Air => return None,
+            Block::WaterSource => return None,
             Block::Grass => Self::Grass,
             Block::Dirt => Self::Dirt,
             Block::Stone => Self::Stone,
@@ -54,17 +65,44 @@ impl Item {
             | Block::TorchWest
             | Block::TorchSouth
             | Block::TorchNorth => Self::Torch,
+            _ => return None,
         })
     }
-    pub fn build(self) -> BuildBlock {
+    pub const CREATIVE: [Self; 8] = [
+        Self::Grass,
+        Self::Dirt,
+        Self::Stone,
+        Self::Wood,
+        Self::Leaves,
+        Self::Torch,
+        Self::EmptyBucket,
+        Self::WaterBucket,
+    ];
+    pub fn max_stack(self) -> u8 {
         match self {
+            Self::EmptyBucket => 16,
+            Self::WaterBucket => 1,
+            _ => MAX_STACK,
+        }
+    }
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::EmptyBucket => "Empty Bucket",
+            Self::WaterBucket => "Water Bucket",
+            Self::WaterSource => "Legacy Water (inventory: CONVERT 7)",
+            _ => self.build().unwrap().name(),
+        }
+    }
+    pub fn build(self) -> Option<BuildBlock> {
+        Some(match self {
             Self::Grass => BuildBlock::Grass,
             Self::Dirt => BuildBlock::Dirt,
             Self::Stone => BuildBlock::Stone,
             Self::Wood => BuildBlock::Wood,
             Self::Leaves => BuildBlock::Leaves,
             Self::Torch => BuildBlock::Torch,
-        }
+            Self::WaterSource | Self::EmptyBucket | Self::WaterBucket => return None,
+        })
     }
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -74,7 +112,7 @@ pub struct Stack {
 }
 impl Stack {
     pub fn new(item: Item, count: u8) -> Option<Self> {
-        (1..=MAX_STACK)
+        (1..=item.max_stack())
             .contains(&count)
             .then_some(Self { item, count })
     }
@@ -121,11 +159,13 @@ impl Inventory {
             Item::Wood,
             Item::Leaves,
             Item::Torch,
+            Item::WaterBucket,
+            Item::EmptyBucket,
         ]
         .into_iter()
         .enumerate()
         {
-            s.slots[i] = Stack::new(item, if i < 3 { 64 } else { 32 });
+            s.slots[i] = Stack::new(item, if i < 3 { 64 } else { item.max_stack().min(32) });
         }
         s
     }
@@ -180,7 +220,7 @@ impl Inventory {
             if let Some(s) = self.slots[i].as_mut()
                 && s.item == item
             {
-                let n = count.min(u16::from(MAX_STACK - s.count));
+                let n = count.min(u16::from(item.max_stack() - s.count));
                 s.count += n as u8;
                 count -= n;
             }
@@ -190,7 +230,7 @@ impl Inventory {
                 break;
             }
             if self.slots[i].is_none() {
-                let n = count.min(u16::from(MAX_STACK));
+                let n = count.min(u16::from(item.max_stack()));
                 self.slots[i] = Stack::new(item, n as u8);
                 count -= n;
             }
@@ -203,6 +243,44 @@ impl Inventory {
             self.changed();
         }
         rest
+    }
+    /// Add a catalog grant only when the entire stack fits; never overwrite slots.
+    pub fn grant(&mut self, item: Item, count: u16) -> bool {
+        let mut next = self.clone();
+        if next.insert(item, count) != 0 {
+            return false;
+        }
+        *self = next;
+        true
+    }
+    /// Explicit one-for-one conversion; saved ID7 never changes meaning on load.
+    pub fn convert_legacy_water(&mut self) -> bool {
+        let Some(s) = self
+            .selected_stack()
+            .filter(|s| s.item == Item::WaterSource)
+        else {
+            return false;
+        };
+        let mut next = self.clone();
+        next.slots[next.selected] = Stack::new(s.item, s.count - 1);
+        if next.insert(Item::WaterBucket, 1) != 0 {
+            return false;
+        }
+        next.changed();
+        *self = next;
+        true
+    }
+    fn exchange_selected(&mut self, result: Item) -> Result<(), InventoryEditError> {
+        let s = self.selected_stack().ok_or(InventoryEditError::Empty)?;
+        self.slots[self.selected] = Stack::new(s.item, s.count - 1);
+        // Prefer the selected slot if it was emptied, then ordinary merge-first insertion.
+        if self.slots[self.selected].is_none() {
+            self.slots[self.selected] = Stack::new(result, 1);
+        } else if self.insert(result, 1) != 0 {
+            return Err(InventoryEditError::Full);
+        }
+        self.changed();
+        Ok(())
     }
     pub fn click(&mut self, index: usize, click: Click) -> bool {
         if index >= SLOT_COUNT {
@@ -226,7 +304,7 @@ impl Inventory {
         } else if click == Click::Left {
             match (self.cursor, self.slots[index]) {
                 (Some(mut hand), Some(mut slot)) if hand.item == slot.item => {
-                    let n = hand.count.min(MAX_STACK - slot.count);
+                    let n = hand.count.min(hand.item.max_stack() - slot.count);
                     slot.count += n;
                     hand.count -= n;
                     self.slots[index] = Some(slot);
@@ -246,7 +324,7 @@ impl Inventory {
                     self.cursor = Stack::new(hand.item, hand.count - 1);
                 }
                 (Some(hand), Some(mut slot))
-                    if hand.item == slot.item && slot.count < MAX_STACK =>
+                    if hand.item == slot.item && slot.count < slot.item.max_stack() =>
                 {
                     slot.count += 1;
                     self.slots[index] = Some(slot);
@@ -293,6 +371,13 @@ pub fn edit_inventory(
     player: &Player,
     config: &PhysicsConfig,
 ) -> Result<Option<EditBatch>, InventoryEditError> {
+    let bucket = place
+        && inventory
+            .selected_stack()
+            .is_some_and(|s| matches!(s.item, Item::EmptyBucket | Item::WaterBucket));
+    if bucket {
+        return use_bucket(world, inventory, ray);
+    }
     let Some(hit) = raycast(world, ray) else {
         return Ok(None);
     };
@@ -302,17 +387,12 @@ pub fn edit_inventory(
     let mut next = inventory.clone();
     let batch = if place {
         let stack = next.selected_stack().ok_or(InventoryEditError::Empty)?;
+        let build = stack.item.build().ok_or(InventoryEditError::Empty)?;
         next.slots[next.selected] = Stack::new(stack.item, stack.count - 1);
         next.changed();
-        edit(
-            world,
-            ray,
-            EditAction::Place(stack.item.build()),
-            player,
-            config,
-        )
-        .map_err(InventoryEditError::World)?
-        .map(EditBatch::single)
+        edit(world, ray, EditAction::Place(build), player, config)
+            .map_err(InventoryEditError::World)?
+            .map(EditBatch::single)
     } else {
         let Some(batch) = world
             .plan_break(hit.position)
@@ -337,11 +417,66 @@ pub fn edit_inventory(
     Ok(batch)
 }
 
+/// Inventory conversion is staged before the validated world edit. Every rejection
+/// preserves the complete input inventory, including stacked empty buckets.
+fn use_bucket(
+    world: &mut World,
+    inventory: &mut Inventory,
+    ray: Ray,
+) -> Result<Option<EditBatch>, InventoryEditError> {
+    use crate::raycast::{TargetMode, raycast_with};
+    let item = inventory
+        .selected_stack()
+        .ok_or(InventoryEditError::Empty)?
+        .item;
+    let mode = if item == Item::EmptyBucket {
+        TargetMode::CollectSource
+    } else {
+        TargetMode::Blocks
+    };
+    let Some(hit) = raycast_with(world, ray, mode) else {
+        return Ok(None);
+    };
+    if !world.ready(hit.position) {
+        return Err(InventoryEditError::World(EditError::NotLoaded));
+    }
+    let (position, block, result) = if item == Item::EmptyBucket {
+        if world.block(hit.position) != Block::WaterSource {
+            return Ok(None);
+        }
+        (hit.position, Block::Air, Item::WaterBucket)
+    } else {
+        let position = if world.block(hit.position).fluid_drop().is_some() {
+            hit.position
+        } else {
+            hit.adjacent
+                .ok_or(InventoryEditError::World(EditError::NoPlacementFace))?
+        };
+        if !world.ready(position) {
+            return Err(InventoryEditError::World(EditError::NotLoaded));
+        }
+        if !world.block(position).fluid_replaceable() || world.block(position) == Block::WaterSource
+        {
+            return Err(InventoryEditError::World(EditError::Occupied));
+        }
+        (position, Block::WaterSource, Item::EmptyBucket)
+    };
+    let mut next = inventory.clone();
+    next.exchange_selected(result)?;
+    let change = world
+        .set_block(position, block)
+        .map_err(InventoryEditError::World)?;
+    if change.is_some() {
+        *inventory = next;
+    }
+    Ok(change.map(EditBatch::single))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn total(i: &Inventory) -> [u32; 6] {
-        let mut n = [0; 6];
+    fn total(i: &Inventory) -> [u32; 9] {
+        let mut n = [0; 9];
         for s in i.slots.iter().copied().chain([i.cursor]).flatten() {
             n[s.item.id() as usize - 1] += u32::from(s.count);
         }
@@ -381,7 +516,7 @@ mod tests {
         assert_eq!(i.cursor().unwrap().item(), Item::Wood);
         assert_eq!(i.slots()[0].unwrap().item(), Item::Dirt);
         assert!(i.return_cursor());
-        assert_eq!(total(&i), [0, 5, 0, 3, 0, 0]);
+        assert_eq!(total(&i), [0, 5, 0, 3, 0, 0, 0, 0, 0]);
     }
     #[test]
     fn randomized_clicks_conserve_every_item_and_keep_stack_bounds() {

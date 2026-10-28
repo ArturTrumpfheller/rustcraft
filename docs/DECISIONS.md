@@ -253,3 +253,31 @@ See SETTINGS for validation and recovery contracts.
 - Preserve static sky/block light separately in COLOR, compare both in greedy keys and apply a shared daylight uniform in the terrain shader. Accept measured additional torch quads and meshing work; never remesh for time.
 - Use original procedural square celestial bodies/stars, matching sky/fog colors and geometric sky exposure for cave protection. Keep time tooling in a separate example.
 - Preserve desktop backends, dependencies, original atlas and all accepted input/viewmodel behavior. Native GPU acceptance remains explicit; see DAY_NIGHT.
+
+## Slice 22
+
+- Append block IDs11–19 and item7 without changing envelopes or old IDs; retain
+  one-byte block storage. Persist actual flow states via existing journaled overlays.
+- Use synchronous local relaxation at5 Hz, budget256 and deduplicated FIFO events;
+  permanent sources, seven horizontal levels, falling columns, no generated sources.
+- Unknown chunk dependencies freeze boundary flow until local install reactivation;
+  never load chunks for water. Eviction drops requests, never persistent edits.
+- Split water geometry/material from opaque greedy surfaces. Reuse exact applied
+  lighting for water-only streamed jobs; retain the single existing mesh worker.
+- Transmit both light channels like Air; share daylight/fog, shader-only pixel
+  animation and deliberate standard mesh-level transparency limitations.
+- Add basic fixed-step drag/swimming and eye tint; retain original land physics,
+  item transactions and torch support. Native acceptance remains separate.
+
+### Slice22 completion
+
+- Retain item7 as inert legacy ownership; explicitly convert one to Water Bucket9.
+  Empty Bucket8 stacks to16, full buckets to1. Do not reinterpret or refill saves.
+- Separate block/source targeting and stage finite bucket transactions before edits.
+  Wash all Torch orientations via a small fluid-decoration policy and relight emitters.
+- Cap stationary, chunk-indexed world items at4096 stacks; preserve overflow by
+  deferring fluid displacement, never expiring items. Keep item render resources
+  separate and shared. Persist ownership in bounded player-v3 journal payloads.
+- Expose an additive inventory item palette; defer game modes, physics/currents,
+  infinite-source rules, crafting and other survival systems. Preserve the solver,
+  original ordinary-block/torch poses, terrain atlas and dependency graph.

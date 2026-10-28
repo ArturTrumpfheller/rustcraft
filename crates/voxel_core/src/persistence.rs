@@ -61,6 +61,7 @@ fn block_id(block: Block) -> u16 {
         Block::TorchWest => 8,
         Block::TorchSouth => 9,
         Block::TorchNorth => 10,
+        b => 11 + u16::from(b.fluid().expect("fluid variant").state_id()),
     }
 }
 fn stored_block(id: u16, version: u32) -> Result<Block, FormatError> {
@@ -78,6 +79,9 @@ fn stored_block(id: u16, version: u32) -> Result<Block, FormatError> {
         8 if version >= 2 => Ok(Block::TorchWest),
         9 if version >= 2 => Ok(Block::TorchSouth),
         10 if version >= 2 => Ok(Block::TorchNorth),
+        11..=19 if version >= 2 => Ok(crate::fluid::Fluid::from_state_id((id - 11) as u8)
+            .unwrap()
+            .block()),
         _ => Err(FormatError::BlockId(id)),
     }
 }

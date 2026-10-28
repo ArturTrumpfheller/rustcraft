@@ -1,0 +1,20 @@
+Code: 5c5a414715837164a2d7ef3da23dbbe7a1779e9f
+Date: 2026-10-26
+Rust 1.99.1, Bevy 0.20.0; dependency graph and Cargo.lock unchanged.
+
+cargo fmt --all -- --check: PASS
+cargo clippy --locked --workspace --all-targets -- -D warnings: PASS
+cargo test --locked --workspace: PASS (188 client +224 core, 0 failures)
+cargo test --locked -p rustcraft viewmodel::: PASS (17 tests)
+cargo test --locked -p rustcraft item_presentation_cpu_measurements -- --ignored --nocapture: PASS
+cargo build --release --locked -p rustcraft: PASS
+python tools/generate_textures.py --check: PASS
+python3 -m py_compile tools/measure_water.py tools/prepare_water_completion_baseline.py: PASS
+
+GitHub PR workflow138 on 5c5a414: Ubuntu PASS, Windows PASS.
+https://github.com/ArturTrumpfheller/rustcraft/actions/runs/40390083801
+
+Xvfb/lavapipe original gameplay: startup, world selection/creation, inventory palette,
+bucket icons and held-item presentation inspected. Production water shader fixtures
+and separate active dynamics measured/captured. Native Void/Wayland/Windows GUI and
+RX9060 XT performance are not established by these software checks.

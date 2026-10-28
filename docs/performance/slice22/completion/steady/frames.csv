@@ -1,0 +1,11 @@
+phase,scene,radius,baseline,motion,cycle,frames,p50_ms,p95_ms,p99_ms,control_p50_ns,writes,user_s,system_s,rss_kib
+before,dry,2,false,false,false,30,75.5669,229.4835,242.5564,7896,0,25.5242,1.5938,355012
+after,dry,2,false,false,false,30,63.4884,76.3990,78.4172,6566,0,18.4135,0.9306,355808
+before,pool,2,false,false,false,30,66.6084,83.5238,83.7256,6275,0,20.7232,1.0945,358352
+after,pool,2,false,false,false,30,70.3802,82.3474,83.9862,5577,0,20.8600,1.0555,359372
+before,waterfall,2,false,false,false,30,80.0940,92.7890,92.9721,6745,0,21.6958,1.1878,347076
+after,waterfall,2,false,false,false,30,74.9137,86.0763,90.0419,6413,0,21.3951,1.0661,360680
+before,several,2,false,false,false,30,86.2407,91.5068,93.2618,7331,0,23.7822,1.2022,358092
+after,several,2,false,false,false,30,75.0161,85.1657,100.0845,6269,0,21.1337,1.1523,357756
+before,boundary,2,false,false,false,30,75.9589,102.3379,124.9744,7255,0,21.7076,1.1583,358388
+after,boundary,2,false,false,false,30,75.4105,86.1933,87.6187,6374,0,21.6640,1.0845,360556

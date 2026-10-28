@@ -12,7 +12,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Persistent 20-minute day/night cycle, procedural square sun/moon, sparse stars and matching terrain fog.
 - Placeable, persistent standing/wall torches (hotbar 6) with worker-based voxel block light.
 - Derived 0–15 voxel skylight: dark roofs/caves, gradual entrance falloff and background updates after edits.
-- At most one surface mesh per rendered chunk; faces shared by solid blocks are removed, including at chunk boundaries.
+- At most one opaque terrain mesh and one translucent water mesh per rendered chunk; hidden faces are removed across chunk boundaries.
 - Mouse look, responsive yaw-relative WASD walking, Ctrl sprint, Shift crouch with safe ledges, grounded jumping and safe respawn.
 - Fixed 60-Hz engine-independent AABB physics, wall sliding and interpolated camera movement.
 - Precise five-block targeting, visible target outline and inventory-backed click-to-break/place.
@@ -23,7 +23,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 21**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 22**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -32,7 +32,7 @@ on their own, with the original atlas's correct faces. Proportions and motion ar
 visually calibrated against Java1.21.1's wide standard arm. Walking/sprint,
 crouch, jump/landing and click gestures animate only the viewmodel; targeting
 and physics stay unchanged. Menus/free cursor hide and reset it. One overlay
-view prevents wall occlusion and keeps the existing UI in front; six retained
+view prevents wall occlusion and keeps the existing UI in front; seven retained held-block
 meshes share the original atlas. See [rendering/resources](docs/VIEWMODEL.md)
 and [validation](docs/VALIDATION.md).
 
@@ -71,6 +71,17 @@ our original pixel glyphs and bounded updates. Inventory keeps the world running
 Pause and its Options page show the frozen world through a 45% dark scrim.
 Title/catalog/options from title retain their opaque background.
 See [Slice 19 controls, measurements, screenshots and native checklist](docs/DEBUG_GAMEPLAY.md).
+
+## Water gameplay (Slice 22)
+
+Use Empty/Water Buckets from the E inventory item palette. Sources spread, fall,
+recede after collection and wash away floor/wall torches into persistent items.
+Mining targets solids through water; blocks can displace it. Buckets have original
+pixel icons and thin held-item models. Flow spans seven horizontal levels;
+hold Jump to swim upward. Pause/Options/focus freeze flow; inventory continues it.
+Existing worlds receive no automatic
+inventory refill; legacy item7 has an explicit CONVERT7 button. See
+[mechanics, saves, limitations and Void acceptance](docs/WATER.md).
 
 ## Persistent day/night (Slice 21)
 
@@ -120,9 +131,11 @@ old global light washout. Native GPU performance still needs acceptance.
 Nine hotbar slots remain visible at the bottom. E opens three additional rows of
 nine slots. Original pixel frames and numerals reuse our own terrain atlas for
 icons; no external UI/font images are required. New player inventories start with
-64 each of grass/dirt/stone and 32 each of wood/leaves/torches (Torch in slot 6). Mining collects blocks;
+64 each of grass/dirt/stone, 32 each of wood/leaves/torches, one Water Bucket
+(slot 7) and 16 Empty Buckets (slot 8). Mining collects blocks;
 placing consumes the selected stack. A full inventory rejects mining without
-changing the block. This slice has no dropped items or crafting.
+changing the block. Water-destroyed torches produce persistent, collectible item drops. Open E for
+the small item palette, including Empty/Water Buckets. Crafting remains deferred.
 
 ![Original Slice-9 inventory and held stack](docs/images/slice9-inventory.png)
 
@@ -202,7 +215,7 @@ In the prepared Codex cloud machine, first run `. /workspace/setup/env.sh` in ea
 
 The 0.6×1.8-block player spawns on or just above safe solid ground, with eyes 1.62 blocks above the feet. Walking accelerates toward 4.317 blocks/s; sprinting toward 5.612 and sneaking toward 1.295 blocks/s. Continuous sprint-jumps gain a bounded run-up bonus up to 6.4538 blocks/s. Sprinting smoothly widens the current base FOV by 9%. Shift lowers the body to 1.5 blocks and the eye to 1.32; standing requires headroom. Sneak guards supported ledges, but jumping or removing support still permits falling. See [movement tuning and limits](docs/MOVEMENT.md). Falling below Y=-32 automatically respawns the player. Escape or focus loss pauses the local simulation, including gravity; choose Fortsetzen or press Escape to continue. Inventory keeps gravity, collision and normal damping running at fixed 60 Hz. Pause/settings and focus loss freeze physics. Inventory/focus/capture/respawn reset double-W detection; modal-held movement and jump keys must be released before reuse.
 
-The center crosshair aims at blocks within five blocks of the displayed eye. A black outline marks the current target; the hotbar frames the selected slot and shows actual counts. Empty clicks and empty selected slots do nothing. Placement cannot replace occupied cells; colliding blocks cannot intersect the current/displayed player body. Torches require a loaded solid floor or clicked wall, allow walking through them, and use selection bounds matching their shaft and tip. Horizontal face clicks mount a torch on that wall; underside placement is rejected. Mining a support also collects all attached torches; if the complete item set cannot fit, the entire action is refused. Ordinary held blocks retain their original Slice20 pose; torches have a modest lift and left lean. Simultaneous buttons prioritize breaking. Closing inventory returns a held stack only if it all fits; otherwise NO ROOM keeps it open. Outside clicks never discard items. Normal application close saves a held stack and restores it with inventory open next time.
+The center crosshair aims at blocks within five blocks of the displayed eye. A black outline marks the current target; the hotbar frames the selected slot and shows actual counts. Empty clicks and empty selected slots do nothing. Placement can replace water cells; colliding blocks cannot intersect the current/displayed player body. Torches require a loaded solid floor or clicked wall, allow walking through them, and use selection bounds matching their shaft and tip. Horizontal face clicks mount a torch on that wall; underside placement is rejected. Mining a support also collects all attached torches; if the complete item set cannot fit, the entire action is refused. Ordinary held blocks retain their original Slice20 pose; torches have a modest lift and left lean. Simultaneous buttons prioritize breaking. Closing inventory returns a held stack only if it all fits; otherwise NO ROOM keeps it open. Outside clicks never discard items. Normal application close saves a held stack and restores it with inventory open next time.
 
 New regional worlds permit edits within **X/Z [-32768,32768), Y [-16,32)**. Legacy v3 worlds retain **X/Z [-64,64)**; v1/v2 snapshots retain **X/Z [-32,32)** with the same Y bounds. Outside the corresponding box, edits are rejected. Pending chunks temporarily block collision/rays and reject edits until ready; they are never treated as a hole in the floor. R preserves edits/inventory and finds clear sky-exposed ground near the starting area, avoiding tree tops and unsupported columns. Loading uses the same search; player position and velocity are not saved.
 
@@ -217,7 +230,7 @@ world. Generator v3 and generators v1/v2 for historical saves remain frozen.
 Display names can repeat; internal directory IDs are unique and never renamed.
 See [safe multi-world management](docs/WORLDS.md).
 
-Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, transparency, water, biomes, ore distribution or emitted light from generated blocks. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
+Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, leaf transparency, biomes, ore distribution or emitted light from generated blocks. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
 
 New v4 worlds save **seed + generator version + world identity** in a manifest and all edits in regional overlays, including explicit Air. Unmodified chunks reproduce locally from that identity. Loaded chunks and clean region maps are disposable caches; unsaved region maps remain pinned in RAM until successfully saved. v1/v2 saves remain full snapshots with no seed metadata and never gain generated terrain. The [generation contract](docs/WORLDGEN.md) explains deterministic arithmetic, limits and future extension.
 

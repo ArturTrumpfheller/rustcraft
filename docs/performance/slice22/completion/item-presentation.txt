@@ -1,0 +1,10 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running unittests src/main.rs (target/debug/deps/rustcraft-3c260a03de281269)
+
+running 1 test
+ITEM_PRESENTATION count=0 update_p50_us=276.077 update_p95_us=403.215 meshes=1 vertices=24 entities=1
+ITEM_PRESENTATION count=12 update_p50_us=327.940 update_p95_us=463.405 meshes=3 vertices=224 entities=14
+test scene::tests::item_presentation_cpu_measurements ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 191 filtered out; finished in 1.36s
+

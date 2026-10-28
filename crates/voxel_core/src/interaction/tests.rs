@@ -52,7 +52,7 @@ fn selection_slots_only_offer_solid_blocks() {
         assert!(!choice.name().is_empty());
     }
     assert_eq!(BuildBlock::from_slot(0), None);
-    assert_eq!(BuildBlock::from_slot(7), None);
+    assert_eq!(BuildBlock::from_slot(8), None);
 }
 
 #[test]

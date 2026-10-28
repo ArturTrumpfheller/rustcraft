@@ -15,6 +15,7 @@ impl Presentation {
         match item {
             None => ARM,
             Some(Item::Torch) => SLENDER,
+            Some(Item::EmptyBucket | Item::WaterBucket | Item::WaterSource) => BUCKET,
             Some(_) => BLOCK,
         }
     }
@@ -42,4 +43,16 @@ pub(super) const ARM: Presentation = Presentation {
     origin: Vec3::ZERO,
     pivot: Vec3::new(0.65, -0.90, -0.45),
     held: false,
+};
+
+// Ordinary blocks, torches and the accepted arm pose remain exactly unchanged.
+pub(super) const BUCKET: Presentation = Presentation {
+    // A full-size generated item entering from the lower right. The yaw gives
+    // the flat silhouette perspective; roll brings its base toward the hand.
+    position: Vec3::new(0.64, -0.46, -0.72),
+    angles: Vec3::new(0., -45., 25.),
+    scale: 0.68,
+    origin: Vec3::ZERO,
+    pivot: Vec3::new(0.64, -0.46, -0.72),
+    held: true,
 };

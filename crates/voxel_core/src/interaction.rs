@@ -15,6 +15,7 @@ pub enum BuildBlock {
     Wood,
     Leaves,
     Torch,
+    WaterSource,
 }
 
 impl BuildBlock {
@@ -26,6 +27,7 @@ impl BuildBlock {
             4 => Some(Self::Wood),
             5 => Some(Self::Leaves),
             6 => Some(Self::Torch),
+            7 => Some(Self::WaterSource),
             _ => None,
         }
     }
@@ -37,6 +39,7 @@ impl BuildBlock {
             Self::Wood => 4,
             Self::Leaves => 5,
             Self::Torch => 6,
+            Self::WaterSource => 7,
         }
     }
     pub fn block(self) -> Block {
@@ -47,6 +50,7 @@ impl BuildBlock {
             Self::Wood => Block::Wood,
             Self::Leaves => Block::Leaves,
             Self::Torch => Block::Torch,
+            Self::WaterSource => Block::WaterSource,
         }
     }
     pub fn name(self) -> &'static str {
@@ -57,6 +61,7 @@ impl BuildBlock {
             Self::Wood => "Wood",
             Self::Leaves => "Leaves",
             Self::Torch => "Torch",
+            Self::WaterSource => "Water Source",
         }
     }
 }
@@ -80,6 +85,7 @@ pub enum EditError {
     Unsupported,
     SupportsTorch,
     StaleEdit,
+    DropCapacity,
 }
 
 /// Single-cell primitive; inventory-backed gameplay uses `inventory::edit_inventory`
@@ -101,11 +107,11 @@ pub fn edit(
     match action {
         EditAction::Break => world.set_block(hit.position, Block::Air),
         EditAction::Place(selection) => {
-            let position = hit.adjacent.ok_or(EditError::NoPlacementFace)?;
+            let position = placement_position(world, hit).ok_or(EditError::NoPlacementFace)?;
             if !world.ready(position) {
                 return Err(EditError::NotLoaded);
             }
-            if world.block(position) != Block::Air {
+            if world.block(position) != Block::Air && world.block(position).fluid().is_none() {
                 return Err(EditError::Occupied);
             }
             if selection.block().is_collidable() && player.intersects_block(position, config) {
@@ -123,3 +129,12 @@ pub fn edit(
 
 #[cfg(test)]
 mod tests;
+
+/// Normal targeting skips water; adjacent placement may displace it.
+pub fn placement_position(world: &World, hit: crate::raycast::RayHit) -> Option<crate::BlockPos> {
+    if world.block(hit.position).fluid().is_some() {
+        Some(hit.position)
+    } else {
+        hit.adjacent
+    }
+}

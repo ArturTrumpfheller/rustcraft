@@ -393,3 +393,101 @@ fn selection_outline_tracks_torch_boxes_and_reuses_one_asset_while_static() {
         Some(&before)
     );
 }
+
+#[test]
+fn water_has_no_block_outline_but_buckets_still_collect_and_place_sources() {
+    use voxel_core::inventory::{Inventory, Item, Stack};
+    use voxel_core::raycast::{TargetMode, raycast_with};
+
+    let mut app = app();
+    prepare_target(&mut app);
+    let source = BlockPos([0, 5, 8]);
+    app.world_mut()
+        .resource_mut::<VoxelWorld>()
+        .0
+        .set_block(source, Block::WaterSource)
+        .unwrap();
+    click(&mut app, MouseButton::Left); // Capture only.
+    let highlight = app
+        .world_mut()
+        .query_filtered::<Entity, With<TargetHighlight>>()
+        .single(app.world())
+        .unwrap();
+
+    for item in [Item::EmptyBucket, Item::WaterBucket, Item::Stone] {
+        let mut slots = [None; voxel_core::inventory::SLOT_COUNT];
+        slots[0] = Stack::new(item, 1);
+        app.world_mut()
+            .resource_mut::<crate::inventory_ui::GameInventory>()
+            .contents = Inventory::from_parts(slots, None, 0).unwrap();
+        frame(&mut app);
+        assert_eq!(
+            app.world().resource::<Editor>().target.unwrap().position,
+            aim_block()
+        );
+        assert_eq!(
+            *app.world().get::<Visibility>(highlight).unwrap(),
+            Visibility::Inherited
+        );
+        assert_eq!(
+            app.world().get::<Transform>(highlight).unwrap().translation,
+            Vec3::from_array(aim_block().0.map(|v| v as f32))
+        );
+    }
+    // Leave only water in range. The source remains collectible but gets no cube.
+    app.world_mut()
+        .resource_mut::<VoxelWorld>()
+        .0
+        .set_block(aim_block(), Block::Air)
+        .unwrap();
+    app.world_mut().resource_mut::<Editor>().reach = 2.5;
+    let mut slots = [None; voxel_core::inventory::SLOT_COUNT];
+    slots[0] = Stack::new(Item::EmptyBucket, 1);
+    app.world_mut()
+        .resource_mut::<crate::inventory_ui::GameInventory>()
+        .contents = Inventory::from_parts(slots, None, 0).unwrap();
+    frame(&mut app);
+    assert!(app.world().resource::<Editor>().target.is_none());
+    assert_eq!(
+        *app.world().get::<Visibility>(highlight).unwrap(),
+        Visibility::Hidden
+    );
+    let view = app.world().resource::<ViewPose>();
+    let ray = Ray {
+        origin: view.eye,
+        direction: view.direction,
+        reach: 2.5,
+    };
+    assert_eq!(
+        raycast_with(world(&app), ray, TargetMode::CollectSource)
+            .unwrap()
+            .position,
+        source
+    );
+    click(&mut app, MouseButton::Right);
+    assert_eq!(world(&app).block(source), Block::Air);
+    assert_eq!(
+        app.world()
+            .resource::<crate::inventory_ui::GameInventory>()
+            .contents
+            .selected_stack()
+            .unwrap()
+            .item(),
+        Item::WaterBucket
+    );
+
+    // Restoring the supporting target allows the same bucket to place the source.
+    prepare_target(&mut app);
+    app.world_mut().resource_mut::<Editor>().reach = DEFAULT_REACH;
+    click(&mut app, MouseButton::Right);
+    assert_eq!(world(&app).block(source), Block::WaterSource);
+    assert_eq!(
+        app.world()
+            .resource::<crate::inventory_ui::GameInventory>()
+            .contents
+            .selected_stack()
+            .unwrap()
+            .item(),
+        Item::EmptyBucket
+    );
+}

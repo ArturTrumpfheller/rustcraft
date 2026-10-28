@@ -418,3 +418,26 @@ adds the world-relative sun/moon and stable sparse stars. No clock tick queries
 blocks, invalidates light caches or schedules terrain work. Existing stale
 rejection and atomic connected publication are unchanged. See [DAY_NIGHT](DAY_NIGHT.md)
 for equations, compatibility, costs, screenshots and native acceptance.
+
+## Slice 22 water
+
+`voxel_core::fluid` owns the packed one-byte block extension, validated water
+state and bounded event-driven batch relaxation. Sources and flowing levels are
+persisted through the existing regional overlays/journal; generator versions are
+frozen. Chunk install/eviction wakes/prunes only local requests. The client shares
+physics' pause gate, runs water at5 Hz and coalesces water-only mesh dirtiness.
+Water-only streamed work reuses exact applied light, avoiding solid greedy work
+and light floods. Separate retained `WaterMesh`/`WaterSurface` assets implement
+animated alpha-blended surfaces; the original terrain vertex layout is intact.
+See [WATER](WATER.md) for bounds, save compatibility, movement, sorting limits,
+measurements and native acceptance.
+
+Slice22 completion keeps the same solver. `raycast::TargetMode` separates normal
+blocks from source collection; bucket exchanges stage inventory before edits.
+`Block::fluid_drop` admits all Torch orientations while preserving solid barriers.
+`World.drops` indexes at most4096 stationary stacks by chunk/cell; local pickup
+and separate session entities preserve ownership across streaming and restarts.
+Nonempty lists use bounded player-v3 records in the same world/inventory redo
+journal; empty lists and old reads retain v2/v1 compatibility. Item palette grants
+are additive/atomic and legacy item7 conversion is explicit. Emission changes use
+the existing full lighting path; ordinary water still reuses cached light.

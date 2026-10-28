@@ -85,6 +85,7 @@ struct StreamJob {
     work: Work,
 }
 impl StreamJob {
+    #[allow(clippy::too_many_arguments)] // Bounded captured worker inputs.
     fn spawn(
         work: Work,
         world: &World,
@@ -93,6 +94,7 @@ impl StreamJob {
         mut cache: streaming::TerrainCache,
         previous: BTreeMap<ChunkPos, voxel_core::lighting::ChunkLight>,
         force: BTreeSet<ChunkPos>,
+        water_only: bool,
     ) -> io::Result<Self> {
         let versions = work
             .targets()
@@ -127,6 +129,14 @@ impl StreamJob {
                         revision,
                         &mut cache,
                     )),
+                    Work::Mesh(targets) if water_only => WorkResult::Mesh(streaming::remesh_water(
+                        &generator,
+                        snapshot,
+                        edits.clone(),
+                        &targets,
+                        &mut cache,
+                        &previous,
+                    )),
                     Work::Mesh(targets) => WorkResult::Mesh(streaming::remesh_lit(
                         &generator,
                         snapshot,
@@ -157,6 +167,7 @@ pub(crate) struct StreamState {
     cache: streaming::TerrainCache,
     lights: BTreeMap<ChunkPos, voxel_core::lighting::ChunkLight>,
     geometry_dirty: BTreeSet<ChunkPos>,
+    water_dirty: BTreeSet<ChunkPos>,
     pub light_cells: usize,
     pub light_propagated: usize,
     pub source_columns_generated: usize,
@@ -209,6 +220,7 @@ impl StreamState {
             cache: streaming::TerrainCache::default(),
             lights: BTreeMap::new(),
             geometry_dirty: BTreeSet::new(),
+            water_dirty: BTreeSet::new(),
             light_cells: 0,
             light_propagated: 0,
             source_columns_generated: 0,
@@ -354,6 +366,9 @@ fn update_streaming(
         state
             .geometry_dirty
             .retain(|p| desired.contains(&[p.0[0], p.0[2]]));
+        state
+            .water_dirty
+            .retain(|p| desired.contains(&[p.0[0], p.0[2]]));
         state.cache.retain(&desired);
         state.queued.retain(|c| desired.contains(c));
         state.queued_at.retain(|c, _| desired.contains(c));
@@ -405,15 +420,38 @@ fn update_streaming(
                 scene.meshes.remove(&render.mesh);
             }
         }
+        let remove: Vec<_> = scene
+            .renders
+            .1
+            .keys()
+            .filter(|p| !desired.contains(&[p.0[0], p.0[2]]))
+            .copied()
+            .collect();
+        for p in remove {
+            if let Some(render) = scene.renders.1.remove(&p) {
+                scene.commands.entity(render.entity).despawn();
+                scene.meshes.remove(&render.mesh);
+            }
+        }
     }
     while let Some(p) = dirty.0.pop_first() {
         if state.desired.contains(&[p.0[0], p.0[2]]) && world.0.chunk(p).is_some() {
+            state.water_dirty.remove(&p);
             state.geometry_dirty.insert(p);
             state.dirty.entry(p).or_insert_with(Instant::now);
         }
     }
     while let Some(p) = dirty.1.pop_first() {
+        state.water_dirty.remove(&p);
         if state.desired.contains(&[p.0[0], p.0[2]]) && world.0.chunk(p).is_some() {
+            state.dirty.entry(p).or_insert_with(Instant::now);
+        }
+    }
+    while let Some(p) = dirty.2.pop_first() {
+        if state.desired.contains(&[p.0[0], p.0[2]]) && world.0.chunk(p).is_some() {
+            if !state.dirty.contains_key(&p) {
+                state.water_dirty.insert(p);
+            }
             state.dirty.entry(p).or_insert_with(Instant::now);
         }
     }
@@ -495,6 +533,7 @@ fn update_streaming(
                     }
                     for p in job.versions.keys() {
                         state.geometry_dirty.remove(p);
+                        state.water_dirty.remove(p);
                         if let Some(since) = state.dirty.remove(p) {
                             state.max_dirty_latency = state.max_dirty_latency.max(since.elapsed());
                         }
@@ -508,7 +547,7 @@ fn update_streaming(
                             &mut scene.renders,
                             p,
                             surface,
-                            &scene.material.0,
+                            &scene.material,
                             &scene.origin,
                         );
                         if let Some(since) = state.dirty.remove(&p) {
@@ -589,7 +628,16 @@ fn update_streaming(
                 .into_iter()
                 .filter_map(|p| state.lights.get(&p).map(|l| (p, l.clone())))
                 .collect();
-            let force = state.geometry_dirty.clone();
+            let force = state
+                .geometry_dirty
+                .union(&state.water_dirty)
+                .copied()
+                .collect();
+            let water_only = matches!(work, Work::Mesh(_))
+                && work
+                    .targets()
+                    .iter()
+                    .all(|p| state.water_dirty.contains(p) && state.lights.contains_key(p));
             match StreamJob::spawn(
                 work.clone(),
                 &world.0,
@@ -598,6 +646,7 @@ fn update_streaming(
                 cache,
                 previous,
                 force,
+                water_only,
             ) {
                 Ok(job) => {
                     match work {
@@ -636,7 +685,14 @@ fn update_streaming(
             .values()
             .filter_map(|r| scene.meshes.get(&r.mesh))
             .map(|m| m.count_vertices() * 56 + m.indices().map_or(0, |i| i.len() * 4))
-            .sum();
+            .sum::<usize>()
+            + scene
+                .renders
+                .1
+                .values()
+                .filter_map(|r| scene.meshes.get(&r.mesh))
+                .map(|m| m.count_vertices() * 48 + m.indices().map_or(0, |i| i.len() * 4))
+                .sum::<usize>();
     }
     state.max_update = state.max_update.max(update_start.elapsed());
     if changed && state.queued.is_empty() && state.dirty.is_empty() && state.job.is_none() {

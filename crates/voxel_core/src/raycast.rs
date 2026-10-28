@@ -26,9 +26,20 @@ pub struct RayHit {
     pub adjacent: Option<BlockPos>,
 }
 
+/// Ordinary editing ignores fluids; source collection has its own visibility policy.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TargetMode {
+    Blocks,
+    CollectSource,
+}
+
+pub fn raycast(world: &World, ray: Ray) -> Option<RayHit> {
+    raycast_with(world, ray, TargetMode::Blocks)
+}
+
 /// Invalid/zero directions, nonfinite/out-of-i32 origins or reach outside
 /// [0,64] return None. Direction magnitude does not affect distance or reach.
-pub fn raycast(world: &World, ray: Ray) -> Option<RayHit> {
+pub fn raycast_with(world: &World, ray: Ray, mode: TargetMode) -> Option<RayHit> {
     if !ray.reach.is_finite()
         || !(0.0..=MAX_REACH).contains(&ray.reach)
         || !ray.origin.iter().all(|v| {
@@ -62,6 +73,37 @@ pub fn raycast(world: &World, ray: Ray) -> Option<RayHit> {
     let mut normal = [0; 3];
     loop {
         let block = world.block(cell);
+        if mode == TargetMode::CollectSource && block == crate::Block::WaterSource {
+            let height = if world.block(cell.offset([0, 1, 0])?).fluid().is_some() {
+                1.
+            } else {
+                f64::from(block.fluid()?.height())
+            };
+            let bounds = crate::shape::SelectionBox {
+                min: [0.; 3],
+                max: [1., height, 1.],
+            };
+            if let Some((d, n)) = intersect_box(
+                bounds,
+                std::array::from_fn(|a| ray.origin[a] - f64::from(cell.0[a])),
+                direction,
+            ) && d + EPSILON >= distance
+                && d <= ray.reach + EPSILON
+            {
+                let grid = n.map(|v| v as i32);
+                return Some(RayHit {
+                    position: cell,
+                    normal: grid,
+                    surface_normal: n,
+                    distance: d,
+                    adjacent: if grid == [0; 3] {
+                        None
+                    } else {
+                        cell.offset(grid)
+                    },
+                });
+            }
+        }
         if block.is_cube() {
             return Some(RayHit {
                 position: cell,

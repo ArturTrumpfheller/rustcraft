@@ -1,5 +1,142 @@
 use super::*;
 use crate::inventory::{Click, Item};
+use std::{collections::BTreeMap, sync::Arc};
+
+#[test]
+fn buckets_and_world_items_replay_creation_and_pickup_at_every_save_boundary() {
+    use crate::{Block, BlockPos};
+    for stage in [
+        SaveStage::SessionPrepared,
+        SaveStage::WorldSaved,
+        SaveStage::PlayerSaved,
+    ] {
+        let t = Temp::new();
+        let (s, mut w, _) = SaveStore::open_with(&t.0, || Ok(World::default())).unwrap();
+        let mut inv = s.load_player(&mut w).unwrap();
+        let p = BlockPos([0, 1, 0]);
+        w.set_block(BlockPos([0, 0, 0]), Block::Stone).unwrap();
+        w.set_block(p, Block::Torch).unwrap();
+        w.set_block(p, Block::WaterSource).unwrap();
+        assert!(
+            s.save_player_with(&w, &inv, true, |at| if at == stage {
+                Err(io::Error::other("drop creation interrupted"))
+            } else {
+                Ok(())
+            })
+            .is_err()
+        );
+        drop(s);
+        let (s, mut w, _) = SaveStore::open(&t.0).unwrap();
+        inv = s.load_player(&mut w).unwrap();
+        assert_eq!(w.block(p), Block::WaterSource);
+        assert_eq!(w.dropped_items().len(), 1);
+        assert_eq!(inv.slots()[6].unwrap().item(), Item::WaterBucket);
+        assert_eq!(inv.slots()[7].unwrap().item(), Item::EmptyBucket);
+        let before = inv
+            .slots()
+            .iter()
+            .flatten()
+            .filter(|s| s.item() == Item::Torch)
+            .map(|s| u16::from(s.count()))
+            .sum::<u16>();
+        assert_eq!(w.collect_items([0.5, 1., 0.5], &mut inv), 1);
+        assert!(w.drops.is_empty());
+        assert!(
+            s.save_player_with(&w, &inv, true, |at| if at == stage {
+                Err(io::Error::other("pickup interrupted"))
+            } else {
+                Ok(())
+            })
+            .is_err()
+        );
+        drop(s);
+        let (s, mut w, _) = SaveStore::open(&t.0).unwrap();
+        let restored = s.load_player(&mut w).unwrap();
+        assert!(w.drops.is_empty());
+        assert_eq!(
+            restored
+                .slots()
+                .iter()
+                .flatten()
+                .filter(|s| s.item() == Item::Torch)
+                .map(|s| u16::from(s.count()))
+                .sum::<u16>(),
+            before + 1
+        );
+        assert_eq!(w.collect_items([0.5, 1., 0.5], &mut inv), 0);
+        assert!(!s.pending_path().exists());
+    }
+}
+
+#[test]
+fn v3_items_validate_bounds_counts_order_and_checksums_and_keep_legacy_id7() {
+    let mut w = World::default();
+    let mut inv = Inventory::empty();
+    inv.insert(Item::WaterSource, 32);
+    w.drops
+        .add(BlockPos([1, 1, 1]), Stack::new(Item::Torch, 3).unwrap());
+    w.drops
+        .add(BlockPos([-1, 1, -1]), Stack::new(Item::Torch, 2).unwrap());
+    let bytes = player_with_drops(Binding::new(&w), &encode(&w).unwrap(), &inv, &w);
+    assert_eq!(bytes.len(), 196 + 2 * 15);
+    assert_eq!(u32at(&bytes, 8), 3);
+    assert_eq!(
+        decode_player(&bytes).unwrap().2.slots()[0].unwrap().item(),
+        Item::WaterSource
+    );
+    assert_eq!(decode_drops(&bytes).unwrap(), w.drops);
+    for (position, value) in [(192, 0), (192, 255), (210, 0), (209, 255)] {
+        let mut bad = bytes.clone();
+        bad[position] = value;
+        let crc = checksum(&bad);
+        bad[20..24].copy_from_slice(&crc.to_le_bytes());
+        assert!(decode_player(&bad).is_err());
+    }
+    let mut bad = bytes.clone();
+    let (left, right) = bad[196..].split_at_mut(15);
+    right.copy_from_slice(left);
+    let crc = checksum(&bad);
+    bad[20..24].copy_from_slice(&crc.to_le_bytes());
+    assert!(decode_player(&bad).is_err());
+    for n in 0..bytes.len() {
+        assert!(decode_player(&bytes[..n]).is_err());
+    }
+}
+
+#[test]
+fn regional_drop_ownership_survives_eviction_unloaded_save_and_return() {
+    use crate::{Block, BlockPos};
+    let t = Temp::new();
+    let (s, mut w, _) =
+        SaveStore::open_with(&t.0, || Ok(crate::streaming::new_large_world(42))).unwrap();
+    let mut inv = s.load_player(&mut w).unwrap();
+    let column = [1000, -1000];
+    s.prepare_regional_column(&mut w, column).unwrap();
+    crate::streaming::prepare_column(&mut w, column).unwrap();
+    let p = BlockPos([16008, 25, -15992]);
+    w.set_block(p.offset([0, -1, 0]).unwrap(), Block::Stone)
+        .unwrap();
+    w.set_block(p, Block::Torch).unwrap();
+    w.set_block(p, Block::WaterSource).unwrap();
+    w.evict_column(column);
+    assert_eq!(w.dropped_items().len(), 1);
+    assert_eq!(w.collect_items([16008.5, 25., -15991.5], &mut inv), 0);
+    s.save_player_session(&w, &inv, true).unwrap();
+    drop(s);
+    let (s, mut w, _) = SaveStore::open(&t.0).unwrap();
+    let mut inv = s.load_player(&mut w).unwrap();
+    assert_eq!(w.dropped_items().len(), 1);
+    assert!(w.chunk(p.split().0).is_none());
+    s.prepare_regional_column(&mut w, column).unwrap();
+    crate::streaming::prepare_column(&mut w, column).unwrap();
+    assert_eq!(w.block(p), Block::WaterSource);
+    assert_eq!(w.collect_items([16008.5, 25., -15991.5], &mut inv), 1);
+    s.save_player_session(&w, &inv, false).unwrap();
+    drop(s);
+    let (s, mut w, _) = SaveStore::open(&t.0).unwrap();
+    s.load_player(&mut w).unwrap();
+    assert!(w.dropped_items().is_empty());
+}
 struct Temp(PathBuf);
 impl Temp {
     fn new() -> Self {
@@ -136,7 +273,7 @@ fn valid_checksums_do_not_bypass_slot_counts_ids_or_selection_validation() {
     let w = crate::streaming::new_large_world(42);
     let root = encode(&w).unwrap();
     let b = player_bytes(Binding::new(&w), &root, &Inventory::starter(), w.time);
-    for (pos, value) in [(64, 9), (65, 7), (67, 0), (67, 65), (65, 0)] {
+    for (pos, value) in [(64, 9), (65, 99), (67, 0), (67, 65), (65, 0)] {
         let mut bad = b.clone();
         bad[pos] = value;
         let crc = checksum(&bad);
@@ -406,4 +543,105 @@ fn clock_validation_rejects_repaired_checksum_invalid_ticks_reserved_and_version
         max,
     );
     assert_eq!(decode_player(&b).unwrap().3, max);
+}
+
+#[test]
+fn regional_water_and_inventory_journal_replay_then_persistent_source_removal() {
+    use crate::{
+        Block, BlockPos, Chunk, ChunkPos, LocalPos, fluid::FluidConfig, regions::RegionPos,
+    };
+    for stage in [
+        SaveStage::SessionPrepared,
+        SaveStage::WorldSaved,
+        SaveStage::PlayerSaved,
+    ] {
+        let t = Temp::new();
+        let (store, mut w, _) =
+            SaveStore::open_with(&t.0, || Ok(crate::streaming::new_large_world(42))).unwrap();
+        let inv = store.load_player(&mut w).unwrap();
+        for cx in [3, 4] {
+            w.install_region(RegionPos([cx / 4, 0]), Arc::new(BTreeMap::new()));
+            for cy in -1..2 {
+                let mut c = Chunk::default();
+                if cy == 0 {
+                    for x in 0..16 {
+                        for z in 0..16 {
+                            c.set(LocalPos::new([x, 0, z]).unwrap(), Block::Stone);
+                        }
+                    }
+                }
+                w.insert_chunk(ChunkPos([cx, cy, 0]), c);
+            }
+        }
+        w.set_block(BlockPos([63, 1, 8]), Block::WaterSource)
+            .unwrap();
+        let mut changes = Vec::new();
+        for _ in 0..200 {
+            w.tick_fluids(FluidConfig::default(), &mut changes);
+            if w.fluid_updates().pending() == 0 {
+                break;
+            }
+        }
+        assert_eq!(w.block(BlockPos([64, 1, 8])), Block::Water1);
+        let expected = w.overlay_snapshot();
+        assert!(
+            store
+                .save_player_with(&w, &inv, true, |s| if s == stage {
+                    Err(io::Error::other("fluid journal interruption"))
+                } else {
+                    Ok(())
+                })
+                .is_err()
+        );
+        drop(store);
+        let (store, mut restored, _) = SaveStore::open(&t.0).unwrap();
+        let got = store.load_player(&mut restored).unwrap();
+        assert_eq!(got.slots(), inv.slots());
+        let id = restored.region_identity().unwrap();
+        for p in [RegionPos([0, 0]), RegionPos([1, 0])] {
+            let edits = store.read_region(id, p).unwrap();
+            assert_eq!(
+                &edits,
+                &expected.regions().find(|(rp, _)| *rp == p).unwrap().1
+            );
+            restored.install_region(p, edits);
+        }
+        // Install exactly persisted authority; no generator is invoked for this fixture.
+        for cx in [3, 4] {
+            for cy in -1..2 {
+                let cp = ChunkPos([cx, cy, 0]);
+                let mut c = w.chunk(cp).unwrap().clone();
+                for (&p, &b) in restored
+                    .overlay_snapshot()
+                    .regions()
+                    .find(|(rp, _)| *rp == RegionPos([cx / 4, 0]))
+                    .unwrap()
+                    .1
+                    .iter()
+                    .filter(|(p, _)| p.split().0 == cp)
+                {
+                    c.set(p.split().1, b);
+                }
+                restored.insert_chunk(cp, c);
+            }
+        }
+        restored
+            .set_block(BlockPos([63, 1, 8]), Block::Air)
+            .unwrap();
+        for _ in 0..200 {
+            restored.tick_fluids(FluidConfig::default(), &mut changes);
+            if restored.fluid_updates().pending() == 0 {
+                break;
+            }
+        }
+        assert_eq!(restored.water_cells(), 0);
+        store.save_player_session(&restored, &got, true).unwrap();
+        drop(store);
+        let (store, mut empty, _) = SaveStore::open(&t.0).unwrap();
+        store.load_player(&mut empty).unwrap();
+        assert_eq!(
+            store.read_region(id, RegionPos([0, 0])).unwrap()[&BlockPos([63, 1, 8])],
+            Block::Air
+        );
+    }
 }

@@ -168,7 +168,22 @@ impl Player {
         }
         // Never trust last tick's support after walking off a ledge or a world edit.
         self.grounded = self.velocity[1] <= 0.0 && self.supported(world, config);
-        self.accelerate(input, config);
+        let in_water = self.in_water(world, config);
+        if in_water {
+            // Exponential drag and bounded acceleration, at the same 60-Hz step.
+            let drag = (-5.0 * PHYSICS_DT).exp();
+            self.velocity[0] *= drag;
+            self.velocity[2] *= drag;
+            let mut water_config = *config;
+            water_config.walk_speed = 2.;
+            water_config.sprint_speed = 2.;
+            water_config.sneak_speed = 1.;
+            water_config.sprint_jump_boost = 0.;
+            water_config.air_acceleration = 10.;
+            self.accelerate(input, &water_config);
+        } else {
+            self.accelerate(input, config);
+        }
         if self.crouched && self.grounded {
             let speed = self.velocity[0].hypot(self.velocity[2]);
             if speed > config.sneak_speed {
@@ -176,14 +191,19 @@ impl Player {
                 self.velocity[2] *= config.sneak_speed / speed;
             }
         }
-        if input.jump && self.grounded {
+        if input.jump && self.grounded && !in_water {
             self.boost_sprint_jump(world, input, config);
             self.velocity[1] = config.jump_speed;
             self.grounded = false;
         }
-        let guard_ledge = self.crouched && self.grounded;
-        self.velocity[1] =
-            (self.velocity[1] - config.gravity * PHYSICS_DT).max(-config.terminal_speed);
+        let guard_ledge = self.crouched && self.grounded && !in_water;
+        self.velocity[1] = if in_water {
+            (self.velocity[1] * (-4.0 * PHYSICS_DT).exp()
+                + if input.jump { 12. } else { -4. } * PHYSICS_DT)
+                .clamp(-2., 2.5)
+        } else {
+            (self.velocity[1] - config.gravity * PHYSICS_DT).max(-config.terminal_speed)
+        };
 
         // Y first settles floors/ceilings; independent X/Z clipping gives wall
         // sliding. The fixed axis order is deliberate and repeatable.
@@ -199,6 +219,28 @@ impl Player {
             }
         }
         self.grounded = self.velocity[1] <= 0.0 && self.supported(world, config);
+    }
+
+    /// Body overlap with actual sloped surface heights, not just water cell IDs.
+    pub fn in_water(&self, world: &World, config: &PhysicsConfig) -> bool {
+        let (min, max) = self.bounds(config);
+        for x in min[0].floor() as i32..=(max[0] - CONTACT_EPSILON).floor() as i32 {
+            for y in min[1].floor() as i32..=(max[1] - CONTACT_EPSILON).floor() as i32 {
+                for z in min[2].floor() as i32..=(max[2] - CONTACT_EPSILON).floor() as i32 {
+                    if submerged(
+                        world,
+                        [
+                            f64::from(x) + 0.5,
+                            min[1].max(f64::from(y)) + CONTACT_EPSILON,
+                            f64::from(z) + 0.5,
+                        ],
+                    ) {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 
     fn accelerate(&mut self, input: MovementInput, config: &PhysicsConfig) {
@@ -452,3 +494,21 @@ pub fn spawn_position(world: &World, config: &PhysicsConfig, preferred: [f64; 3]
 
 #[cfg(test)]
 mod tests;
+
+/// Matches the two surface triangles and their shared diagonal exactly.
+pub fn submerged(world: &World, point: [f64; 3]) -> bool {
+    let p = BlockPos(point.map(|v| v.floor() as i32));
+    if world.block(p).fluid().is_none() {
+        return false;
+    }
+    let x = (point[0] - f64::from(p.0[0])) as f32;
+    let z = (point[2] - f64::from(p.0[2])) as f32;
+    let h = [[0, 0], [1, 0], [0, 1], [1, 1]]
+        .map(|[cx, cz]| crate::water_mesh::corner_height(world, p, cx, cz));
+    let height = if x + z <= 1. {
+        h[0] + (h[1] - h[0]) * x + (h[2] - h[0]) * z
+    } else {
+        h[3] + (h[2] - h[3]) * (1. - x) + (h[1] - h[3]) * (1. - z)
+    };
+    point[1] < f64::from(p.0[1]) + f64::from(height)
+}

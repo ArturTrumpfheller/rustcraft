@@ -39,6 +39,8 @@ impl Plugin for PlayerPlugin {
         app.insert_resource(Time::<Fixed>::from_hz(PHYSICS_HZ))
             .init_resource::<PlayerSettings>()
             .init_resource::<PlayerState>()
+            .init_resource::<FluidRuntime>()
+            .init_resource::<crate::scene::DirtyChunks>()
             .init_resource::<ControllerInput>()
             .add_systems(
                 Startup,
@@ -52,7 +54,13 @@ impl Plugin for PlayerPlugin {
             )
             .add_systems(
                 FixedUpdate,
-                (simulate_player, advance_world_time).run_if(crate::session::has_world),
+                (
+                    simulate_fluids.before(simulate_player),
+                    simulate_player,
+                    advance_world_time,
+                    collect_drops.after(simulate_player),
+                )
+                    .run_if(crate::session::has_world),
             );
     }
 }
@@ -183,5 +191,64 @@ fn initialize_player(
         };
     } else {
         *player = safe_spawn(&world.0, &settings.0);
+    }
+}
+
+#[derive(Resource)]
+pub(crate) struct FluidRuntime {
+    pub config: voxel_core::fluid::FluidConfig,
+    phase: u8,
+    changes: Vec<voxel_core::BlockChange>,
+    pub milliseconds: f64,
+}
+impl Default for FluidRuntime {
+    fn default() -> Self {
+        Self {
+            config: voxel_core::fluid::FluidConfig::default(),
+            phase: 0,
+            changes: Vec::with_capacity(256),
+            milliseconds: 0.,
+        }
+    }
+}
+fn simulate_fluids(
+    input: Res<ControllerInput>,
+    mut world: ResMut<VoxelWorld>,
+    mut runtime: ResMut<FluidRuntime>,
+    mut dirty: ResMut<crate::scene::DirtyChunks>,
+) {
+    if !input.simulation_active {
+        runtime.phase = 0;
+        return;
+    }
+    runtime.phase += 1;
+    if runtime.phase < 12 {
+        return;
+    }
+    runtime.phase = 0;
+    let start = std::time::Instant::now();
+    let config = runtime.config;
+    world.0.tick_fluids(config, &mut runtime.changes);
+    // Emitting decorations require the full light/terrain path; ordinary fluid
+    // transitions retain the cached-light water-only optimization.
+    for &change in &runtime.changes {
+        dirty.mark(change);
+    }
+    runtime.milliseconds = start.elapsed().as_secs_f64() * 1000.;
+}
+
+fn collect_drops(
+    input: Res<ControllerInput>,
+    player: Res<PlayerState>,
+    mut world: ResMut<VoxelWorld>,
+    inventory: Option<ResMut<crate::inventory_ui::GameInventory>>,
+) {
+    if !input.simulation_active || player.awaiting_spawn {
+        return;
+    }
+    if let Some(mut inv) = inventory {
+        world
+            .0
+            .collect_items(player.body.position, &mut inv.contents);
     }
 }
