@@ -1,5 +1,21 @@
 # RustCraft architecture
 
+## Slice 26: versioned vertical worlds
+
+New regional worlds select generator6 with Y[-64,192); all historical identities
+retain Y[-16,32). `bounds::WorldHeight` supplies generation, streaming, validation,
+lighting, collision/recovery and persistence limits. Ready uniform Air/Stone
+chunks are allocation-free descriptors; pending descriptors remain solid barriers.
+Mixed chunks materialize on demand and empty again without losing readiness.
+One existing async column worker installs16 descriptors, evaluates only three
+surface slabs, and skips empty/enclosed geometry and empty light caches. V6
+lighting trims only proven opaque bottom / known-Air upper planes, preserving
+exact sky/torch floods. Existing manifests/region/player/journal envelopes and
+record budgets remain unchanged. Historical architecture sections below describe
+their original slices; this section supersedes their fixed-height statements.
+See [vertical contracts, budgets and native checklist](VERTICAL_WORLD.md) and
+[measurements](performance/slice26/README.md).
+
 ## Slice 24 terrain and identity design
 
 New worlds use local generator4 / manifest5; existing manifest4 remains frozen

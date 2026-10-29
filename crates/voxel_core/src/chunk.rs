@@ -161,37 +161,87 @@ impl ChunkPos {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+/// Uniform chunks have no voxel allocation. Presence in World still proves readiness.
+#[derive(Clone, Debug, Eq)]
 pub struct Chunk {
     blocks: Vec<Block>,
+    uniform: Block,
+    non_air: usize,
     water_cells: usize,
+}
+
+impl PartialEq for Chunk {
+    fn eq(&self, other: &Self) -> bool {
+        if self.non_air != other.non_air || self.water_cells != other.water_cells {
+            return false;
+        }
+        match (self.uniform(), other.uniform()) {
+            (Some(a), Some(b)) => a == b,
+            (None, None) => self.blocks == other.blocks,
+            (Some(a), None) => other.blocks.iter().all(|&b| a == b),
+            (None, Some(b)) => self.blocks.iter().all(|&a| a == b),
+        }
+    }
 }
 
 impl Default for Chunk {
     fn default() -> Self {
-        Self {
-            blocks: vec![Block::Air; VOLUME],
-            water_cells: 0,
-        }
+        Self::filled(Block::Air)
     }
 }
 
 impl Chunk {
+    pub fn filled(block: Block) -> Self {
+        Self {
+            blocks: Vec::new(),
+            uniform: block,
+            non_air: if block == Block::Air { 0 } else { VOLUME },
+            water_cells: if block.fluid().is_some() { VOLUME } else { 0 },
+        }
+    }
+    pub fn uniform(&self) -> Option<Block> {
+        self.blocks.is_empty().then_some(self.uniform)
+    }
+    pub fn is_empty(&self) -> bool {
+        self.non_air == 0
+    }
+    pub fn allocated_bytes(&self) -> usize {
+        self.blocks.capacity() * std::mem::size_of::<Block>()
+    }
+    /// Generation/import may fill a complete uniform slab. Compact once off-thread.
+    pub fn compact(&mut self) {
+        if let Some(&b) = self.blocks.first()
+            && self.blocks.iter().all(|&v| v == b)
+        {
+            *self = Self::filled(b);
+        }
+    }
     pub fn water_cells(&self) -> usize {
         self.water_cells
     }
     pub fn get(&self, position: LocalPos) -> Block {
-        self.blocks[position.index()]
+        if self.blocks.is_empty() {
+            self.uniform
+        } else {
+            self.blocks[position.index()]
+        }
     }
-
     pub fn set(&mut self, position: LocalPos, block: Block) -> bool {
-        let cell = &mut self.blocks[position.index()];
-        if *cell == block {
+        let before = self.get(position);
+        if before == block {
             return false;
         }
-        self.water_cells -= usize::from(cell.fluid().is_some());
+        if self.blocks.is_empty() {
+            self.blocks = vec![self.uniform; VOLUME];
+        }
+        self.water_cells -= usize::from(before.fluid().is_some());
         self.water_cells += usize::from(block.fluid().is_some());
-        *cell = block;
+        self.non_air -= usize::from(before != Block::Air);
+        self.non_air += usize::from(block != Block::Air);
+        self.blocks[position.index()] = block;
+        if self.non_air == 0 {
+            *self = Self::default();
+        }
         true
     }
 }

@@ -1,0 +1,10 @@
+generator,scene,ready_descriptors,nonempty_chunks,voxel_bytes,cache_columns,cache_voxel_bytes,mesh_bytes,light_cells,light_us,job_p50_us,job_p95_us,job_p99_us,worker_cpu_p50_us,install_p50_us,peak_job_heap,spawn_us,fluid_us,fluid_queue
+5,surface,27,20,110592,9,110592,24056,101568,338.84,519.57,619.88,715.43,519.77,1.32,446384,361.32,0.00,0
+UPPER_PROBE generator=5 lights=1 cells=101568 meshes=0 elapsed_us=362.28
+5,empty_upper,27,20,110592,9,110592,24056,101568,347.35,513.11,746.81,911.96,513.26,1.26,446384,445.54,0.00,0
+5,deep_mined,27,20,110592,9,110592,91016,101568,339.37,585.47,860.00,887.18,585.82,1.91,574376,378.18,0.00,0
+5,tower,27,21,110592,9,110592,34720,101568,311.05,501.06,593.09,666.59,501.12,1.14,446384,350.15,0.00,0
+5,vertical_water,27,21,110592,9,110592,46560,101568,312.63,524.98,543.19,546.00,525.02,67.56,446384,419.64,49.27,0
+5,heavy_column,27,21,110592,9,110592,8929240,101568,324.55,7805.79,8308.71,8355.49,7806.85,198.76,12535528,365.90,0.00,0
+TRAVEL generator=5 p50_us=1680.10 p95_us=2673.58 p99_us=5019.13 peak_cache_columns=15 cache_voxel_bytes=184320
+SAVE_RELOAD generator=5 edits=2 save_p50_us=55.08 save_p95_us=84.43 save_p99_us=84.43 reload_p50_us=389.35 reload_p95_us=621.25 reload_p99_us=621.25

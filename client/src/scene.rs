@@ -33,7 +33,15 @@ pub(crate) struct DirtyChunks(
     pub BTreeSet<ChunkPos>,
 );
 impl DirtyChunks {
+    #[cfg(test)]
     pub fn mark(&mut self, change: voxel_core::BlockChange) {
+        self.mark_in(change, voxel_core::bounds::WorldHeight::HISTORICAL);
+    }
+    pub fn mark_in(
+        &mut self,
+        change: voxel_core::BlockChange,
+        height: voxel_core::bounds::WorldHeight,
+    ) {
         let relight = change.before.is_opaque() != change.after.is_opaque()
             || change.before.emission() != change.after.emission();
         if !relight && (change.before.fluid().is_some() || change.after.fluid().is_some()) {
@@ -43,7 +51,7 @@ impl DirtyChunks {
         }
         if relight {
             self.1
-                .extend(voxel_core::lighting::affected(change.position));
+                .extend(voxel_core::lighting::affected_in(change.position, height));
         }
     }
 }

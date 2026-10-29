@@ -114,7 +114,7 @@ fn prepare(
     let spawn = start.map_or(player::SPAWN, |c| {
         [
             f64::from(c[0]) * 16. + 8.5,
-            32.,
+            f64::from(world.world_height().max),
             f64::from(c[1]) * 16. + 8.5,
         ]
     });

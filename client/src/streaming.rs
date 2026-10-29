@@ -53,9 +53,9 @@ enum Work {
     Mesh(BTreeSet<ChunkPos>),
 }
 impl Work {
-    fn targets(&self) -> BTreeSet<ChunkPos> {
+    fn targets(&self, height: voxel_core::bounds::WorldHeight) -> BTreeSet<ChunkPos> {
         match self {
-            Self::Load([x, z]) => (-1..2).map(|y| ChunkPos([*x, y, *z])).collect(),
+            Self::Load([x, z]) => height.chunks().map(|y| ChunkPos([*x, y, *z])).collect(),
             Self::Mesh(targets) => targets.clone(),
         }
     }
@@ -97,17 +97,17 @@ impl StreamJob {
         water_only: bool,
     ) -> io::Result<Self> {
         let versions = work
-            .targets()
+            .targets(world.world_height())
             .into_iter()
             .map(|p| (p, world.mesh_revision(p)))
             .collect();
         let mut edits = world.overlay_snapshot();
         let regional = world.region_identity();
-        let needed = streaming::lighting_regions(&work.targets());
+        let needed = streaming::lighting_regions(&work.targets(world.world_height()));
         edits.retain_regions(&needed);
         let revision = world.revision();
         let request = work.clone();
-        let snapshot = streaming::mesh_snapshot(world, &work.targets());
+        let snapshot = streaming::mesh_snapshot(world, &work.targets(world.world_height()));
         let handle = thread::Builder::new()
             .name("rustcraft-terrain".into())
             .spawn(move || {
@@ -196,6 +196,7 @@ pub(crate) struct StreamState {
     pub max_dirty_latency: Duration,
     pub mesh_bytes: usize,
     recent_frames: VecDeque<Duration>,
+    recent_jobs: VecDeque<Duration>,
 }
 impl StreamState {
     pub(crate) fn radius(&self) -> i32 {
@@ -247,6 +248,7 @@ impl StreamState {
             max_dirty_latency: Duration::ZERO,
             mesh_bytes: 0,
             recent_frames: VecDeque::new(),
+            recent_jobs: VecDeque::new(),
         }
     }
     fn retry(&mut self, work: &Work) {
@@ -383,7 +385,7 @@ fn update_streaming(
             } else if initial {
                 // Startup meshes need a procedural halo, even before their
                 // neighbors become resident. Do not regenerate cached spawn.
-                for y in -1..2 {
+                for y in world.0.world_height().chunks() {
                     state
                         .dirty
                         .entry(ChunkPos([c[0], y, c[1]]))
@@ -476,6 +478,10 @@ fn update_streaming(
                 state.cache.retain(&desired);
                 let result = payload.result;
                 state.worker_time += result.elapsed();
+                if state.recent_jobs.len() == 128 {
+                    state.recent_jobs.pop_front();
+                }
+                state.recent_jobs.push_back(result.elapsed());
                 state.max_job = state.max_job.max(result.elapsed());
                 let metrics = match &result {
                     WorkResult::Load(r) => &r.lighting,
@@ -501,6 +507,16 @@ fn update_streaming(
                         WorkResult::Mesh(r) => &r.lights,
                     };
 
+                    // Water-only results deliberately carry no new light data.
+                    // Only a full replacement can prune sparse exact-light caches.
+                    let water_only_result = matches!(&result, WorkResult::Mesh(r) if r.meshes.iter().all(|(_,m)| m.water_only));
+                    if !water_only_result {
+                        for p in job.versions.keys() {
+                            if !light_samples.contains_key(p) {
+                                state.lights.remove(p);
+                            }
+                        }
+                    }
                     state
                         .lights
                         .extend(light_samples.iter().map(|(&p, l)| (p, l.clone())));
@@ -624,7 +640,7 @@ fn update_streaming(
         if let Some(work) = work {
             let cache = std::mem::take(&mut state.cache);
             let previous = work
-                .targets()
+                .targets(world.0.world_height())
                 .into_iter()
                 .filter_map(|p| state.lights.get(&p).map(|l| (p, l.clone())))
                 .collect();
@@ -635,7 +651,7 @@ fn update_streaming(
                 .collect();
             let water_only = matches!(work, Work::Mesh(_))
                 && work
-                    .targets()
+                    .targets(world.0.world_height())
                     .iter()
                     .all(|p| state.water_dirty.contains(p) && state.lights.contains_key(p));
             match StreamJob::spawn(
@@ -671,7 +687,9 @@ fn update_streaming(
         let targets = state.desired.iter().map(|c| ChunkPos([c[0], 0, c[1]]));
         let mut keep = streaming::lighting_regions(&targets.collect());
         if let Some(job) = &state.job {
-            keep.extend(streaming::lighting_regions(&job.work.targets()));
+            keep.extend(streaming::lighting_regions(
+                &job.work.targets(world.0.world_height()),
+            ));
         }
         world.0.retain_regions(&keep);
     }
@@ -713,6 +731,23 @@ fn update_streaming(
         } else {
             0.
         };
+        let mut jobs: Vec<_> = state.recent_jobs.iter().copied().collect();
+        jobs.sort_unstable();
+        let percentile = |p: usize| {
+            jobs.get(jobs.len().saturating_sub(1) * p / 100)
+                .copied()
+                .unwrap_or_default()
+        };
+        info!(
+            "Terrain jobs: p50 {:?} p95 {:?} p99 {:?}; ready descriptors {}, nonempty chunks {}, voxel bytes {}, cache voxel bytes {}",
+            percentile(50),
+            percentile(95),
+            percentile(99),
+            world.0.chunk_count(),
+            world.0.nonempty_chunk_count(),
+            world.0.allocated_voxel_bytes(),
+            state.cache.allocated_voxel_bytes()
+        );
         info!(
             "Light work: {} cells, {} propagated, {} source columns generated, {} halo columns cached, {} applied chunk samples",
             state.light_cells,
@@ -736,7 +771,7 @@ fn update_streaming(
             "Stream idle: {} resident chunks, {} meshes, {} block bytes, {} terrain buffer bytes, peak {}, queue peak {}, jobs load {} mesh chunks {} discarded {}, worker total {:?} max {:?}, install max {:?}, stream update max {:?}, dirty latency max {:?}, recent frame p95 {:?} ({} samples)",
             world.0.chunks().count(),
             scene.renders.0.len(),
-            world.0.chunks().count() * 4096 * std::mem::size_of::<voxel_core::Block>(),
+            world.0.allocated_voxel_bytes(),
             state.mesh_bytes,
             state.peak_chunks,
             state.peak_pending,

@@ -32,7 +32,7 @@ fn identity() -> RegionIdentity {
 }
 fn load_column(store: &SaveStore, w: &mut World, c: [i32; 2]) {
     let id = w.region_identity().unwrap();
-    let targets = (-1..2).map(|y| ChunkPos([c[0], y, c[1]]));
+    let targets = w.world_height().chunks().map(|y| ChunkPos([c[0], y, c[1]]));
     let mut edits = w.overlay_snapshot();
     for p in crate::regions::needed_regions(targets) {
         if !edits.contains_region(p) {
@@ -43,7 +43,7 @@ fn load_column(store: &SaveStore, w: &mut World, c: [i32; 2]) {
     }
     let g = crate::worldgen::Generator::new(crate::worldgen::GenerationConfig {
         seed: id.seed,
-        version: 3,
+        version: id.generator,
     })
     .unwrap();
     for (p, c, _) in streaming::build_column(&g, edits, c, w.revision()).chunks {
@@ -616,8 +616,13 @@ fn v5_edits_water_player_journal_backup_and_eviction_survive_all_commit_interrup
         SaveStage::PlayerSaved,
     ] {
         let dir = Dir::new();
-        let (store, mut world, _) =
-            SaveStore::open_with(&dir.0, || Ok(streaming::new_large_world(42))).unwrap();
+        let (store, mut world, _) = SaveStore::open_with(&dir.0, || {
+            Ok(World::regional(RegionIdentity {
+                generator: 5,
+                ..streaming::new_large_world(42).region_identity().unwrap()
+            }))
+        })
+        .unwrap();
         let mut inventory = store.load_player(&mut world).unwrap();
         let id = world.region_identity().unwrap();
         assert_eq!(id.generator, 5);
@@ -785,4 +790,150 @@ fn additive_biome_block_ids_do_not_reinterpret_historical_materials() {
         assert_eq!(decode(&b).unwrap().region_identity(), Some(id));
         assert_eq!(u32_at(&b, 8), if version == 3 { 4 } else { 5 });
     }
+}
+
+#[test]
+fn v6_high_deep_edits_inventory_binding_and_every_journal_boundary_recover() {
+    use crate::inventory::{Inventory, Item};
+    for stage in [
+        SaveStage::SessionPrepared,
+        SaveStage::WorldSaved,
+        SaveStage::PlayerSaved,
+    ] {
+        let dir = Dir::new();
+        let (store, mut w, _) =
+            SaveStore::open_with(&dir.0, || Ok(streaming::new_large_world(42))).unwrap();
+        let mut inv = store.load_player(&mut w).unwrap();
+        let identity = w.region_identity().unwrap();
+        let root = fs::read(store.path()).unwrap();
+        assert_eq!(root.len(), 64);
+        assert_eq!(u32_at(&root, 8), 5);
+        assert_eq!(u32_at(&root, 32), 6);
+        for c in [[-5, -1], [-4, 0]] {
+            load_column(&store, &mut w, c);
+        }
+        let edits = [
+            (BlockPos([-65, -64, -1]), Block::Air),
+            (BlockPos([-65, -48, -1]), Block::Air),
+            (BlockPos([-64, 128, 1]), Block::Wood),
+            (BlockPos([-64, 191, 1]), Block::WaterSource),
+        ];
+        for (p, b) in edits {
+            w.set_block(p, b).unwrap();
+        }
+        inv.insert(Item::Sand, 17);
+        inv.select(8);
+        w.time.advance(1234);
+        let expected: Inventory = inv.clone();
+        assert!(
+            store
+                .save_player_with(&w, &inv, true, |s| if s == stage {
+                    Err(io::Error::other("isolated v6 recovery fixture"))
+                } else {
+                    Ok(())
+                })
+                .is_err()
+        );
+        w.evict_column([-5, -1]);
+        w.evict_column([-4, 0]);
+        drop(store);
+        let (store, mut restored, _) = SaveStore::open_with(&dir.0, || {
+            panic!("initialized v6 must never regenerate identity")
+        })
+        .unwrap();
+        let got = store.load_player(&mut restored).unwrap();
+        assert_eq!(got.slots(), expected.slots());
+        assert_eq!(got.selected(), expected.selected());
+        assert_eq!(restored.region_identity(), Some(identity));
+        assert_eq!(restored.time, w.time);
+        for c in [[-5, -1], [-4, 0]] {
+            load_column(&store, &mut restored, c);
+        }
+        for (p, b) in edits {
+            assert_eq!(restored.block(p), b);
+        }
+        let foreign = World::regional(RegionIdentity {
+            generator: 5,
+            ..identity
+        });
+        assert!(store.save_player_session(&foreign, &got, true).is_err());
+        assert_eq!(fs::read(store.path()).unwrap(), root);
+    }
+}
+
+#[test]
+fn region_v1_validates_height_by_identity_and_retains_its_bounded_record_budget() {
+    let id6 = RegionIdentity {
+        generator: 6,
+        ..identity()
+    };
+    let p = RegionPos([0, 0]);
+    let edits = Arc::new(BTreeMap::from([
+        (BlockPos([1, -64, 1]), Block::Air),
+        (BlockPos([1, 191, 1]), Block::Wood),
+    ]));
+    let encoded = encode_region(id6, p, &edits).unwrap();
+    assert_eq!(u32_at(&encoded, 8), 1);
+    assert_eq!(encoded.len(), 64 + 2 * 14);
+    assert_eq!(decode_region(&encoded, id6, p).unwrap(), edits);
+    assert!(
+        encode_region(
+            RegionIdentity {
+                generator: 5,
+                ..id6
+            },
+            p,
+            &edits
+        )
+        .is_err()
+    );
+    for y in [-65, 192] {
+        let invalid = Arc::new(BTreeMap::from([(BlockPos([1, y, 1]), Block::Air)]));
+        assert!(matches!(
+            encode_region(id6, p, &invalid),
+            Err(FormatError::Coordinates)
+        ));
+        let mut bad = encoded.clone();
+        bad[68..72].copy_from_slice(&y.to_le_bytes());
+        bad = finish(bad);
+        assert!(decode_region(&bad, id6, p).is_err());
+    }
+    let mut map = BTreeMap::new();
+    for x in 0..64 {
+        for y in -16..32 {
+            for z in 0..64 {
+                map.insert(BlockPos([x, y, z]), Block::Air);
+            }
+        }
+    }
+    assert_eq!(map.len(), id6.max_region_records());
+    let mut w = World::regional(id6);
+    w.install_region(p, Arc::new(map.clone()));
+    w.insert_chunk(ChunkPos([0, 8, 0]), crate::Chunk::default());
+    let revision = w.revision();
+    assert_eq!(
+        w.set_block(BlockPos([0, 128, 0]), Block::Wood),
+        Err(crate::interaction::EditError::RegionCapacity)
+    );
+    assert_eq!(w.revision(), revision);
+    assert_eq!(w.edit_count(), MAX_REGION_RECORDS);
+    w.insert_chunk(ChunkPos([0, 0, 0]), crate::Chunk::filled(Block::Stone));
+    w.set_block(BlockPos([8, 8, 8]), Block::Air).unwrap(); // replacement still possible at capacity
+    let full = encode_region(id6, p, &Arc::new(map.clone())).unwrap();
+    assert_eq!(full.len(), MAX_REGION_FILE);
+    assert_eq!(
+        decode_region(&full, id6, p).unwrap().len(),
+        MAX_REGION_RECORDS
+    );
+    map.insert(BlockPos([0, 128, 0]), Block::Wood);
+    assert!(matches!(
+        encode_region(id6, p, &Arc::new(map)),
+        Err(FormatError::TooLarge)
+    ));
+    let mut oversize = full;
+    oversize.push(0);
+    assert!(matches!(
+        decode_region(&oversize, id6, p),
+        Err(FormatError::TooLarge)
+    ));
 }

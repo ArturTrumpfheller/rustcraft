@@ -21,9 +21,18 @@ impl RegionIdentity {
     pub fn format_version(self) -> u32 {
         if self.generator == 3 { 4 } else { 5 }
     }
+    pub fn world_height(self) -> crate::bounds::WorldHeight {
+        crate::bounds::WorldHeight::for_generator(self.generator)
+            .expect("validated regional identity")
+    }
+    /// Keep the historical record budget: eight full maps fit the 32 MiB journal.
+    /// V6 permits these records anywhere in its taller volume, never truncates.
+    pub fn max_region_records(self) -> usize {
+        MAX_REGION_RECORDS
+    }
     pub fn validate_generator(self) -> Result<(), crate::worldgen::UnsupportedGenerator> {
         match self.generator {
-            3..=5 => Ok(()),
+            3..=6 => Ok(()),
             v => Err(crate::worldgen::UnsupportedGenerator(v)),
         }
     }

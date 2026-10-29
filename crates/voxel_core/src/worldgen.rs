@@ -10,7 +10,7 @@ pub use local::Sampler;
 
 pub const GENERATOR_VERSION: u32 = 1;
 /// Default for newly created regional worlds; historical defaults remain frozen.
-pub const CURRENT_LOCAL_GENERATOR: u32 = 5;
+pub const CURRENT_LOCAL_GENERATOR: u32 = 6;
 pub const DEFAULT_SEED: u64 = 2026;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GenerationConfig {
@@ -79,7 +79,7 @@ fn noise(seed: u64, x: i32, z: i32, scale: i32, salt: u64) -> i32 {
 }
 impl Generator {
     pub fn new(config: GenerationConfig) -> Result<Self, UnsupportedGenerator> {
-        if ![GENERATOR_VERSION, 2, 3, 4, 5].contains(&config.version) {
+        if ![GENERATOR_VERSION, 2, 3, 4, 5, 6].contains(&config.version) {
             return Err(UnsupportedGenerator(config.version));
         }
         if config.version >= 3 {
@@ -153,6 +153,9 @@ impl Generator {
         self.config
     }
 
+    pub fn world_height(&self) -> crate::bounds::WorldHeight {
+        crate::bounds::WorldHeight::for_generator(self.config.version).expect("validated generator")
+    }
     pub fn chunk_limit(&self) -> i32 {
         self.extent / 16
     }
@@ -168,7 +171,7 @@ impl Generator {
             return None;
         }
         if self.config.version >= 3 {
-            return Some(if self.config.version == 5 {
+            return Some(if self.config.version >= 5 {
                 biome::height(self.config.seed, x, z)
             } else if self.config.version == 4 {
                 terrain::height(self.config.seed, x, z)
@@ -180,7 +183,7 @@ impl Generator {
     }
     /// Historical worlds have no biome identity. Never reinterpret their generator.
     pub fn biome(&self, x: i32, z: i32) -> Option<Biome> {
-        (self.config.version == 5)
+        (self.config.version >= 5)
             .then(|| sample_biome(self.config.seed, x, z))
             .flatten()
     }

@@ -173,6 +173,7 @@ struct KeyboardCommands<'w> {
     gestures: ResMut<'w, MovementGestures>,
     time: Res<'w, Time<Real>>,
     player: Res<'w, PlayerState>,
+    voxel_world: Res<'w, crate::scene::VoxelWorld>,
     flow: Option<Res<'w, crate::session::ClientFlow>>,
     preferences: Option<Res<'w, crate::settings::Preferences>>,
 }
@@ -232,7 +233,7 @@ fn read_input(
     let enabled = !input.captured_this_frame
         && !input.reset_pending
         && !commands.player.awaiting_spawn
-        && commands.player.body.position[1] >= crate::player::RECOVERY_Y;
+        && commands.player.body.position[1] >= commands.voxel_world.0.world_height().recovery_y();
     commands
         .gestures
         .update(keyboard, bindings, commands.time.elapsed(), enabled);

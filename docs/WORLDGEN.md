@@ -1,5 +1,17 @@
 # Biome Generation v1 — Slice25 / generator v5
 
+## Current new-world generator: v6 (Slice 26)
+
+New worlds now select6, retaining manifest5. `WorldHeight` defines Y[-64,192),
+chunk Y[-4,12), with minimum inclusive / maximum exclusive. Every v6 cell in
+Y[-16,32) equals frozen v5 at the same seed/X/Z. New deeper cells are Stone;
+Y[32,192) is Air. Climate, biome distribution, surface materials, caves and tree
+crowns are unchanged. Uniform new slabs are returned without per-voxel work.
+Existing generators1–5, bounds and golden fixtures remain unchanged. The biome
+specification below documents v5 and the shared v6 surface stages. Earlier
+fixed-three-slab audits are historical. See [v6 goldens, readiness, limits and
+acceptance](VERTICAL_WORLD.md).
+
 New worlds use generator **5** in the existing regional **manifest v5**. All
 historical generator1–4 paths and goldens retain their exact output. Existing
 manifest v4 always means generator3; existing v5/gen4 stays v5/gen4. No world is

@@ -45,7 +45,7 @@ pub(super) fn decode_manifest(b: &[u8]) -> Result<World, FormatError> {
     if version == VERSIONED_REGIONAL_VERSION && generator < 4 {
         return Err(FormatError::Identity);
     }
-    if ![3, 4, 5].contains(&generator) {
+    if ![3, 4, 5, 6].contains(&generator) {
         return Err(FormatError::Generator(generator));
     }
     if u32_at(b, 12) != 0
@@ -70,7 +70,7 @@ pub(super) fn encode_region(
 ) -> Result<Vec<u8>, FormatError> {
     id.validate_generator()
         .map_err(|e| FormatError::Generator(e.0))?;
-    if !p.valid() || edits.len() > MAX_REGION_RECORDS {
+    if !p.valid() || edits.len() > id.max_region_records() {
         return Err(FormatError::TooLarge);
     }
     let mut b = vec![0; SIZE];
@@ -84,7 +84,7 @@ pub(super) fn encode_region(
     b[52..56].copy_from_slice(&p.0[0].to_le_bytes());
     b[56..60].copy_from_slice(&p.0[1].to_le_bytes());
     for (&pos, &block) in edits.iter() {
-        if RegionPos::of(pos) != p || !(-16..32).contains(&pos.0[1]) {
+        if RegionPos::of(pos) != p || !id.world_height().contains(pos.0[1]) {
             return Err(FormatError::Coordinates);
         }
         for v in pos.0 {
@@ -114,7 +114,7 @@ pub(super) fn decode_region(
         return Err(FormatError::Version(u32_at(b, 8)));
     }
     let count = u32_at(b, 12) as usize;
-    if count > MAX_REGION_RECORDS
+    if count > id.max_region_records()
         || u32_at(b, 16) as usize != count * 14
         || b.len() != SIZE + count * 14
     {
@@ -140,7 +140,7 @@ pub(super) fn decode_region(
         let pos = BlockPos(std::array::from_fn(|i| {
             i32::from_le_bytes(r[i * 4..i * 4 + 4].try_into().unwrap())
         }));
-        if RegionPos::of(pos) != p || !(-16..32).contains(&pos.0[1]) {
+        if RegionPos::of(pos) != p || !id.world_height().contains(pos.0[1]) {
             return Err(FormatError::Coordinates);
         }
         if previous.is_some_and(|old| pos <= old) {

@@ -1,5 +1,19 @@
 # RustCraft saves — v1/v2 snapshots, v3 overlays and v4/v5 regional worlds
 
+## Slice 26: generator6 uses existing manifest5 / region1
+
+The supported manifest5 generator list is4,5,6; manifest4 remains strictly3.
+No new file version or layout is needed. Generator6 defines Y[-64,192); existing
+generators retain Y[-16,32). Region1's existing signed coordinates and generator
+field validate records against that identity. Its historical196,608-record /
+2,752,576-byte cap remains, even in the taller volume. Gameplay rejects additional
+new-coordinate records before mutation; staged support/fluid edits share the cap.
+Eight maximum maps still fit the32 MiB coordinated journal. Existing player mode5,
+nonce/seed/generator binding, root fingerprint, backup/lock and replay protocols
+are unchanged. No old world is extended or rewritten on load. See
+[capacity policy and recovery tests](VERTICAL_WORLD.md#regional-and-recovery-budgets).
+Historical descriptions below retain their slice-specific context.
+
 ## Slice 24: versioned regional manifest v5
 
 New worlds write **manifest5 / generator4**. Existing manifest4 remains strictly

@@ -620,16 +620,15 @@ pub(super) fn paint(b: &Browser, c: &mut Canvas) {
             0.7,
             muted,
         );
-        c.centered(
-            -39.,
-            if b.page == Page::Create {
-                "EMPTY SEED = RANDOM / GENERATOR V4"
-            } else {
-                "ONLY THE DISPLAY NAME WILL CHANGE"
-            },
-            0.85,
-            muted,
-        );
+        let identity_note = if b.page == Page::Create {
+            format!(
+                "EMPTY SEED = RANDOM / GENERATOR V{}",
+                voxel_core::worldgen::CURRENT_LOCAL_GENERATOR
+            )
+        } else {
+            "ONLY THE DISPLAY NAME WILL CHANGE".into()
+        };
+        c.centered(-39., &identity_note, 0.85, muted);
         c.centered(-66., "TAB: NEXT FIELD / CTRL+A: CLEAR", 0.85, muted);
     } else if let Some(e) = b.entry() {
         c.centered(64., &clip(&e.name, 45), 1., cream);

@@ -87,6 +87,7 @@ pub enum EditError {
     OutOfBounds,
     NotLoaded,
     SaveRequired,
+    RegionCapacity,
     InventoryFull,
     EmptySlot,
     Occupied,

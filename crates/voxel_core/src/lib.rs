@@ -1,5 +1,6 @@
 //! Engine-independent voxel storage, coordinates, fluids and surface generation.
 
+pub mod bounds;
 mod chunk;
 pub mod drops;
 pub mod fluid;
@@ -35,3 +36,6 @@ mod bucket_tests;
 
 #[cfg(test)]
 mod biome_block_tests;
+
+#[cfg(test)]
+mod vertical_tests;

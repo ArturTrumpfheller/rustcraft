@@ -188,7 +188,7 @@ fn edit_and_target(
         if let Ok(Some(change)) = result {
             ctx.inventory.message = "";
             for &changed in change.changes() {
-                ctx.dirty.mark(changed);
+                ctx.dirty.mark_in(changed, ctx.world.0.world_height());
             }
         }
     }

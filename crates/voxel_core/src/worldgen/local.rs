@@ -7,7 +7,7 @@ pub(super) fn height(seed: u64, x: i32, z: i32) -> i32 {
         / 1024
 }
 fn surface(g: &Generator, x: i32, z: i32) -> i32 {
-    if g.config.version == 5 {
+    if g.config.version >= 5 {
         super::biome::height(g.config.seed, x, z)
     } else if g.config.version == 4 {
         super::terrain::height(g.config.seed, x, z)
@@ -39,15 +39,27 @@ pub(super) fn terrain(g: &Generator, p: BlockPos, h: i32) -> Block {
 }
 fn layers(g: &Generator, p: BlockPos, h: i32, column: Option<super::biome::Column>) -> Block {
     let [x, y, z] = p.0;
+    if g.config.version == 6
+        && g.world_height().contains(y)
+        && (-g.extent..g.extent).contains(&x)
+        && (-g.extent..g.extent).contains(&z)
+    {
+        if y < crate::bounds::WorldHeight::HISTORICAL.min {
+            return Block::Stone;
+        }
+        if y >= crate::bounds::WorldHeight::HISTORICAL.max {
+            return Block::Air;
+        }
+    }
     if !(-g.extent..g.extent).contains(&x)
         || !(-g.extent..g.extent).contains(&z)
-        || !(-16..32).contains(&y)
+        || !g.world_height().contains(y)
         || y > h
         || cave(g, x, y, z)
     {
         return Block::Air;
     }
-    if g.config.version == 5 {
+    if g.config.version >= 5 {
         let c = column.unwrap_or_else(|| super::biome::column(g.config.seed, x, z));
         return if y == h {
             c.top
@@ -72,10 +84,10 @@ fn trees(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Vec<Tree> {
     for gz in (min[1] - 3).div_euclid(8)..=(max[1] + 3).div_euclid(8) {
         for gx in (min[0] - 3).div_euclid(8)..=(max[0] + 3).div_euclid(8) {
             let h = hash(g.config.seed, gx, gz, 71);
-            if g.config.version != 5 && h.is_multiple_of(5) {
+            if g.config.version < 5 && h.is_multiple_of(5) {
                 continue;
             }
-            let (x, z, h) = if g.config.version == 5 {
+            let (x, z, h) = if g.config.version >= 5 {
                 super::biome::candidate(g.config.seed, gx, gz)
             } else {
                 (
@@ -96,7 +108,7 @@ fn trees(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Vec<Tree> {
             {
                 continue;
             }
-            if g.config.version == 5
+            if g.config.version >= 5
                 && (h >> 24) % 1000 >= super::biome::tree_density(g.config.seed, x, z)
             {
                 continue;
@@ -115,7 +127,7 @@ fn trees(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Vec<Tree> {
                 continue;
             }
             let root = terrain(g, BlockPos([x, ground, z]), ground);
-            if root != Block::Grass && !(g.config.version == 5 && root == Block::SnowyGround) {
+            if root != Block::Grass && !(g.config.version >= 5 && root == Block::SnowyGround) {
                 continue;
             }
             if (-2..=2).all(|dx| (-2..=2).all(|dz| surface(g, x + dx, z + dz) < ground + trunk - 1))
@@ -142,7 +154,7 @@ fn sample(
     let b = layers(g, p, h, column);
     if b != Block::Air
         || y <= h
-        || !(-16..32).contains(&y)
+        || !g.world_height().contains(y)
         || !(-g.extent..g.extent).contains(&x)
         || !(-g.extent..g.extent).contains(&z)
     {
@@ -167,14 +179,26 @@ fn sample(
 }
 pub(super) fn point(g: &Generator, p: BlockPos) -> Block {
     let [x, y, z] = p.0;
+    if g.config.version == 6
+        && g.world_height().contains(y)
+        && (-g.extent..g.extent).contains(&x)
+        && (-g.extent..g.extent).contains(&z)
+    {
+        if y < crate::bounds::WorldHeight::HISTORICAL.min {
+            return Block::Stone;
+        }
+        if y >= crate::bounds::WorldHeight::HISTORICAL.max {
+            return Block::Air;
+        }
+    }
     if !(-g.extent..g.extent).contains(&x)
         || !(-g.extent..g.extent).contains(&z)
-        || !(-16..32).contains(&y)
+        || !g.world_height().contains(y)
     {
         return Block::Air;
     }
     let h = surface(g, x, z);
-    let column = (g.config.version == 5).then(|| super::biome::column(g.config.seed, x, z));
+    let column = (g.config.version >= 5).then(|| super::biome::column(g.config.seed, x, z));
     let b = layers(g, p, h, column);
     // A v4 root may sit two blocks above this cell's surface. A five-block
     // trunk plus the crown then reaches h+8. Keep the frozen v3 shortcut.
@@ -194,7 +218,7 @@ impl Plan {
     fn new(g: &Generator, c: [i32; 2]) -> Self {
         let min = [c[0] * 16 - 1, c[1] * 16 - 1];
         let max = [min[0] + 17, min[1] + 17];
-        let materials = if g.config.version == 5 {
+        let materials = if g.config.version >= 5 {
             super::biome::columns(g.config.seed, min)
         } else {
             Vec::new()
@@ -202,7 +226,7 @@ impl Plan {
         let mut heights = Vec::with_capacity(18 * 18);
         for z in min[1]..=max[1] {
             for x in min[0]..=max[0] {
-                heights.push(if g.config.version == 5 {
+                heights.push(if g.config.version >= 5 {
                     materials[heights.len()].height
                 } else {
                     surface(g, x, z)
@@ -260,9 +284,19 @@ impl<'a> Sampler<'a> {
         let limit = self.g.chunk_limit();
         if !(-limit..limit).contains(&p.0[0])
             || !(-limit..limit).contains(&p.0[2])
-            || !(-1..2).contains(&p.0[1])
+            || !self.g.world_height().chunks().contains(&p.0[1])
         {
             return None;
+        }
+        // V6 freezes v5 surface/caves/trees; deeper slabs are solid Stone and
+        // the old upper boundary remains empty. These proofs avoid 13 voxel scans.
+        if self.g.config.version == 6 {
+            if p.0[1] < crate::bounds::WorldHeight::HISTORICAL.chunks().start {
+                return Some(Chunk::filled(Block::Stone));
+            }
+            if p.0[1] >= crate::bounds::WorldHeight::HISTORICAL.chunks().end {
+                return Some(Chunk::default());
+            }
         }
         let mut c = Chunk::default();
         for y in 0..16 {
@@ -273,6 +307,7 @@ impl<'a> Sampler<'a> {
                 }
             }
         }
+        c.compact();
         Some(c)
     }
 }

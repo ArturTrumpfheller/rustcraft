@@ -1,12 +1,22 @@
 # RustCraft
 
+## Vertical World Expansion (Slice 26)
+
+New worlds use generator6 with Y[-64,192). The five v5 biomes/surface geography
+remain, with Stone below the old floor and empty sky above the old ceiling.
+Historical worlds/generators1–5 retain their exact bounds and output. Compact
+Air/Stone chunk descriptors avoid allocating16 full voxel chunks per column;
+empty sky also skips meshing/light caches. Existing save layouts and bounded
+journal/region budgets remain. [Architecture and Void/Fish testing](docs/VERTICAL_WORLD.md),
+[measurements and remaining native acceptance](docs/performance/slice26/README.md).
+
 **RustCraft** is a public, experimental Minecraft-inspired voxel sandbox written in Rust. The current v0.1 prototype displays a finite, procedurally generated block world with a first-person **walking player**, gravity, jumping, voxel collision and editable blocks. The long-term goal is a Classic-style editable world, followed by survival and original sandbox mechanics.
 
 RustCraft is an independent project, not a Minecraft source port, and is not affiliated with or endorsed by Mojang or Microsoft.
 
 ## Biome Generation v1 (Slice 25)
 
-New worlds use generator5: broad Plains, Forest, Desert, Snowy Plains and Rocky
+Slice25 introduced generator5: broad Plains, Forest, Desert, Snowy Plains and Rocky
 Highlands, with continuous climate-driven terrain and vegetation transitions.
 Original Sand/Snowy Ground blocks are available from the inventory palette in
 both old and new worlds. F3 shows the current biome. Existing generators1–4 and
@@ -26,7 +36,7 @@ migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest upla
 ## Current prototype
 
 - Deterministic seeded terrain, rolling hills/valleys, a walkable cave network with surface entrance, and blocky trees.
-- 16³ chunks streamed in a **65,536×65,536×48** new-world rollout with local generation and regional saves; configurable load radius, bounded background generation/meshing and cache eviction.
+- 16³ chunks streamed in a **65,536×65,536×256** new-world rollout with local generation and regional saves; configurable load radius, bounded background generation/meshing and cache eviction.
 - Eleven original 16×16 pixel textures for grass, dirt, stone, bark, end-grain, opaque leaves and torches, using one shared nearest-filtered atlas.
 - Persistent 20-minute day/night cycle, procedural square sun/moon, sparse stars and matching terrain fog.
 - Placeable, persistent standing/wall torches (hotbar 6) with worker-based voxel block light.
@@ -42,7 +52,7 @@ migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest upla
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 25**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 26**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -232,11 +242,11 @@ In the prepared Codex cloud machine, first run `. /workspace/setup/env.sh` in ea
 | F3 while playing | Toggle the pixel debug overlay without releasing the mouse |
 | F5 while focused | Save world and inventory, including with inventory open or mouse released |
 
-The 0.6×1.8-block player spawns on or just above safe solid ground, with eyes 1.62 blocks above the feet. Walking accelerates toward 4.317 blocks/s; sprinting toward 5.612 and sneaking toward 1.295 blocks/s. Continuous sprint-jumps gain a bounded run-up bonus up to 6.4538 blocks/s. Sprinting smoothly widens the current base FOV by 9%. Shift lowers the body to 1.5 blocks and the eye to 1.32; standing requires headroom. Sneak guards supported ledges, but jumping or removing support still permits falling. See [movement tuning and limits](docs/MOVEMENT.md). Falling below Y=-32 automatically respawns the player. Escape or focus loss pauses the local simulation, including gravity; choose Fortsetzen or press Escape to continue. Inventory keeps gravity, collision and normal damping running at fixed 60 Hz. Pause/settings and focus loss freeze physics. Inventory/focus/capture/respawn reset double-W detection; modal-held movement and jump keys must be released before reuse.
+The 0.6×1.8-block player spawns on or just above safe solid ground, with eyes 1.62 blocks above the feet. Walking accelerates toward 4.317 blocks/s; sprinting toward 5.612 and sneaking toward 1.295 blocks/s. Continuous sprint-jumps gain a bounded run-up bonus up to 6.4538 blocks/s. Sprinting smoothly widens the current base FOV by 9%. Shift lowers the body to 1.5 blocks and the eye to 1.32; standing requires headroom. Sneak guards supported ledges, but jumping or removing support still permits falling. See [movement tuning and limits](docs/MOVEMENT.md). Falling one chunk below the world floor automatically respawns the player (v6 Y=-80; historical Y=-32). Escape or focus loss pauses the local simulation, including gravity; choose Fortsetzen or press Escape to continue. Inventory keeps gravity, collision and normal damping running at fixed 60 Hz. Pause/settings and focus loss freeze physics. Inventory/focus/capture/respawn reset double-W detection; modal-held movement and jump keys must be released before reuse.
 
 The center crosshair aims at blocks within five blocks of the displayed eye. A black outline marks the current target; the hotbar frames the selected slot and shows actual counts. Empty clicks and empty selected slots do nothing. Placement can replace water cells; colliding blocks cannot intersect the current/displayed player body. Torches require a loaded solid floor or clicked wall, allow walking through them, and use selection bounds matching their shaft and tip. Horizontal face clicks mount a torch on that wall; underside placement is rejected. Mining a support also collects all attached torches; if the complete item set cannot fit, the entire action is refused. Ordinary held blocks retain their original Slice20 pose; torches have a modest lift and left lean. Simultaneous buttons prioritize breaking. Closing inventory returns a held stack only if it all fits; otherwise NO ROOM keeps it open. Outside clicks never discard items. Normal application close saves a held stack and restores it with inventory open next time.
 
-New regional worlds permit edits within **X/Z [-32768,32768), Y [-16,32)**. Legacy v3 worlds retain **X/Z [-64,64)**; v1/v2 snapshots retain **X/Z [-32,32)** with the same Y bounds. Outside the corresponding box, edits are rejected. Pending chunks temporarily block collision/rays and reject edits until ready; they are never treated as a hole in the floor. R preserves edits/inventory and finds clear sky-exposed ground near the starting area, avoiding tree tops and unsupported columns. Loading uses the same search; player position and velocity are not saved.
+New generator6 regional worlds permit edits within **X/Z [-32768,32768), Y [-64,192)**. Existing regional generators3–5 keep Y[-16,32). Legacy v3 worlds retain **X/Z [-64,64)**; v1/v2 snapshots retain **X/Z [-32,32)** with the same Y bounds. Outside the corresponding box, edits are rejected. Pending chunks temporarily block collision/rays and reject edits until ready; they are never treated as a hole in the floor. R preserves edits/inventory and finds clear sky-exposed ground near the starting area, avoiding tree tops and unsupported columns. Loading uses the same search; player position and velocity are not saved.
 
 Movement speed is independent of diagonal input. Mouse sensitivity does not depend on frame time. The window title also lists the essential controls.
 
@@ -245,7 +255,7 @@ Movement speed is independent of diagonal input. Mouse sensitivity does not depe
 Create worlds in **Spielen → Neue Welt**. A decimal unsigned 64-bit seed is
 validated before creation; an empty field generates a fresh stored seed.
 `RUSTCRAFT_WORLD_SEED` optionally prefills that form and never changes an existing
-world. New worlds use generator v5; generators v1/v2/v3/v4 for historical saves remain frozen.
+world. New worlds use generator v6; generators v1–v5 for historical saves remain frozen.
 Display names can repeat; internal directory IDs are unique and never renamed.
 See [safe multi-world management](docs/WORLDS.md).
 
@@ -255,10 +265,12 @@ New v5 worlds save **seed + generator version + world identity** in a manifest a
 
 ## Streaming and compatibility
 
-A confirmed new-world creation produces a **v5 regional world** with generator v5 and
-X/Z [-32768,32768), Y [-16,32). There is no map-sized startup allocation.
+A confirmed new-world creation produces a **v5 regional world** with generator v6 and
+X/Z [-32768,32768), Y [-64,192). There is no map-sized startup allocation.
 `RUSTCRAFT_LOAD_RADIUS=1`, `2` (default) or `3` selects a radius independently of
-world extent: at most 75 chunks by default, 147 at radius 3. Distant voxel data,
+world extent: at most400 ready chunk descriptors by default,784 at radius3.
+Uniform Air/Stone descriptors allocate no voxel arrays; mixed chunks materialize
+on demand. Historical worlds keep75/default and147/max descriptors. Distant voxel data,
 meshes, GPU assets and clean regional overlays unload. Spawn is not pinned.
 
 One background terrain worker loads regional edits, locally generates new columns
@@ -295,8 +307,9 @@ rejected until saving succeeds; dirty data is retained while its graphics unload
 The panel shows yellow `SAVING...`, green `SAVED`, red `SAVE ERROR - F5 RETRY` or
 `LOAD ERROR - F5 RETRY`. A final-save error keeps the window open for retry.
 
-For v4, `world.rcw` is a fixed **64-byte identity manifest**, not the whole world.
-Only dirty 64×64×48 region overlays are saved under sharded `regions/` paths.
+For regional v4/v5, `world.rcw` is a fixed **64-byte identity manifest**, not the whole world.
+Only dirty64×64 region overlays are saved under sharded `regions/` paths, with
+identity-dependent height and a196,608-record cap per region.
 They include explicit Air and validate identity, coordinates, sizes and checksums.
 Each changed region uses synced temporary/backup/rename replacement with one
 `.rcw.bak` previous generation. Saving is atomic **per file**, not one transaction

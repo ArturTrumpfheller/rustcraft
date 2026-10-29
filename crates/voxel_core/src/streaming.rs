@@ -45,7 +45,7 @@ pub struct LightMetrics {
 #[derive(Default)]
 pub struct TerrainCache {
     identity: Option<GenerationConfig>,
-    columns: BTreeMap<Column, [Chunk; 3]>,
+    columns: BTreeMap<Column, Vec<Chunk>>,
 }
 impl TerrainCache {
     pub fn retain(&mut self, desired: &BTreeSet<Column>) {
@@ -54,6 +54,13 @@ impl TerrainCache {
                 .iter()
                 .any(|d| (c[0] - d[0]).abs() <= 1 && (c[1] - d[1]).abs() <= 1)
         });
+    }
+    pub fn allocated_voxel_bytes(&self) -> usize {
+        self.columns
+            .values()
+            .flatten()
+            .map(Chunk::allocated_bytes)
+            .sum()
     }
     pub fn columns(&self) -> usize {
         self.columns.len()
@@ -100,7 +107,9 @@ pub fn build_column_cached(
     let start = Instant::now();
     let limit = generator.chunk_limit();
     let targets = if column.iter().all(|c| (-limit..limit).contains(c)) {
-        (-1..2)
+        generator
+            .world_height()
+            .chunks()
             .map(|y| ChunkPos([column[0], y, column[1]]))
             .collect()
     } else {
@@ -125,10 +134,16 @@ pub fn build_column_cached(
         generated,
         start,
     );
-    let chunks = batch
-        .meshes
-        .into_iter()
-        .map(|(p, m)| (p, source.chunk(p).unwrap().clone(), m))
+    let mut meshes: BTreeMap<_, _> = batch.meshes.into_iter().collect();
+    let chunks = targets
+        .iter()
+        .map(|&p| {
+            (
+                p,
+                source.chunk(p).unwrap().clone(),
+                meshes.remove(&p).unwrap_or_default(),
+            )
+        })
         .collect();
     ColumnResult {
         column,
@@ -139,7 +154,7 @@ pub fn build_column_cached(
         elapsed: start.elapsed(),
     }
 }
-/// Initial spawn preparation is exactly one column (12 KiB), before the App.
+/// Initial spawn preparation is one compact column, before the App.
 /// No full-world generation is performed by the streamed client.
 pub fn prepare_spawn(
     world: &mut World,
@@ -158,7 +173,7 @@ pub fn prepare_column(
     let sampler = generator.sampler(column);
     let edits = world.overlay_snapshot();
     // Startup preparation only: this column can later be evicted like any other.
-    for y in -1..2 {
+    for y in generator.world_height().chunks() {
         let p = ChunkPos([column[0], y, column[1]]);
         let mut chunk = sampler.chunk(p).unwrap();
         for (&pos, &block) in edits.range_x(
@@ -181,8 +196,11 @@ pub fn new_world(seed: u64) -> World {
 /// is supplied on the worker, never interpreted as transparent pending terrain.
 pub fn mesh_snapshot(world: &World, targets: &BTreeSet<ChunkPos>) -> World {
     let mut snapshot = World::default();
+    if let Some(id) = world.identity() {
+        snapshot.set_mesh_identity(id);
+    }
     for c in crate::lighting::source_columns(targets) {
-        for y in -1..2 {
+        for y in world.world_height().chunks() {
             let p = ChunkPos([c[0], y, c[1]]);
             if let Some(chunk) = world.chunk(p) {
                 snapshot.insert_mesh_chunk(p, chunk.clone());
@@ -202,24 +220,35 @@ fn lit_source(
         cache.columns.clear();
         cache.identity = Some(generator.config());
     }
+    source.set_mesh_identity(StreamIdentity {
+        seed: generator.config().seed,
+        generator: generator.config().version,
+    });
+    let height = generator.world_height();
     let mut generated = 0;
     let limit = generator.chunk_limit();
     for c in crate::lighting::source_columns(targets) {
         if !c.iter().all(|v| (-limit..limit).contains(v)) {
             continue;
         }
-        if (-1..2).all(|y| source.chunk(ChunkPos([c[0], y, c[1]])).is_some()) {
+        if height
+            .chunks()
+            .all(|y| source.chunk(ChunkPos([c[0], y, c[1]])).is_some())
+        {
             continue;
         }
         let chunks = cache.columns.entry(c).or_insert_with(|| {
             generated += 1;
             let sampler = generator.sampler(c);
-            std::array::from_fn(|i| sampler.chunk(ChunkPos([c[0], i as i32 - 1, c[1]])).unwrap())
+            height
+                .chunks()
+                .map(|y| sampler.chunk(ChunkPos([c[0], y, c[1]])).unwrap())
+                .collect()
         });
-        for y in -1..2 {
+        for y in height.chunks() {
             let p = ChunkPos([c[0], y, c[1]]);
             if source.chunk(p).is_none() {
-                source.insert_mesh_chunk(p, chunks[(y + 1) as usize].clone());
+                source.insert_mesh_chunk(p, chunks[(y - height.chunks().start) as usize].clone());
             }
         }
     }
@@ -233,6 +262,24 @@ fn lit_source(
         }
     }
     (source, generated)
+}
+pub fn needs_mesh(world: &World, p: ChunkPos) -> bool {
+    let Some(c) = world.chunk(p) else {
+        return false;
+    };
+    if c.is_empty() {
+        return false;
+    }
+    if c.uniform().is_some_and(|b| b.is_opaque()) {
+        return crate::fluid::NEIGHBORS.iter().any(|d| {
+            let n = ChunkPos(std::array::from_fn(|a| p.0[a] + d[a]));
+            !world
+                .chunk(n)
+                .and_then(Chunk::uniform)
+                .is_some_and(|b| b.is_opaque())
+        });
+    }
+    true
 }
 pub struct MeshBatchResult {
     pub meshes: Vec<(ChunkPos, ChunkMesh)>,
@@ -249,10 +296,35 @@ fn lit_batch(
     generated: usize,
     start: Instant,
 ) -> MeshBatchResult {
+    let sparse = source.world_height() == crate::bounds::WorldHeight::EXTENDED;
+    if sparse && targets.iter().all(|&p| !needs_mesh(source, p)) {
+        return MeshBatchResult {
+            meshes: targets
+                .iter()
+                .filter(|p| force.contains(p) || previous.contains_key(p))
+                .map(|&p| (p, ChunkMesh::default()))
+                .collect(),
+            lights: BTreeMap::new(),
+            lighting: LightMetrics {
+                generated_columns: generated,
+                ..Default::default()
+            },
+            sampled_border_cells: 0,
+            elapsed: start.elapsed(),
+        };
+    }
     let light = crate::lighting::Skylight::for_chunks(source, targets);
     let mut meshes = vec![];
     let mut lights = BTreeMap::new();
     for &p in targets {
+        // Air has no faces and needs no 18³ light cache. Enclosed uniform Stone
+        // likewise has no geometry. Edits can materialize either on the next job.
+        if sparse && !needs_mesh(source, p) {
+            if force.contains(&p) || previous.contains_key(&p) {
+                meshes.push((p, ChunkMesh::default()));
+            }
+            continue;
+        }
         let data = light.chunk(p);
         if force.contains(&p) || previous.get(&p) != Some(&data) {
             meshes.push((p, crate::mesh::mesh_chunk_lit(source, p, &light)));
@@ -267,7 +339,9 @@ fn lit_batch(
             propagated: light.propagated + light.block_propagated,
             generated_columns: generated,
         },
-        sampled_border_cells: generated * 3 * 4096,
+        sampled_border_cells: generated
+            * crate::bounds::WorldHeight::HISTORICAL.chunk_count()
+            * 4096,
         elapsed: start.elapsed(),
     }
 }
@@ -334,7 +408,9 @@ pub fn remesh_water(
             generated_columns: generated,
             ..Default::default()
         },
-        sampled_border_cells: generated * 3 * 4096,
+        sampled_border_cells: generated
+            * crate::bounds::WorldHeight::HISTORICAL.chunk_count()
+            * 4096,
         elapsed: start.elapsed(),
     }
 }

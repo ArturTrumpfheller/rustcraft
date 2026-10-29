@@ -524,7 +524,11 @@ pub fn spawn_position(world: &World, config: &PhysicsConfig, preferred: [f64; 3]
                 {
                     continue;
                 }
-                if !world.ready(BlockPos([x, 0, z])) {
+                if !world
+                    .world_height()
+                    .chunks()
+                    .all(|cy| world.ready(BlockPos([x, cy * 16, z])))
+                {
                     continue;
                 }
                 for y in (world_min[1]..world_max[1]).rev() {
