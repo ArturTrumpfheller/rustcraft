@@ -10,14 +10,22 @@ assets, terrain tuning, cave algorithm, biomes or movement abilities.
 | Legacy snapshots / generator1 | [-32,32) | [-16,32) | [-1,2) |
 | Finite generator2 | [-64,64) | [-16,32) | [-1,2) |
 | Regional generators3–5 | [-32768,32768) | [-16,32) | [-1,2) |
-| New regional generator6 | [-32768,32768) | [-64,192) | [-4,12) |
+| Frozen regional generator6 | [-32768,32768) | [-64,192) | [-4,12) |
+| New regional generator7 | [-32768,32768) | [-64,192) | [-4,12) |
 
 `bounds::WorldHeight::for_generator` owns this contract. `World::bounds`,
 generation, collision readiness, edit validation, light dependencies, source
 snapshots, eviction and recovery derive their ranges from the identity. Minimum
 is inclusive, maximum exclusive: Y191 is editable; Y192 is known outside Air.
 Unknown generators are rejected by generation and persistence before loading.
-New catalogs select6; existing identities and their heights never change.
+New catalogs select7; existing identities and their heights never change.
+
+Slice27 retains these bounds/storage budgets. V7 adds bounded cave plans below
+-16, four Stone foundation layers[-64,-60), protected spawn and ordinary five-block
+roofs. Only chunks with real mixed cave geometry allocate voxel vectors. The
+existing light classifier includes those chunks automatically, with no full-height
+mode switch. The frozen v6 algorithm and measurements below remain historical;
+see [current v7 algorithm](WORLDGEN.md) and [v7 evidence](performance/slice27/README.md).
 
 Manifest5's generator field already supplies all required information, so v6
 uses the same exact64-byte envelope. Regional format1 still uses signed i32

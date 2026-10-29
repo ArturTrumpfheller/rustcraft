@@ -830,8 +830,19 @@ impl Drop for RegionalDir {
     }
 }
 fn large_app(path: &std::path::Path) -> App {
-    let (store, mut world, source) =
-        SaveStore::open_with(path, || Ok(streaming::new_large_world(42))).unwrap();
+    large_app_with_generator(path, voxel_core::worldgen::CURRENT_LOCAL_GENERATOR)
+}
+fn large_app_with_generator(path: &std::path::Path, version: u32) -> App {
+    let (store, mut world, source) = SaveStore::open_with(path, || {
+        Ok(voxel_core::World::regional(
+            voxel_core::regions::RegionIdentity {
+                seed: 42,
+                generator: version,
+                nonce: [27; 16],
+            },
+        ))
+    })
+    .unwrap();
     store.prepare_regional_spawn(&mut world).unwrap();
     let generator = streaming::prepare_spawn(&mut world).unwrap();
     let session = crate::persistence::SaveSession::new(store, &world, source);
@@ -1735,85 +1746,90 @@ fn water_only_jobs_reuse_applied_lighting_and_opaque_assets_then_evict_cleanly()
 }
 
 #[test]
-fn v6_upper_air_mesh_materialization_stale_rejection_eviction_and_reload() {
-    let dir = RegionalDir::new();
-    let mut app = large_app(&dir.0);
-    let upper = BlockPos([8, 128, 8]);
-    let deep = BlockPos([8, -48, 8]);
-    assert!(app.world().resource::<VoxelWorld>().0.ready(upper));
-    assert_eq!(
-        app.world().resource::<VoxelWorld>().0.block(upper),
-        Block::Air
-    );
-    assert!(
-        !app.world()
-            .resource::<ChunkRenders>()
-            .0
-            .contains_key(&upper.split().0)
-    );
-    edit(&mut app, upper, Block::Wood);
-    drain(&mut app);
-    assert!(
-        app.world()
-            .resource::<ChunkRenders>()
-            .0
-            .contains_key(&upper.split().0)
-    );
-    edit(&mut app, upper, Block::Air);
-    drain(&mut app);
-    assert!(app.world().resource::<VoxelWorld>().0.ready(upper));
-    assert!(
-        !app.world()
-            .resource::<ChunkRenders>()
-            .0
-            .contains_key(&upper.split().0)
-    );
-    let release = blocked_column(&mut app, [0, 0]);
-    edit(&mut app, upper, Block::Wood);
-    edit(&mut app, deep, Block::Air);
-    release.send(()).unwrap();
-    drain(&mut app);
-    assert!(app.world().resource::<StreamState>().discarded > 0);
-    assert!(
-        app.world()
-            .resource::<ChunkRenders>()
-            .0
-            .contains_key(&upper.split().0)
-    );
-    assert_geometry(&app, &BTreeSet::from([upper.split().0, deep.split().0]));
-    save_large(&mut app);
-    go(&mut app, [30, 30]);
-    assert!(!app.world().resource::<VoxelWorld>().0.ready(upper));
-    assert!(
-        !app.world()
-            .resource::<ChunkRenders>()
-            .0
-            .contains_key(&upper.split().0)
-    );
-    go(&mut app, [0, 0]);
-    assert_eq!(
-        app.world().resource::<VoxelWorld>().0.block(upper),
-        Block::Wood
-    );
-    assert_eq!(
-        app.world().resource::<VoxelWorld>().0.block(deep),
-        Block::Air
-    );
-    assert!(
-        app.world()
-            .resource::<VoxelWorld>()
-            .0
-            .allocated_voxel_bytes()
-            <= 9 * 16 * 4096
-    );
-    drop(app);
-    let app = large_app(&dir.0);
-    assert_eq!(
-        app.world().resource::<VoxelWorld>().0.block(upper),
-        Block::Wood
-    );
-    assert_eq!(
-        app.world().resource::<VoxelWorld>().0.block(deep),
-        Block::Air
-    );
+fn v6_and_v7_upper_air_mesh_materialization_stale_rejection_eviction_and_reload() {
+    for version in [6, 7] {
+        let dir = RegionalDir::new();
+        let mut app = large_app_with_generator(&dir.0, version);
+        let upper = BlockPos([8, 128, 8]);
+        let deep = (0..16)
+            .flat_map(|x| (0..16).map(move |z| BlockPos([x, -48, z])))
+            .find(|p| app.world().resource::<VoxelWorld>().0.block(*p) == Block::Stone)
+            .unwrap();
+        assert!(app.world().resource::<VoxelWorld>().0.ready(upper));
+        assert_eq!(
+            app.world().resource::<VoxelWorld>().0.block(upper),
+            Block::Air
+        );
+        assert!(
+            !app.world()
+                .resource::<ChunkRenders>()
+                .0
+                .contains_key(&upper.split().0)
+        );
+        edit(&mut app, upper, Block::Wood);
+        drain(&mut app);
+        assert!(
+            app.world()
+                .resource::<ChunkRenders>()
+                .0
+                .contains_key(&upper.split().0)
+        );
+        edit(&mut app, upper, Block::Air);
+        drain(&mut app);
+        assert!(app.world().resource::<VoxelWorld>().0.ready(upper));
+        assert!(
+            !app.world()
+                .resource::<ChunkRenders>()
+                .0
+                .contains_key(&upper.split().0)
+        );
+        let release = blocked_column(&mut app, [0, 0]);
+        edit(&mut app, upper, Block::Wood);
+        edit(&mut app, deep, Block::Air);
+        release.send(()).unwrap();
+        drain(&mut app);
+        assert!(app.world().resource::<StreamState>().discarded > 0);
+        assert!(
+            app.world()
+                .resource::<ChunkRenders>()
+                .0
+                .contains_key(&upper.split().0)
+        );
+        assert_geometry(&app, &BTreeSet::from([upper.split().0, deep.split().0]));
+        save_large(&mut app);
+        go(&mut app, [30, 30]);
+        assert!(!app.world().resource::<VoxelWorld>().0.ready(upper));
+        assert!(
+            !app.world()
+                .resource::<ChunkRenders>()
+                .0
+                .contains_key(&upper.split().0)
+        );
+        go(&mut app, [0, 0]);
+        assert_eq!(
+            app.world().resource::<VoxelWorld>().0.block(upper),
+            Block::Wood
+        );
+        assert_eq!(
+            app.world().resource::<VoxelWorld>().0.block(deep),
+            Block::Air
+        );
+        assert!(
+            app.world()
+                .resource::<VoxelWorld>()
+                .0
+                .allocated_voxel_bytes()
+                <= 9 * 16 * 4096
+        );
+        drop(app);
+        let app = large_app_with_generator(&dir.0, version);
+        assert_eq!(
+            app.world().resource::<VoxelWorld>().0.block(upper),
+            Block::Wood
+        );
+        assert_eq!(
+            app.world().resource::<VoxelWorld>().0.block(deep),
+            Block::Air
+        );
+    }
 }

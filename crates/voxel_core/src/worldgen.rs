@@ -3,6 +3,7 @@
 use crate::{Block, BlockPos, CHUNK_SIZE, Chunk, ChunkPos, LocalPos, World};
 
 pub mod biome;
+mod caves;
 mod local;
 pub use biome::{Biome, Climate, sample_biome, sample_climate};
 mod terrain;
@@ -10,7 +11,7 @@ pub use local::Sampler;
 
 pub const GENERATOR_VERSION: u32 = 1;
 /// Default for newly created regional worlds; historical defaults remain frozen.
-pub const CURRENT_LOCAL_GENERATOR: u32 = 6;
+pub const CURRENT_LOCAL_GENERATOR: u32 = 7;
 pub const DEFAULT_SEED: u64 = 2026;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GenerationConfig {
@@ -79,7 +80,7 @@ fn noise(seed: u64, x: i32, z: i32, scale: i32, salt: u64) -> i32 {
 }
 impl Generator {
     pub fn new(config: GenerationConfig) -> Result<Self, UnsupportedGenerator> {
-        if ![GENERATOR_VERSION, 2, 3, 4, 5, 6].contains(&config.version) {
+        if ![GENERATOR_VERSION, 2, 3, 4, 5, 6, 7].contains(&config.version) {
             return Err(UnsupportedGenerator(config.version));
         }
         if config.version >= 3 {
@@ -316,3 +317,6 @@ mod tests;
 
 #[cfg(test)]
 mod biome_tests;
+
+#[cfg(test)]
+mod cave_tests;

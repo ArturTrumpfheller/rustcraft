@@ -50,17 +50,17 @@ fn light(w: &World) -> Skylight {
 }
 #[test]
 fn identities_define_exclusive_bounds_and_old_worlds_never_expand() {
-    for version in 1..=6 {
+    for version in 1..=7 {
         let h = WorldHeight::for_generator(version).unwrap();
         assert_eq!(
             h,
-            if version == 6 {
+            if version >= 6 {
                 WorldHeight::EXTENDED
             } else {
                 WorldHeight::HISTORICAL
             }
         );
-        assert_eq!(h.chunk_count(), if version == 6 { 16 } else { 3 });
+        assert_eq!(h.chunk_count(), if version >= 6 { 16 } else { 3 });
         assert!(h.contains(h.min));
         assert!(h.contains(h.max - 1));
         assert!(!h.contains(h.min - 1));
@@ -70,7 +70,7 @@ fn identities_define_exclusive_bounds_and_old_worlds_never_expand() {
         assert!(g.chunk(ChunkPos([0, h.chunks().start - 1, 0])).is_none());
         assert!(g.chunk(ChunkPos([0, h.chunks().end, 0])).is_none());
     }
-    for version in 3..=6 {
+    for version in 3..=7 {
         let w = world(version);
         assert_eq!(w.bounds().0[0], -32768);
         assert_eq!(w.bounds().1[2], 32768);
@@ -83,9 +83,9 @@ fn identities_define_exclusive_bounds_and_old_worlds_never_expand() {
     }
     assert_eq!(
         streaming::new_large_world(42).identity().unwrap().generator,
-        6
+        7
     );
-    for v in [0, 7, u32::MAX] {
+    for v in [0, 8, u32::MAX] {
         assert!(WorldHeight::for_generator(v).is_err());
         assert!(
             Generator::new(GenerationConfig {

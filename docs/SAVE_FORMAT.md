@@ -1,5 +1,19 @@
 # RustCraft saves — v1/v2 snapshots, v3 overlays and v4/v5 regional worlds
 
+## Slice 27: generator7 in the existing envelopes
+
+New worlds select generator7. The64-byte manifest5, regional format1, player
+binding/fingerprint and coordinated redo journal remain unchanged. Generator7
+uses the same Y[-64,192) bounds and196,608-record regional capacity as6. Region
+nonce, seed and generator must all match exactly, including during journal replay.
+Explicit Air edits, water/torch states, inventory IDs and backups remain authoritative.
+No load rewrites/migrates a world. Existing generator6 remains6 and never gains
+v7 cave geometry. Generators1–6 and historical save/golden bytes remain frozen.
+Supported regional identities are3–7; generator8+ is rejected before recovery or
+creation can overwrite an existing bundle. Save-format versions are independent
+of generator versions. See [v7 algorithm](WORLDGEN.md).
+
+
 ## Slice 26: generator6 uses existing manifest5 / region1
 
 The supported manifest5 generator list is4,5,6; manifest4 remains strictly3.

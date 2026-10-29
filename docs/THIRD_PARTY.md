@@ -1,5 +1,14 @@
 # Third-party dependencies and asset inventory
 
+## Slice 27 provenance
+
+Cave-v7 geometry, tests, surveys, benchmark/capture tooling and documentation are
+original RustCraft work, MIT OR Apache-2.0. Gallery images capture actual v7
+procedural geometry using the existing original Stone/material atlas and shaders.
+The labeled lighting fixture adds supported existing torches only. No external
+source, noise library, texture, asset, crate or renderer feature was added.
+
+
 ## Slice 24 provenance
 
 Terrain-v4 integer composition, versioned identity support, tests, benchmark/survey

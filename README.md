@@ -1,8 +1,19 @@
 # RustCraft
 
+## Cave Generation v2 (Slice 27)
+
+New worlds use generator7: curved branching passages, medium chambers, occasional
+large caverns, deeper connections and uncommon real surface entrances. Existing
+generators1–6 retain exact geometry and save identities. Surface heights, five
+biomes, materials and tree models remain; caves preserve solid roofs, supported
+spawn and four Stone foundation layers. Uniform deep/upper chunks stay compact.
+No natural water, lava, ores or structures are generated.
+[Algorithm](docs/WORLDGEN.md), [measurements, genuine captures and Void/Fish tests](docs/performance/slice27/README.md).
+
+
 ## Vertical World Expansion (Slice 26)
 
-New worlds use generator6 with Y[-64,192). The five v5 biomes/surface geography
+Slice26 introduced generator6 with Y[-64,192). The five v5 biomes/surface geography
 remain, with Stone below the old floor and empty sky above the old ceiling.
 Historical worlds/generators1–5 retain their exact bounds and output. Compact
 Air/Stone chunk descriptors avoid allocating16 full voxel chunks per column;
@@ -52,7 +63,7 @@ migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest upla
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 26**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 27**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -246,7 +257,7 @@ The 0.6×1.8-block player spawns on or just above safe solid ground, with eyes 1
 
 The center crosshair aims at blocks within five blocks of the displayed eye. A black outline marks the current target; the hotbar frames the selected slot and shows actual counts. Empty clicks and empty selected slots do nothing. Placement can replace water cells; colliding blocks cannot intersect the current/displayed player body. Torches require a loaded solid floor or clicked wall, allow walking through them, and use selection bounds matching their shaft and tip. Horizontal face clicks mount a torch on that wall; underside placement is rejected. Mining a support also collects all attached torches; if the complete item set cannot fit, the entire action is refused. Ordinary held blocks retain their original Slice20 pose; torches have a modest lift and left lean. Simultaneous buttons prioritize breaking. Closing inventory returns a held stack only if it all fits; otherwise NO ROOM keeps it open. Outside clicks never discard items. Normal application close saves a held stack and restores it with inventory open next time.
 
-New generator6 regional worlds permit edits within **X/Z [-32768,32768), Y [-64,192)**. Existing regional generators3–5 keep Y[-16,32). Legacy v3 worlds retain **X/Z [-64,64)**; v1/v2 snapshots retain **X/Z [-32,32)** with the same Y bounds. Outside the corresponding box, edits are rejected. Pending chunks temporarily block collision/rays and reject edits until ready; they are never treated as a hole in the floor. R preserves edits/inventory and finds clear sky-exposed ground near the starting area, avoiding tree tops and unsupported columns. Loading uses the same search; player position and velocity are not saved.
+Generator6/7 regional worlds permit edits within **X/Z [-32768,32768), Y [-64,192)**. Existing regional generators3–5 keep Y[-16,32). Legacy v3 worlds retain **X/Z [-64,64)**; v1/v2 snapshots retain **X/Z [-32,32)** with the same Y bounds. Outside the corresponding box, edits are rejected. Pending chunks temporarily block collision/rays and reject edits until ready; they are never treated as a hole in the floor. R preserves edits/inventory and finds clear sky-exposed ground near the starting area, avoiding tree tops and unsupported columns. Loading uses the same search; player position and velocity are not saved.
 
 Movement speed is independent of diagonal input. Mouse sensitivity does not depend on frame time. The window title also lists the essential controls.
 
@@ -255,17 +266,17 @@ Movement speed is independent of diagonal input. Mouse sensitivity does not depe
 Create worlds in **Spielen → Neue Welt**. A decimal unsigned 64-bit seed is
 validated before creation; an empty field generates a fresh stored seed.
 `RUSTCRAFT_WORLD_SEED` optionally prefills that form and never changes an existing
-world. New worlds use generator v6; generators v1–v5 for historical saves remain frozen.
+world. New worlds use generator v7; generators v1–v6 for historical saves remain frozen.
 Display names can repeat; internal directory IDs are unique and never renamed.
 See [safe multi-world management](docs/WORLDS.md).
 
-Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, leaf transparency, ore distribution or emitted light from generated blocks. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
+Terrain uses coherent height variation with grass/dirt/stone layers. Generator7 caves form winding local networks, deeper chambers and uncommon routed surface entrances. Historical generators retain their original periodic tunnel/ramp geometry. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, leaf transparency, ore distribution or emitted light from generated blocks. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
 
 New v5 worlds save **seed + generator version + world identity** in a manifest and all edits in regional overlays, including explicit Air. Unmodified chunks reproduce locally from that identity. Loaded chunks and clean region maps are disposable caches; unsaved region maps remain pinned in RAM until successfully saved. v1/v2 saves remain full snapshots with no seed metadata and never gain generated terrain. The [generation contract](docs/WORLDGEN.md) explains deterministic arithmetic, limits and future extension.
 
 ## Streaming and compatibility
 
-A confirmed new-world creation produces a **v5 regional world** with generator v6 and
+A confirmed new-world creation produces a **v5 regional world** with generator v7 and
 X/Z [-32768,32768), Y [-64,192). There is no map-sized startup allocation.
 `RUSTCRAFT_LOAD_RADIUS=1`, `2` (default) or `3` selects a radius independently of
 world extent: at most400 ready chunk descriptors by default,784 at radius3.

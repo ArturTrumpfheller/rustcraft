@@ -1,0 +1,9 @@
+2026-10-29T16:29:22.819994Z  INFO bevy_render::renderer: AdapterInfo { name: "llvmpipe (LLVM 19.1.7, 256 bits)", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: "", driver: "llvmpipe", driver_info: "Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }
+2026-10-29T17:05:27.231464Z  INFO rustcraft::persistence: World saved successfully: <isolated-world>/world.rcw (revision 0)
+2026-10-29T17:05:31.351345Z  INFO rustcraft::streaming: Terrain jobs: p50 1.963179ms p95 3.445259ms p99 3.445259ms; ready descriptors 144, nonempty chunks 45, voxel bytes 45056, cache voxel bytes 147456
+2026-10-29T17:05:31.351369Z  INFO rustcraft::streaming: Light work: 1267484 cells, 0 propagated, 24 source columns generated, 24 halo columns cached, 35 applied chunk samples
+2026-10-29T17:05:31.351395Z  INFO rustcraft::streaming: Stream metrics: regions 4 edits 0 dirty regions 0, load queue-to-install max 4.214734857s, frames p50 89.23189ms p95 2.450903457s p99 2.450903457s, mean fps 2.3
+2026-10-29T17:05:31.351400Z  INFO rustcraft::streaming: Stream idle: 144 resident chunks, 20 meshes, 45056 block bytes, 77624 terrain buffer bytes, peak 144, queue peak 24, jobs load 8 mesh chunks 3 discarded 0, worker total 21.661208ms max 5.513128ms, install max 85.318µs, stream update max 200.731µs, dirty latency max 94.702444ms, recent frame p95 2.450903457s (10 samples)
+2026-10-29T17:05:57.242888Z  INFO rustcraft::persistence: World saved successfully: <isolated-world>/world.rcw (revision 0)
+2026-10-29T17:06:00.661992Z  INFO rustcraft::persistence: World saved successfully: <isolated-world>/world.rcw (revision 0)
+2026-10-29T17:06:30.688559Z  INFO rustcraft::persistence: World saved successfully: <isolated-world>/world.rcw (revision 0)

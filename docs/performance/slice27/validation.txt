@@ -1,0 +1,26 @@
+Slice 27 local validation — cloud Linux x86-64
+Baseline: 30bc9955c77f002987ee1258eabbaf5fc8a4bbb5 (merged Slice26)
+Rust 1.99.1 / Cargo 1.99.1 / Bevy 0.20.0; dependency graph unchanged.
+
+PASS cargo fmt --all -- --check
+PASS cargo clippy --locked --workspace --all-targets -- -D warnings
+PASS cargo test --locked --workspace
+     client: 193 passed; 4 pre-existing optional CPU measurement tests ignored
+     core: 292 passed; doc tests: 0; no failures
+PASS cargo build --release --locked -p rustcraft
+PASS python3 tools/generate_textures.py --check
+PASS cargo build --locked -p rustcraft --example terrain_gallery
+PASS python3 -m py_compile tools/benchmark_caves.py tools/capture_caves.py
+PASS three interleaved identical-harness baseline-v6/current-v6/current-v7 runs
+PASS bounded multi-seed cave survey
+PASS six real procedural v7 production-material gallery captures
+     Xvfb / Mesa25.0.7 llvmpipe LLVM19.1.7 software Vulkan /1280x720
+     Underground captures use labeled supported-floor-torch lighting fixtures.
+PASS normal release-client create/play/F3/F5/autosave/clean quit/reopen, generator7
+PASS focused existing HUD tests after updating development Slice27 label
+PASS historical generator1–6 golden fixtures unchanged
+PASS new generator7 CRCs, manifest5/region1 identity, every journal interruption
+PASS exact sparse/full-height lighting comparison on actual deep cave geometry
+
+Native Void X11/Wayland / i3-13100 / RX9060 XT /1920x1080 and Windows GUI
+acceptance is manual. Remote Ubuntu/Windows CI is attached to the dedicated PR.
