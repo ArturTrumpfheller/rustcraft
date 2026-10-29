@@ -1,0 +1,9 @@
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+cargo 1.99.1 (5f94df478 2026-08-27)
+Linux 6.18.55
+Architecture:                            x86_64
+CPU(s):                                  3
+Model name:                              INTEL(R) XEON(R) PLATINUM 8573C
+NUMA node0 CPU(s):                       0-2
+               total        used        free      shared  buff/cache   available
+Mem:            9968         928        2856           0        6518        9040

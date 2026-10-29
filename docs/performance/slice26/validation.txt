@@ -1,0 +1,25 @@
+Slice 26 local validation (cloud Linux x86-64)
+Baseline: 99137e3df86e71d6499a8d94f8c01c639249005b (merged Slice25)
+Rust: rustc 1.99.1 (58cf8f9c3 2026-10-13)
+Cargo: 1.99.1 (5f94df478 2026-08-27)
+
+PASS cargo fmt --all -- --check
+PASS cargo clippy --locked --workspace --all-targets -- -D warnings
+PASS cargo test --locked --workspace
+     client: 193 passed, 4 pre-existing CPU measurement tests ignored
+     core: 283 passed, 0 ignored
+     doc tests: 0; no failed tests
+PASS cargo build --release --locked -p rustcraft
+PASS python3 tools/generate_textures.py --check
+PASS cargo build --locked -p rustcraft --example terrain_gallery
+PASS python3 -m py_compile tools/benchmark_vertical.py
+PASS actual Xvfb/Mesa tower and deep torch-room production-renderer captures
+PASS real release client title/create/catalog/play, v6 F3 identity, autosave,
+     reopen and Pause / Quit Game final save with clean process exit
+
+Historical generator v1-v5 CRC/golden constants retained.
+New independent v6 column CRCs: 427164329, 4240216072, 4166722754, 988062637.
+New bounds [-64,192); historical bounds [-16,32).
+Manifest5 / region1 / player envelopes / 32 MiB journal unchanged.
+Native Void X11/Wayland / RX9060 XT and Windows GUI acceptance remains manual.
+Linux/Windows remote CI results are attached to the dedicated PR.

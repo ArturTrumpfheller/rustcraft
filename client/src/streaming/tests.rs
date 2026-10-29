@@ -49,7 +49,10 @@ fn edit(app: &mut App, p: BlockPos, b: Block) {
         .set_block(p, b)
         .unwrap()
         .unwrap();
-    app.world_mut().resource_mut::<DirtyChunks>().mark(change);
+    let height = app.world().resource::<VoxelWorld>().0.world_height();
+    app.world_mut()
+        .resource_mut::<DirtyChunks>()
+        .mark_in(change, height);
 }
 
 #[test]
@@ -140,7 +143,7 @@ fn blocked_column(app: &mut App, column: Column) -> std::sync::mpsc::Sender<()> 
     let revision = world.revision();
     let work = Work::Load(column);
     let versions = work
-        .targets()
+        .targets(world.world_height())
         .into_iter()
         .map(|p| (p, world.mesh_revision(p)))
         .collect();
@@ -916,7 +919,7 @@ fn large_world_travel_bounds_cpu_gpu_overlays_and_keeps_far_edits_across_restart
         let w = app.world_mut();
         let chunks = w.resource::<VoxelWorld>().0.chunks().count();
         let renders = w.resource::<ChunkRenders>().0.len();
-        assert!(chunks <= 27);
+        assert!(chunks <= 9 * w.resource::<VoxelWorld>().0.world_height().chunk_count());
         assert!(w.resource::<VoxelWorld>().0.cached_regions() <= 16);
         assert_eq!(w.resource::<Assets<Mesh>>().len(), renders);
         assert_eq!(w.query::<&Mesh3d>().iter(w).count(), renders);
@@ -1115,7 +1118,7 @@ fn assert_textured_residency(app: &mut App) {
         1
     );
     let state = w.resource::<StreamState>();
-    assert!(state.lights.len() <= 147);
+    assert!(state.lights.len() <= 49 * w.resource::<VoxelWorld>().0.world_height().chunk_count());
     assert!(state.cache.columns() <= 81);
     let renders = w.resource::<ChunkRenders>();
     assert_eq!(w.resource::<Assets<Mesh>>().len(), renders.0.len());
@@ -1548,7 +1551,10 @@ fn support_batches_invalidate_all_chunks_coalesce_and_reject_stale_worker_light(
         .unwrap();
         assert_eq!(batch.changes().len(), 6);
         for &change in batch.changes() {
-            app.world_mut().resource_mut::<DirtyChunks>().mark(change);
+            let height = app.world().resource::<VoxelWorld>().0.world_height();
+            app.world_mut()
+                .resource_mut::<DirtyChunks>()
+                .mark_in(change, height);
         }
         if n < 19 {
             edit(&mut app, p, Block::Stone);
@@ -1725,5 +1731,89 @@ fn water_only_jobs_reuse_applied_lighting_and_opaque_assets_then_evict_cleanly()
         water
             .iter()
             .all(|h| app.world().resource::<Assets<Mesh>>().get(h).is_none())
+    );
+}
+
+#[test]
+fn v6_upper_air_mesh_materialization_stale_rejection_eviction_and_reload() {
+    let dir = RegionalDir::new();
+    let mut app = large_app(&dir.0);
+    let upper = BlockPos([8, 128, 8]);
+    let deep = BlockPos([8, -48, 8]);
+    assert!(app.world().resource::<VoxelWorld>().0.ready(upper));
+    assert_eq!(
+        app.world().resource::<VoxelWorld>().0.block(upper),
+        Block::Air
+    );
+    assert!(
+        !app.world()
+            .resource::<ChunkRenders>()
+            .0
+            .contains_key(&upper.split().0)
+    );
+    edit(&mut app, upper, Block::Wood);
+    drain(&mut app);
+    assert!(
+        app.world()
+            .resource::<ChunkRenders>()
+            .0
+            .contains_key(&upper.split().0)
+    );
+    edit(&mut app, upper, Block::Air);
+    drain(&mut app);
+    assert!(app.world().resource::<VoxelWorld>().0.ready(upper));
+    assert!(
+        !app.world()
+            .resource::<ChunkRenders>()
+            .0
+            .contains_key(&upper.split().0)
+    );
+    let release = blocked_column(&mut app, [0, 0]);
+    edit(&mut app, upper, Block::Wood);
+    edit(&mut app, deep, Block::Air);
+    release.send(()).unwrap();
+    drain(&mut app);
+    assert!(app.world().resource::<StreamState>().discarded > 0);
+    assert!(
+        app.world()
+            .resource::<ChunkRenders>()
+            .0
+            .contains_key(&upper.split().0)
+    );
+    assert_geometry(&app, &BTreeSet::from([upper.split().0, deep.split().0]));
+    save_large(&mut app);
+    go(&mut app, [30, 30]);
+    assert!(!app.world().resource::<VoxelWorld>().0.ready(upper));
+    assert!(
+        !app.world()
+            .resource::<ChunkRenders>()
+            .0
+            .contains_key(&upper.split().0)
+    );
+    go(&mut app, [0, 0]);
+    assert_eq!(
+        app.world().resource::<VoxelWorld>().0.block(upper),
+        Block::Wood
+    );
+    assert_eq!(
+        app.world().resource::<VoxelWorld>().0.block(deep),
+        Block::Air
+    );
+    assert!(
+        app.world()
+            .resource::<VoxelWorld>()
+            .0
+            .allocated_voxel_bytes()
+            <= 9 * 16 * 4096
+    );
+    drop(app);
+    let app = large_app(&dir.0);
+    assert_eq!(
+        app.world().resource::<VoxelWorld>().0.block(upper),
+        Block::Wood
+    );
+    assert_eq!(
+        app.world().resource::<VoxelWorld>().0.block(deep),
+        Block::Air
     );
 }

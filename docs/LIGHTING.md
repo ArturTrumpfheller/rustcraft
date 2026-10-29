@@ -1,5 +1,20 @@
 # Derived voxel skylight (Slice 10)
 
+## Slice 26 height-aware path
+
+World identity now selects48 historical planes or256 v6 planes. V6 classifies
+complete source descriptors, skips uniformly opaque bottom planes and known-Air
+upper planes, and retains a15-plane artificial-light margin. Remaining cells use
+the same exact direct sky / indirect sky / torch solve. Pending data is opaque;
+unknown space never proves skylight. Empty upper target batches do no light solve,
+meshing or exact18³ cache allocation. Edits anywhere expand the active span and
+invalidate version-aware full-height tokens. Historical worlds retain their
+previous48-plane cache and water-only behavior. A full256-plane reference test
+checks both channels cell-for-cell with deep emitters, high shadows and pending
+input. [Architecture and costs](VERTICAL_WORLD.md#lighting),
+[measurements](performance/slice26/README.md). Old fixed-height numbers below
+refer to the historical path.
+
 From accepted Slice-9 main `bc34e76`; MIT OR Apache-2.0 original implementation.
 No saved generator, block/item ID, terrain art, world/player/journal format changes.
 

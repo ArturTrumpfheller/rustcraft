@@ -226,3 +226,13 @@ the artwork. Existing eight tiles remain byte-identical. No external reference
 images, Minecraft artwork/code, fonts, dependencies or renderer features added.
 `docs/images/slice25` contains actual RustCraft production-material captures of
 seeded generated terrain, not concept art or AI-generated imagery.
+
+## Slice 26 vertical expansion
+
+Bounds, compact chunk storage, versioned worker/light paths, tests, benchmark
+harness and documentation are project-authored MIT OR Apache-2.0 work. The
+Slice26 PNGs are actual captures of original RustCraft code/art using the
+production renderer; tower and underground room are authored development
+fixtures. No new textures, external art, crates, renderer features, toolchain
+or lockfile changes were introduced. Software Mesa/Xvfb remain development
+capture tools and are not distributed as game dependencies.

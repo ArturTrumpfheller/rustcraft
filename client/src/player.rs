@@ -7,7 +7,6 @@ use crate::scene::VoxelWorld;
 
 // Clear ground at (0, 10), above the low terrace and facing the island's centre.
 pub(crate) const SPAWN: [f64; 3] = [0.5, 4.0, 10.5];
-pub(crate) const RECOVERY_Y: f64 = -32.0;
 
 pub struct PlayerPlugin;
 #[derive(Resource)]
@@ -120,7 +119,7 @@ fn simulate_player(
         return;
     }
     let reset = std::mem::take(&mut input.reset_pending);
-    if (input.active && reset) || player.body.position[1] < RECOVERY_Y {
+    if (input.active && reset) || player.body.position[1] < world.0.world_height().recovery_y() {
         *player = safe_spawn(&world.0, &config.0);
         input.jump_pending = false;
         return;
@@ -232,7 +231,7 @@ fn simulate_fluids(
     // Emitting decorations require the full light/terrain path; ordinary fluid
     // transitions retain the cached-light water-only optimization.
     for &change in &runtime.changes {
-        dirty.mark(change);
+        dirty.mark_in(change, world.0.world_height());
     }
     runtime.milliseconds = start.elapsed().as_secs_f64() * 1000.;
 }

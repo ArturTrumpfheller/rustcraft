@@ -1,5 +1,18 @@
 # RustCraft development roadmap
 
+## Slice 26 — Vertical World Expansion
+
+- [x] Generator6 identity and Y[-64,192); historical generators/bounds preserved
+- [x] Compact uniform Air/Stone readiness, on-demand mixed chunks and bounded workers
+- [x] Version-aware lighting, mesh dependencies, fluids, collision and void recovery
+- [x] Existing manifest/region formats, bounded edits and coordinated recovery tests
+- [x] Independent v6 goldens, historical fixtures and sparse/full light comparisons
+- [ ] Native Void X11/Wayland / RX9060 XT and Windows GUI/performance acceptance
+
+[Architecture, record limits and Fish checklist](VERTICAL_WORLD.md);
+[measurements and actual validation](performance/slice26/README.md).
+Following slices:27 caves v2,28 natural water,29 vegetation/details.
+
 ## Slice 24 — Terrain Generation v2
 
 - [x] Explicit generator4 for new worlds; frozen gen1–3 output and manifest4/gen3
@@ -10,8 +23,8 @@
 - [ ] Native Void X11/Wayland / RX9060 XT and Windows GUI acceptance
 
 Evidence, benchmarks and reproducible scenes: [Slice24](performance/slice24/README.md).
-Separate follow-ups: Slice25 biomes, Slice26 caves v2, Slice27 natural water,
-Slice28 vegetation/details; vertical expansion requires its own engineering slice.
+Separate follow-ups: Slice25 biomes, Slice26 vertical expansion, Slice27 caves v2, Slice28 natural
+water and Slice29 vegetation/details.
 
 
 This document tracks intended milestones, not promised delivery dates. Implement and test one vertical slice at a time.
@@ -64,7 +77,7 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 - [x] First local large-world rollout with versioned regional storage and bounded caches
 - [ ] Further coordinate expansion and opt-in legacy migration
 - [x] Terrain Generation v2 (Slice24)
-- [ ] Cave Generation v2 (Slice26)
+- [ ] Cave Generation v2 (Slice27)
 - [x] Initial voxel skylight and bounded light/mesh updates
 - [x] Emitted block light / persistent standing/wall torches, bounded worker updates and matched fixtures
 - [x] Slice20 original lighting/rendering/persistence/performance accepted on native Void Linux
@@ -128,4 +141,4 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 See [WORLDGEN](WORLDGEN.md) for current contracts and
 [Slice25 evidence/checklist](performance/slice25/README.md) for measured validation.
 Vertical expansion, new caves, natural water and vegetation details remain
-separate future slices26–28; this slice keeps Y[-16,32).
+separate slices26–29; Slice25 keeps Y[-16,32).

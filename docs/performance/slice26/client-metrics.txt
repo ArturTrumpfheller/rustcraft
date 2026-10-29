@@ -1,0 +1,4 @@
+rustcraft::streaming: Terrain jobs: p50 2.206214ms p95 7.635881ms p99 7.635881ms; ready descriptors 144, nonempty chunks 47, voxel bytes 57344, cache voxel bytes 143360
+rustcraft::streaming: Light work: 1098204 cells, 3010 propagated, 24 source columns generated, 24 halo columns cached, 32 applied chunk samples
+rustcraft::streaming: Stream metrics: regions 4 edits 0 dirty regions 0, load queue-to-install max 940.741416ms, frames p50 88.411103ms p95 272.84274ms p99 272.84274ms, mean fps 9.7
+rustcraft::streaming: Stream idle: 144 resident chunks, 23 meshes, 57344 block bytes, 507408 terrain buffer bytes, peak 144, queue peak 24, jobs load 8 mesh chunks 3 discarded 0, worker total 33.866728ms max 8.415607ms, install max 100.451µs, stream update max 355.245µs, dirty latency max 288.177425ms, recent frame p95 272.84274ms (10 samples)

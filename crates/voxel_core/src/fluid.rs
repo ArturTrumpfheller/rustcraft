@@ -91,7 +91,11 @@ impl Block {
 }
 /// Hard cap matches maximum supported radius (147 resident chunks).
 /// A bit/set entry is never retained for an unknown or evicted cell.
-pub const MAX_PENDING: usize = 147 * 4096;
+pub const MAX_PENDING: usize = 49
+    * ((crate::bounds::WorldHeight::EXTENDED.max - crate::bounds::WorldHeight::EXTENDED.min)
+        as usize
+        / 16)
+    * 4096;
 pub const NEIGHBORS: [[i32; 3]; 6] = [
     [0, -1, 0],
     [0, 1, 0],
@@ -107,7 +111,7 @@ pub const ROUTE_DISTANCE: i32 = 4;
 const ROUTE_WIDTH: usize = (2 * ROUTE_DISTANCE + 1) as usize;
 const ROUTE_CELLS: usize = 1 + 2 * (ROUTE_DISTANCE * (ROUTE_DISTANCE + 1)) as usize;
 // Low four bits are directions, bit four means computed (including mask zero).
-// Lazily allocated only for queried resident chunks: at most 147 * 4096 bytes.
+// Lazily allocated only for queried resident chunks: at most 49 * crate::bounds::WorldHeight::EXTENDED.chunk_count() * 4096 bytes.
 type RouteCache = BTreeMap<ChunkPos, Box<[u8; 4096]>>;
 #[derive(Clone, Copy, Debug)]
 pub struct FluidConfig {
@@ -214,7 +218,10 @@ impl World {
                             let low = cp.0[a] * 16;
                             (low - p.0[a]).max(p.0[a] - (low + 15)).max(0)
                         };
-                        if distance(1) > 1 || distance(0) + distance(2) > ROUTE_DISTANCE {
+                        // A dry consumer one cell beyond a wet feeder may have
+                        // deferred because its next neighbor was pending. Wake
+                        // that feeder too when the missing vertical slab arrives.
+                        if distance(1) > 2 || distance(0) + distance(2) > ROUTE_DISTANCE {
                             continue;
                         }
                         if self.chunk(np).unwrap().get(lp).fluid().is_some() {
@@ -240,6 +247,7 @@ impl World {
         let mut regions = [None; crate::regions::MAX_DIRTY_REGIONS];
         let mut region_count = 0;
         let mut planned_drops = 0;
+        let mut planned_records = BTreeMap::<crate::regions::RegionPos, usize>::new();
         let mut routes = std::mem::take(&mut self.fluids.routes);
         for _ in 0..count {
             let p = self.fluids.queue.pop_front().unwrap();
@@ -278,13 +286,19 @@ impl World {
                         && (self.drops.contains(p)
                             || self.drops.len() + planned_drops < crate::drops::MAX_DROPS))
             });
-            let allowed = drop_allowed
+            // Count earlier accepted candidates against the shared region budget.
+            let allowed = self
+                .fluid_record_room(p, planned_records.get(&region).copied().unwrap_or(0))
+                && drop_allowed
                 && self.fluid_edit_allowed(p)
                 && (self.region_identity().is_none()
                     || self.fluid_region_dirty(region)
                     || regions.contains(&Some(region))
                     || self.dirty_regions() + region_count < crate::regions::MAX_DIRTY_REGIONS);
             if before != after && allowed {
+                if self.fluid_new_record(p) {
+                    *planned_records.entry(region).or_default() += 1;
+                }
                 if self.region_identity().is_some()
                     && !self.fluid_region_dirty(region)
                     && !regions.contains(&Some(region))

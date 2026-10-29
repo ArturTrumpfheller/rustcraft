@@ -668,3 +668,22 @@ fn regional_water_and_inventory_journal_replay_then_persistent_source_removal() 
         );
     }
 }
+
+#[test]
+fn extended_height_keeps_eight_maximum_regions_inside_existing_journal_budget() {
+    let id = crate::regions::RegionIdentity {
+        seed: 42,
+        generator: 6,
+        nonce: [26; 16],
+    };
+    let maximum = 24
+        + 1
+        + 4
+        + 64
+        + 4
+        + crate::regions::MAX_DIRTY_REGIONS * (12 + 64 + 14 * id.max_region_records())
+        + 4
+        + MAX_PLAYER_SIZE;
+    assert!(maximum < MAX_TX);
+    assert_eq!(id.max_region_records(), crate::regions::MAX_REGION_RECORDS);
+}

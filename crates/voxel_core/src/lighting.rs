@@ -4,9 +4,10 @@ use crate::{BlockPos, ChunkPos, LocalPos, World};
 use std::collections::{BTreeSet, VecDeque};
 pub const SKY: u8 = 15;
 pub const HALO: i32 = SKY as i32;
-pub const MIN_Y: i32 = -16;
-pub const MAX_Y: i32 = 32;
-const HEIGHT: usize = (MAX_Y - MIN_Y) as usize;
+/// Historical fixture limits. Runtime calculations use World::world_height.
+pub const MIN_Y: i32 = crate::bounds::WorldHeight::HISTORICAL.min;
+pub const MAX_Y: i32 = crate::bounds::WorldHeight::HISTORICAL.max;
+
 /// Exact disposable cache: low nibble skylight, high nibble artificial light.
 /// Equality cannot hide a hash collision or suppress an independent channel change.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -15,6 +16,9 @@ pub struct ChunkLight(pub Box<[u8]>);
 pub struct Skylight {
     min: [i32; 2],
     size: [usize; 2],
+    min_y: i32,
+    max_y: i32,
+    world_height: crate::bounds::WorldHeight,
     levels: Vec<u8>,
     block_levels: Vec<u8>,
     pub propagated: usize,
@@ -37,12 +41,15 @@ pub fn source_columns(targets: &BTreeSet<ChunkPos>) -> BTreeSet<[i32; 2]> {
     out
 }
 pub fn affected(position: BlockPos) -> BTreeSet<ChunkPos> {
+    affected_in(position, crate::bounds::WorldHeight::HISTORICAL)
+}
+pub fn affected_in(position: BlockPos, height: crate::bounds::WorldHeight) -> BTreeSet<ChunkPos> {
     let [x, _, z] = position.0;
     let mut out = BTreeSet::new();
     for cx in (x.saturating_sub(HALO)).div_euclid(16)..=(x.saturating_add(HALO)).div_euclid(16) {
         for cz in (z.saturating_sub(HALO)).div_euclid(16)..=(z.saturating_add(HALO)).div_euclid(16)
         {
-            for cy in -1..2 {
+            for cy in height.chunks() {
                 out.insert(ChunkPos([cx, cy, cz]));
             }
         }
@@ -51,13 +58,23 @@ pub fn affected(position: BlockPos) -> BTreeSet<ChunkPos> {
 }
 impl Skylight {
     pub fn for_chunks(world: &World, targets: &BTreeSet<ChunkPos>) -> Self {
+        Self::calculate(world, targets, active_span(world, targets))
+    }
+    #[cfg(test)]
+    pub(crate) fn full_reference(world: &World, targets: &BTreeSet<ChunkPos>) -> Self {
+        let h = world.world_height();
+        Self::calculate(world, targets, (h.min, h.max))
+    }
+    fn calculate(world: &World, targets: &BTreeSet<ChunkPos>, (min_y, max_y): (i32, i32)) -> Self {
         assert!(!targets.is_empty());
         let min = [0, 2].map(|a| targets.iter().map(|p| p.0[a]).min().unwrap() * 16 - HALO);
         let max = [0, 2].map(|a| (targets.iter().map(|p| p.0[a]).max().unwrap() + 1) * 16 + HALO);
         let size = [(max[0] - min[0]) as usize, (max[1] - min[1]) as usize];
         // Callers bound targets to resident radius (maximum 7x7 columns).
         assert!(size[0] <= 7 * 16 + 2 * HALO as usize && size[1] <= 7 * 16 + 2 * HALO as usize);
-        let count = size[0] * size[1] * HEIGHT;
+        let world_height = world.world_height();
+        let height = (max_y - min_y) as usize;
+        let count = size[0] * size[1] * height;
         let mut solid = vec![false; count];
         let mut levels = vec![0; count];
         let mut queue = VecDeque::<u32>::new();
@@ -67,15 +84,18 @@ impl Skylight {
             for x in 0..size[0] {
                 let wx = min[0] + x as i32;
                 let wz = min[1] + z as i32;
-                let base = (z * size[0] + x) * HEIGHT;
+                let base = (z * size[0] + x) * height;
                 let mut sky = true;
-                for cy in (-1..2).rev() {
+                for cy in (min_y.div_euclid(16)..(max_y + 15).div_euclid(16)).rev() {
                     let cp = ChunkPos([wx.div_euclid(16), cy, wz.div_euclid(16)]);
                     let chunk = world.chunk(cp);
                     let pending = chunk.is_none() && !world.ready(BlockPos([wx, cy * 16, wz]));
                     for ly in (0..16).rev() {
                         let y = cy * 16 + ly as i32;
-                        let i = base + (y - MIN_Y) as usize;
+                        if !(min_y..max_y).contains(&y) {
+                            continue;
+                        }
+                        let i = base + (y - min_y) as usize;
                         let block = chunk.map_or(crate::Block::Air, |c| {
                             c.get(
                                 LocalPos::new([
@@ -92,7 +112,7 @@ impl Skylight {
                         }
                         solid[i] = opaque;
                         if sky && opaque {
-                            floors[z * size[0] + x] = (y - MIN_Y + 1) as usize;
+                            floors[z * size[0] + x] = (y - min_y + 1) as usize;
                         }
                         sky &= !opaque;
                         if sky {
@@ -119,7 +139,7 @@ impl Skylight {
                         (b, a)
                     };
                     for y in floors[lo]..floors[hi] {
-                        let n = hi * HEIGHT + y;
+                        let n = hi * height + y;
                         if !solid[n] && levels[n] < SKY - 1 {
                             levels[n] = SKY - 1;
                             queue.push_back(n as u32);
@@ -129,7 +149,7 @@ impl Skylight {
                 }
             }
         }
-        propagated += flood(&solid, &mut levels, &mut queue, size);
+        propagated += flood(&solid, &mut levels, &mut queue, size, height);
         // Avoid the second volume allocation and flood entirely without sources.
         // Reuse the drained skylight queue for the independent artificial channel.
         let mut block_levels = if sources.is_empty() {
@@ -141,10 +161,13 @@ impl Skylight {
             block_levels[i as usize] = emission;
             queue.push_back(i);
         }
-        let block_propagated = flood(&solid, &mut block_levels, &mut queue, size);
+        let block_propagated = flood(&solid, &mut block_levels, &mut queue, size, height);
         Self {
             min,
             size,
+            min_y,
+            max_y,
+            world_height,
             levels,
             propagated,
             block_levels,
@@ -156,10 +179,10 @@ impl Skylight {
     }
     pub fn level(&self, p: BlockPos) -> u8 {
         let [x, y, z] = p.0;
-        if y >= MAX_Y {
+        if y >= self.world_height.max {
             return SKY;
         }
-        if y < MIN_Y {
+        if y < self.world_height.min {
             return 0;
         }
         let x = x - self.min[0];
@@ -167,7 +190,16 @@ impl Skylight {
         if x < 0 || z < 0 || x as usize >= self.size[0] || z as usize >= self.size[1] {
             return 0;
         }
-        self.levels[(z as usize * self.size[0] + x as usize) * HEIGHT + (y - MIN_Y) as usize]
+        // Omitted bottom planes are opaque everywhere; omitted upper planes
+        // are proven open sky. Neither inference is made from pending chunks.
+        if y >= self.max_y {
+            return SKY;
+        }
+        if y < self.min_y {
+            return 0;
+        }
+        self.levels[(z as usize * self.size[0] + x as usize) * (self.max_y - self.min_y) as usize
+            + (y - self.min_y) as usize]
     }
     /// Artificial light has no implicit sky/outside-world sources.
     pub fn block_level(&self, p: BlockPos) -> u8 {
@@ -175,7 +207,7 @@ impl Skylight {
         let x = x - self.min[0];
         let z = z - self.min[1];
         if self.block_levels.is_empty()
-            || !(MIN_Y..MAX_Y).contains(&y)
+            || !(self.min_y..self.max_y).contains(&y)
             || x < 0
             || z < 0
             || x as usize >= self.size[0]
@@ -183,7 +215,9 @@ impl Skylight {
         {
             return 0;
         }
-        self.block_levels[(z as usize * self.size[0] + x as usize) * HEIGHT + (y - MIN_Y) as usize]
+        self.block_levels[(z as usize * self.size[0] + x as usize)
+            * (self.max_y - self.min_y) as usize
+            + (y - self.min_y) as usize]
     }
     pub fn combined_level(&self, p: BlockPos) -> u8 {
         self.level(p).max(self.block_level(p))
@@ -205,7 +239,49 @@ impl Skylight {
         ChunkLight(b.into_boxed_slice())
     }
 }
-fn flood(solid: &[bool], levels: &mut [u8], queue: &mut VecDeque<u32>, size: [usize; 2]) -> usize {
+/// Trim only planes whose values are proven from complete source descriptors.
+/// No dense allocation or per-cell scan of empty upper sky or solid deep slabs.
+/// Nonuniform/edited data anywhere in the height range participates normally.
+fn active_span(world: &World, targets: &BTreeSet<ChunkPos>) -> (i32, i32) {
+    let h = world.world_height();
+    if h == crate::bounds::WorldHeight::HISTORICAL {
+        return (h.min, h.max);
+    }
+    let columns = source_columns(targets);
+    let classification = |c: [i32; 2], cy: i32| {
+        let cp = ChunkPos([c[0], cy, c[1]]);
+        match world.chunk(cp) {
+            Some(chunk) => chunk.uniform(),
+            None if world.ready(BlockPos([c[0] * 16, cy * 16, c[1] * 16])) => {
+                Some(crate::Block::Air)
+            }
+            None => Some(crate::Block::Stone), // unknown is opaque, never implicit sky
+        }
+    };
+    let top = h.chunks().rev().find(|&cy| {
+        columns
+            .iter()
+            .any(|&c| classification(c, cy) != Some(crate::Block::Air))
+    });
+    let Some(top) = top else {
+        return (h.min, h.min);
+    };
+    let bottom = (h.chunks().start..=top).find(|&cy| {
+        columns
+            .iter()
+            .any(|&c| !classification(c, cy).is_some_and(|b| b.is_opaque()))
+    });
+    let min = bottom.map_or((top + 1) * 16, |cy| cy * 16);
+    let max = ((top + 1) * 16 + HALO).min(h.max);
+    (min, max.max(min))
+}
+fn flood(
+    solid: &[bool],
+    levels: &mut [u8],
+    queue: &mut VecDeque<u32>,
+    size: [usize; 2],
+    height: usize,
+) -> usize {
     let mut propagated = 0;
     while let Some(i) = queue.pop_front() {
         let i = i as usize;
@@ -213,17 +289,17 @@ fn flood(solid: &[bool], levels: &mut [u8], queue: &mut VecDeque<u32>, size: [us
         if value == 0 {
             continue;
         }
-        let y = i % HEIGHT;
-        let column = i / HEIGHT;
+        let y = i % height;
+        let column = i / height;
         let x = column % size[0];
         let z = column / size[0];
         let neighbors = [
             (y > 0, i.wrapping_sub(1)),
-            (y + 1 < HEIGHT, i + 1),
-            (x > 0, i.wrapping_sub(HEIGHT)),
-            (x + 1 < size[0], i + HEIGHT),
-            (z > 0, i.wrapping_sub(HEIGHT * size[0])),
-            (z + 1 < size[1], i + HEIGHT * size[0]),
+            (y + 1 < height, i + 1),
+            (x > 0, i.wrapping_sub(height)),
+            (x + 1 < size[0], i + height),
+            (z > 0, i.wrapping_sub(height * size[0])),
+            (z + 1 < size[1], i + height * size[0]),
         ];
         for (valid, n) in neighbors {
             if valid && !solid[n] && levels[n] < value {

@@ -49,7 +49,7 @@ fn climate_is_broad_balanced_continuous_and_independent_of_request_order() {
         assert_eq!(sample_biome(42, x, z), None);
         assert_eq!(sample_climate(42, x, z), None);
     }
-    assert_eq!(CURRENT_LOCAL_GENERATOR, 5);
+    assert_eq!(CURRENT_LOCAL_GENERATOR, 6);
     for version in 1..5 {
         assert_eq!(
             Generator::new(GenerationConfig { seed: 42, version })
@@ -61,7 +61,7 @@ fn climate_is_broad_balanced_continuous_and_independent_of_request_order() {
     assert!(
         Generator::new(GenerationConfig {
             seed: 42,
-            version: 6
+            version: 7
         })
         .is_err()
     );
@@ -170,7 +170,11 @@ fn biome_trees_are_supported_sparse_or_dense_and_cross_chunk_order_independent()
     let mut roots = BTreeMap::new();
     let mut cross = false;
     for (b, x, z) in SITES {
-        let mut world = crate::streaming::new_large_world(42);
+        let mut world = World::regional(crate::regions::RegionIdentity {
+            seed: 42,
+            generator: 5,
+            nonce: [1; 16],
+        });
         let center = [x.div_euclid(16), z.div_euclid(16)];
         for cz in center[1] - 1..=center[1] + 2 {
             for cx in center[0] - 1..=center[0] + 2 {

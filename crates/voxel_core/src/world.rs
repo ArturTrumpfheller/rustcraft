@@ -181,17 +181,27 @@ impl World {
     pub fn identity(&self) -> Option<StreamIdentity> {
         self.identity
     }
+    pub fn world_height(&self) -> crate::bounds::WorldHeight {
+        self.identity
+            .map_or(crate::bounds::WorldHeight::HISTORICAL, |i| {
+                crate::bounds::WorldHeight::for_generator(i.generator)
+                    .expect("validated world identity")
+            })
+    }
     pub fn bounds(&self) -> ([i32; 3], [i32; 3]) {
-        if self.regional.is_some() {
-            (
-                [-LARGE_EXTENT, -16, -LARGE_EXTENT],
-                [LARGE_EXTENT, 32, LARGE_EXTENT],
-            )
-        } else if self.identity.is_some() {
-            ([-64, -16, -64], [64, 32, 64])
+        let h = self.world_height();
+        let extent = if self.regional.is_some() || self.identity.is_some_and(|i| i.generator >= 3) {
+            LARGE_EXTENT
+        } else if self.identity.is_some_and(|i| i.generator >= 2) {
+            64
         } else {
-            (EDIT_MIN, EDIT_MAX)
-        }
+            32
+        };
+        ([-extent, h.min, -extent], [extent, h.max, extent])
+    }
+    /// Worker-only source metadata; does not import edits or fluid queues.
+    pub(crate) fn set_mesh_identity(&mut self, identity: StreamIdentity) {
+        self.identity = Some(identity);
     }
     pub fn in_bounds(&self, p: BlockPos) -> bool {
         let (min, max) = self.bounds();
@@ -238,7 +248,7 @@ impl World {
         );
         self.chunks.retain(|p, _| [p.0[0], p.0[2]] != column);
         self.fluids.evict(column);
-        for y in -1..=1 {
+        for y in self.world_height().chunks() {
             self.wake_installed_fluids(ChunkPos([column[0], y, column[1]]));
         }
     }
@@ -319,6 +329,7 @@ impl World {
         {
             return Err(EditError::SupportsTorch);
         }
+        self.validate_edit_capacity(&[position])?;
         if self.regional.is_some() {
             let r = self
                 .regions
@@ -419,6 +430,13 @@ impl World {
                 return Err(EditError::SaveRequired);
             }
         }
+        self.validate_edit_capacity(
+            &batch
+                .changes()
+                .iter()
+                .map(|c| c.position)
+                .collect::<Vec<_>>(),
+        )?;
         Ok(Some(batch))
     }
 
@@ -440,12 +458,42 @@ impl World {
         self.regions.get(&p).is_some_and(|r| r.dirty)
     }
 
+    /// Validate the whole staged batch before any inventory/drop/voxel mutation.
+    pub(crate) fn validate_edit_capacity(&self, positions: &[BlockPos]) -> Result<(), EditError> {
+        let Some(id) = self.regional else {
+            return Ok(());
+        };
+        let mut additions = BTreeMap::<RegionPos, BTreeSet<BlockPos>>::new();
+        for &p in positions {
+            let rp = RegionPos::of(p);
+            let r = self.regions.get(&rp).ok_or(EditError::NotLoaded)?;
+            if !r.edits.contains_key(&p) {
+                additions.entry(rp).or_default().insert(p);
+            }
+        }
+        for (rp, cells) in additions {
+            if self.regions[&rp].edits.len() + cells.len() > id.max_region_records() {
+                return Err(EditError::RegionCapacity);
+            }
+        }
+        Ok(())
+    }
+    pub(crate) fn fluid_new_record(&self, p: BlockPos) -> bool {
+        self.regional.is_some() && !self.regions[&RegionPos::of(p)].edits.contains_key(&p)
+    }
+    pub(crate) fn fluid_record_room(&self, p: BlockPos, planned: usize) -> bool {
+        self.regional.is_none()
+            || !self.fluid_new_record(p)
+            || self.regions[&RegionPos::of(p)].edits.len() + planned
+                < self.regional.unwrap().max_region_records()
+    }
     pub(crate) fn fluid_edit_allowed(&self, p: BlockPos) -> bool {
         self.regional.is_none()
-            || self
-                .regions
-                .get(&RegionPos::of(p))
-                .is_some_and(|r| r.dirty || self.dirty_regions() < MAX_DIRTY_REGIONS)
+            || self.regions.get(&RegionPos::of(p)).is_some_and(|r| {
+                (r.dirty || self.dirty_regions() < MAX_DIRTY_REGIONS)
+                    && (r.edits.contains_key(&p)
+                        || r.edits.len() < self.regional.unwrap().max_region_records())
+            })
     }
 
     pub(crate) fn apply_changes(&mut self, changes: &[BlockChange]) {
@@ -497,7 +545,10 @@ impl World {
                 if change.before.is_opaque() != change.after.is_opaque()
                     || change.before.emission() != change.after.emission()
                 {
-                    affected.extend(crate::lighting::affected(change.position));
+                    affected.extend(crate::lighting::affected_in(
+                        change.position,
+                        self.world_height(),
+                    ));
                 }
                 for dx in -1..=1 {
                     for dy in -1..=1 {
@@ -535,7 +586,13 @@ impl World {
         self.chunks.get(&position)
     }
 
-    /// Resident voxel chunks, including empty chunks; constant-time diagnostics.
+    pub fn allocated_voxel_bytes(&self) -> usize {
+        self.chunks.values().map(Chunk::allocated_bytes).sum()
+    }
+    pub fn nonempty_chunk_count(&self) -> usize {
+        self.chunks.values().filter(|c| !c.is_empty()).count()
+    }
+    /// Ready chunk descriptors, including allocation-free known Air.
     pub fn chunk_count(&self) -> usize {
         self.chunks.len()
     }

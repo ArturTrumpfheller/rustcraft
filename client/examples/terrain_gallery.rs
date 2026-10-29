@@ -30,6 +30,8 @@ struct Scene {
     z: i32,
     yaw: f32,
     overview: bool,
+    vertical: bool,
+    deep: bool,
 }
 fn main() {
     let args: Vec<_> = std::env::args().skip(1).collect();
@@ -47,6 +49,8 @@ fn main() {
         z: args[2].parse().unwrap(),
         yaw: args[3].parse::<f32>().unwrap().to_radians(),
         overview: args.iter().any(|s| s == "--overview"),
+        vertical: args.iter().any(|s| s == "--vertical"),
+        deep: args.iter().any(|s| s == "--deep"),
     };
     assert!(scene.x.abs() < 32000 && scene.z.abs() < 32000 && scene.yaw.is_finite());
     let mut app = App::new();
@@ -107,9 +111,60 @@ fn setup(
     for z in center[1] - radius - 1..=center[1] + radius + 1 {
         for x in center[0] - radius - 1..=center[0] + radius + 1 {
             let s = g.sampler([x, z]);
-            for y in -1..2 {
+            world.install_region(
+                voxel_core::regions::RegionPos::of(voxel_core::BlockPos([x * 16, 0, z * 16])),
+                Default::default(),
+            );
+            for y in g.world_height().chunks() {
                 let p = ChunkPos([x, y, z]);
                 world.insert_chunk(p, s.chunk(p).unwrap());
+            }
+        }
+    }
+    if scene.vertical || scene.deep {
+        assert_eq!(scene.version, 6, "vertical gallery fixtures require v6");
+        use voxel_core::{Block, BlockPos};
+        if scene.vertical {
+            for y in 12..180 {
+                for dx in -3i32..=3 {
+                    for dz in -3i32..=3 {
+                        if (dx.abs() == 3 && dz.abs() == 3) || y % 16 == 0 {
+                            world
+                                .set_block(
+                                    BlockPos([scene.x + dx, y, scene.z + dz]),
+                                    if y % 16 == 0 {
+                                        Block::Stone
+                                    } else {
+                                        Block::Wood
+                                    },
+                                )
+                                .unwrap();
+                        }
+                    }
+                }
+            }
+        }
+        if scene.deep {
+            for y in -52..=-44 {
+                for dx in -6i32..=6 {
+                    for dz in -12i32..=12 {
+                        world
+                            .set_block(
+                                BlockPos([scene.x + dx, y, scene.z + dz]),
+                                if y == -52 || y == -44 || dx.abs() == 6 || dz.abs() == 12 {
+                                    Block::Stone
+                                } else {
+                                    Block::Air
+                                },
+                            )
+                            .unwrap();
+                    }
+                }
+            }
+            for dz in [-8, 0, 8] {
+                world
+                    .set_block(BlockPos([scene.x - 4, -51, scene.z + dz]), Block::Torch)
+                    .unwrap();
             }
         }
     }
@@ -169,16 +224,32 @@ fn setup(
             f64::from(scene.z) + 0.5,
         ],
     );
-    let eye = Vec3::new(
+    let mut eye = Vec3::new(
         (feet[0] - f64::from(origin[0])) as f32,
         feet[1] as f32 + if scene.overview { 12. } else { 1.62 },
         (feet[2] - f64::from(origin[1])) as f32,
     );
-    let direction = Vec3::new(
+    let mut direction = Vec3::new(
         scene.yaw.sin(),
         if scene.overview { -0.3 } else { -0.08 },
         -scene.yaw.cos(),
     );
+    if scene.vertical {
+        eye = Vec3::new(
+            (scene.x - origin[0] + 12) as f32,
+            124.,
+            (scene.z - origin[1] + 14) as f32,
+        );
+        direction = Vec3::new(-12., -8., -14.);
+    }
+    if scene.deep {
+        eye = Vec3::new(
+            (scene.x - origin[0] + 3) as f32,
+            -49.8,
+            (scene.z - origin[1] + 9) as f32,
+        );
+        direction = Vec3::new(-0.15, -0.1, -1.);
+    }
     commands.spawn((
         Camera3d::default(),
         Projection::Perspective(PerspectiveProjection {
@@ -196,6 +267,10 @@ fn setup(
         scene.z,
         scene.yaw.to_degrees(),
         scene.overview
+    );
+    println!(
+        "VERTICAL_FIXTURE tower={} deep={} eye={eye:?}",
+        scene.vertical, scene.deep
     );
 }
 
