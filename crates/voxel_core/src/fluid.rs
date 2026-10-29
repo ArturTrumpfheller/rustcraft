@@ -89,7 +89,7 @@ impl Block {
         Fluid::from_state_id(state)
     }
 }
-/// Hard cap matches maximum supported radius (147 resident chunks).
+/// Hard cap matches the maximum supported resident volume (49 extended columns).
 /// A bit/set entry is never retained for an unknown or evicted cell.
 pub const MAX_PENDING: usize = 49
     * ((crate::bounds::WorldHeight::EXTENDED.max - crate::bounds::WorldHeight::EXTENDED.min)
@@ -224,7 +224,24 @@ impl World {
                         if distance(1) > 2 || distance(0) + distance(2) > ROUTE_DISTANCE {
                             continue;
                         }
-                        if self.chunk(np).unwrap().get(lp).fluid().is_some() {
+                        let block = self.chunk(np).unwrap().get(lp);
+                        let active = if block == Block::WaterSource {
+                            // A generated source body is already stable. Sources
+                            // cannot flow upward, into solids, or into sources.
+                            // Wake only real resident consumers; pending boundaries
+                            // will be reconsidered by the next lifecycle event.
+                            NEIGHBORS.iter().filter(|d| **d != [0, 1, 0]).any(|&d| {
+                                p.offset(d).is_some_and(|n| {
+                                    self.in_bounds(n)
+                                        && self.ready(n)
+                                        && self.block(n) != Block::WaterSource
+                                        && self.block(n).fluid_replaceable()
+                                })
+                            })
+                        } else {
+                            block.fluid().is_some()
+                        };
+                        if active {
                             self.fluids.invalidate_route(p);
                             self.wake_fluid(p);
                         }

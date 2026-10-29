@@ -1,3 +1,36 @@
+# Slice 28: procedural hydrology and quiet water installation
+
+Generator8 composes bounded `worldgen::hydrology` surface plans with existing biome
+columns, supported tree anchors and v7 cave primitives. The18x18 sampled column
+uses an additional20x20 water ring to prove immediate wet-bank caps. Independent
+point queries and chunk rasterization share the same geography and cave-water
+membership. Generation is seed/version/absolute-coordinate based; no residency,
+RNG stream, traversal order or world-sized map participates.
+
+A per-generator64-entry FIFO cache holds immutable cave-pool cells. Each candidate
+is bounded to8192 cells in an81x81 box below source level-52; candidates reaching
+a box edge are rejected. Metadata/cache construction is CPU-only and remains on
+the existing worker. Cached voxels and saved overlays retain their current
+ownership, stale-result rejection and dirty-region capacity checks.
+
+Generated source slabs compact to uniform chunks. `wake_installed_fluids` tests
+actual downstream/side consumers before enqueuing a source's dependencies;
+unchanged source interiors and their dry upper surfaces remain asleep. Flowing
+states and changed/deferred boundaries retain ordinary lifecycle wakeups. Queue
+capacity/budget are unchanged, and water never generates/loads missing chunks.
+
+Uniform enclosed water slabs need no geometry or retained light cache. The
+existing separate water mesher culls internal faces and delays corner sampling
+until a visible face needs it. Terrain meshes/materials, lighting transmission,
+collision, buckets and underwater gameplay use their existing paths. Saved Air,
+construction and fluid edits override the generated baseline; only these changes
+are persisted through manifest5 / region1 and the existing session journal.
+
+[Hydrology contract](WORLDGEN.md), [source semantics](WATER.md), [measurements,
+images, limitations and native acceptance](performance/slice28/README.md).
+
+---
+
 # RustCraft architecture
 
 ## Slice 27: bounded three-dimensional caves

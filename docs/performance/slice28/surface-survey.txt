@@ -1,0 +1,61 @@
+seed,center_x,center_z,samples,water_percent,ocean_percent,pond_cells,lake_cells,river_cells,components,small_lt256,medium_lt4096,large_ge4096,largest,depth_p50,depth_p95,max_depth,shore_edges,river_lake_edges,cave_water_cells,cave_wet_columns
+CAVE seed=0 position=[-97, -52, -20]
+SITE kind=1 seed=0 x=-337 z=171 depth=4
+SITE kind=3 seed=0 x=-306 z=159 depth=5
+SITE kind=4 seed=0 x=-3 z=-501 depth=30
+0,0,0,1048576,67.746,67.656,327,0,620,39,37,1,1,708930,30,30,30,5213,44,497,8
+SITE kind=1 seed=0 x=8498 z=-8668 depth=4
+SITE kind=2 seed=0 x=8413 z=-8250 depth=9
+SITE kind=3 seed=0 x=8533 z=-8620 depth=5
+SITE kind=4 seed=0 x=7680 z=-8345 depth=7
+0,8192,-8192,1048576,5.584,2.628,2894,21457,6645,52,33,16,3,13622,3,8,9,7917,88,0,0
+SITE kind=1 seed=0 x=-16463 z=15488 depth=4
+SITE kind=2 seed=0 x=-15553 z=15692 depth=9
+SITE kind=3 seed=0 x=-16360 z=15488 depth=5
+SITE kind=4 seed=0 x=-16227 z=16511 depth=10
+0,-16000,16000,1048576,4.382,0.900,2389,26846,7276,42,20,19,3,9431,4,8,10,7590,104,0,0
+SITE kind=1 seed=42 x=-248 z=-334 depth=4
+SITE kind=2 seed=42 x=-434 z=31 depth=9
+SITE kind=3 seed=42 x=-247 z=-333 depth=5
+SITE kind=4 seed=42 x=-82 z=-512 depth=30
+42,0,0,1048576,58.955,58.072,1065,6897,1297,32,26,5,1,609346,18,30,30,6743,72,0,0
+SITE kind=1 seed=42 x=8369 z=-8152 depth=3
+SITE kind=2 seed=42 x=8113 z=-7905 depth=9
+SITE kind=3 seed=42 x=8149 z=-7854 depth=5
+SITE kind=4 seed=42 x=7680 z=-8704 depth=30
+42,8192,-8192,1048576,68.720,67.811,127,7683,1723,40,34,4,2,711060,30,30,30,4659,40,0,0
+SITE kind=1 seed=42 x=-16346 z=15792 depth=4
+SITE kind=2 seed=42 x=-16290 z=16072 depth=8
+SITE kind=3 seed=42 x=-16346 z=15795 depth=5
+SITE kind=4 seed=42 x=-16353 z=15495 depth=30
+42,-16000,16000,1048576,15.972,14.764,1178,6320,5174,13,8,4,1,155442,20,30,30,5216,65,0,0
+SITE kind=1 seed=2026 x=-97 z=-466 depth=4
+SITE kind=2 seed=2026 x=-438 z=-238 depth=8
+SITE kind=3 seed=2026 x=107 z=-243 depth=5
+SITE kind=4 seed=2026 x=511 z=35 depth=30
+2026,0,0,1048576,10.022,7.589,1807,18374,5340,27,10,14,3,74816,6,26,30,6480,237,0,0
+SITE kind=1 seed=2026 x=8246 z=-8015 depth=4
+SITE kind=2 seed=2026 x=8393 z=-8663 depth=8
+SITE kind=3 seed=2026 x=8565 z=-8704 depth=5
+SITE kind=4 seed=2026 x=7950 z=-8566 depth=30
+2026,8192,-8192,1048576,56.255,54.876,1061,9218,4182,23,16,5,2,572350,13,30,30,7460,176,0,0
+SITE kind=1 seed=2026 x=-15562 z=15793 depth=4
+SITE kind=2 seed=2026 x=-16051 z=15913 depth=9
+SITE kind=3 seed=2026 x=-15560 z=15795 depth=5
+SITE kind=4 seed=2026 x=-16256 z=15488 depth=30
+2026,-16000,16000,1048576,19.480,16.947,1797,19133,5625,53,41,9,3,145102,6,23,30,9414,201,0,0
+CAVE seed=18446744073709551615 position=[-117, -52, -97]
+SITE kind=1 seed=18446744073709551615 x=-279 z=-336 depth=4
+SITE kind=2 seed=18446744073709551615 x=175 z=-443 depth=8
+SITE kind=3 seed=18446744073709551615 x=239 z=-500 depth=5
+SITE kind=4 seed=18446744073709551615 x=493 z=-375 depth=30
+18446744073709551615,0,0,1048576,67.964,67.140,1633,4864,2141,26,18,7,1,702685,30,30,30,6475,37,118,3
+SITE kind=1 seed=18446744073709551615 x=8603 z=-8399 depth=4
+SITE kind=2 seed=18446744073709551615 x=8590 z=-8124 depth=8
+SITE kind=3 seed=18446744073709551615 x=8605 z=-8397 depth=5
+18446744073709551615,8192,-8192,1048576,1.664,0.000,1123,10468,5858,16,5,10,1,4218,4,7,8,4236,69,0,0
+SITE kind=1 seed=18446744073709551615 x=-15795 z=15551 depth=4
+SITE kind=2 seed=18446744073709551615 x=-16453 z=15523 depth=9
+SITE kind=3 seed=18446744073709551615 x=-15977 z=15488 depth=5
+SITE kind=4 seed=18446744073709551615 x=-15541 z=16319 depth=8
+18446744073709551615,-16000,16000,1048576,3.459,0.842,2524,20138,4783,48,32,15,1,4153,3,8,9,6107,57,0,0

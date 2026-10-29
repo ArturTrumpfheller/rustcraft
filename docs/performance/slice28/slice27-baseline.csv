@@ -1,0 +1,10 @@
+generator,scene,seed,cx,cz,raw_p50_us,raw_p95_us,raw_p99_us,cold_job_us,job_p50_us,job_p95_us,job_p99_us,cpu_p50_us,install_p50_us,mesh_bytes,mixed,uniform,resident_bytes,terrain_cache_bytes,water_cache_bytes,peak_job_heap,water_cells,initial_queue,idle_processed,edit_peak_queue,edit_processed,edit_changes,settle_ticks,max_changes_tick,save_us,reload_us,edit_records
+7,dry,2026,0,0,217.9,249.6,338.6,3110.4,892.2,933.7,942.1,892.2,4.4,496,11,133,45056,45056,0,463136,0,0,0,0,0,0,0,0,27.7,254.1,1
+7,pond,2026,-7,-30,259.4,288.5,296.3,4311.9,1430.9,1907.4,1982.5,1431.3,7.7,140864,29,115,118784,118784,0,678304,0,0,0,0,0,0,0,0,29.1,326.0,1
+7,lake,42,-28,1,324.2,441.0,481.8,4545.2,1254.7,1498.1,1560.0,1254.9,6.6,42904,18,126,73728,73728,0,590240,0,0,0,0,0,0,0,0,28.5,413.3,1
+7,ocean,42,6,6,238.3,276.8,354.2,3675.5,1282.4,1438.3,1638.3,1282.6,6.9,61008,26,118,106496,106496,0,653984,0,0,0,0,0,0,0,0,27.6,290.3,1
+7,river,2026,6,-16,282.2,313.0,363.1,4041.5,1397.6,1764.7,1800.7,1397.9,7.6,184016,33,111,135168,135168,0,812908,0,0,0,0,0,0,0,0,27.3,335.3,1
+7,coast,2026,28,2,251.5,288.5,319.3,3538.6,1167.0,1581.4,1630.7,1164.9,7.0,93744,19,125,77824,77824,0,528928,0,0,0,0,0,0,0,0,28.4,309.9,1
+7,underground,2026,-13,-42,316.7,422.4,464.1,37041.9,1435.0,1663.2,1948.4,1433.6,7.0,271064,30,114,122880,122880,0,947052,0,0,0,0,0,0,0,0,26.9,389.1,1
+TRAVEL generator=7 scene=river_travel jobs=75 p50_us=1754.1 p95_us=5710.2 p99_us=37484.3 resident=144 resident_bytes=135168 cache_columns=25 cache_bytes=327680 water_cache_bytes=0 queue_peak=0 edits=0
+TRAVEL generator=7 scene=coast_travel jobs=75 p50_us=1673.9 p95_us=2422.3 p99_us=4570.6 resident=144 resident_bytes=77824 cache_columns=25 cache_bytes=196608 water_cache_bytes=0 queue_peak=0 edits=0

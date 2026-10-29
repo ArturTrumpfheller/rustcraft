@@ -107,8 +107,14 @@ fn setup(
     mut materials: ResMut<Assets<TerrainSurface>>,
     mut sky: ResMut<Assets<SkyMaterial>>,
     mut images: ResMut<Assets<Image>>,
+    mut water_materials: ResMut<Assets<terrain_material::WaterSurface>>,
 ) {
-    let radius = if scene.eye.is_some() { 5 } else { 3 };
+    let radius = std::env::args()
+        .find_map(|a| a.strip_prefix("--radius=").map(str::to_owned))
+        .map_or(if scene.eye.is_some() { 5 } else { 3 }, |s| {
+            s.parse::<i32>().unwrap()
+        })
+        .clamp(1, 10);
     let origin = [scene.x.div_euclid(16) * 16, scene.z.div_euclid(16) * 16];
     let center = origin.map(|v| v / 16);
     let g = Generator::new(GenerationConfig {
@@ -182,9 +188,9 @@ fn setup(
         }
     }
     if scene.cave_torches {
-        assert_eq!(
-            scene.version, 7,
-            "procedural cave torch fixture requires v7"
+        assert!(
+            scene.version == 7 || scene.version == 8,
+            "procedural cave torch fixture requires v7/v8"
         );
         use voxel_core::{Block, BlockPos};
         let mut count = 0;
@@ -225,8 +231,15 @@ fn setup(
         .into_iter()
         .map(|(key, targets)| (key, Skylight::for_chunks(&world, &targets)))
         .collect();
-    let clock = voxel_core::time::WorldTime::from_parts(0, 6000 * 3).unwrap();
-    let params = AtmosphereUniform::at_time(radius, clock);
+    let time = std::env::args()
+        .find_map(|a| a.strip_prefix("--time=").map(str::to_owned))
+        .map_or(6000, |s| s.parse().unwrap());
+    let clock = voxel_core::time::WorldTime::from_parts(0, time * 3).unwrap();
+    let mut params = AtmosphereUniform::at_time(radius, clock);
+    if std::env::args().any(|a| a == "--survey-fog") {
+        params.fog.x = 96.;
+        params.fog.y = 160.;
+    }
     let material = materials.add(TerrainSurface {
         base: StandardMaterial {
             unlit: true,
@@ -237,10 +250,45 @@ fn setup(
             atmosphere: params,
         },
     });
+    let water_material = water_materials.add(terrain_material::WaterSurface {
+        base: StandardMaterial {
+            unlit: true,
+            alpha_mode: AlphaMode::Blend,
+            cull_mode: None,
+            double_sided: true,
+            ..default()
+        },
+        extension: terrain_material::WaterEffect {
+            texture: images.add(terrain_texture::water_image()),
+            atmosphere: params,
+            effect: Vec4::ZERO,
+        },
+    });
     for (p, _) in world.chunks().filter(|(p, _)| {
         (p.0[0] - center[0]).abs() <= radius && (p.0[2] - center[1]).abs() <= radius
     }) {
         let m = mesh_chunk_lit(&world, p, &lights[&batch_key(p)]);
+        if !m.water.indices.is_empty() {
+            let water = m.water;
+            let mesh = Mesh::new(
+                PrimitiveTopology::TriangleList,
+                RenderAssetUsages::default(),
+            )
+            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, water.positions)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, water.normals)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, water.uvs)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, water.colors)
+            .with_inserted_indices(Indices::U32(water.indices));
+            commands.spawn((
+                Mesh3d(meshes.add(mesh)),
+                MeshMaterial3d(water_material.clone()),
+                Transform::from_xyz(
+                    (p.0[0] * 16 - origin[0]) as f32,
+                    (p.0[1] * 16) as f32,
+                    (p.0[2] * 16 - origin[1]) as f32,
+                ),
+            ));
+        }
         if m.indices.is_empty() {
             continue;
         }
@@ -345,15 +393,33 @@ fn capture(
     mut frames: Local<u32>,
     time: Res<Time<Real>>,
     mut captured: Local<bool>,
+    mut intervals: Local<Vec<f64>>,
 ) {
     *frames += 1;
+    if *frames > 30 {
+        intervals.push(time.delta_secs_f64() * 1000.);
+    }
     if !*captured
-        && *frames >= 120
+        && *frames
+            >= std::env::args()
+                .find_map(|a| a.strip_prefix("--capture-frames=").map(str::to_owned))
+                .map_or(120, |s| s.parse().unwrap())
         && time.elapsed_secs() > 10.
         && let Some(path) =
             std::env::args().find_map(|a| a.strip_prefix("--capture=").map(str::to_owned))
     {
         *captured = true;
+        intervals.sort_by(f64::total_cmp);
+        if !intervals.is_empty() {
+            let p = |n: usize| intervals[(intervals.len() - 1) * n / 100];
+            println!(
+                "CAPTURE_FRAME_MS samples={} p50={:.2} p95={:.2} p99={:.2}",
+                intervals.len(),
+                p(50),
+                p(95),
+                p(99)
+            );
+        }
         commands
             .spawn(bevy::render::view::screenshot::Screenshot::primary_window())
             .observe(

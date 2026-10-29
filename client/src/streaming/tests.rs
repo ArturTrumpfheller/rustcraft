@@ -929,7 +929,10 @@ fn large_world_travel_bounds_cpu_gpu_overlays_and_keeps_far_edits_across_restart
         timings.push(t.elapsed());
         let w = app.world_mut();
         let chunks = w.resource::<VoxelWorld>().0.chunks().count();
-        let renders = w.resource::<ChunkRenders>().0.len();
+        let renders = {
+            let r = w.resource::<ChunkRenders>();
+            r.0.len() + r.1.len()
+        };
         assert!(chunks <= 9 * w.resource::<VoxelWorld>().0.world_height().chunk_count());
         assert!(w.resource::<VoxelWorld>().0.cached_regions() <= 16);
         assert_eq!(w.resource::<Assets<Mesh>>().len(), renders);
@@ -1132,7 +1135,26 @@ fn assert_textured_residency(app: &mut App) {
     assert!(state.lights.len() <= 49 * w.resource::<VoxelWorld>().0.world_height().chunk_count());
     assert!(state.cache.columns() <= 81);
     let renders = w.resource::<ChunkRenders>();
-    assert_eq!(w.resource::<Assets<Mesh>>().len(), renders.0.len());
+    assert_eq!(
+        w.resource::<Assets<Mesh>>().len(),
+        renders.0.len() + renders.1.len()
+    );
+    let water_payload: usize = renders
+        .1
+        .values()
+        .map(|r| {
+            let mesh = w.resource::<Assets<Mesh>>().get(&r.mesh).unwrap();
+            mesh.count_vertices() * 48 + mesh.indices().unwrap().len() * 4
+        })
+        .sum();
+    for render in renders.1.values() {
+        assert_eq!(
+            w.get::<MeshMaterial3d<crate::terrain_material::WaterSurface>>(render.entity)
+                .unwrap()
+                .0,
+            w.resource::<TerrainMaterial>().2
+        );
+    }
     let payload: usize = renders
         .0
         .values()
@@ -1141,7 +1163,7 @@ fn assert_textured_residency(app: &mut App) {
             mesh.count_vertices() * 56 + mesh.indices().unwrap().len() * 4
         })
         .sum();
-    assert_eq!(state.mesh_bytes, payload);
+    assert_eq!(state.mesh_bytes, payload + water_payload);
     for render in renders.0.values() {
         let m = w.resource::<Assets<Mesh>>().get(&render.mesh).unwrap();
         assert_eq!(
