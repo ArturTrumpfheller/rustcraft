@@ -35,7 +35,11 @@ fn cave(g: &Generator, x: i32, y: i32, z: i32) -> bool {
     main || (y >= floor && y < floor + 4)
 }
 pub(super) fn terrain(g: &Generator, p: BlockPos, h: i32) -> Block {
-    layers(g, p, h, None)
+    if g.config.version == 7 && super::caves::point(g.config.seed, p, h) {
+        Block::Air
+    } else {
+        layers(g, p, h, None)
+    }
 }
 fn layers(g: &Generator, p: BlockPos, h: i32, column: Option<super::biome::Column>) -> Block {
     let [x, y, z] = p.0;
@@ -55,7 +59,7 @@ fn layers(g: &Generator, p: BlockPos, h: i32, column: Option<super::biome::Colum
         || !(-g.extent..g.extent).contains(&z)
         || !g.world_height().contains(y)
         || y > h
-        || cave(g, x, y, z)
+        || (g.config.version != 7 && cave(g, x, y, z))
     {
         return Block::Air;
     }
@@ -200,6 +204,9 @@ pub(super) fn point(g: &Generator, p: BlockPos) -> Block {
     let h = surface(g, x, z);
     let column = (g.config.version >= 5).then(|| super::biome::column(g.config.seed, x, z));
     let b = layers(g, p, h, column);
+    if g.config.version == 7 && y <= h && super::caves::point(g.config.seed, p, h) {
+        return Block::Air;
+    }
     // A v4 root may sit two blocks above this cell's surface. A five-block
     // trunk plus the crown then reaches h+8. Keep the frozen v3 shortcut.
     let overhead = if g.config.version >= 4 { 8 } else { 7 };
@@ -213,6 +220,7 @@ pub(super) struct Plan {
     heights: Vec<i32>,
     materials: Vec<super::biome::Column>,
     trees: Vec<Tree>,
+    caves: Option<super::caves::Plan>,
 }
 impl Plan {
     fn new(g: &Generator, c: [i32; 2]) -> Self {
@@ -238,6 +246,8 @@ impl Plan {
             heights,
             materials,
             trees: trees(g, min, max),
+            caves: (g.config.version == 7)
+                .then(|| super::caves::Plan::new(g.config.seed, min, max)),
         }
     }
     fn block(&self, g: &Generator, p: BlockPos) -> Block {
@@ -252,6 +262,9 @@ impl Plan {
         } else {
             return point(g, p);
         };
+        if p.0[1] <= h && self.caves.as_ref().is_some_and(|c| c.contains(p, h)) {
+            return Block::Air;
+        }
         sample(
             g,
             p,
@@ -296,6 +309,46 @@ impl<'a> Sampler<'a> {
             }
             if p.0[1] >= crate::bounds::WorldHeight::HISTORICAL.chunks().end {
                 return Some(Chunk::default());
+            }
+        }
+        if self.g.config.version == 7 {
+            if p.0[1] >= 2 {
+                return Some(Chunk::default());
+            }
+            if let Some(plan) = &self.plan {
+                // A sampler may be asked for a different column; never apply
+                // this column's conservative bounds to that request.
+                if p.0[0] * 16 == plan.min[0] + 1 && p.0[2] * 16 == plan.min[1] + 1 {
+                    let mut c = if p.0[1] * 16 + 15 < *plan.heights.iter().min().unwrap() - 4 {
+                        Chunk::filled(Block::Stone)
+                    } else {
+                        let mut c = Chunk::default();
+                        for y in 0..16 {
+                            for z in 0..16 {
+                                for x in 0..16 {
+                                    let l = LocalPos::new([x, y, z]).unwrap();
+                                    let pos = p.block_position(l).unwrap();
+                                    let i = (z + 1) * 18 + x + 1;
+                                    c.set(
+                                        l,
+                                        sample(
+                                            self.g,
+                                            pos,
+                                            plan.heights[i],
+                                            &plan.trees,
+                                            plan.materials.get(i).copied(),
+                                        ),
+                                    );
+                                }
+                            }
+                        }
+                        c
+                    };
+                    plan.caves.as_ref().unwrap().carve(&mut c, p, |x, z| {
+                        plan.heights[((z - plan.min[1]) * 18 + x - plan.min[0]) as usize]
+                    });
+                    return Some(c);
+                }
             }
         }
         let mut c = Chunk::default();

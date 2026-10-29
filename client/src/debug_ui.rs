@@ -183,7 +183,7 @@ fn update(
     overlay.text.clear();
     let _ = writeln!(
         overlay.text,
-        "RUSTCRAFT {} / DEV SLICE 26",
+        "RUSTCRAFT {} / DEV SLICE 27",
         env!("CARGO_PKG_VERSION")
     );
     if let Some(seconds) = overlay.frame_seconds {

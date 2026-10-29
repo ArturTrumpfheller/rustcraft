@@ -32,6 +32,9 @@ struct Scene {
     overview: bool,
     vertical: bool,
     deep: bool,
+    eye: Option<Vec3>,
+    direction: Option<Vec3>,
+    cave_torches: bool,
 }
 fn main() {
     let args: Vec<_> = std::env::args().skip(1).collect();
@@ -39,6 +42,13 @@ fn main() {
         args.len() >= 4,
         "SEED X Z YAW_DEGREES [--capture=path.ppm] [--overview]"
     );
+    let vector = |prefix: &str| {
+        args.iter().find_map(|s| s.strip_prefix(prefix)).map(|s| {
+            let v: Vec<f32> = s.split(',').map(|v| v.parse().unwrap()).collect();
+            assert!(v.len() == 3 && v.iter().all(|v| v.is_finite()));
+            Vec3::new(v[0], v[1], v[2])
+        })
+    };
     let scene = Scene {
         version: args
             .iter()
@@ -51,6 +61,9 @@ fn main() {
         overview: args.iter().any(|s| s == "--overview"),
         vertical: args.iter().any(|s| s == "--vertical"),
         deep: args.iter().any(|s| s == "--deep"),
+        eye: vector("--eye="),
+        direction: vector("--direction="),
+        cave_torches: args.iter().any(|s| s == "--cave-torches"),
     };
     assert!(scene.x.abs() < 32000 && scene.z.abs() < 32000 && scene.yaw.is_finite());
     let mut app = App::new();
@@ -95,7 +108,7 @@ fn setup(
     mut sky: ResMut<Assets<SkyMaterial>>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    let radius = 3;
+    let radius = if scene.eye.is_some() { 5 } else { 3 };
     let origin = [scene.x.div_euclid(16) * 16, scene.z.div_euclid(16) * 16];
     let center = origin.map(|v| v / 16);
     let g = Generator::new(GenerationConfig {
@@ -168,12 +181,50 @@ fn setup(
             }
         }
     }
-    let targets = world
-        .chunks()
-        .map(|(p, _)| p)
-        .filter(|p| (p.0[0] - center[0]).abs() <= radius && (p.0[2] - center[1]).abs() <= radius)
+    if scene.cave_torches {
+        assert_eq!(
+            scene.version, 7,
+            "procedural cave torch fixture requires v7"
+        );
+        use voxel_core::{Block, BlockPos};
+        let mut count = 0;
+        for x in (scene.x - 36..=scene.x + 36).step_by(6) {
+            for z in (scene.z - 36..=scene.z + 36).step_by(6) {
+                for y in -59..g.height(x, z).unwrap() {
+                    let p = BlockPos([x, y, z]);
+                    if world.ready(p)
+                        && world.block(p) == Block::Air
+                        && world.block(BlockPos([x, y - 1, z])).is_opaque()
+                    {
+                        world.set_block(p, Block::Torch).unwrap();
+                        count += 1;
+                    }
+                }
+            }
+        }
+        println!(
+            "CAVE_LIGHTING_FIXTURE supported_floor_torches={count}; procedural geometry unmodified"
+        );
+    }
+    // Gallery-only larger context: each solve still respects the production
+    // seven-column target bound. Fifteen-cell halos make independent fields
+    // agree exactly at the batch edges.
+    let batch_key = |p: ChunkPos| {
+        [
+            (p.0[0] - center[0] + radius) / 7,
+            (p.0[2] - center[1] + radius) / 7,
+        ]
+    };
+    let mut batches = std::collections::BTreeMap::<_, std::collections::BTreeSet<_>>::new();
+    for (p, _) in world.chunks().filter(|(p, _)| {
+        (p.0[0] - center[0]).abs() <= radius && (p.0[2] - center[1]).abs() <= radius
+    }) {
+        batches.entry(batch_key(p)).or_default().insert(p);
+    }
+    let lights: std::collections::BTreeMap<_, _> = batches
+        .into_iter()
+        .map(|(key, targets)| (key, Skylight::for_chunks(&world, &targets)))
         .collect();
-    let light = Skylight::for_chunks(&world, &targets);
     let clock = voxel_core::time::WorldTime::from_parts(0, 6000 * 3).unwrap();
     let params = AtmosphereUniform::at_time(radius, clock);
     let material = materials.add(TerrainSurface {
@@ -189,7 +240,7 @@ fn setup(
     for (p, _) in world.chunks().filter(|(p, _)| {
         (p.0[0] - center[0]).abs() <= radius && (p.0[2] - center[1]).abs() <= radius
     }) {
-        let m = mesh_chunk_lit(&world, p, &light);
+        let m = mesh_chunk_lit(&world, p, &lights[&batch_key(p)]);
         if m.indices.is_empty() {
             continue;
         }
@@ -250,6 +301,21 @@ fn setup(
         );
         direction = Vec3::new(-0.15, -0.1, -1.);
     }
+    if let Some(p) = scene.eye {
+        assert!(p.x.abs() < 32000. && p.z.abs() < 32000. && (-63. ..192.).contains(&p.y));
+        eye = p - Vec3::new(origin[0] as f32, 0., origin[1] as f32);
+    }
+    if let Some(d) = scene.direction {
+        assert!(d.length_squared() > 0.);
+        direction = d;
+    }
+    println!(
+        "CAVE_CAMERA seed={} generator={} world_eye={:?} direction={direction:?} torch_fixture={}",
+        scene.seed,
+        scene.version,
+        eye + Vec3::new(origin[0] as f32, 0., origin[1] as f32),
+        scene.cave_torches
+    );
     commands.spawn((
         Camera3d::default(),
         Projection::Perspective(PerspectiveProjection {

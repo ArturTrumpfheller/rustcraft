@@ -1,0 +1,4 @@
+CAVE_LIGHTING_FIXTURE supported_floor_torches=65; procedural geometry unmodified
+CAVE_CAMERA seed=42 generator=7 world_eye=Vec3(-175.0, -39.0, -158.0) direction=Vec3(-0.7, -0.25, 0.7) torch_fixture=true
+TERRAIN_SCENE generator=7 seed=42 x=-175 z=-158 surface_y=5 yaw=0 radius=5 overview=false feet=[-174.5, 6.0, -157.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(1.0, -39.0, 2.0)

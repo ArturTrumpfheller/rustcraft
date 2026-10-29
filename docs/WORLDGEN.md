@@ -1,8 +1,119 @@
-# Biome Generation v1 — Slice25 / generator v5
+# World generation — generator v7 / Cave Generation v2
 
-## Current new-world generator: v6 (Slice 26)
+Only newly created worlds select **7**. Generators **1–6 are frozen**, including
+all previous golden CRCs, bounds, materials and historical cave behavior. Manifest5
+and region1 already carry explicit generator identity; loading never upgrades it.
+Unsupported generator8+ fails closed. See [SAVE_FORMAT](SAVE_FORMAT.md).
 
-New worlds now select6, retaining manifest5. `WorldHeight` defines Y[-64,192),
+## Cave systems
+
+`worldgen::caves` is original, Bevy-independent integer geometry. Five biomes,
+climate distribution, terrain heights, soils and existing tree models reuse the
+v5/v6 surface stages without retuning. V7 supersedes the periodic historical
+cave/ramp predicate, including the old Y=-14 cave floor.
+
+Each96×96 world-coordinate cell can own a local system. Its root has independent
+24–71-block X/Z offsets and a center at Y[-35,-23]. A512-block Q10 field varies
+system admission broadly (`760 + noise*350/1024` per mille); neighboring systems
+can intersect, while quieter areas retain solid rock. Placement cells are not
+edit regions or resident chunks. They do not impose a hard carving boundary.
+
+Four to seven independently salted, seven-leg passages branch from each root.
+Each leg advances approximately ten blocks, can turn45 degrees and change height
+by up to four blocks. Quadratic midpoint smoothing sampled in Q4 produces curved
+swept ellipsoidal passages. Horizontal radii vary2.5–4.25 blocks; vertical radii
+are0.75 blocks taller. Rounded ends, crossings, bends and width variation avoid
+one-cell corridors and mandatory global connectivity. Branches can end blindly.
+
+Medium rooms have axes7–12 by5–8 by7–12 blocks. About one fifth of admitted
+roots instead has a large room with axes18–27 by11–17 by16–25. Three offset,
+overlapping lobes give uneven walls, ledges and overhangs. Large chambers cross
+horizontal and vertical chunk seams. An offset deep room at Y[-49,-43], connected
+through a bent sloping passage, adds another independently salted branch. Stone
+between intersecting shapes can form buttresses; dedicated pillar features are
+not implemented. These are swept passages/lobed rooms, not a 3D noise sponge.
+
+Independent salt families separate placement/density (`0x7001/2`), chamber shape
+(`0x7021/0x7030..`), branch paths (`0x7100+branch*32`), deep paths (`0x7300`) and
+entrance bending (`0x7400`). Shared root-admission bits select room size, direction
+and whether the system has an entrance. There is no shared mutable random stream.
+
+## Entrances, roof and spawn
+
+About one quarter of admitted systems route a narrow, gently bent passage from
+the actual root room to a mouth up to48 blocks away. Its target center is the
+existing terrain height plus two. The final stretch opens through the surface;
+the route starts inside a real chamber, rather than drilling an isolated pit.
+Only these designated routes may breach the ordinary **five-block roof**. Some
+entrances are stair-like and steep; the algorithm does not promise every route
+can be walked without jumping or digging. No automatic water is generated.
+
+A21×21 area around preferred spawn(0,10) retains18 supported layers below its
+surface; all carving, including entrances, respects this constraint. Mouths
+within the wider protected28-block X/Z neighborhood are rejected. Existing
+spawn/respawn still uses actual loaded blocks, supported ground and player
+clearance. Terrain heights, physics and player movement are unchanged.
+
+Carving starts at **Y=-60**. Four uninterrupted Stone layers occupy[-64,-60).
+Large-room floors stay above this foundation. Upper bounds remain192 exclusive;
+pristine Y[32,192) remains uniform Air, since the retained surface/crown model
+finishes below32. No Bedrock, new materials or shaders are added.
+
+## Determinism and bounded discovery
+
+Every cell's geometry lies inside that cell expanded by **less than96 blocks**.
+For a point, exactly a3×3 cell neighborhood suffices; an18×18 column halo can
+straddle a cell boundary and visits at most4×4 cells. Tests verify the geometric
+bound independently over multiple cells/seeds. Features are filtered by their
+conservative X/Z bounds, then rasterized only inside intersecting chunk bounds.
+No neighbor chunk, planning map, recursion or global connectivity search is used.
+
+All placement uses wrapping-u64 hashes, Euclidean signed cell division and Q10
+value noise. Curves/voxel centers use Q4; closest-point projection uses Q10.
+Both point and chunk paths evaluate the same fixed integer ellipsoid metric.
+Axes are at most432 Q4 units; local deltas and short segment lengths keep metric
+products/projection intermediates within i64. Absolute supported X/Z coordinates
+are bounded before arithmetic. No float operation affects any generated block.
+OS/compiler/worker order therefore cannot change a threshold decision.
+
+Column plans hold a bounded vector of intersecting primitives. Per-feature route
+planning uses fixed arrays; cave point queries use a stack visitor without heap
+allocation. The rasterizer computes each primitive's metric once, uses cached
+surface heights for roof tests and never visits all deep voxels in a solid chunk.
+Unchanged deep chunks start and remain uniform Stone, while only actual mixed
+geometry materializes4096 cells. Upper chunks return uniform Air immediately.
+The existing worker/cache/overlay ownership and eviction semantics remain.
+
+## Lighting, gameplay and evidence
+
+The existing source-descriptor classifier automatically expands the active light
+span down to real caves, while retaining proven opaque bottom and known-Air upper
+trimming. Enclosed chambers get no skylight; entrances admit the ordinary flood;
+supported torches use the existing independent block-light field. Procedural-room
+tests compare both channels to the full256-plane reference and mesh both sides
+of a vertical seam. No global full-height solve switch or renderer change exists.
+
+Mining, inventory transactions, collision, torches, player water, authoritative
+Air edits and save/journal recovery retain their existing implementations.
+Focused v7 regressions cover those paths, historical fixtures, signed/extreme
+sampling, parallel/reverse queries, regeneration and entrance-to-depth reachability.
+
+[Measured density/connectivity, performance, actual renderer captures, exact
+cameras and Void/Fish acceptance](performance/slice27/README.md). Surveys are
+bounded six-connected Air analyses, not guarantees of player-sized walkability
+or exploration quality throughout the world. Cave geography has no underground
+biomes, natural water, lava, ores, vegetation, structures or gameplay rewards.
+
+---
+
+The following sections specify historical releases. Statements about “new worlds”
+in those sections refer to the release that introduced that generator.
+
+# Historical biome generation v1 — Slice25 / generator v5
+
+## Frozen generator v6 (Slice 26)
+
+Slice26 new worlds selected6, retaining manifest5. `WorldHeight` defines Y[-64,192),
 chunk Y[-4,12), with minimum inclusive / maximum exclusive. Every v6 cell in
 Y[-16,32) equals frozen v5 at the same seed/X/Z. New deeper cells are Stone;
 Y[32,192) is Air. Climate, biome distribution, surface materials, caves and tree

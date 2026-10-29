@@ -1,5 +1,19 @@
 # RustCraft development roadmap
 
+## Slice 27 — Cave Generation v2
+
+- [x] Generator7 for new worlds; frozen generators1–6, bounds and save envelopes
+- [x] Curved branching passages, medium/lobed large rooms and deep connections
+- [x] Broad cave distribution, routed entrances, protected spawn/roof/foundation
+- [x] Bounded integer sampling, sparse deep chunks and existing asynchronous worker
+- [x] Determinism, procedural lighting/gameplay and coordinated recovery regressions
+- [x] Multi-seed bounded volume/connectivity survey and procedural renderer gallery
+- [ ] Native Void X11/Wayland / i3-13100 / RX9060 XT and Windows GUI acceptance
+
+[Algorithm](WORLDGEN.md); [measurements, exact cameras and Fish checklist](performance/slice27/README.md).
+Next: Slice28 natural water, Slice29 vegetation/details, Slice30 worldgen review.
+
+
 ## Slice 26 — Vertical World Expansion
 
 - [x] Generator6 identity and Y[-64,192); historical generators/bounds preserved
@@ -77,7 +91,7 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 - [x] First local large-world rollout with versioned regional storage and bounded caches
 - [ ] Further coordinate expansion and opt-in legacy migration
 - [x] Terrain Generation v2 (Slice24)
-- [ ] Cave Generation v2 (Slice27)
+- [x] Cave Generation v2 (Slice27)
 - [x] Initial voxel skylight and bounded light/mesh updates
 - [x] Emitted block light / persistent standing/wall torches, bounded worker updates and matched fixtures
 - [x] Slice20 original lighting/rendering/persistence/performance accepted on native Void Linux

@@ -1,5 +1,25 @@
 # RustCraft architecture
 
+## Slice 27: bounded three-dimensional caves
+
+New worlds select generator7; generators1–6 retain exact output and bounds.
+`worldgen::caves` plans jittered local systems with Q4 swept curved branches,
+lobed ellipsoidal chambers, descending room connections and actual chamber-to-
+surface entrances. A broad admission field leaves quiet solid regions. At most
+a4×4 candidate-cell neighborhood supplies a column halo; conservative primitive
+bounds restrict rasterization. Point queries use an allocation-free visitor.
+Metric coefficients are computed once per primitive, with only integer math.
+
+The existing v5/v6 height/material/tree stages and16-descriptor column worker
+remain. V7 deep chunks begin uniform Stone and materialize only for actual cave
+cells; upper sky remains uniform Air. Actual mixed source descriptors determine
+the existing sparse light span, so deep cave surfaces/torches use the established
+lighting, greedy/AO, invalidation and streaming paths. Manifest5, region1, player
+bindings, record limits and journal recovery add supported identity7 without
+changing envelopes. No world migration or new block/item IDs are introduced.
+[Algorithm, roof/foundation and spawn rules](WORLDGEN.md);
+[quality/performance, genuine captures and native acceptance](performance/slice27/README.md).
+
 ## Slice 26: versioned vertical worlds
 
 New regional worlds select generator6 with Y[-64,192); all historical identities
