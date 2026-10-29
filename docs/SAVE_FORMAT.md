@@ -406,3 +406,30 @@ World formats, generators, regional block IDs and journal protocol stay unchange
 Drops persist across eviction, creation/pickup share world/inventory journal replay,
 and old clients reject v3 or bucket IDs. Restore only complete consistent world
 directory copies. See WATER.md for the lifecycle and deliberate limits.
+
+
+## Slice25 additive biome compatibility
+
+New regional manifest-v5 worlds now pin generator5. Existing manifest-v4/gen3
+and manifest-v5/gen4 retain their exact64-byte identities and generators; the
+v5 envelope is extended, not replaced by another format. The decoder and region
+identity validator admit3/4/5 with the existing envelope constraints. Player
+bindings already include manifest mode, seed, generator and nonce, so v5/gen5
+uses the same explicit matching and redo-journal replay. Catalog details continue
+to show Regional v5 and the actual generator. Unknown generators are rejected;
+there is no implicit conversion of saved worlds or procedural replacement of
+explicit saved Air.
+
+Additive persistent IDs: **Sand=20, Snowy Ground=21**; item **Sand=10,
+Snowy Ground=11**. Block0–19/item1–9 are unchanged. Snapshot-v1 retains its
+historical accepted material set; current v2 snapshots, finite-v3 and regional
+records can store the new IDs using the existing two-byte field. Inventory/player
+and journal envelopes need no change. Older readers reject new IDs and generator5;
+use full closed-directory copies when testing an older client.
+
+Regression coverage pins the old v4/gen3 manifest CRC and the Slice24 v5/gen4 CRC
+(0x1da306c7 for seed42/nonce[7;16]), plus all historical generator goldens.
+For generators3/4/5, interrupted saves at session intent, world commit and player
+commit replay new blocks/items and explicit Air correctly without changing the
+manifest. Both new blocks can be selected and placed in existing worlds without
+changing their original terrain generator. See [WORLDGEN](WORLDGEN.md).

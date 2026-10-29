@@ -1,3 +1,108 @@
+# Biome Generation v1 — Slice25 / generator v5
+
+New worlds use generator **5** in the existing regional **manifest v5**. All
+historical generator1–4 paths and goldens retain their exact output. Existing
+manifest v4 always means generator3; existing v5/gen4 stays v5/gen4. No world is
+converted, expanded, regenerated or assigned a new generator on load. Explicit
+regional Air remains authoritative. Unsupported generator identities fail before
+creation/recovery can replace data. See [SAVE_FORMAT](SAVE_FORMAT.md).
+
+## Climate and geographical distribution
+
+`voxel_core::worldgen::{Biome, Climate, sample_biome, sample_climate}` is an
+engine-independent, bounded X/Z query. `Generator::biome` reports `None` for
+historical generators; the client F3 overlay says LEGACY instead of inventing
+biomes in old worlds. Queries require no chunks, neighbors, disk or stored map.
+Unsupported horizontal coordinates return `None` before arithmetic.
+
+All fields use the existing wrapping-u64 coordinate hash and signed integer Q10
+smoothstep value noise. The original bounded36-block domain warp at384 blocks
+feeds temperature (five parts768-block noise + one part384), moisture (four
+parts640 + one part320), and Slice24's512-block geographical field. Independent
+salts211/223 and227/229 separate climate from terrain and each other. Sampling
+uses Euclidean division at negative coordinates and no floating-point RNG.
+
+Classification, in priority order, on signed Q10 values (nominal[-1024,1024]):
+
+| Condition | Biome | Character |
+| --- | --- | --- |
+| Geography >240 | Rocky Highlands | Elevated connected ridges, exposed rock, rare trees |
+| Temperature <−260 | Snowy Plains | Pale full-block snowy ground, gentle rolling terrain, sparse trees |
+| Temperature >180 and moisture <−100 | Desert | Low dunes/depressions, five-block sand cover, no roots on sand |
+| Moisture >80 | Forest | Existing tree species, denser irregular stands and broad clearings |
+| Otherwise | Plains | Grassy building areas, occasional rolling hills and sparse trees |
+
+Dry temperate land can remain plains; warmth alone is insufficient for desert.
+Highland temperature is independent, so warm uplands remain rocky. The committed
+[survey](performance/slice25/biome-sites.csv) covers an8192² footprint at32-block
+spacing for seeds0/42/2026/u64::MAX, including all five biomes on every seed.
+Each type occupies approximately10–38% across those surveys. Tests also check
+connected96² interiors, neighbor continuity and boundary offsets relative to16.
+These are representative regression guards, not a minimum area guarantee for
+every isolated threshold contour throughout the entire supported world.
+
+## Terrain and material transitions
+
+`worldgen::biome` extends Slice24's same plain/rolling/ridge model. Broad climate
+weights reduce hill influence in arid/cold lowlands, blend in low80/28-block dune
+noise, and retain the geographical ridge elevation. Smoothstep weights, rather
+than the discrete biome label, control terrain. There is no height jump when a
+classification threshold is crossed. The convex height bounds remain[-1,24];
+no final height clamp creates truncated mountain tops.
+
+A continuous24-block field offsets material thresholds by up to65 Q10 units.
+This makes coherent irregular ecotones rather than one-block random stippling.
+Surface temperature loses18 Q10 units per block above Y10. Snow can occur on
+cold upper slopes without covering every highland. At geography>160, a two-block
+neighbor slope or elevation>=13 exposes stone (snow when sufficiently cold).
+Else cold ground becomes Snowy Ground, hot/dry lowland becomes Sand, and the
+remaining ground uses the original Grass. Sand extends through depth4 below the
+surface; other soils retain the three-block Dirt cover over Stone. Caves still
+carve the established periodic tunnels and four-block entrance ramps, evaluated
+against v5's own local surface. No new cave algorithm, natural water or structure.
+
+## Vegetation and bounded work
+
+The existing four/five-block trunk and original leaves/wood species remain.
+V5 candidates occupy eight-block cells with independent offsets1–6 on both
+axes, using salt257. Climate smoothly varies acceptance from95 to780 per mille
+before cold/arid/highland suppression and a64-block clearing field. Root surfaces
+must be Grass or Snowy Ground. Sand/Stone roots are rejected. Every candidate
+requires real non-carved support, <=2-block local relief, a clear5² crown footprint
+and a crown below Y31. The origin spawn reservation remains open. Trunks take
+precedence over overlapping crowns; accepted tree output is sampled in world
+coordinates, including neighboring candidates at chunk/region boundaries.
+
+One temporary20² height/climate grid supplies an18² surface/halo plan. Its cached
+materials and heights serve all three vertical chunks, so climate/material
+selection is not repeated for every voxel. Candidate checks remain bounded local
+queries. No area-wide allocation, startup survey, persistent biome map or extra
+streaming cache is introduced. Worker, edit, lighting, eviction and render-origin
+contracts remain the same. [Measurements and reproducible scenes](performance/slice25/README.md).
+
+## Blocks, art and current limits
+
+Sand is block20/item10; Snowy Ground is block21/item11. Existing block0–19 and
+item1–9 retain their meanings, including torch mounts, water states and legacy
+item7. Both new materials are ordinary full, opaque, colliding, mineable cubes;
+sand gravity and snow accumulation/layers/weather are deliberately absent.
+
+Three original16² tiles (sand, snow_top, snow_side) append slots8–10 to the atlas,
+now128×96 RGBA with the same32-pixel pitch and8-pixel extrusion. Slots0–7 and
+all their art/gutter bytes are unchanged. Snowy Ground has a snowy top, cold
+snow/dirt side and original dirt underside. All game, greedy shader, icon, held
+and dropped-torch UV scales use the extended layout. Assets/source/tooling are
+original RustCraft MIT OR Apache-2.0 work; no downloaded texture/reference pack.
+
+The supported Y range is still **−16 through31**, with ground<=24 and crowns<=30.
+Major mountains and deeper caves require a separate versioned vertical-expansion
+slice covering world bounds, save limits, lighting halos, streaming, physics and
+memory budgets first. Small render radii constrain the visible geographical
+breadth. Forests reuse the present opaque cube crowns; new species/details,
+weather, water geography, ores and structures remain deferred.
+
+---
+
 # World generation — frozen v1–v3 and geographical v4
 
 ## Slice 24: generator v4, regional manifest v5

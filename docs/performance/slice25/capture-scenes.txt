@@ -1,0 +1,8 @@
+TERRAIN_SCENE generator=5 seed=42 x=-1568 z=-4096 surface_y=3 yaw=45 radius=3 overview=false feet=[-1567.5, 4.0, -4095.5]
+TERRAIN_SCENE generator=5 seed=42 x=-4096 z=-4096 surface_y=3 yaw=90 radius=3 overview=false feet=[-4095.5, 4.0, -4095.5]
+TERRAIN_SCENE generator=5 seed=0 x=2304 z=-4032 surface_y=4 yaw=0 radius=3 overview=false feet=[2304.5, 5.0, -4031.5]
+TERRAIN_SCENE generator=5 seed=2026 x=-3808 z=-4096 surface_y=6 yaw=90 radius=3 overview=false feet=[-3807.5, 7.0, -4095.5]
+TERRAIN_SCENE generator=5 seed=42 x=-2936 z=-3000 surface_y=6 yaw=90 radius=3 overview=true feet=[-2935.5, 7.0, -2999.5]
+TERRAIN_SCENE generator=5 seed=2026 x=1288 z=-3000 surface_y=7 yaw=90 radius=3 overview=true feet=[1288.5, 8.0, -2999.5]
+TERRAIN_SCENE generator=5 seed=42 x=3824 z=-4032 surface_y=13 yaw=0 radius=3 overview=false feet=[3824.5, 14.0, -4031.5]
+Renderer: X11/Xvfb, Vulkan llvmpipe LLVM19.1.7, Mesa25.0.7-2+deb13u1; 1280x720, FOV78, radius3, day0/time6000.

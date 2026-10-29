@@ -73,7 +73,7 @@ struct HeldBlock;
 struct Arm;
 #[derive(Resource)]
 struct Models {
-    blocks: [Handle<Mesh>; 9],
+    blocks: [Handle<Mesh>; 11],
     textured: Handle<StandardMaterial>,
     flat: Handle<StandardMaterial>,
     root: Entity,
@@ -91,7 +91,7 @@ fn cube(block: Option<Block>) -> Mesh {
         let uv = core
             .uvs
             .iter()
-            .map(|p| [tile[0] + p[0] * 16. / 128., tile[1] + p[1] * 16. / 64.])
+            .map(|p| [tile[0] + p[0] * 16. / 128., tile[1] + p[1] * 16. / 96.])
             .collect::<Vec<_>>();
         return Mesh::new(
             bevy::render::render_resource::PrimitiveTopology::TriangleList,

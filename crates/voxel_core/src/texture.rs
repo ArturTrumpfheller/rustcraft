@@ -4,7 +4,7 @@ use crate::Block;
 pub const TILE_SIZE: u32 = 16;
 pub const TILE_PITCH: u32 = 32;
 pub const TILE_PADDING: u32 = 8;
-pub const ATLAS_SIZE: [u32; 2] = [128, 64];
+pub const ATLAS_SIZE: [u32; 2] = [128, 96];
 
 /// Atlas slots, unrelated to persistence IDs. Row zero is the image's top row.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -18,6 +18,9 @@ pub enum Tile {
     EndGrain,
     Leaves,
     Torch,
+    Sand,
+    SnowTop,
+    SnowSide,
 }
 
 pub fn face_tile(block: Block, normal: [i32; 3]) -> Option<Tile> {
@@ -27,6 +30,10 @@ pub fn face_tile(block: Block, normal: [i32; 3]) -> Option<Tile> {
         Block::Grass if normal == [0, 1, 0] => Tile::GrassTop,
         Block::Grass if normal == [0, -1, 0] => Tile::Dirt,
         Block::Grass => Tile::GrassSide,
+        Block::Sand => Tile::Sand,
+        Block::SnowyGround if normal == [0, 1, 0] => Tile::SnowTop,
+        Block::SnowyGround if normal == [0, -1, 0] => Tile::Dirt,
+        Block::SnowyGround => Tile::SnowSide,
         Block::Dirt => Tile::Dirt,
         Block::Stone => Tile::Stone,
         Block::Wood if normal[1] != 0 => Tile::EndGrain,
@@ -104,12 +111,12 @@ mod tests {
                 min,
                 [
                     ((i % 4) * 32 + 8) as f32 / 128.,
-                    ((i / 4) * 32 + 8) as f32 / 64.
+                    ((i / 4) * 32 + 8) as f32 / 96.
                 ]
             );
             for a in 0..2 {
                 assert!(min[a] > 0. && max[a] < 1.);
-                assert_eq!((max[a] - min[a]) * ATLAS_SIZE[a] as f32, 16.);
+                assert!(((max[a] - min[a]) * ATLAS_SIZE[a] as f32 - 16.).abs() < 0.00001);
             }
             assert_eq!(tile.uv([0, 1]), [min[0], max[1]]);
             assert_eq!(tile.uv([1, 0]), [max[0], min[1]]);

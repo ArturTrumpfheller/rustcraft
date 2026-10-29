@@ -45,7 +45,7 @@ pub(super) fn decode_manifest(b: &[u8]) -> Result<World, FormatError> {
     if version == VERSIONED_REGIONAL_VERSION && generator < 4 {
         return Err(FormatError::Identity);
     }
-    if ![3, 4].contains(&generator) {
+    if ![3, 4, 5].contains(&generator) {
         return Err(FormatError::Generator(generator));
     }
     if u32_at(b, 12) != 0

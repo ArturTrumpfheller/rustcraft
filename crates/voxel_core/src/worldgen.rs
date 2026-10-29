@@ -2,13 +2,15 @@
 //! coordinates, never a shared RNG or chunk traversal order. No Bevy types.
 use crate::{Block, BlockPos, CHUNK_SIZE, Chunk, ChunkPos, LocalPos, World};
 
+pub mod biome;
 mod local;
+pub use biome::{Biome, Climate, sample_biome, sample_climate};
 mod terrain;
 pub use local::Sampler;
 
 pub const GENERATOR_VERSION: u32 = 1;
 /// Default for newly created regional worlds; historical defaults remain frozen.
-pub const CURRENT_LOCAL_GENERATOR: u32 = 4;
+pub const CURRENT_LOCAL_GENERATOR: u32 = 5;
 pub const DEFAULT_SEED: u64 = 2026;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GenerationConfig {
@@ -77,7 +79,7 @@ fn noise(seed: u64, x: i32, z: i32, scale: i32, salt: u64) -> i32 {
 }
 impl Generator {
     pub fn new(config: GenerationConfig) -> Result<Self, UnsupportedGenerator> {
-        if ![GENERATOR_VERSION, 2, 3, 4].contains(&config.version) {
+        if ![GENERATOR_VERSION, 2, 3, 4, 5].contains(&config.version) {
             return Err(UnsupportedGenerator(config.version));
         }
         if config.version >= 3 {
@@ -166,13 +168,21 @@ impl Generator {
             return None;
         }
         if self.config.version >= 3 {
-            return Some(if self.config.version == 4 {
+            return Some(if self.config.version == 5 {
+                biome::height(self.config.seed, x, z)
+            } else if self.config.version == 4 {
                 terrain::height(self.config.seed, x, z)
             } else {
                 local::height(self.config.seed, x, z)
             });
         }
         Some(self.heights[((z + self.extent) * self.extent * 2 + x + self.extent) as usize])
+    }
+    /// Historical worlds have no biome identity. Never reinterpret their generator.
+    pub fn biome(&self, x: i32, z: i32) -> Option<Biome> {
+        (self.config.version == 5)
+            .then(|| sample_biome(self.config.seed, x, z))
+            .flatten()
     }
     fn cave(&self, x: i32, y: i32, z: i32) -> bool {
         if y <= -14 || (x.abs() <= 3 && (8..=13).contains(&z)) {
@@ -300,3 +310,6 @@ impl Generator {
 mod terrain_tests;
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod biome_tests;

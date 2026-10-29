@@ -7,7 +7,9 @@ pub(super) fn height(seed: u64, x: i32, z: i32) -> i32 {
         / 1024
 }
 fn surface(g: &Generator, x: i32, z: i32) -> i32 {
-    if g.config.version == 4 {
+    if g.config.version == 5 {
+        super::biome::height(g.config.seed, x, z)
+    } else if g.config.version == 4 {
         super::terrain::height(g.config.seed, x, z)
     } else {
         height(g.config.seed, x, z)
@@ -33,6 +35,9 @@ fn cave(g: &Generator, x: i32, y: i32, z: i32) -> bool {
     main || (y >= floor && y < floor + 4)
 }
 pub(super) fn terrain(g: &Generator, p: BlockPos, h: i32) -> Block {
+    layers(g, p, h, None)
+}
+fn layers(g: &Generator, p: BlockPos, h: i32, column: Option<super::biome::Column>) -> Block {
     let [x, y, z] = p.0;
     if !(-g.extent..g.extent).contains(&x)
         || !(-g.extent..g.extent).contains(&z)
@@ -41,6 +46,18 @@ pub(super) fn terrain(g: &Generator, p: BlockPos, h: i32) -> Block {
         || cave(g, x, y, z)
     {
         return Block::Air;
+    }
+    if g.config.version == 5 {
+        let c = column.unwrap_or_else(|| super::biome::column(g.config.seed, x, z));
+        return if y == h {
+            c.top
+        } else if y >= h - 4 && c.soil == Block::Sand {
+            Block::Sand
+        } else if y >= h - 3 {
+            c.soil
+        } else {
+            Block::Stone
+        };
     }
     if y == h {
         Block::Grass
@@ -55,11 +72,18 @@ fn trees(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Vec<Tree> {
     for gz in (min[1] - 3).div_euclid(8)..=(max[1] + 3).div_euclid(8) {
         for gx in (min[0] - 3).div_euclid(8)..=(max[0] + 3).div_euclid(8) {
             let h = hash(g.config.seed, gx, gz, 71);
-            if h.is_multiple_of(5) {
+            if g.config.version != 5 && h.is_multiple_of(5) {
                 continue;
             }
-            let x = gx * 8 + (h % 3) as i32 - 1;
-            let z = gz * 8 + ((h >> 8) % 3) as i32 - 1;
+            let (x, z, h) = if g.config.version == 5 {
+                super::biome::candidate(g.config.seed, gx, gz)
+            } else {
+                (
+                    gx * 8 + (h % 3) as i32 - 1,
+                    gz * 8 + ((h >> 8) % 3) as i32 - 1,
+                    h,
+                )
+            };
             if x < min[0] - 2
                 || x > max[0] + 2
                 || z < min[1] - 2
@@ -72,12 +96,17 @@ fn trees(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Vec<Tree> {
             {
                 continue;
             }
+            if g.config.version == 5
+                && (h >> 24) % 1000 >= super::biome::tree_density(g.config.seed, x, z)
+            {
+                continue;
+            }
             let ground = surface(g, x, z);
             let trunk = 4 + ((h >> 16) % 2) as i32;
             // v4 keeps the established species/grid, with sparse roots on gentle
             // ground and enough vertical/canopy clearance. v3 stays frozen.
-            if g.config.version == 4
-                && (h.is_multiple_of(2)
+            if g.config.version >= 4
+                && ((g.config.version == 4 && h.is_multiple_of(2))
                     || ground + trunk + 1 > 30
                     || !(-2..=2).all(|dx| {
                         (-2..=2).all(|dz| (surface(g, x + dx, z + dz) - ground).abs() <= 2)
@@ -85,7 +114,8 @@ fn trees(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Vec<Tree> {
             {
                 continue;
             }
-            if terrain(g, BlockPos([x, ground, z]), ground) != Block::Grass {
+            let root = terrain(g, BlockPos([x, ground, z]), ground);
+            if root != Block::Grass && !(g.config.version == 5 && root == Block::SnowyGround) {
                 continue;
             }
             if (-2..=2).all(|dx| (-2..=2).all(|dz| surface(g, x + dx, z + dz) < ground + trunk - 1))
@@ -101,9 +131,15 @@ fn trees(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Vec<Tree> {
     }
     result
 }
-fn sample(g: &Generator, p: BlockPos, h: i32, trees: &[Tree]) -> Block {
+fn sample(
+    g: &Generator,
+    p: BlockPos,
+    h: i32,
+    trees: &[Tree],
+    column: Option<super::biome::Column>,
+) -> Block {
     let [x, y, z] = p.0;
-    let b = terrain(g, p, h);
+    let b = layers(g, p, h, column);
     if b != Block::Air
         || y <= h
         || !(-16..32).contains(&y)
@@ -138,33 +174,45 @@ pub(super) fn point(g: &Generator, p: BlockPos) -> Block {
         return Block::Air;
     }
     let h = surface(g, x, z);
-    let b = terrain(g, p, h);
+    let column = (g.config.version == 5).then(|| super::biome::column(g.config.seed, x, z));
+    let b = layers(g, p, h, column);
     // A v4 root may sit two blocks above this cell's surface. A five-block
     // trunk plus the crown then reaches h+8. Keep the frozen v3 shortcut.
-    let overhead = if g.config.version == 4 { 8 } else { 7 };
+    let overhead = if g.config.version >= 4 { 8 } else { 7 };
     if b != Block::Air || y <= h || y > h + overhead {
         return b;
     }
-    sample(g, p, h, &trees(g, [x, z], [x, z]))
+    sample(g, p, h, &trees(g, [x, z], [x, z]), column)
 }
 pub(super) struct Plan {
     min: [i32; 2],
     heights: Vec<i32>,
+    materials: Vec<super::biome::Column>,
     trees: Vec<Tree>,
 }
 impl Plan {
     fn new(g: &Generator, c: [i32; 2]) -> Self {
         let min = [c[0] * 16 - 1, c[1] * 16 - 1];
         let max = [min[0] + 17, min[1] + 17];
+        let materials = if g.config.version == 5 {
+            super::biome::columns(g.config.seed, min)
+        } else {
+            Vec::new()
+        };
         let mut heights = Vec::with_capacity(18 * 18);
         for z in min[1]..=max[1] {
             for x in min[0]..=max[0] {
-                heights.push(surface(g, x, z));
+                heights.push(if g.config.version == 5 {
+                    materials[heights.len()].height
+                } else {
+                    surface(g, x, z)
+                });
             }
         }
         Self {
             min,
             heights,
+            materials,
             trees: trees(g, min, max),
         }
     }
@@ -180,7 +228,13 @@ impl Plan {
         } else {
             return point(g, p);
         };
-        sample(g, p, h, &self.trees)
+        sample(
+            g,
+            p,
+            h,
+            &self.trees,
+            self.materials.get((z * 18 + x) as usize).copied(),
+        )
     }
 }
 pub struct Sampler<'a> {

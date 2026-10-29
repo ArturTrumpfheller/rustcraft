@@ -146,14 +146,19 @@ fn creative_palette_adds_new_items_to_loaded_inventories_and_refuses_full_grants
     let (_dir, mut app) = app();
     app.world_mut().resource_mut::<GameInventory>().contents = Inventory::empty();
     key(&mut app, KeyCode::KeyE);
-    point_click(&mut app, Vec2::new(3.5 * 28., 94.));
-    assert_eq!(total(&app, Item::WaterBucket), 1);
     point_click(&mut app, Vec2::new(2.5 * 28., 94.));
+    assert_eq!(total(&app, Item::WaterBucket), 1);
+    point_click(&mut app, Vec2::new(1.5 * 28., 94.));
     assert_eq!(total(&app, Item::EmptyBucket), 1);
+    point_click(&mut app, Vec2::new(3.5 * 28., 94.));
+    assert_eq!(total(&app, Item::Sand), 1);
+    point_click(&mut app, Vec2::new(4.5 * 28., 94.));
+    assert_eq!(total(&app, Item::SnowyGround), 1);
+
     let mut full = Inventory::empty();
     full.insert(Item::Stone, 36 * 64);
     app.world_mut().resource_mut::<GameInventory>().contents = full.clone();
-    point_click(&mut app, Vec2::new(3.5 * 28., 94.));
+    point_click(&mut app, Vec2::new(2.5 * 28., 94.));
     assert_eq!(app.world().resource::<GameInventory>().contents, full);
     assert_eq!(app.world().resource::<GameInventory>().message, "NO ROOM");
     let mut legacy = Inventory::empty();

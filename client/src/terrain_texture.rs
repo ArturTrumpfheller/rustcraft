@@ -7,7 +7,7 @@ use bevy::{
 };
 use voxel_core::texture::ATLAS_SIZE;
 
-const PIXELS: &[u8; 128 * 64 * 4] = include_bytes!("../../assets/terrain/atlas.rgba");
+const PIXELS: &[u8; 128 * 96 * 4] = include_bytes!("../../assets/terrain/atlas.rgba");
 
 pub(crate) fn atlas_image() -> Image {
     let mut image = Image::new(
@@ -87,7 +87,7 @@ mod tests {
         let t = &image.texture_descriptor;
         assert_eq!(
             [t.size.width, t.size.height, t.size.depth_or_array_layers],
-            [128, 64, 1]
+            [128, 96, 1]
         );
         assert_eq!(t.format, TextureFormat::Rgba8UnormSrgb);
         assert_eq!(t.mip_level_count, 1);
@@ -112,7 +112,7 @@ mod tests {
         let pixel = |x: usize, y: usize| &PIXELS[(y * 128 + x) * 4..(y * 128 + x + 1) * 4];
         assert_eq!(pixel(8, 8), [129, 156, 77, 255]); // editable grass-top row 0, symbol 2
         let mut unique = BTreeSet::new();
-        for i in 0..8 {
+        for i in 0..11 {
             let ox = i % 4 * 32;
             let oy = i / 4 * 32;
             let mut tile = Vec::new();

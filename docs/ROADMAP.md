@@ -114,3 +114,18 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 - Add regression tests before refactoring fragile behavior.
 - Track external licenses and asset provenance from the beginning.
 - No unlicensed Minecraft textures, sounds or source code.
+
+
+## Slice25 — Biome Generation v1
+
+- [x] Generator5: broad temperature/moisture fields and five recognizable biome regions
+- [x] Continuous biome terrain influence, coherent material ecotones and biome tree density
+- [x] Original Sand/Snowy Ground blocks/items, atlas art, palette and held rendering
+- [x] Frozen generators1–4, existing manifest identities, additive IDs and journal recovery tests
+- [x] Engine-independent biome queries and current biome in F3
+- [ ] Native Void X11/Wayland, RX9060 XT and Windows GUI acceptance before owner merge
+
+See [WORLDGEN](WORLDGEN.md) for current contracts and
+[Slice25 evidence/checklist](performance/slice25/README.md) for measured validation.
+Vertical expansion, new caves, natural water and vegetation details remain
+separate future slices26–28; this slice keeps Y[-16,32).

@@ -4,11 +4,21 @@
 
 RustCraft is an independent project, not a Minecraft source port, and is not affiliated with or endorsed by Mojang or Microsoft.
 
+## Biome Generation v1 (Slice 25)
+
+New worlds use generator5: broad Plains, Forest, Desert, Snowy Plains and Rocky
+Highlands, with continuous climate-driven terrain and vegetation transitions.
+Original Sand/Snowy Ground blocks are available from the inventory palette in
+both old and new worlds. F3 shows the current biome. Existing generators1–4 and
+all saved edits stay authoritative; no world migration is performed. Y remains
+[-16,32). [Algorithm and stable IDs](docs/WORLDGEN.md),
+[actual screenshots, measurements and Void Fish acceptance](docs/performance/slice25/README.md).
+
 ## Terrain Generation v2 (Slice 24)
 
-New worlds blend broad building plains, rolling hills and connected ridge regions
-using bounded integer-only local generation. Manifest v5 explicitly pins generator
-v4. Existing v1–v4 saves keep their original blocks, generators and edits; no
+Slice24 introduced broad building plains, rolling hills and connected ridge
+regions using bounded integer-only local generation, with manifest v5 pinning
+generator v4. Existing v1–v4 saves keep their original blocks, generators and edits; no
 migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest uplands.
 [Algorithm, compatibility and vertical limits](docs/WORLDGEN.md),
 [measurements, actual captures and native acceptance](docs/performance/slice24/README.md).
@@ -17,7 +27,7 @@ migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest upla
 
 - Deterministic seeded terrain, rolling hills/valleys, a walkable cave network with surface entrance, and blocky trees.
 - 16³ chunks streamed in a **65,536×65,536×48** new-world rollout with local generation and regional saves; configurable load radius, bounded background generation/meshing and cache eviction.
-- Eight original 16×16 pixel textures for grass, dirt, stone, bark, end-grain, opaque leaves and torches, using one shared nearest-filtered atlas.
+- Eleven original 16×16 pixel textures for grass, dirt, stone, bark, end-grain, opaque leaves and torches, using one shared nearest-filtered atlas.
 - Persistent 20-minute day/night cycle, procedural square sun/moon, sparse stars and matching terrain fog.
 - Placeable, persistent standing/wall torches (hotbar 6) with worker-based voxel block light.
 - Derived 0–15 voxel skylight: dark roofs/caves, gradual entrance falloff and background updates after edits.
@@ -32,7 +42,7 @@ migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest upla
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 24**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 25**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -41,7 +51,7 @@ on their own, with the original atlas's correct faces. Proportions and motion ar
 visually calibrated against Java1.21.1's wide standard arm. Walking/sprint,
 crouch, jump/landing and click gestures animate only the viewmodel; targeting
 and physics stay unchanged. Menus/free cursor hide and reset it. One overlay
-view prevents wall occlusion and keeps the existing UI in front; seven retained held-block
+view prevents wall occlusion and keeps the existing UI in front; eleven retained item
 meshes share the original atlas. See [rendering/resources](docs/VIEWMODEL.md)
 and [validation](docs/VALIDATION.md).
 
@@ -154,13 +164,13 @@ See [inventory controls, architecture and recovery limits](docs/INVENTORY.md).
 
 Grass has separate turf tops, grassy dirt sides and dirt undersides. Upright logs
 use bark on walls and end-grain on both ends. Stone and opaque leaves have their
-own tiles. The eight authored 16×16 grids use restrained earth/foliage palettes;
+own tiles. The eleven authored 16×16 grids use restrained earth/foliage palettes;
 no external texture pack or Minecraft image was used. Art, editable source and
 standard-library generator are **MIT OR Apache-2.0**: [asset provenance](assets/terrain/README.md).
 
 ![Original Slice-8 terrain, software-rendered X11](docs/images/slice8-terrain.png)
 
-A single embedded 128×64 sRGB atlas/material serves all chunks, with eight texels
+A single embedded 128×96 sRGB atlas/material serves all chunks, with eight texels
 of extruded padding per tile, nearest sampling and one mip. Chunk meshes retain
 face culling and async updates; greedy quads repeat each block tile using terrain-only UVs and an embedded shader.
 Separate sky/block/AO contributions share the existing COLOR attribute; uncompressed terrain vertices use 56 bytes. Inventory icons share that image. Intentional distant pixel shimmer is
@@ -235,17 +245,17 @@ Movement speed is independent of diagonal input. Mouse sensitivity does not depe
 Create worlds in **Spielen → Neue Welt**. A decimal unsigned 64-bit seed is
 validated before creation; an empty field generates a fresh stored seed.
 `RUSTCRAFT_WORLD_SEED` optionally prefills that form and never changes an existing
-world. New worlds use generator v4; generators v1/v2/v3 for historical saves remain frozen.
+world. New worlds use generator v5; generators v1/v2/v3/v4 for historical saves remain frozen.
 Display names can repeat; internal directory IDs are unique and never renamed.
 See [safe multi-world management](docs/WORLDS.md).
 
-Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, leaf transparency, biomes, ore distribution or emitted light from generated blocks. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
+Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, leaf transparency, ore distribution or emitted light from generated blocks. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
 
 New v5 worlds save **seed + generator version + world identity** in a manifest and all edits in regional overlays, including explicit Air. Unmodified chunks reproduce locally from that identity. Loaded chunks and clean region maps are disposable caches; unsaved region maps remain pinned in RAM until successfully saved. v1/v2 saves remain full snapshots with no seed metadata and never gain generated terrain. The [generation contract](docs/WORLDGEN.md) explains deterministic arithmetic, limits and future extension.
 
 ## Streaming and compatibility
 
-A confirmed new-world creation produces a **v5 regional world** with generator v4 and
+A confirmed new-world creation produces a **v5 regional world** with generator v5 and
 X/Z [-32768,32768), Y [-16,32). There is no map-sized startup allocation.
 `RUSTCRAFT_LOAD_RADIUS=1`, `2` (default) or `3` selects a radius independently of
 world extent: at most 75 chunks by default, 147 at radius 3. Distant voxel data,

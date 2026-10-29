@@ -22,6 +22,8 @@ pub enum Item {
     WaterSource,
     EmptyBucket,
     WaterBucket,
+    Sand,
+    SnowyGround,
 }
 impl Item {
     pub fn id(self) -> u16 {
@@ -35,6 +37,8 @@ impl Item {
             Self::WaterSource => 7,
             Self::EmptyBucket => 8,
             Self::WaterBucket => 9,
+            Self::Sand => 10,
+            Self::SnowyGround => 11,
         }
     }
     pub fn from_id(id: u16) -> Option<Self> {
@@ -48,6 +52,8 @@ impl Item {
             7 => Self::WaterSource,
             8 => Self::EmptyBucket,
             9 => Self::WaterBucket,
+            10 => Self::Sand,
+            11 => Self::SnowyGround,
             _ => return None,
         })
     }
@@ -56,6 +62,8 @@ impl Item {
             Block::Air => return None,
             Block::WaterSource => return None,
             Block::Grass => Self::Grass,
+            Block::Sand => Self::Sand,
+            Block::SnowyGround => Self::SnowyGround,
             Block::Dirt => Self::Dirt,
             Block::Stone => Self::Stone,
             Block::Wood => Self::Wood,
@@ -68,7 +76,7 @@ impl Item {
             _ => return None,
         })
     }
-    pub const CREATIVE: [Self; 8] = [
+    pub const CREATIVE: [Self; 10] = [
         Self::Grass,
         Self::Dirt,
         Self::Stone,
@@ -77,6 +85,8 @@ impl Item {
         Self::Torch,
         Self::EmptyBucket,
         Self::WaterBucket,
+        Self::Sand,
+        Self::SnowyGround,
     ];
     pub fn max_stack(self) -> u8 {
         match self {
@@ -96,6 +106,8 @@ impl Item {
     pub fn build(self) -> Option<BuildBlock> {
         Some(match self {
             Self::Grass => BuildBlock::Grass,
+            Self::Sand => BuildBlock::Sand,
+            Self::SnowyGround => BuildBlock::SnowyGround,
             Self::Dirt => BuildBlock::Dirt,
             Self::Stone => BuildBlock::Stone,
             Self::Wood => BuildBlock::Wood,

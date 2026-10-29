@@ -12,7 +12,7 @@ import struct
 import zlib
 
 ROOT = Path(__file__).resolve().parent.parent / 'assets' / 'terrain'
-NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'bark', 'end_grain', 'leaves', 'torch']
+NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'bark', 'end_grain', 'leaves', 'torch', 'sand', 'snow_top', 'snow_side']
 
 
 def png(width, height, data, compression=0):
@@ -26,9 +26,9 @@ def png(width, height, data, compression=0):
 def generate():
     source = json.loads((ROOT / 'source.json').read_text())
     assert source['license'] == 'MIT OR Apache-2.0'
-    assert (source['tile_size'], source['pitch'], source['padding'], source['atlas_size']) == (16, 32, 8, [128, 64])
+    assert (source['tile_size'], source['pitch'], source['padding'], source['atlas_size']) == (16, 32, 8, [128, 96])
     assert [t['name'] for t in source['tiles']] == NAMES
-    atlas = bytearray(bytes([255, 0, 255, 255]) * (128 * 64))
+    atlas = bytearray(bytes([255, 0, 255, 255]) * (128 * 96))
     result = {}
     for i, tile in enumerate(source['tiles']):
         rows = tile['rows']
@@ -44,7 +44,7 @@ def generate():
                 dest = (((i // 4) * 32 + y) * 128 + (i % 4) * 32 + x) * 4
                 atlas[dest:dest + 4] = pixels[(sy * 16 + sx) * 4:(sy * 16 + sx + 1) * 4]
     result['atlas.rgba'] = bytes(atlas)
-    result['atlas.png'] = png(128, 64, atlas)
+    result['atlas.png'] = png(128, 96, atlas)
     return result
 
 
