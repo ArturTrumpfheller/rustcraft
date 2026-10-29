@@ -39,12 +39,21 @@ fn worlds_have_unique_identity_reproducible_terrain_and_isolated_player_regions(
     let b = c.create("Welt / Ä & ß", 42).unwrap();
     let d = c.create("Andere", 43).unwrap();
     assert_ne!(a, b);
+    let listing = c.list().unwrap();
+    let entry = listing
+        .iter()
+        .find(|entry| entry.key == WorldKey::Managed(a.clone()))
+        .unwrap();
+    assert_eq!(entry.generator, Some(4));
+    assert_eq!(entry.kind, "Regional v5");
     let (sa, mut wa, _) = c.open(&a).unwrap();
     let (sb, mut wb, _) = c.open(&b).unwrap();
     let (sd, wd, _) = c.open(&d).unwrap();
     assert_ne!(wa.region_identity(), wb.region_identity());
     assert_ne!(wa.identity(), wd.identity());
     assert_eq!(wa.identity(), wb.identity());
+    assert_eq!(wa.identity().unwrap().generator, 4);
+    assert_eq!(wa.region_identity().unwrap().format_version(), 5);
     crate::streaming::prepare_column(&mut wa, [0, 0]).unwrap();
     crate::streaming::prepare_column(&mut wb, [0, 0]).unwrap();
     for x in -4..4 {

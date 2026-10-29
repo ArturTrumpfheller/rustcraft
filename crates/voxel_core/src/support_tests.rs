@@ -165,6 +165,7 @@ fn aggregate_dirty_region_limits_and_pending_dependents_reject_everything() {
     for already_dirty in [5, 6, 7] {
         let mut w = World::regional(RegionIdentity {
             seed: 42,
+            generator: 3,
             nonce: [3; 16],
         });
         for c in [[3, 3], [4, 3], [3, 4]] {
@@ -200,6 +201,7 @@ fn aggregate_dirty_region_limits_and_pending_dependents_reject_everything() {
     }
     let mut w = World::regional(RegionIdentity {
         seed: 42,
+        generator: 3,
         nonce: [3; 16],
     });
     for c in [[3, 3], [4, 3], [3, 4]] {

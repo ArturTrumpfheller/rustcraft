@@ -13,7 +13,20 @@ pub type RegionEdits = Arc<EditMap>;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RegionIdentity {
     pub seed: u64,
+    pub generator: u32,
     pub nonce: [u8; 16],
+}
+impl RegionIdentity {
+    /// v4 is forever generator 3. v5 explicitly selects a supported local generator.
+    pub fn format_version(self) -> u32 {
+        if self.generator == 3 { 4 } else { 5 }
+    }
+    pub fn validate_generator(self) -> Result<(), crate::worldgen::UnsupportedGenerator> {
+        match self.generator {
+            3 | 4 => Ok(()),
+            v => Err(crate::worldgen::UnsupportedGenerator(v)),
+        }
+    }
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct RegionPos(pub [i32; 2]);

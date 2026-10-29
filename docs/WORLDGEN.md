@@ -1,6 +1,99 @@
-# World generation — frozen v1/v2 and local v3
+# World generation — frozen v1–v3 and geographical v4
 
-## Current generator v3 (v4 regional worlds)
+## Slice 24: generator v4, regional manifest v5
+
+**New worlds alone select generator4. Generators1/2/3 and all historical golden
+fixtures remain frozen.** Generator versions describe generated blocks; save
+versions describe serialization. Existing manifest4 continues to mean generator3.
+Manifest5 uses the same 64-byte layout with an explicitly supported generator
+(currently4). Unsupported future generators fail with a generator error; no
+migration, conversion, fallback, block-ID change or rewriting on load occurs.
+See [SAVE_FORMAT](SAVE_FORMAT.md#slice-24-versioned-regional-manifest-v5).
+
+### Geographical shape
+
+`worldgen::terrain` contains the original, integer-only v4 height function:
+
+- Two 384-block noise fields warp X/Z by at most36 blocks, removing obvious
+  alignment with chunks or the 64-block edit regions.
+- A 512-block geographical field smoothly controls plain/hill/mountain weights.
+  These are continuous shape weights, not biome types or abrupt region choices.
+- Plains combine a base elevation with 384-block lowland variation and subtle
+  64-block contours. Rolling regions combine96/40-block slopes. Their amplitudes
+  blend with cubic smoothstep; substantial quiet areas remain common.
+- Mountain regions use a skewed96-block ridge field, squared for connected
+  crests/valleys, plus128-block elevation variation. Smooth geographical exposure
+  connects multiple crests into broad elevated regions. Mountain weights blend
+  heights rather than selecting independent per-region algorithms.
+- A12-block detail field contributes only0.125 blocks on plains, rising to0.375
+  in mountains. Fractional Q10 heights are retained until final floor division.
+  No final height clamp is used.
+
+Every sample has bounded work and depends solely on seed/version/world X/Z.
+Noise/hash use explicit wrapping u64, Q10 integer arithmetic and Euclidean cells.
+Signed skew division is Rust's explicit truncation toward zero on both platforms;
+final surface rounding uses `div_euclid`. There is no floating point, mutable RNG,
+hash iteration dependency, world-sized plan or dependency on resident neighbors.
+Point and chunk sampling share the same height/cave/tree rules. Column samplers
+reuse the existing18×18 height halo and bounded nearby eight-block tree grid.
+The asynchronous worker, light halos, stale-result checks and cache eviction are
+unchanged. Full-world materialization remains forbidden for local generators.
+
+### Materials, caves, trees and spawn
+
+Shape lives separately from `local::terrain` (grass, three dirt layers, stone),
+`local::cave`, and tree placement. This is the integration point for the later
+biome slice; no climate fields, biome registry or unused framework is added.
+Future output changes must select a new generator and extend the explicit
+supported-version list; manifest5 and the existing region/journal layouts already
+carry that identity.
+
+Caves retain the existing protected spawn, bottom two foundation layers, periodic
+seeded tunnel and four-block-high entrance ramp. V4's own surface determines its
+entrance height. This is a compatibility adaptation, not a new cave system. The
+old128-block cave repetition remains a limitation for Slice26. V4 tree candidates
+retain the existing species/crown/grid, with fewer roots and a five-by-five slope
+check (maximum2 blocks relative to the root), grass support, full canopy clearance
+and top <=30. Cross-column trunks take priority over leaves as before. The
+protected area around(0,10) stays open. Actual edited blocks still determine
+startup/R/void spawn through the existing bounded sky-exposed clearance search;
+no physics change or generated spawn platform is needed.
+
+### Vertical audit and future expansion
+
+The current bounds remain X/Z[-32768,32768), Y[-16,32): three16³ vertical chunks.
+The convex height blends analytically bound surface Y to[-1,24]. The measured
+four-seed survey reaches0..24; taller crowns finish at30, leaving Y31 clear.
+Players have overhead above even the highest ground. The bottom two layers stay
+Stone, and caves do not remove whole mountain foundations. Mountains are modest
+voxel uplands, not modern Minecraft's much taller peaks. Normal render radius1–3
+also limits the breadth visible from one location.
+
+A separate vertical-expansion slice should first version world bounds and region
+record limits; replace fixed three-chunk assumptions in streaming, source/light
+halos, collision/spawn bounds, save/journal validation and mesh lifecycle; then
+measure memory, lighting flood costs and recovery before selecting a taller new
+generator. Existing worlds must retain their original bounds. Slice24 does none
+of that expansion and never fakes height through clipped summits.
+
+### Evidence and remaining work
+
+[Performance, actual client gallery captures, coordinates and Void acceptance](performance/slice24/README.md).
+New independent goldens cover seeds0/42/2026/u64::MAX at six signed/distant columns.
+Tests cover parallel/reverse requests, point sampling, regeneration, strict v5
+identity, journal interruptions, region/lighting/mesh seams, spawn, grounded trees,
+canopy clearance, cave ramps, foundation connectivity and multi-seed quality.
+Quality indicators sample a4096²-block footprint per seed: height/slope histogram,
+32² buildable footprints, and connected lowland/upland components. These are
+regression guards, not a claim that every region is attractive or walkable.
+
+Slice25 can influence versioned shape/material selection; Slice26 can replace
+periodic caves; Slice27 adds natural water; Slice28 adds vegetation/detail rules.
+None is implemented here. Native Void X11/Wayland, Radeon performance and Windows
+GUI acceptance remain separate from cloud tests/software captures.
+
+
+## Historical generator v3 (v4 regional worlds)
 
 Generator v3 locally addresses X/Z [-32768,32768), Y [-16,32). Construction stores
 only seed/version/extent; no heights/tree arrays proportional to world area.
@@ -36,7 +129,7 @@ textures, biomes, water, ore systems, growing trees or generator-owned lighting 
 
 ## Historical frozen generators
 
-The sections below document the retained older modes; new worlds use v3 above.
+The sections below document retained older modes; new worlds use v4 above.
 
 
 The implementation is original RustCraft code, MIT OR Apache-2.0, in `voxel_core::worldgen`. No Bevy, shared RNG, noise library or copied game assets are used. This is a finite first generator, not an infinite-world/biome system.

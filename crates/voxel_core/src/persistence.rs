@@ -13,7 +13,7 @@ use std::{
 pub mod catalog;
 mod player;
 mod regional;
-pub use regional::REGIONAL_VERSION;
+pub use regional::{REGIONAL_VERSION, VERSIONED_REGIONAL_VERSION};
 
 pub const MAGIC: &[u8; 8] = b"RUSTWRLD";
 /// Current legacy full-snapshot writer. Streamed identity/overlays use v3.
@@ -30,6 +30,7 @@ pub const MAX_FILE_SIZE: usize = STREAM_HEADER_SIZE + MAX_STREAM_RECORDS * RECOR
 pub enum FormatError {
     Magic,
     Version(u32),
+    Generator(u32),
     Length,
     TooLarge,
     Checksum,
@@ -40,7 +41,11 @@ pub enum FormatError {
 }
 impl fmt::Display for FormatError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "invalid world save: {self:?}")
+        if let Self::Generator(version) = self {
+            write!(f, "unsupported world generator version {version}")
+        } else {
+            write!(f, "invalid world save: {self:?}")
+        }
     }
 }
 impl std::error::Error for FormatError {}
@@ -189,7 +194,7 @@ pub fn decode(bytes: &[u8]) -> Result<World, FormatError> {
         )
     };
     let version = u32_at(8);
-    if version == REGIONAL_VERSION {
+    if [REGIONAL_VERSION, VERSIONED_REGIONAL_VERSION].contains(&version) {
         return regional::decode_manifest(bytes);
     }
     if ![1, FORMAT_VERSION, STREAM_FORMAT_VERSION].contains(&version) {

@@ -1,5 +1,19 @@
 # RustCraft development roadmap
 
+## Slice 24 — Terrain Generation v2
+
+- [x] Explicit generator4 for new worlds; frozen gen1–3 output and manifest4/gen3
+- [x] Manifest5 generator identity through regions, catalog, player and redo recovery
+- [x] Multi-scale lowlands/hills/connected ridges with smooth transitions and local plans
+- [x] Existing vertical bounds, cave foundations, tree clearance and deterministic safe spawn
+- [x] Independent goldens, multi-seed quality, signed seams and persistence regressions
+- [ ] Native Void X11/Wayland / RX9060 XT and Windows GUI acceptance
+
+Evidence, benchmarks and reproducible scenes: [Slice24](performance/slice24/README.md).
+Separate follow-ups: Slice25 biomes, Slice26 caves v2, Slice27 natural water,
+Slice28 vegetation/details; vertical expansion requires its own engineering slice.
+
+
 This document tracks intended milestones, not promised delivery dates. Implement and test one vertical slice at a time.
 
 Slice14 adds paged world selection, named seeded creation, separate bundles,
@@ -49,7 +63,8 @@ intact. See VIEWMODEL and VALIDATION for architecture, costs and acceptance.
 - [x] First bounded streaming: configurable radius, one worker, cache/GPU eviction, safe pending barriers and persistent edits
 - [x] First local large-world rollout with versioned regional storage and bounded caches
 - [ ] Further coordinate expansion and opt-in legacy migration
-- [ ] More interesting terrain and caves
+- [x] Terrain Generation v2 (Slice24)
+- [ ] Cave Generation v2 (Slice26)
 - [x] Initial voxel skylight and bounded light/mesh updates
 - [x] Emitted block light / persistent standing/wall torches, bounded worker updates and matched fixtures
 - [x] Slice20 original lighting/rendering/persistence/performance accepted on native Void Linux

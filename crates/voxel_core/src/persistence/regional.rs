@@ -3,6 +3,7 @@ use super::*;
 use crate::regions::{LARGE_EXTENT, MAX_REGION_RECORDS, RegionEdits, RegionIdentity, RegionPos};
 use std::{collections::BTreeMap, sync::Arc};
 pub const REGIONAL_VERSION: u32 = 4;
+pub const VERSIONED_REGIONAL_VERSION: u32 = 5;
 const SIZE: usize = 64;
 const REGION_MAGIC: &[u8; 8] = b"RUSTREGN";
 const MAX_REGION_FILE: usize = SIZE + MAX_REGION_RECORDS * RECORD_SIZE;
@@ -20,9 +21,9 @@ fn finish(mut b: Vec<u8>) -> Vec<u8> {
 pub(super) fn manifest(identity: RegionIdentity) -> Vec<u8> {
     let mut b = vec![0; SIZE];
     b[..8].copy_from_slice(MAGIC);
-    b[8..12].copy_from_slice(&REGIONAL_VERSION.to_le_bytes());
+    b[8..12].copy_from_slice(&identity.format_version().to_le_bytes());
     b[24..32].copy_from_slice(&identity.seed.to_le_bytes());
-    b[32..36].copy_from_slice(&3u32.to_le_bytes());
+    b[32..36].copy_from_slice(&identity.generator.to_le_bytes());
     b[40..44].copy_from_slice(&(LARGE_EXTENT as u32).to_le_bytes());
     b[44..60].copy_from_slice(&identity.nonce);
     finish(b)
@@ -34,9 +35,21 @@ pub(super) fn decode_manifest(b: &[u8]) -> Result<World, FormatError> {
     if u32_at(b, 20) != checksum(b) {
         return Err(FormatError::Checksum);
     }
+    let version = u32_at(b, 8);
+    let generator = u32_at(b, 32);
+    // Keep the old manifest's exact meaning. Future algorithms use v5 plus
+    // an explicit supported generator, never reinterpret an existing identity.
+    if version == REGIONAL_VERSION && generator != 3 {
+        return Err(FormatError::Identity);
+    }
+    if version == VERSIONED_REGIONAL_VERSION && generator < 4 {
+        return Err(FormatError::Identity);
+    }
+    if ![3, 4].contains(&generator) {
+        return Err(FormatError::Generator(generator));
+    }
     if u32_at(b, 12) != 0
         || u32_at(b, 16) != 0
-        || u32_at(b, 32) != 3
         || u32_at(b, 36) != 0
         || u32_at(b, 40) != LARGE_EXTENT as u32
         || u32_at(b, 60) != 0
@@ -46,6 +59,7 @@ pub(super) fn decode_manifest(b: &[u8]) -> Result<World, FormatError> {
     }
     Ok(World::regional(RegionIdentity {
         seed: u64_at(b, 24),
+        generator,
         nonce: b[44..60].try_into().unwrap(),
     }))
 }
@@ -54,6 +68,8 @@ pub(super) fn encode_region(
     p: RegionPos,
     edits: &RegionEdits,
 ) -> Result<Vec<u8>, FormatError> {
+    id.validate_generator()
+        .map_err(|e| FormatError::Generator(e.0))?;
     if !p.valid() || edits.len() > MAX_REGION_RECORDS {
         return Err(FormatError::TooLarge);
     }
@@ -64,7 +80,7 @@ pub(super) fn encode_region(
     b[16..20].copy_from_slice(&(edits.len() as u32 * 14).to_le_bytes());
     b[24..40].copy_from_slice(&id.nonce);
     b[40..48].copy_from_slice(&id.seed.to_le_bytes());
-    b[48..52].copy_from_slice(&3u32.to_le_bytes());
+    b[48..52].copy_from_slice(&id.generator.to_le_bytes());
     b[52..56].copy_from_slice(&p.0[0].to_le_bytes());
     b[56..60].copy_from_slice(&p.0[1].to_le_bytes());
     for (&pos, &block) in edits.iter() {
@@ -83,6 +99,8 @@ pub(super) fn decode_region(
     id: RegionIdentity,
     p: RegionPos,
 ) -> Result<RegionEdits, FormatError> {
+    id.validate_generator()
+        .map_err(|e| FormatError::Generator(e.0))?;
     if b.len() > MAX_REGION_FILE {
         return Err(FormatError::TooLarge);
     }
@@ -108,7 +126,7 @@ pub(super) fn decode_region(
     if !p.valid()
         || b[24..40] != id.nonce
         || u64_at(b, 40) != id.seed
-        || u32_at(b, 48) != 3
+        || u32_at(b, 48) != id.generator
         || u32_at(b, 60) != 0
     {
         return Err(FormatError::Identity);

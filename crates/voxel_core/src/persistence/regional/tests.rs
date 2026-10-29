@@ -26,6 +26,7 @@ impl Drop for Dir {
 fn identity() -> RegionIdentity {
     RegionIdentity {
         seed: 42,
+        generator: 3,
         nonce: [7; 16],
     }
 }
@@ -54,6 +55,7 @@ fn v4_manifest_and_region_golden_bytes_and_strict_validation() {
     let id = identity();
     let b = manifest(id);
     assert_eq!(b.len(), 64);
+    assert_eq!(u32_at(&b, 20), 0xccfae85f, "frozen v4 manifest bytes");
     assert_eq!(&b[..12], b"RUSTWRLD\x04\x00\x00\x00");
     assert_eq!(decode(&b).unwrap().region_identity(), Some(id));
     assert_eq!(encode(&decode(&b).unwrap()).unwrap(), b);
@@ -545,5 +547,140 @@ fn support_batch_and_inventory_survive_signed_region_eviction_and_interrupted_se
             }
             assert!(!d.0.join("session.pending").exists());
         }
+    }
+}
+
+#[test]
+fn v5_manifest_generator_identity_and_old_v4_bytes_are_strictly_separate() {
+    let old = identity();
+    let new = RegionIdentity {
+        generator: 4,
+        ..old
+    };
+    let b4 = manifest(old);
+    let b5 = manifest(new);
+    assert_eq!(u32_at(&b5, 8), 5);
+    assert_eq!(u32_at(&b5, 32), 4);
+    assert_eq!(decode(&b4).unwrap().identity().unwrap().generator, 3);
+    assert_eq!(decode(&b5).unwrap().region_identity(), Some(new));
+    assert_eq!(encode(&decode(&b5).unwrap()).unwrap(), b5);
+    // Repaired checksums must never let v4 mean gen4 or v5 mean gen3.
+    for (base, generator) in [(&b4, 4u32), (&b5, 3)] {
+        let mut bad = base.clone();
+        bad[32..36].copy_from_slice(&generator.to_le_bytes());
+        assert_eq!(decode(&finish(bad)), Err(FormatError::Identity));
+    }
+    let mut future = b5.clone();
+    future[32..36].copy_from_slice(&99u32.to_le_bytes());
+    assert_eq!(
+        decode(&finish(future.clone())),
+        Err(FormatError::Generator(99))
+    );
+    let dir = Dir::new();
+    fs::write(dir.0.join("world.rcw"), finish(future)).unwrap();
+    let before = fs::read(dir.0.join("world.rcw")).unwrap();
+    assert!(
+        SaveStore::open_with(&dir.0, || panic!(
+            "unsupported generator must not invoke creation"
+        ))
+        .is_err()
+    );
+    assert_eq!(fs::read(dir.0.join("world.rcw")).unwrap(), before);
+    for offset in [12, 16, 36, 40, 44, 60] {
+        let mut bad = b5.clone();
+        bad[offset] ^= 1;
+        if offset == 44 {
+            bad[44..60].fill(0);
+        }
+        assert!(decode(&finish(bad)).is_err());
+    }
+    let p = RegionPos([-1, 0]);
+    let edits = Arc::new(BTreeMap::from([(BlockPos([-1, -15, 0]), Block::Air)]));
+    let region = encode_region(new, p, &edits).unwrap();
+    assert_eq!(u32_at(&region, 48), 4);
+    assert_eq!(decode_region(&region, new, p).unwrap(), edits);
+    assert_eq!(decode_region(&region, old, p), Err(FormatError::Identity));
+    assert!(decode_region(&encode_region(old, p, &edits).unwrap(), new, p).is_err());
+}
+
+#[test]
+fn v5_edits_water_player_journal_backup_and_eviction_survive_all_commit_interruptions() {
+    for stage in [
+        SaveStage::SessionPrepared,
+        SaveStage::WorldSaved,
+        SaveStage::PlayerSaved,
+    ] {
+        let dir = Dir::new();
+        let (store, mut world, _) =
+            SaveStore::open_with(&dir.0, || Ok(streaming::new_large_world(42))).unwrap();
+        let mut inventory = store.load_player(&mut world).unwrap();
+        let id = world.region_identity().unwrap();
+        assert_eq!(id.generator, 4);
+        let root = fs::read(store.path()).unwrap();
+        assert_eq!(u32_at(&root, 8), 5);
+        // Signed region/chunk boundaries, explicit Air and water retain their IDs.
+        for c in [[-5, -1], [-4, -1], [-5, 0], [-4, 0]] {
+            store.prepare_regional_column(&mut world, c).unwrap();
+            streaming::prepare_column(&mut world, c).unwrap();
+        }
+        let air = BlockPos([-65, -15, -1]);
+        let water = BlockPos([-64, 25, -1]);
+        let torch = BlockPos([-63, 25, -1]);
+        let untouched = BlockPos([-62, -15, -1]);
+        world.set_block(air, Block::Air).unwrap();
+        world.set_block(water, Block::WaterSource).unwrap();
+        world
+            .set_block(torch.offset([0, -1, 0]).unwrap(), Block::Stone)
+            .unwrap();
+        world.set_block(torch, Block::Torch).unwrap();
+        store.save_player_session(&world, &inventory, true).unwrap();
+        world.mark_regions_saved(world.revision());
+        world.set_block(water, Block::Air).unwrap();
+        inventory.select(8);
+        world.time.advance(12345);
+        let time = world.time;
+        assert!(
+            store
+                .save_player_with(&world, &inventory, true, |at| if at == stage {
+                    Err(io::Error::other("v5 interrupted paired save"))
+                } else {
+                    Ok(())
+                })
+                .is_err()
+        );
+        for c in [[-5, -1], [-4, -1], [-5, 0], [-4, 0]] {
+            world.evict_column(c);
+        }
+        assert_eq!(world.dirty_regions(), 1);
+        drop(store);
+        let (store, mut got, _) =
+            SaveStore::open_with(&dir.0, || panic!("must retain v5 identity")).unwrap();
+        let inv = store.load_player(&mut got).unwrap();
+        assert_eq!(got.region_identity(), Some(id));
+        assert_eq!(got.time, time);
+        assert_eq!(inv.selected(), 8);
+        for c in [[-5, -1], [-4, -1], [-5, 0], [-4, 0]] {
+            store.prepare_regional_column(&mut got, c).unwrap();
+            streaming::prepare_column(&mut got, c).unwrap();
+        }
+        assert_eq!(got.block(air), Block::Air);
+        assert_eq!(got.block(water), Block::Air);
+        assert_eq!(got.block(torch), Block::Torch);
+        assert_eq!(got.block(untouched), Block::Stone);
+        assert_eq!(
+            fs::read(store.path()).unwrap(),
+            root,
+            "manifest must remain immutable"
+        );
+        assert!(
+            store
+                .region_path(RegionPos::of(water))
+                .with_extension("rcw.bak")
+                .exists()
+        );
+        assert!(!dir.0.join("session.pending").exists());
+        // A gen3 world with the same seed/nonce still cannot overwrite gen4.
+        let foreign = World::regional(RegionIdentity { generator: 3, ..id });
+        assert!(store.save(&foreign).is_err());
     }
 }

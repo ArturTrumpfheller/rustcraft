@@ -98,11 +98,14 @@ impl World {
     }
     pub fn regional(identity: RegionIdentity) -> Self {
         assert_ne!(identity.nonce, [0; 16]);
+        identity
+            .validate_generator()
+            .expect("supported regional generator");
         Self {
             regional: Some(identity),
             identity: Some(StreamIdentity {
                 seed: identity.seed,
-                generator: 3,
+                generator: identity.generator,
             }),
             ..Self::default()
         }

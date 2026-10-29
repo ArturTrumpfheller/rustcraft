@@ -60,7 +60,8 @@ pub(crate) fn create_world() -> Result<World, SaveError> {
     let start = std::time::Instant::now();
     let world = voxel_core::streaming::new_large_world(seed);
     eprintln!(
-        "RustCraft new streamed world: seed {seed}, generator v3, regional 65536x65536 blocks; identity created in {:?}",
+        "RustCraft new streamed world: seed {seed}, generator v{}, regional 65536x65536 blocks; identity created in {:?}",
+        voxel_core::worldgen::CURRENT_LOCAL_GENERATOR,
         start.elapsed()
     );
     Ok(world)

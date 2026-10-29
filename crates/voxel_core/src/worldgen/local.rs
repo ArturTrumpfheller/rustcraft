@@ -1,10 +1,17 @@
-//! Version 3: bounded local height/tree plans; no world-area allocation.
+//! Local v3/v4 height/tree plans. All output changes are explicitly version-gated.
 use super::*;
 pub(super) fn height(seed: u64, x: i32, z: i32) -> i32 {
     5 + (noise(seed, x, z, 32, 11) * 7
         + noise(seed, x, z, 16, 23) * 4
         + noise(seed, x, z, 8, 37) * 2)
         / 1024
+}
+fn surface(g: &Generator, x: i32, z: i32) -> i32 {
+    if g.config.version == 4 {
+        super::terrain::height(g.config.seed, x, z)
+    } else {
+        height(g.config.seed, x, z)
+    }
 }
 fn cave(g: &Generator, x: i32, y: i32, z: i32) -> bool {
     if y <= -14 || (x.abs() <= 3 && (8..=13).contains(&z)) {
@@ -21,7 +28,7 @@ fn cave(g: &Generator, x: i32, y: i32, z: i32) -> bool {
     if (x - entrance_x).abs() > 1 || !(-16..=22).contains(&local_z) {
         return main;
     }
-    let top = height(g.config.seed, entrance_x, base_z + 20) + 1;
+    let top = surface(g, entrance_x, base_z + 20) + 1;
     let floor = top - ((20 - local_z).clamp(0, 36) * (top + 6) / 32).min(top + 6);
     main || (y >= floor && y < floor + 4)
 }
@@ -65,14 +72,24 @@ fn trees(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Vec<Tree> {
             {
                 continue;
             }
-            let ground = height(g.config.seed, x, z);
+            let ground = surface(g, x, z);
             let trunk = 4 + ((h >> 16) % 2) as i32;
+            // v4 keeps the established species/grid, with sparse roots on gentle
+            // ground and enough vertical/canopy clearance. v3 stays frozen.
+            if g.config.version == 4
+                && (h.is_multiple_of(2)
+                    || ground + trunk + 1 > 30
+                    || !(-2..=2).all(|dx| {
+                        (-2..=2).all(|dz| (surface(g, x + dx, z + dz) - ground).abs() <= 2)
+                    }))
+            {
+                continue;
+            }
             if terrain(g, BlockPos([x, ground, z]), ground) != Block::Grass {
                 continue;
             }
-            if (-2..=2).all(|dx| {
-                (-2..=2).all(|dz| height(g.config.seed, x + dx, z + dz) < ground + trunk - 1)
-            }) {
+            if (-2..=2).all(|dx| (-2..=2).all(|dz| surface(g, x + dx, z + dz) < ground + trunk - 1))
+            {
                 result.push(Tree {
                     x,
                     z,
@@ -120,9 +137,12 @@ pub(super) fn point(g: &Generator, p: BlockPos) -> Block {
     {
         return Block::Air;
     }
-    let h = height(g.config.seed, x, z);
+    let h = surface(g, x, z);
     let b = terrain(g, p, h);
-    if b != Block::Air || y <= h || y > h + 7 {
+    // A v4 root may sit two blocks above this cell's surface. A five-block
+    // trunk plus the crown then reaches h+8. Keep the frozen v3 shortcut.
+    let overhead = if g.config.version == 4 { 8 } else { 7 };
+    if b != Block::Air || y <= h || y > h + overhead {
         return b;
     }
     sample(g, p, h, &trees(g, [x, z], [x, z]))
@@ -139,7 +159,7 @@ impl Plan {
         let mut heights = Vec::with_capacity(18 * 18);
         for z in min[1]..=max[1] {
             for x in min[0]..=max[0] {
-                heights.push(height(g.config.seed, x, z));
+                heights.push(surface(g, x, z));
             }
         }
         Self {
@@ -149,8 +169,12 @@ impl Plan {
         }
     }
     fn block(&self, g: &Generator, p: BlockPos) -> Block {
-        let x = p.0[0] - self.min[0];
-        let z = p.0[2] - self.min[1];
+        let Some(x) = p.0[0].checked_sub(self.min[0]) else {
+            return point(g, p);
+        };
+        let Some(z) = p.0[2].checked_sub(self.min[1]) else {
+            return point(g, p);
+        };
         let h = if (0..18).contains(&x) && (0..18).contains(&z) {
             self.heights[(z * 18 + x) as usize]
         } else {
@@ -167,7 +191,7 @@ impl<'a> Sampler<'a> {
     pub(super) fn new(g: &'a Generator, c: [i32; 2]) -> Self {
         Self {
             g,
-            plan: (g.config.version == 3
+            plan: (g.config.version >= 3
                 && c.iter()
                     .all(|v| (-g.chunk_limit()..g.chunk_limit()).contains(v)))
             .then(|| Plan::new(g, c)),

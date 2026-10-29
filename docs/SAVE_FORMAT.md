@@ -1,4 +1,35 @@
-# RustCraft saves — v1/v2 snapshots, v3 finite overlays and v4 regional worlds
+# RustCraft saves — v1/v2 snapshots, v3 overlays and v4/v5 regional worlds
+
+## Slice 24: versioned regional manifest v5
+
+New worlds write **manifest5 / generator4**. Existing manifest4 remains strictly
+**generator3** and retains its exact bytes, nonce, regional edits and bounds.
+There is no automatic migration or rewriting on load. Generator and save versions
+are independent; future local generators can be explicitly added to manifest5's
+supported list without another regional persistence redesign.
+
+Manifest5 retains the exact64-byte manifest4 layout below. Offset8 is now5;
+offset32 is the selected generator u32 (currently only4 for v5). Count/length,
+reserved fields, nonzero nonce, extent32768, CRC and exact size remain mandatory.
+Manifest4/gen4 and manifest5/gen3 combinations are invalid. Future generator IDs
+produce `FormatError::Generator(id)`; unknown save versions also fail closed.
+
+`RegionIdentity` carries seed, generator and nonce throughout workers and saves.
+Region format1 already had a generator field at offset48; it now must equal the
+selected world's generator exactly. Old gen3 region bytes are unchanged. No
+coordinates, block IDs, explicit Air semantics, shard paths, limits or records
+are reinterpreted. A gen3 file cannot be used in a gen4 world, even with identical
+seed/nonce, and existing root identity cannot be replaced during saving.
+
+The unchanged player/identity/journal envelopes encode regional mode5 and the
+selected generator in their existing binding fields. Mode4 remains gen3. Root
+fingerprints cover the versioned manifest. Nested journal regions validate against
+that root identity before replay. Old readers reject format5; use complete closed
+copies for old-client testing. Atomic replacement, previous backups, per-region
+COW/dirty limits, locks and save-level redo recovery keep their existing protocol.
+Catalog validation reads the identity and shows Regional v5 / Gen4 for new worlds;
+old catalog metadata/imports retain the original identity and bytes.
+
 
 Project-authored specification: MIT OR Apache-2.0. Implemented by `voxel_core::persistence`, independent of Bevy. The root `world.rcw` is a complete snapshot/overlay in v1–v3, or an immutable identity manifest in v4. Regional v4 data lives beside it under `regions/`. Backups retain one previous generation of each replaced data file. Paths and recovery commands are in [README](../README.md#saving-loading-and-recovery).
 
