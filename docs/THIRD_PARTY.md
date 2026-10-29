@@ -1,5 +1,14 @@
 # Third-party dependencies and asset inventory
 
+## Slice 24 provenance
+
+Terrain-v4 integer composition, versioned identity support, tests, benchmark/survey
+and gallery tooling are original RustCraft work, MIT OR Apache-2.0. Actual
+`docs/images/slice24` client gallery captures show the existing original textures
+and production shaders. No external noise library, third-party art/source,
+dependency, texture/block ID, engine feature or toolchain change is introduced.
+
+
 Project-created code and documentation are **MIT OR Apache-2.0**, at the recipient's option. See the root LICENSE-MIT and LICENSE-APACHE files. This does not relicense dependencies or separately licensed artwork.
 
 ## Direct dependencies (slice 10; unchanged from slice 4)

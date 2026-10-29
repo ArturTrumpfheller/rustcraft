@@ -623,7 +623,7 @@ pub(super) fn paint(b: &Browser, c: &mut Canvas) {
         c.centered(
             -39.,
             if b.page == Page::Create {
-                "EMPTY SEED = RANDOM / GENERATOR V3"
+                "EMPTY SEED = RANDOM / GENERATOR V4"
             } else {
                 "ONLY THE DISPLAY NAME WILL CHANGE"
             },

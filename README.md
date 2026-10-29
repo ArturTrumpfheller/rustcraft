@@ -4,6 +4,15 @@
 
 RustCraft is an independent project, not a Minecraft source port, and is not affiliated with or endorsed by Mojang or Microsoft.
 
+## Terrain Generation v2 (Slice 24)
+
+New worlds blend broad building plains, rolling hills and connected ridge regions
+using bounded integer-only local generation. Manifest v5 explicitly pins generator
+v4. Existing v1–v4 saves keep their original blocks, generators and edits; no
+migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest uplands.
+[Algorithm, compatibility and vertical limits](docs/WORLDGEN.md),
+[measurements, actual captures and native acceptance](docs/performance/slice24/README.md).
+
 ## Current prototype
 
 - Deterministic seeded terrain, rolling hills/valleys, a walkable cave network with surface entrance, and blocky trees.
@@ -23,7 +32,7 @@ RustCraft is an independent project, not a Minecraft source port, and is not aff
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 22**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 24**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -226,17 +235,17 @@ Movement speed is independent of diagonal input. Mouse sensitivity does not depe
 Create worlds in **Spielen → Neue Welt**. A decimal unsigned 64-bit seed is
 validated before creation; an empty field generates a fresh stored seed.
 `RUSTCRAFT_WORLD_SEED` optionally prefills that form and never changes an existing
-world. Generator v3 and generators v1/v2 for historical saves remain frozen.
+world. New worlds use generator v4; generators v1/v2/v3 for historical saves remain frozen.
 Display names can repeat; internal directory IDs are unique and never renamed.
 See [safe multi-world management](docs/WORLDS.md).
 
 Terrain uses coherent height variation with grass/dirt/stone layers. Caves connect across chunks and have a stair-stepped surface entrance near x=-10, z=20, descending toward the east/west tunnel near z=-10. Trees use supported 4–5-block trunks and simple crowns. Wood and leaves are both **solid and opaque**; there is no leaf decay, leaf transparency, biomes, ore distribution or emitted light from generated blocks. The outer terrain is a finite cut-off edge; falling below the world respawns you safely. The historical demo remains a library test fixture.
 
-New v4 worlds save **seed + generator version + world identity** in a manifest and all edits in regional overlays, including explicit Air. Unmodified chunks reproduce locally from that identity. Loaded chunks and clean region maps are disposable caches; unsaved region maps remain pinned in RAM until successfully saved. v1/v2 saves remain full snapshots with no seed metadata and never gain generated terrain. The [generation contract](docs/WORLDGEN.md) explains deterministic arithmetic, limits and future extension.
+New v5 worlds save **seed + generator version + world identity** in a manifest and all edits in regional overlays, including explicit Air. Unmodified chunks reproduce locally from that identity. Loaded chunks and clean region maps are disposable caches; unsaved region maps remain pinned in RAM until successfully saved. v1/v2 saves remain full snapshots with no seed metadata and never gain generated terrain. The [generation contract](docs/WORLDGEN.md) explains deterministic arithmetic, limits and future extension.
 
 ## Streaming and compatibility
 
-A confirmed new-world creation produces a **v4 regional world** with generator v3 and
+A confirmed new-world creation produces a **v5 regional world** with generator v4 and
 X/Z [-32768,32768), Y [-16,32). There is no map-sized startup allocation.
 `RUSTCRAFT_LOAD_RADIUS=1`, `2` (default) or `3` selects a radius independently of
 world extent: at most 75 chunks by default, 147 at radius 3. Distant voxel data,

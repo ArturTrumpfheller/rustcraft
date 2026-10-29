@@ -3,9 +3,12 @@
 use crate::{Block, BlockPos, CHUNK_SIZE, Chunk, ChunkPos, LocalPos, World};
 
 mod local;
+mod terrain;
 pub use local::Sampler;
 
 pub const GENERATOR_VERSION: u32 = 1;
+/// Default for newly created regional worlds; historical defaults remain frozen.
+pub const CURRENT_LOCAL_GENERATOR: u32 = 4;
 pub const DEFAULT_SEED: u64 = 2026;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GenerationConfig {
@@ -74,10 +77,10 @@ fn noise(seed: u64, x: i32, z: i32, scale: i32, salt: u64) -> i32 {
 }
 impl Generator {
     pub fn new(config: GenerationConfig) -> Result<Self, UnsupportedGenerator> {
-        if ![GENERATOR_VERSION, 2, 3].contains(&config.version) {
+        if ![GENERATOR_VERSION, 2, 3, 4].contains(&config.version) {
             return Err(UnsupportedGenerator(config.version));
         }
-        if config.version == 3 {
+        if config.version >= 3 {
             return Ok(Self {
                 config,
                 heights: Vec::new(),
@@ -162,8 +165,12 @@ impl Generator {
         if !(-self.extent..self.extent).contains(&x) || !(-self.extent..self.extent).contains(&z) {
             return None;
         }
-        if self.config.version == 3 {
-            return Some(local::height(self.config.seed, x, z));
+        if self.config.version >= 3 {
+            return Some(if self.config.version == 4 {
+                terrain::height(self.config.seed, x, z)
+            } else {
+                local::height(self.config.seed, x, z)
+            });
         }
         Some(self.heights[((z + self.extent) * self.extent * 2 + x + self.extent) as usize])
     }
@@ -202,7 +209,7 @@ impl Generator {
     /// Samples world-space cells. Trees are planned once and cross chunk seams;
     /// no neighboring chunk must already exist for a correct result.
     pub fn block(&self, BlockPos([x, y, z]): BlockPos) -> Block {
-        if self.config.version == 3 {
+        if self.config.version >= 3 {
             return local::point(self, BlockPos([x, y, z]));
         }
         let terrain = self.terrain(x, y, z);
@@ -235,7 +242,7 @@ impl Generator {
         Block::Air
     }
     pub fn chunk(&self, pos: ChunkPos) -> Option<Chunk> {
-        if self.config.version == 3 {
+        if self.config.version >= 3 {
             return self.sampler([pos.0[0], pos.0[2]]).chunk(pos);
         }
         if !(-self.extent / 16..self.extent / 16).contains(&pos.0[0])
@@ -256,8 +263,8 @@ impl Generator {
         Some(chunk)
     }
     pub fn generate(&self) -> World {
-        assert_ne!(
-            self.config.version, 3,
+        assert!(
+            self.config.version < 3,
             "local generator is streamed, never materialize its entire extent"
         );
         let mut world = if self.config.version == 1 {
@@ -289,5 +296,7 @@ impl Generator {
     }
 }
 
+#[cfg(test)]
+mod terrain_tests;
 #[cfg(test)]
 mod tests;

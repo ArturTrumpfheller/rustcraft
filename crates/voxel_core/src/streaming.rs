@@ -356,7 +356,11 @@ pub fn new_large_world(seed: u64) -> World {
         ^ (u128::from(NEXT.fetch_add(1, Ordering::Relaxed)) << 96))
         .max(1)
         .to_le_bytes();
-    World::regional(crate::regions::RegionIdentity { seed, nonce })
+    World::regional(crate::regions::RegionIdentity {
+        seed,
+        generator: crate::worldgen::CURRENT_LOCAL_GENERATOR,
+        nonce,
+    })
 }
 
 /// Nearest rings first, with a deterministic preference ahead of motion inside

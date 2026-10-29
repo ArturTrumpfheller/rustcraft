@@ -49,8 +49,8 @@ fn unpack<'a>(b: &'a [u8], magic: &[u8; 8], count: u32) -> Result<&'a [u8], Form
 impl Binding {
     fn new(w: &World) -> Self {
         let mut b = [0; 32];
-        let mode = if w.region_identity().is_some() {
-            4u32
+        let mode = if let Some(id) = w.region_identity() {
+            id.format_version()
         } else if w.identity().is_some() {
             3
         } else {
@@ -88,9 +88,10 @@ impl Binding {
                             && self.0[12..16] == i.generator.to_le_bytes()
                     })
             }
-            4 => w.region_identity().is_some_and(|i| {
-                self.0[4..12] == i.seed.to_le_bytes()
-                    && self.0[12..16] == 3u32.to_le_bytes()
+            4 | 5 => w.region_identity().is_some_and(|i| {
+                mode == i.format_version()
+                    && self.0[4..12] == i.seed.to_le_bytes()
+                    && self.0[12..16] == i.generator.to_le_bytes()
                     && self.0[16..] == i.nonce
             }),
             _ => false,

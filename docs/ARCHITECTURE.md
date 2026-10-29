@@ -1,5 +1,31 @@
 # RustCraft architecture
 
+## Slice 24 terrain and identity design
+
+New worlds use local generator4 / manifest5; existing manifest4 remains frozen
+at generator3. `RegionIdentity { seed, generator, nonce }` travels through region
+reads/writes, world snapshots and the existing player/redo-journal binding. V5 is
+an explicit supported-generator envelope using the existing64-byte layout; region
+format1 already contains the generator field. Validation stays strict. Future
+local versions extend an explicit supported list and algorithm branch, not a new
+storage architecture. No saved world is implicitly converted.
+
+`worldgen::terrain` separates v4 geographical shape from the shared, version-gated
+local cave/material/tree stages. Large384/512-block warp/geography fields smoothly
+blend buildable lowlands,96/40-block hills and connected skewed ridges. Q10 integer
+math, bounded18×18 column plans and world-coordinate trees retain order-independent
+point/chunk output. Frozen gen1–3 goldens remain unchanged. V4 tree placement checks
+slope, support and crown clearance. Existing edited-block spawn/respawn needs no
+physics or world mutation.
+
+Y[-16,32), three-chunk streaming/light/mesh/save bounds, the single terrain worker,
+cache/resource ownership, dirty-region authority and failure barriers stay intact.
+No map-sized planning, frame-loop noise evaluation or new dependency is added.
+See [WORLDGEN](WORLDGEN.md) for the vertical audit, later-slice boundaries and
+separate height-expansion proposal; [measurements and acceptance](performance/slice24/README.md)
+for actual costs and visual evidence.
+
+
 ## Slice 23 fluid behavior
 
 `voxel_core::fluid` retains synchronous event-driven relaxation and selects

@@ -324,7 +324,12 @@ impl WorldCatalog {
             let (_store, world) = validate(&e.path, matches!(e.key, WorldKey::Legacy))?;
             e.seed = world.identity().map(|i| i.seed);
             e.generator = world.identity().map(|i| i.generator);
-            e.kind = if world.region_identity().is_some() {
+            e.kind = if world
+                .region_identity()
+                .is_some_and(|i| i.format_version() == 5)
+            {
+                "Regional v5"
+            } else if world.region_identity().is_some() {
                 "Regional v4"
             } else if world.identity().is_some() {
                 "Finite v3"

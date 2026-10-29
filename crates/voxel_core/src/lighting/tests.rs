@@ -310,7 +310,7 @@ fn derived_lighting_preserves_legacy_and_streamed_save_bytes_and_revisions() {
 }
 
 #[test]
-fn saved_world_v1_v2_v3_v4_items_and_far_lighting_reconstruct_after_restart() {
+fn saved_world_v1_v2_v3_v4_v5_items_and_far_lighting_reconstruct_after_restart() {
     use crate::{
         inventory::{Click, Item, edit_inventory},
         persistence::{SaveStore, encode},
@@ -364,7 +364,7 @@ fn saved_world_v1_v2_v3_v4_items_and_far_lighting_reconstruct_after_restart() {
             prepare_column(w, c).unwrap();
         }
     }
-    for version in 1..=4 {
+    for version in 1..=5 {
         let stamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -386,7 +386,12 @@ fn saved_world_v1_v2_v3_v4_items_and_far_lighting_reconstruct_after_restart() {
         let (store, mut w, _) = SaveStore::open_with(&t.0, || {
             Ok(match version {
                 3 => new_world(42),
-                4 => new_large_world(42),
+                4 => World::regional(crate::regions::RegionIdentity {
+                    seed: 42,
+                    generator: 3,
+                    nonce: [9; 16],
+                }),
+                5 => new_large_world(42),
                 _ => crate::demo_world(),
             })
         })
@@ -399,7 +404,7 @@ fn saved_world_v1_v2_v3_v4_items_and_far_lighting_reconstruct_after_restart() {
             );
         }
         prepare(&store, &mut w);
-        let p = if version == 4 {
+        let p = if version >= 4 {
             BlockPos([16008, -15, -15992])
         } else if version == 3 {
             BlockPos([8, -15, 8])

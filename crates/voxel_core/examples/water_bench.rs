@@ -13,6 +13,7 @@ fn main() {
         let mut w = if std::env::args().any(|a| a == "--regional") {
             let mut w = voxel_core::World::regional(voxel_core::regions::RegionIdentity {
                 seed: 42,
+                generator: 3,
                 nonce: [22; 16],
             });
             for (p, chunk) in terrain.chunks() {
