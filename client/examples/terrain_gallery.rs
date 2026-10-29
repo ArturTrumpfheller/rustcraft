@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Real v4 terrain, production textures/lighting/materials. No save access.
+//! Real versioned terrain, production textures/lighting/materials. No save access.
 //! terrain_gallery SEED X Z YAW_DEGREES [--capture=path.ppm] [--overview]
 #[allow(dead_code)]
 #[path = "../src/atmosphere.rs"]
@@ -25,6 +25,7 @@ use voxel_core::{
 #[derive(Resource)]
 struct Scene {
     seed: u64,
+    version: u32,
     x: i32,
     z: i32,
     yaw: f32,
@@ -37,6 +38,10 @@ fn main() {
         "SEED X Z YAW_DEGREES [--capture=path.ppm] [--overview]"
     );
     let scene = Scene {
+        version: args
+            .iter()
+            .find_map(|s| s.strip_prefix("--generator="))
+            .map_or(4, |s| s.parse().unwrap()),
         seed: args[0].parse().unwrap(),
         x: args[1].parse().unwrap(),
         z: args[2].parse().unwrap(),
@@ -48,7 +53,7 @@ fn main() {
     app.insert_resource(scene)
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "RustCraft Slice24 terrain".into(),
+                title: "RustCraft terrain gallery".into(),
                 resolution: (1280, 720).into(),
                 present_mode: bevy::window::PresentMode::AutoNoVsync,
                 ..default()
@@ -91,10 +96,14 @@ fn setup(
     let center = origin.map(|v| v / 16);
     let g = Generator::new(GenerationConfig {
         seed: scene.seed,
-        version: 4,
+        version: scene.version,
     })
     .unwrap();
-    let mut world = voxel_core::streaming::new_large_world(scene.seed);
+    let mut world = voxel_core::World::regional(voxel_core::regions::RegionIdentity {
+        seed: scene.seed,
+        generator: scene.version,
+        nonce: [1; 16],
+    });
     for z in center[1] - radius - 1..=center[1] + radius + 1 {
         for x in center[0] - radius - 1..=center[0] + radius + 1 {
             let s = g.sampler([x, z]);
@@ -180,7 +189,8 @@ fn setup(
         Transform::from_translation(eye).looking_at(eye + direction, Vec3::Y),
     ));
     println!(
-        "TERRAIN_SCENE seed={} x={} z={} surface_y={h} yaw={} radius={radius} overview={} feet={feet:?}",
+        "TERRAIN_SCENE generator={} seed={} x={} z={} surface_y={h} yaw={} radius={radius} overview={} feet={feet:?}",
+        scene.version,
         scene.seed,
         scene.x,
         scene.z,

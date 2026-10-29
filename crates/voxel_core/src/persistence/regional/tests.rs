@@ -559,6 +559,11 @@ fn v5_manifest_generator_identity_and_old_v4_bytes_are_strictly_separate() {
     };
     let b4 = manifest(old);
     let b5 = manifest(new);
+    assert_eq!(
+        u32_at(&b5, 20),
+        0x1da306c7,
+        "frozen Slice24 v5/gen4 manifest"
+    );
     assert_eq!(u32_at(&b5, 8), 5);
     assert_eq!(u32_at(&b5, 32), 4);
     assert_eq!(decode(&b4).unwrap().identity().unwrap().generator, 3);
@@ -615,7 +620,7 @@ fn v5_edits_water_player_journal_backup_and_eviction_survive_all_commit_interrup
             SaveStore::open_with(&dir.0, || Ok(streaming::new_large_world(42))).unwrap();
         let mut inventory = store.load_player(&mut world).unwrap();
         let id = world.region_identity().unwrap();
-        assert_eq!(id.generator, 4);
+        assert_eq!(id.generator, 5);
         let root = fs::read(store.path()).unwrap();
         assert_eq!(u32_at(&root, 8), 5);
         // Signed region/chunk boundaries, explicit Air and water retain their IDs.
@@ -682,5 +687,102 @@ fn v5_edits_water_player_journal_backup_and_eviction_survive_all_commit_interrup
         // A gen3 world with the same seed/nonce still cannot overwrite gen4.
         let foreign = World::regional(RegionIdentity { generator: 3, ..id });
         assert!(store.save(&foreign).is_err());
+    }
+}
+
+#[test]
+fn biome_blocks_and_items_survive_journal_replay_in_all_regional_generators() {
+    use crate::inventory::Item;
+    for generator in [3, 4, 5] {
+        for stage in [
+            SaveStage::SessionPrepared,
+            SaveStage::WorldSaved,
+            SaveStage::PlayerSaved,
+        ] {
+            let dir = Dir::new();
+            let id = RegionIdentity {
+                generator,
+                ..identity()
+            };
+            let (store, mut world, _) =
+                SaveStore::open_with(&dir.0, || Ok(World::regional(id))).unwrap();
+            let mut inv = store.load_player(&mut world).unwrap();
+            store.prepare_regional_column(&mut world, [-1, -1]).unwrap();
+            streaming::prepare_column(&mut world, [-1, -1]).unwrap();
+            let root = fs::read(store.path()).unwrap();
+            for (p, b) in [
+                (BlockPos([-2, 25, -2]), Block::Sand),
+                (BlockPos([-1, 25, -2]), Block::SnowyGround),
+                (BlockPos([-2, -15, -2]), Block::Air),
+            ] {
+                world.set_block(p, b).unwrap();
+            }
+            inv.insert(Item::Sand, 17);
+            inv.insert(Item::SnowyGround, 23);
+            assert!(
+                store
+                    .save_player_with(&world, &inv, true, |at| if at == stage {
+                        Err(io::Error::other("biome interrupted save"))
+                    } else {
+                        Ok(())
+                    })
+                    .is_err()
+            );
+            drop(store);
+            let (store, mut restored, _) =
+                SaveStore::open_with(&dir.0, || panic!("existing identity")).unwrap();
+            let got = store.load_player(&mut restored).unwrap();
+            assert_eq!(got.slots(), inv.slots());
+            assert_eq!(restored.region_identity(), Some(id));
+            store
+                .prepare_regional_column(&mut restored, [-1, -1])
+                .unwrap();
+            streaming::prepare_column(&mut restored, [-1, -1]).unwrap();
+            assert_eq!(restored.block(BlockPos([-2, 25, -2])), Block::Sand);
+            assert_eq!(restored.block(BlockPos([-1, 25, -2])), Block::SnowyGround);
+            assert_eq!(restored.block(BlockPos([-2, -15, -2])), Block::Air);
+            assert_eq!(fs::read(store.path()).unwrap(), root);
+            assert!(!dir.0.join("session.pending").exists());
+        }
+    }
+}
+#[test]
+fn additive_biome_block_ids_do_not_reinterpret_historical_materials() {
+    assert_eq!(block_id(Block::Sand), 20);
+    assert_eq!(block_id(Block::SnowyGround), 21);
+    for b in [
+        Block::Air,
+        Block::Grass,
+        Block::Dirt,
+        Block::Stone,
+        Block::Wood,
+        Block::Leaves,
+        Block::Torch,
+        Block::TorchEast,
+        Block::TorchWest,
+        Block::TorchSouth,
+        Block::TorchNorth,
+        Block::WaterSource,
+        Block::Water1,
+        Block::Water2,
+        Block::Water3,
+        Block::Water4,
+        Block::Water5,
+        Block::Water6,
+        Block::Water7,
+        Block::WaterFalling,
+        Block::Sand,
+        Block::SnowyGround,
+    ] {
+        assert_eq!(stored_block(block_id(b), 3).unwrap(), b);
+    }
+    for version in [3, 4, 5] {
+        let id = RegionIdentity {
+            generator: version,
+            ..identity()
+        };
+        let b = manifest(id);
+        assert_eq!(decode(&b).unwrap().region_identity(), Some(id));
+        assert_eq!(u32_at(&b, 8), if version == 3 { 4 } else { 5 });
     }
 }

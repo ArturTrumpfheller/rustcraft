@@ -25,6 +25,8 @@ pub enum Block {
     Water6,
     Water7,
     WaterFalling,
+    Sand,
+    SnowyGround,
 }
 
 impl Block {
@@ -82,6 +84,8 @@ impl Block {
             Self::Air => [0.0; 4],
             b if b.fluid().is_some() => [0.06, 0.25, 0.72, 0.65],
             Self::Grass => [0.18, 0.42, 0.07, 1.0],
+            Self::Sand => [0.72, 0.60, 0.34, 1.0],
+            Self::SnowyGround => [0.83, 0.90, 0.94, 1.0],
             Self::Dirt => [0.28, 0.13, 0.06, 1.0],
             Self::Stone => [0.32, 0.35, 0.38, 1.0],
             Self::Wood => [0.24, 0.12, 0.035, 1.0],

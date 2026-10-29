@@ -16,6 +16,8 @@ pub enum BuildBlock {
     Leaves,
     Torch,
     WaterSource,
+    Sand,
+    SnowyGround,
 }
 
 impl BuildBlock {
@@ -28,6 +30,8 @@ impl BuildBlock {
             5 => Some(Self::Leaves),
             6 => Some(Self::Torch),
             7 => Some(Self::WaterSource),
+            10 => Some(Self::Sand),
+            11 => Some(Self::SnowyGround),
             _ => None,
         }
     }
@@ -40,11 +44,15 @@ impl BuildBlock {
             Self::Leaves => 5,
             Self::Torch => 6,
             Self::WaterSource => 7,
+            Self::Sand => 10,
+            Self::SnowyGround => 11,
         }
     }
     pub fn block(self) -> Block {
         match self {
             Self::Grass => Block::Grass,
+            Self::Sand => Block::Sand,
+            Self::SnowyGround => Block::SnowyGround,
             Self::Dirt => Block::Dirt,
             Self::Stone => Block::Stone,
             Self::Wood => Block::Wood,
@@ -56,6 +64,8 @@ impl BuildBlock {
     pub fn name(self) -> &'static str {
         match self {
             Self::Grass => "Grass",
+            Self::Sand => "Sand",
+            Self::SnowyGround => "Snowy Ground",
             Self::Dirt => "Dirt",
             Self::Stone => "Stone",
             Self::Wood => "Wood",

@@ -30,7 +30,7 @@ fn ensure_assets(
     let uv = source
         .uvs
         .into_iter()
-        .map(|uv| [tile[0] + uv[0] * 16. / 128., tile[1] + uv[1] * 16. / 64.])
+        .map(|uv| [tile[0] + uv[0] * 16. / 128., tile[1] + uv[1] * 16. / 96.])
         .collect::<Vec<_>>();
     let mesh = meshes.add(
         Mesh::new(

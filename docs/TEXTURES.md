@@ -1,5 +1,15 @@
 # Terrain texture and light modulation contract (Slices 8–10)
 
+Current Slice25 layout: **128×96**, eleven original16×16 tiles at32-pixel pitch
+with8-pixel extrusion. Existing slots0–7/art are unchanged; Sand/Snow Top/Snow
+Side append slots8–10. The terrain shader, inventory, held cubes/torches and
+world-item torches use the updated vertical UV scale. Embedded pixel payload is
+48KiB each on CPU/GPU before driver overhead. Snowy Ground uses the new top/side
+and original Dirt underside. Source, generation command and nearest LOD0 policy
+remain the same. See [WORLDGEN](WORLDGEN.md); historical dimensions below describe
+the original Slice8 layout.
+
+
 Slice21 extends this historical baseline with a saved day/night clock, separate
 sky/block COLOR contributions, procedural celestial bodies/stars and matching
 fog gated by geometric sky exposure. See [the current contract](DAY_NIGHT.md).

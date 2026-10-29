@@ -481,3 +481,28 @@ Nonempty lists use bounded player-v3 records in the same world/inventory redo
 journal; empty lists and old reads retain v2/v1 compatibility. Item palette grants
 are additive/atomic and legacy item7 conversion is explicit. Emission changes use
 the existing full lighting path; ordinary water still reuses cached light.
+
+
+## Slice25 biome generation
+
+`worldgen::biome` provides engine-neutral Q10 climate, classification, v5 shape,
+coherent surface choice and vegetation density. `worldgen::local` version-gates
+these inputs and caches18² per-column materials alongside heights for all three
+vertical chunks; a temporary20² grid reuses slope neighbors. The established
+cave sampler, tree geometry, worker and bounded terrain cache remain shared.
+Historical v1–v4 outputs remain pinned and are never reinterpreted. F3 samples
+one seed/coordinate query at the existing bounded refresh rate.
+
+New worlds select generator5 through CURRENT_LOCAL_GENERATOR, stored explicitly
+in manifest v5; saved identities select their original generation path. Existing
+player binding/catalog/journal logic derives the manifest version from the actual
+identity and retains exact generator matching. Only supported-generator validation
+is extended. No persistent derived biome map or new envelope is needed.
+
+Sand20/SnowyGround21 use the ordinary solid-block rules and item10/11. The
+creative palette, retained held models and face mappings include both. Three
+original pixel tiles extend the single embedded atlas to128×96 (48KiB CPU/GPU
+pixel payload each, excluding driver overhead). Terrain greedy UVs, inventory,
+viewmodel and dropped torches use that same layout. No extra material, render
+pass, simulation behavior, native dependency or persistent cache is added.
+See [WORLDGEN](WORLDGEN.md) and [validation](performance/slice25/README.md).

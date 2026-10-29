@@ -180,7 +180,7 @@ fn input(
             .into_iter()
             .enumerate()
             .find_map(|(i, item)| {
-                let center = Vec2::new((i as f32 - 3.5) * 28., 94.);
+                let center = Vec2::new((i as f32 - 4.5) * 28., 94.);
                 ((point - center).abs().max_element() < 12.).then_some(item)
             })
         {
@@ -266,7 +266,7 @@ impl Batch {
                 self.rect(p + offset, size, 1., [1.; 4]);
                 self.uvs.extend(
                     [[0., v1], [1., v1], [1., v0], [0., v0]]
-                        .map(|uv| [tile[0] + uv[0] * 16. / 128., tile[1] + uv[1] * 16. / 64.]),
+                        .map(|uv| [tile[0] + uv[0] * 16. / 128., tile[1] + uv[1] * 16. / 96.]),
                 );
             }
             return;
@@ -570,7 +570,7 @@ fn draw(
             [0.9, 0.75, 0.5, 1.],
         );
         for (i, item) in Item::CREATIVE.into_iter().enumerate() {
-            let c = Vec2::new((i as f32 - 3.5) * 28., 94.);
+            let c = Vec2::new((i as f32 - 4.5) * 28., 94.);
             flat.rect(
                 c - Vec2::splat(12.),
                 Vec2::splat(24.),

@@ -63,3 +63,15 @@ cutouts, blended leaves, normal maps or dynamic-lighting changes are included.
 Slice20 adds an independently authored amber/gold tip and wood-grain tile in the
 previously unused slot7, under the same original-art license and source policy.
 No old tile changes; all eight slots have opaque pixels and extruded gutters.
+
+
+## Slice25 atlas extension
+
+The original eight16×16 grids and their extruded pixels are unchanged. Sand,
+Snow Top and Snow Side append slots8/9/10; the atlas grows from128×64 to128×96.
+The final unused slot retains the opaque diagnostic magenta fill. New grids are
+independently authored RustCraft pixel art under MIT OR Apache-2.0, including
+artwork; no third-party pack or proprietary reference was used. Regenerate/check
+with the same standard-library `tools/generate_textures.py [--check]` command.
+Snowy Ground uses Snow Top/+Y, Dirt/−Y and Snow Side/walls; Sand uses its one tile
+on every face. Terrain, UI, held blocks and torches share the extended UV layout.

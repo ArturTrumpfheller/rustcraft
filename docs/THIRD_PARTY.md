@@ -215,3 +215,14 @@ UI colored pixels and thin held-item silhouettes use these same source grids.
 Dropped Torch presentation reuses our original Slice20 Torch art. No Minecraft
 asset, reference image, external texture pack, font, crate or feature was added.
 New gameplay captures retain the same project licenses.
+
+
+## Slice25 original biome surfaces
+
+The Sand, Snow Top and Snow Side16×16 pixel grids/palettes appended to
+`assets/terrain/source.json`, generated PNG/RGBA atlas, biome code, tools, tests
+and documentation are original RustCraft work, **MIT OR Apache-2.0**, including
+the artwork. Existing eight tiles remain byte-identical. No external reference
+images, Minecraft artwork/code, fonts, dependencies or renderer features added.
+`docs/images/slice25` contains actual RustCraft production-material captures of
+seeded generated terrain, not concept art or AI-generated imagery.

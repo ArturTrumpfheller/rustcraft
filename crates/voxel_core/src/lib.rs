@@ -32,3 +32,6 @@ mod support_tests;
 
 #[cfg(test)]
 mod bucket_tests;
+
+#[cfg(test)]
+mod biome_block_tests;

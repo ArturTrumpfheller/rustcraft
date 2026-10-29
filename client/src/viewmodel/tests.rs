@@ -119,7 +119,7 @@ fn cube_faces_reuse_exact_original_uv_orientation_for_all_five_blocks() {
                 uv[i],
                 [
                     original.atlas_uvs[index][0] + original.uvs[index][0] * 16. / 128.,
-                    original.atlas_uvs[index][1] + original.uvs[index][1] * 16. / 64.
+                    original.atlas_uvs[index][1] + original.uvs[index][1] * 16. / 96.
                 ]
             );
         }

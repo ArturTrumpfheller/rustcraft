@@ -183,7 +183,7 @@ fn update(
     overlay.text.clear();
     let _ = writeln!(
         overlay.text,
-        "RUSTCRAFT {} / DEV SLICE 22",
+        "RUSTCRAFT {} / DEV SLICE 25",
         env!("CARGO_PKG_VERSION")
     );
     if let Some(seconds) = overlay.frame_seconds {
@@ -233,6 +233,19 @@ fn update(
         world.fluid_updates().processed,
         data.fluids.as_ref().map_or(0., |f| f.milliseconds)
     );
+    if let Some(id) = world.identity() {
+        if id.generator == 5 {
+            if let Some(biome) = voxel_core::worldgen::sample_biome(id.seed, block[0], block[2]) {
+                let _ = writeln!(
+                    overlay.text,
+                    "BIOME: {} / GENERATOR: 5",
+                    biome.name().to_ascii_uppercase()
+                );
+            }
+        } else {
+            let _ = writeln!(overlay.text, "BIOME: LEGACY / GENERATOR: {}", id.generator);
+        }
+    }
     let clock = world.time;
     let _ = writeln!(
         overlay.text,
