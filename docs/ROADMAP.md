@@ -1,5 +1,18 @@
 # RustCraft development roadmap
 
+## Slice 28 — Natural Water Generation
+
+- [x] Version-gated generator8; historical1–7 fixtures, identities and save envelopes
+- [x] Irregular basins, finite connected river channels and broad ocean/coastal regions
+- [x] Bounded validated pools in existing caves, watertight beds and supported trees
+- [x] Procedural source baseline, quiet installation, ordinary edited-water simulation
+- [x] Authoritative Air/construction/bucket edits and interrupted-journal recovery tests
+- [x] Deterministic multi-seed survey, worker/fluid/memory comparisons and renderer gallery
+- [ ] Native Void X11/Wayland / i3-13100 / RX9060 XT and Windows GUI acceptance
+
+[Algorithm](WORLDGEN.md); [reproduction, evidence and limitations](performance/slice28/README.md).
+Following: Slice29 vegetation/details, Slice30 world-generation review/refinement.
+
 ## Slice 27 — Cave Generation v2
 
 - [x] Generator7 for new worlds; frozen generators1–6, bounds and save envelopes

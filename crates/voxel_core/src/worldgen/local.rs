@@ -7,7 +7,9 @@ pub(super) fn height(seed: u64, x: i32, z: i32) -> i32 {
         / 1024
 }
 fn surface(g: &Generator, x: i32, z: i32) -> i32 {
-    if g.config.version >= 5 {
+    if g.config.version == 8 {
+        super::hydrology::surface(g.config.seed, x, z).bed
+    } else if g.config.version >= 5 {
         super::biome::height(g.config.seed, x, z)
     } else if g.config.version == 4 {
         super::terrain::height(g.config.seed, x, z)
@@ -35,6 +37,16 @@ fn cave(g: &Generator, x: i32, y: i32, z: i32) -> bool {
     main || (y >= floor && y < floor + 4)
 }
 pub(super) fn terrain(g: &Generator, p: BlockPos, h: i32) -> Block {
+    if g.config.version == 8 {
+        let water = super::hydrology::surface(g.config.seed, p.0[0], p.0[2]);
+        if water.depth() > 0 {
+            return Block::Stone;
+        } // tree admission separately rejects wet roots
+        if super::caves::point(g.config.seed, p, h) {
+            return Block::Air;
+        }
+        return layers(g, p, h, None);
+    }
     if g.config.version == 7 && super::caves::point(g.config.seed, p, h) {
         Block::Air
     } else {
@@ -59,7 +71,7 @@ fn layers(g: &Generator, p: BlockPos, h: i32, column: Option<super::biome::Colum
         || !(-g.extent..g.extent).contains(&z)
         || !g.world_height().contains(y)
         || y > h
-        || (g.config.version != 7 && cave(g, x, y, z))
+        || (g.config.version < 7 && cave(g, x, y, z))
     {
         return Block::Air;
     }
@@ -118,6 +130,9 @@ fn trees(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Vec<Tree> {
                 continue;
             }
             let ground = surface(g, x, z);
+            if g.config.version == 8 && ground <= super::hydrology::SEA_LEVEL {
+                continue;
+            }
             let trunk = 4 + ((h >> 16) % 2) as i32;
             // v4 keeps the established species/grid, with sparse roots on gentle
             // ground and enough vertical/canopy clearance. v3 stays frozen.
@@ -183,6 +198,15 @@ fn sample(
 }
 pub(super) fn point(g: &Generator, p: BlockPos) -> Block {
     let [x, y, z] = p.0;
+    if g.config.version == 8 {
+        if !g.world_height().contains(y)
+            || !(-g.extent..g.extent).contains(&x)
+            || !(-g.extent..g.extent).contains(&z)
+        {
+            return Block::Air;
+        }
+        return Plan::new(g, [x.div_euclid(16), z.div_euclid(16)]).block(g, p);
+    }
     if g.config.version == 6
         && g.world_height().contains(y)
         && (-g.extent..g.extent).contains(&x)
@@ -221,6 +245,7 @@ pub(super) struct Plan {
     materials: Vec<super::biome::Column>,
     trees: Vec<Tree>,
     caves: Option<super::caves::Plan>,
+    water: Option<super::hydrology::Plan>,
 }
 impl Plan {
     fn new(g: &Generator, c: [i32; 2]) -> Self {
@@ -231,10 +256,14 @@ impl Plan {
         } else {
             Vec::new()
         };
+        let water =
+            (g.config.version == 8).then(|| super::hydrology::Plan::new(g, min, max, &materials));
         let mut heights = Vec::with_capacity(18 * 18);
         for z in min[1]..=max[1] {
             for x in min[0]..=max[0] {
-                heights.push(if g.config.version >= 5 {
+                heights.push(if let Some(w) = &water {
+                    w.columns[heights.len()].bed
+                } else if g.config.version >= 5 {
                     materials[heights.len()].height
                 } else {
                     surface(g, x, z)
@@ -246,9 +275,84 @@ impl Plan {
             heights,
             materials,
             trees: trees(g, min, max),
-            caves: (g.config.version == 7)
+            water,
+            caves: (g.config.version >= 7)
                 .then(|| super::caves::Plan::new(g.config.seed, min, max)),
         }
+    }
+    fn water_material(
+        &self,
+        px: i32,
+        pz: i32,
+        h: i32,
+        column: super::hydrology::Surface,
+    ) -> super::biome::Column {
+        let mut material = self.materials[((pz - self.min[1]) * 18 + px - self.min[0]) as usize];
+        if column.depth() > 0 {
+            material.top = if material.top == Block::Grass {
+                Block::Dirt
+            } else {
+                material.top
+            };
+        }
+        if h <= super::hydrology::SEA_LEVEL + 2
+            && column.coastal
+            && material.top != Block::SnowyGround
+            && material.top != Block::Stone
+        {
+            material.top = Block::Sand;
+            material.soil = Block::Sand;
+        }
+        material
+    }
+    fn water_chunk(&self, g: &Generator, p: ChunkPos) -> Chunk {
+        let water = self.water.as_ref().unwrap();
+        // Every voxel is above its bed and at/below the common water datum;
+        // caves cannot carve above the bed. Keep homogeneous source slabs
+        // allocation-free instead of materializing and compacting 4096 cells.
+        if p.0[1] * 16 > *self.heights.iter().max().unwrap()
+            && p.0[1] * 16 + 15 <= super::hydrology::SEA_LEVEL
+        {
+            return Chunk::filled(Block::WaterSource);
+        }
+        let mut c = if p.0[1] * 16 + 15 < *self.heights.iter().min().unwrap() - 4 {
+            Chunk::filled(Block::Stone)
+        } else {
+            Chunk::default()
+        };
+        if c.uniform() != Some(Block::Stone) {
+            for z in 0..16 {
+                for x in 0..16 {
+                    let px = p.0[0] * 16 + x as i32;
+                    let pz = p.0[2] * 16 + z as i32;
+                    let column = water.column(px, pz);
+                    let h = column.bed;
+                    let material = self.water_material(px, pz, h, column);
+                    for y in 0..16 {
+                        let l = LocalPos::new([x, y, z]).unwrap();
+                        let pos = p.block_position(l).unwrap();
+                        let b = if pos.0[1] > h && pos.0[1] <= super::hydrology::SEA_LEVEL {
+                            Block::WaterSource
+                        } else {
+                            sample(g, pos, h, &self.trees, Some(material))
+                        };
+                        c.set(l, b);
+                    }
+                }
+            }
+        }
+        self.caves.as_ref().unwrap().carve_if(
+            &mut c,
+            p,
+            |x, z| water.column(x, z).bed,
+            |pos, h| {
+                !(water.sealed(pos.0[0], pos.0[2])
+                    && pos.0[1] >= h.min(super::hydrology::SEA_LEVEL) - 4)
+            },
+        );
+        water.fill_pools(&mut c, p);
+        c.compact();
+        c
     }
     fn block(&self, g: &Generator, p: BlockPos) -> Block {
         let Some(x) = p.0[0].checked_sub(self.min[0]) else {
@@ -262,6 +366,31 @@ impl Plan {
         } else {
             return point(g, p);
         };
+        if let Some(water) = &self.water {
+            let [px, y, pz] = p.0;
+            if !g.world_height().contains(y)
+                || !(-g.extent..g.extent).contains(&px)
+                || !(-g.extent..g.extent).contains(&pz)
+            {
+                return Block::Air;
+            }
+            let column = water.column(px, pz);
+            if y > h && y <= super::hydrology::SEA_LEVEL {
+                return Block::WaterSource;
+            }
+            // A four-block watertight bed/bank cap suppresses cave breaches in
+            // low shores. The primitive cave shapes themselves remain frozen.
+            let sealed = water.sealed(px, pz) && y >= h.min(super::hydrology::SEA_LEVEL) - 4;
+            if y <= h && !sealed && self.caves.as_ref().unwrap().contains(p, h) {
+                return if water.cave_water(p) {
+                    Block::WaterSource
+                } else {
+                    Block::Air
+                };
+            }
+            let material = self.water_material(px, pz, h, column);
+            return sample(g, p, h, &self.trees, Some(material));
+        }
         if p.0[1] <= h && self.caves.as_ref().is_some_and(|c| c.contains(p, h)) {
             return Block::Air;
         }
@@ -310,6 +439,16 @@ impl<'a> Sampler<'a> {
             if p.0[1] >= crate::bounds::WorldHeight::HISTORICAL.chunks().end {
                 return Some(Chunk::default());
             }
+        }
+        if self.g.config.version == 8 && p.0[1] >= 2 {
+            return Some(Chunk::default());
+        }
+        if self.g.config.version == 8
+            && let Some(plan) = &self.plan
+            && p.0[0] * 16 == plan.min[0] + 1
+            && p.0[2] * 16 == plan.min[1] + 1
+        {
+            return Some(plan.water_chunk(self.g, p));
         }
         if self.g.config.version == 7 {
             if p.0[1] >= 2 {

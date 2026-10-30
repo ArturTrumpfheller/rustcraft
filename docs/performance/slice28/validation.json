@@ -1,0 +1,77 @@
+[
+  {
+    "name": "fmt",
+    "command": [
+      "cargo",
+      "fmt",
+      "--all",
+      "--",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 0.71
+  },
+  {
+    "name": "clippy",
+    "command": [
+      "cargo",
+      "clippy",
+      "--locked",
+      "--workspace",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "seconds": 3.64
+  },
+  {
+    "name": "tests",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--workspace"
+    ],
+    "exit_code": 0,
+    "seconds": 169.01
+  },
+  {
+    "name": "release",
+    "command": [
+      "cargo",
+      "build",
+      "--release",
+      "--locked",
+      "-p",
+      "rustcraft"
+    ],
+    "exit_code": 0,
+    "seconds": 0.2
+  },
+  {
+    "name": "textures",
+    "command": [
+      "python3",
+      "tools/generate_textures.py",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 0.03
+  },
+  {
+    "name": "gallery",
+    "command": [
+      "cargo",
+      "build",
+      "--locked",
+      "-p",
+      "rustcraft",
+      "--example",
+      "terrain_gallery"
+    ],
+    "exit_code": 0,
+    "seconds": 0.19
+  }
+]

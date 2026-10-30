@@ -1,4 +1,96 @@
-# World generation — generator v7 / Cave Generation v2
+# Natural water — generator v8 / Slice 28
+
+Only newly created worlds select **8**. Generators **1–7 remain frozen**, including
+all historical golden fixtures, bounds and persistence identities. V8 retains the
+five-biome climate/material system, tree species, v7 cave primitives and extended
+Y[-64,192). Manifest5 / region1 already encode this identity; no conversion or new
+save envelope is needed. Generator9+ is rejected.
+
+## Surface geography and the sea datum
+
+`worldgen::hydrology` combines three bounded integer stages with the established
+v5 terrain. A domain-warped768-block continentalness field, with96-block coastal
+variation, lowers broad basins. Squared lowering begins below field-80. The
+original terrain remains the upper bound, except that formerly very low dry land
+has a minimum surface Y3. Ocean beds bottom at Y-28, giving up to30 source layers.
+The original height variation remains within basins until that depth cap.
+
+**SEA_LEVEL=2 means the top occupied source cell, not its upper face.** The existing
+source mesh exposes its surface at Y2+8/9. Every surface lake and channel uses this
+same datum. This deliberately models still, low-gradient water geography, with
+no uphill reaches, stepped river levels or new fluid state IDs. It is a first
+bounded hydrology model, not a global drainage/erosion simulation.
+
+Jittered128-block cells admit climate-weighted basins: plains/forests more often,
+deserts/highlands less often. Several radius classes produce ponds, medium lakes
+and occasional larger lakes. Independently warped ellipsoidal footprints create
+irregular shorelines. Quadratic beds vary depth; an outer transition blends the
+bank back to existing terrain, rather than cutting off the basin at its wet edge.
+All features are discoverable from a fixed3x3 neighborhood, including signed
+coordinates. The conservative discovery bounds include the entire dry bank.
+
+Admitted384-block cells own finite cubic river centerlines, discretized into24
+short connected segments. Independent control points vary bends, orientation,
+width and endpoint positions. Steep candidate routes are rejected as a whole;
+channels never disappear/restart at individual chunks. Channels join actual
+endpoint basins (roughly12x10 and30x24 radii), and also join oceans naturally when
+they intersect the continental basin. A common level keeps such intersections
+consistent. Beds are several blocks deep, with graded banks and shallow margins.
+Some uncommon highland cuts are steep; broader watershed routing and varied river
+elevations are deferred to the later geography review.
+
+Coastal shelves and dry beach margins may use existing Sand. Snowy and rocky
+materials remain, desert shores retain Sand, and ordinary lake shores keep their
+biome material. Submerged grassy beds become Dirt. Trees sample the final ground,
+retain biome admission on supported dry ground and reject wet roots; existing jittered
+anchors/cross-chunk crowns remain deterministic. A12-block protected starting
+shore blends into the actual geography by40 blocks from preferred spawn(0,10).
+
+## Cave lakes and watertight beds
+
+Occasional deep v7 chamber anchors nominate water at source-cell Y-52. The actual
+v7 cave predicate is flood-tested below that level in an81x81 local box, with at
+most8192 visited Air cells. Reaching an open horizontal boundary, exceeding the
+cap, lacking an exposed surface or producing a negligible pool rejects the whole
+candidate. Accepted cells fill **existing connected cave space**, without carving
+a rectangular room or changing the underlying cave primitives. All admitted pools
+share the same deep level, so overlapping components cannot disagree.
+
+The chamber anchor can leave its96-block ownership cell; discovery includes a
+proven48-block expansion, not merely the40-block flood-box radius. A bounded FIFO
+cache retains at most64 immutable accepted/rejected pool plans per generator.
+Cache hits, eviction, parallel scheduling and request order cannot change output.
+
+Only wet surface columns and their four immediate banks receive a four-block
+solid cap under the bed/shore. This prevents accidental cave-roof leaks while
+preserving dry cave entrances elsewhere. Cave pools stay far below these caps.
+Surface-to-cave waterfalls are not deliberately generated in this first version.
+Dry caves and navigable passages remain common.
+
+## Runtime, persistence and validation
+
+WaterSource cells are written directly into generated chunks. Homogeneous source
+slabs compact like Air/Stone. Neither gameplay edits nor fluid ticks create the
+baseline. Stable sources with no real downstream/side consumer are not activated
+on installation; changed sources, exposed consumers and deferred loaded boundaries
+use the existing bounded simulator. No fluid propagation requests chunks.
+
+The existing overlay is applied after generation, including explicit Air and
+construction blocks. Collection cannot restore a source by procedural authority;
+neighboring sources can refill the hole with ordinary flowing water. See [WATER](WATER.md).
+Water uses the original transparent material, meshes, swimming, buckets and light.
+Hidden uniform water interiors skip meshes/light caches; water corner heights are
+computed only for cells with visible faces.
+
+[Multi-seed survey, baseline measurements, real renderer captures, exact cameras,
+verification and native Void/Fish acceptance](performance/slice28/README.md).
+
+---
+
+The following sections describe historical releases; default/future-version
+statements in them refer to those releases.
+
+# Historical world generation — generator v7 / Cave Generation v2
 
 Only newly created worlds select **7**. Generators **1–6 are frozen**, including
 all previous golden CRCs, bounds, materials and historical cave behavior. Manifest5

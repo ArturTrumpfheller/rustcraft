@@ -4,6 +4,7 @@ use crate::{Block, BlockPos, CHUNK_SIZE, Chunk, ChunkPos, LocalPos, World};
 
 pub mod biome;
 mod caves;
+pub mod hydrology;
 mod local;
 pub use biome::{Biome, Climate, sample_biome, sample_climate};
 mod terrain;
@@ -11,7 +12,7 @@ pub use local::Sampler;
 
 pub const GENERATOR_VERSION: u32 = 1;
 /// Default for newly created regional worlds; historical defaults remain frozen.
-pub const CURRENT_LOCAL_GENERATOR: u32 = 7;
+pub const CURRENT_LOCAL_GENERATOR: u32 = 8;
 pub const DEFAULT_SEED: u64 = 2026;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GenerationConfig {
@@ -50,6 +51,7 @@ pub struct Generator {
     trees: Vec<Tree>,
     entrance_height: i32,
     extent: i32,
+    water_cache: hydrology::PoolCache,
 }
 fn hash(seed: u64, x: i32, z: i32, salt: u64) -> u64 {
     let mut v = seed
@@ -80,7 +82,7 @@ fn noise(seed: u64, x: i32, z: i32, scale: i32, salt: u64) -> i32 {
 }
 impl Generator {
     pub fn new(config: GenerationConfig) -> Result<Self, UnsupportedGenerator> {
-        if ![GENERATOR_VERSION, 2, 3, 4, 5, 6, 7].contains(&config.version) {
+        if ![GENERATOR_VERSION, 2, 3, 4, 5, 6, 7, 8].contains(&config.version) {
             return Err(UnsupportedGenerator(config.version));
         }
         if config.version >= 3 {
@@ -90,6 +92,7 @@ impl Generator {
                 trees: Vec::new(),
                 entrance_height: 0,
                 extent: crate::regions::LARGE_EXTENT,
+                water_cache: Default::default(),
             });
         }
         let extent = if config.version == 1 { 32 } else { 64 };
@@ -108,6 +111,7 @@ impl Generator {
             trees: Vec::new(),
             entrance_height: 0,
             extent,
+            water_cache: Default::default(),
         };
         generator.entrance_height = generator.height(-10, 20).unwrap() + 1;
         let trees = extent / 8 - 1;
@@ -172,7 +176,9 @@ impl Generator {
             return None;
         }
         if self.config.version >= 3 {
-            return Some(if self.config.version >= 5 {
+            return Some(if self.config.version == 8 {
+                hydrology::surface(self.config.seed, x, z).bed
+            } else if self.config.version >= 5 {
                 biome::height(self.config.seed, x, z)
             } else if self.config.version == 4 {
                 terrain::height(self.config.seed, x, z)
@@ -320,3 +326,6 @@ mod biome_tests;
 
 #[cfg(test)]
 mod cave_tests;
+
+#[cfg(test)]
+mod hydrology_tests;

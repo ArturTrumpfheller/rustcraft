@@ -1,3 +1,56 @@
+# Natural water (Slice 28 / generator v8)
+
+New generator8 worlds contain actual WaterSource volumes in shaped ponds, lakes,
+river channels, ocean basins and selected closed cave pools. Existing worlds keep
+their original generator; none acquire natural water automatically. Existing
+water textures, state IDs, buckets, swimming, underwater detection, transparent
+meshes, torch washing and source/flow rules are shared with player water.
+
+## Initialization and lifecycle
+
+Procedural water is generated directly, before the authoritative saved overlay is
+applied. Installing an untouched stable body produces no edit records and needs
+no settling ticks. The global queue cap and normal256-update tick budget are
+unchanged. Chunk installation still checks the bounded route neighborhood, but
+sources wake only if a loaded, replaceable non-source consumer exists beside or
+below them. Air above a source is not a consumer. Non-source flow still wakes for
+recession; newly loaded dry chunks can reactivate deferred feeders, including
+diagonal/four-step route dependencies. Eviction drops pending work for the evicted
+column and never loads another column for water.
+
+Edits use the normal event-driven simulator: mining a bed lets nearby water fall
+into the opening, replacing water with solid blocks displaces it, sources wash
+torches through the existing atomic item-drop path, and unsupported flow recedes.
+Sources never relax into another state and relaxation never creates a source.
+No second hydrology simulator or automatic source regeneration exists.
+
+## Collection, construction and saved authority
+
+Every generated occupied cell is an existing source. Collecting a surface source
+removes exactly that source and exchanges the bucket normally. Nearby sources
+remain permanent; their ordinary flow may fill the collected hole with **flowing
+water**, which cannot be collected as a new source. Collecting one source does not
+drain an entire source-filled lake. Opening a large lake into excavations can
+create lasting flow, just as a player source does. Closing the opening permits
+unsupported downstream water to recede.
+
+Only actual edits and resulting fluid changes enter regional overlays. Explicit
+Air, collected sources, construction and independently placed sources survive
+regeneration/save/reload. An Air record overrides procedural water on install;
+subsequent legitimate fluid flow can still enter that cell. Manifest5, region1,
+record budgets and coordinated inventory/world redo recovery are unchanged.
+
+Surface sources occupy through Y2 (visible level2+8/9); cave pools use Y-52.
+The foundation is not a hydrological simulation boundary outside supported world
+coordinates. The finite horizontal edge remains the game's existing cutoff.
+
+[Architecture](WORLDGEN.md), [survey, actual images, queue/performance results and
+Void/Fish checklist](performance/slice28/README.md). Existing per-chunk transparent
+sorting can still misorder overlapping water/terrain views; no global transparent
+sort, new shader, currents, oxygen or waterlogging is introduced.
+
+---
+
 # Water gameplay — Slices 22–23
 
 RustCraft's first water implementation keeps simulation in `voxel_core` and

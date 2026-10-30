@@ -279,6 +279,15 @@ pub fn needs_mesh(world: &World, p: ChunkPos) -> bool {
                 .is_some_and(|b| b.is_opaque())
         });
     }
+    if c.uniform().is_some_and(|b| b.fluid().is_some()) {
+        return crate::fluid::NEIGHBORS.iter().any(|d| {
+            let n = ChunkPos(std::array::from_fn(|a| p.0[a] + d[a]));
+            !world
+                .chunk(n)
+                .and_then(Chunk::uniform)
+                .is_some_and(|b| b.is_opaque() || b.fluid().is_some())
+        });
+    }
     true
 }
 pub struct MeshBatchResult {

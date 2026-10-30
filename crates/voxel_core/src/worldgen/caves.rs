@@ -278,6 +278,15 @@ impl Plan {
             .any(|s| Self::allowed(p.0, height, s.entrance) && s.contains(p.0))
     }
     pub(super) fn carve(&self, chunk: &mut Chunk, pos: ChunkPos, height: impl Fn(i32, i32) -> i32) {
+        self.carve_if(chunk, pos, height, |_, _| true);
+    }
+    pub(super) fn carve_if(
+        &self,
+        chunk: &mut Chunk,
+        pos: ChunkPos,
+        height: impl Fn(i32, i32) -> i32,
+        permitted: impl Fn(BlockPos, i32) -> bool,
+    ) {
         let origin = pos.0.map(|v| v * 16);
         for s in &self.shapes {
             let min: [i32; 3] = std::array::from_fn(|i| s.min[i].max(origin[i]));
@@ -296,6 +305,7 @@ impl Plan {
                         ])
                         .unwrap();
                         if chunk.get(local) != Block::Air
+                            && permitted(BlockPos([x, y, z]), h)
                             && Self::allowed([x, y, z], h, s.entrance)
                             && s.contains([x, y, z])
                         {
@@ -323,6 +333,23 @@ pub(super) fn point(seed: u64, p: BlockPos, height: i32) -> bool {
     }
     .generate(seed);
     carved
+}
+
+/// The existing deep chamber anchor, for v8's separate closed-basin validation.
+/// This metadata does not alter v7 geometry or admission.
+pub(super) fn pool_center(seed: u64, [cx, cz]: [i32; 2]) -> Option<[i32; 3]> {
+    let h = hash(seed, cx, cz, 0x7001);
+    if !(h >> 20).is_multiple_of(3) {
+        return None;
+    }
+    let x = cx * CELL + 24 + (h % 48) as i32;
+    let z = cz * CELL + 24 + ((h >> 8) % 48) as i32;
+    let density = 760 + noise(seed, x, z, 512, 0x7002) * 350 / 1024;
+    if ((h >> 24) % 1000) as i32 >= density {
+        return None;
+    }
+    let dir = DIRECTIONS[((h >> 52) % 8) as usize];
+    Some([x + dir[0] * 2, -49 + ((h >> 44) % 7) as i32, z + dir[1] * 2])
 }
 
 #[cfg(test)]

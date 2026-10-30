@@ -1,3 +1,21 @@
+# Generator8 identity (Slice 28)
+
+Generator8 uses the existing **64-byte version5 regional manifest** and **version1
+region records** without binary layout changes. Generator identity8 is accepted
+explicitly;9 and unknown identities fail closed. Generators1–7 retain their
+original output, height contracts and byte envelopes. No automatic conversion or
+manifest rewrite upgrades an existing world. Bounds remain X/Z[-32768,32768),
+Y[-64,192), with unchanged block/item IDs and regional record/journal budgets.
+
+Natural sources are part of deterministic generation, not serialized edit lists.
+Only player/physics changes are overlaid. Explicit Air and collected source edits
+are authoritative when regenerated; neighboring sources may later feed ordinary
+flow into an edited Air cell. Bucket ownership, construction and removed sources
+use the same coordinated player/world redo journal, including interrupted saves.
+See [water semantics](WATER.md) and [Slice28 evidence](performance/slice28/README.md).
+
+---
+
 # RustCraft saves — v1/v2 snapshots, v3 overlays and v4/v5 regional worlds
 
 ## Slice 27: generator7 in the existing envelopes

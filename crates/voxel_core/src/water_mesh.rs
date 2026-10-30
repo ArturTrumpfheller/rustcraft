@@ -62,13 +62,16 @@ fn mesh_water_sampled(
                     continue;
                 }
                 let p = cp.block_position(local).unwrap();
-                let h = [[0, 0], [1, 0], [0, 1], [1, 1]]
-                    .map(|[cx, cz]| corner_height(world, p, cx, cz));
+                let mut heights = None;
                 for face in &crate::mesh::FACES {
                     let neighbor = world.block(p.offset(face.normal).unwrap());
                     if neighbor.fluid().is_some() || neighbor.is_opaque() {
                         continue;
                     }
+                    let h = heights.get_or_insert_with(|| {
+                        [[0, 0], [1, 0], [0, 1], [1, 1]]
+                            .map(|[cx, cz]| corner_height(world, p, cx, cz))
+                    });
                     let start = out.positions.len() as u32;
                     let shade = match face.normal {
                         [0, 1, 0] => 1.,
