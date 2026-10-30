@@ -54,7 +54,7 @@ struct Segment {
     width: i32,
     depth: i32,
 }
-struct Geography {
+pub(super) struct Geography {
     basins: Vec<Basin>,
     rivers: Vec<Segment>,
 }
@@ -62,7 +62,7 @@ fn overlaps(min: [i32; 2], max: [i32; 2], a: [i32; 2], b: [i32; 2], r: i32) -> b
     (0..2).all(|i| a[i].min(b[i]) - r <= max[i] && a[i].max(b[i]) + r >= min[i])
 }
 impl Geography {
-    fn new(seed: u64, min: [i32; 2], max: [i32; 2]) -> Self {
+    pub(super) fn new(seed: u64, min: [i32; 2], max: [i32; 2]) -> Self {
         let mut result = Self {
             basins: Vec::new(),
             rivers: Vec::new(),
@@ -192,7 +192,7 @@ impl Geography {
             self.basins.push(b);
         }
     }
-    fn column(&self, seed: u64, x: i32, z: i32, base: i32) -> Surface {
+    pub(super) fn column(&self, seed: u64, x: i32, z: i32, base: i32) -> Surface {
         let wx = x + noise(seed, x, z, 256, 0x8201) * 44 / 1024;
         let wz = z + noise(seed, x, z, 256, 0x8202) * 44 / 1024;
         let continental = noise(seed, wx, wz, 768, 0x8203) + noise(seed, x, z, 96, 0x8204) / 6;

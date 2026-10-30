@@ -60,6 +60,8 @@ impl Block {
     pub fn selection_boxes(self) -> &'static [SelectionBox] {
         if self == Self::Air {
             &[]
+        } else if self.is_plant() {
+            self.plant_selection()
         } else if self.is_torch() {
             &TORCH_BOXES
         } else {

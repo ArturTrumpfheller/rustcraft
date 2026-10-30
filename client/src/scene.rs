@@ -44,7 +44,11 @@ impl DirtyChunks {
     ) {
         let relight = change.before.is_opaque() != change.after.is_opaque()
             || change.before.emission() != change.after.emission();
-        if !relight && (change.before.fluid().is_some() || change.after.fluid().is_some()) {
+        if !relight
+            && !change.before.is_plant()
+            && !change.after.is_plant()
+            && (change.before.fluid().is_some() || change.after.fluid().is_some())
+        {
             self.2.extend(change.affected_chunks());
         } else {
             self.0.extend(change.affected_chunks());
@@ -60,6 +64,7 @@ impl DirtyChunks {
 pub(crate) struct ChunkRenders(
     pub BTreeMap<ChunkPos, ChunkRender>,
     pub BTreeMap<ChunkPos, ChunkRender>,
+    pub BTreeMap<ChunkPos, ChunkRender>,
 );
 pub(crate) struct ChunkRender {
     pub entity: Entity,
@@ -70,6 +75,7 @@ pub(crate) struct TerrainMaterial(
     pub Handle<TerrainSurface>,
     pub Handle<Image>,
     pub Handle<crate::terrain_material::WaterSurface>,
+    pub Handle<TerrainSurface>,
 );
 
 impl Plugin for VoxelScenePlugin {
@@ -153,6 +159,17 @@ pub(crate) fn upsert_stream_mesh(
     origin: &RenderOrigin,
 ) {
     if surface.water_only || surface.indices.is_empty() {
+        if !surface.water_only {
+            upsert_plants(
+                commands,
+                meshes,
+                renders,
+                position,
+                std::mem::take(&mut surface.plants),
+                material,
+                origin,
+            );
+        }
         upsert_water(
             commands,
             meshes,
@@ -184,6 +201,16 @@ pub(crate) fn upsert_chunk(
     material: &TerrainMaterial,
     origin: &RenderOrigin,
 ) {
+    // Full legacy/streamed publication owns all three chunk surfaces.
+    upsert_plants(
+        commands,
+        meshes,
+        renders,
+        position,
+        std::mem::take(&mut surface.plants),
+        material,
+        origin,
+    );
     if !surface.water.indices.is_empty() || renders.1.contains_key(&position) {
         upsert_water(
             commands,
@@ -267,7 +294,20 @@ fn spawn_scene(
             effect: Vec4::ZERO,
         },
     });
-    let material = TerrainMaterial(material, atlas, water);
+    let plants = materials.add(TerrainSurface {
+        base: StandardMaterial {
+            unlit: true,
+            alpha_mode: AlphaMode::Mask(0.5),
+            cull_mode: None,
+            double_sided: true,
+            ..default()
+        },
+        extension: AtlasRepeat {
+            atlas: atlas.clone(),
+            atmosphere: crate::atmosphere::AtmosphereUniform::for_radius(2),
+        },
+    });
+    let material = TerrainMaterial(material, atlas, water, plants);
     let initial_targets: BTreeSet<_> = world.0.chunks().map(|(p, _)| p).collect();
     let initial_light = if world.0.identity().is_none() && !initial_targets.is_empty() {
         Some(voxel_core::lighting::Skylight::for_chunks(
@@ -553,6 +593,13 @@ fn update_atmosphere(
         material.extension.effect.x = animation;
     }
 
+    if terrain
+        .get(&handle.3)
+        .is_some_and(|m| m.extension.atmosphere != params)
+        && let Some(mut m) = terrain.get_mut(&handle.3)
+    {
+        m.extension.atmosphere = params;
+    }
     crate::atmosphere::update_materials(
         params,
         &handle.0,
@@ -629,5 +676,46 @@ fn update_underwater(
         };
         let h = 0.3 * (p.fov * 0.5).tan();
         t.scale = Vec3::new(h * p.aspect_ratio * 1.02, h * 1.02, 1.);
+    }
+}
+
+fn upsert_plants(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    renders: &mut ChunkRenders,
+    position: ChunkPos,
+    surface: voxel_core::plant_mesh::PlantMesh,
+    material: &TerrainMaterial,
+    origin: &RenderOrigin,
+) {
+    if surface.indices.is_empty() {
+        if let Some(r) = renders.2.remove(&position) {
+            commands.entity(r.entity).despawn();
+            meshes.remove(&r.mesh);
+        }
+        return;
+    }
+    let (mesh, visibility) = convert_mesh(surface.into_surface());
+    if let Some(r) = renders.2.get(&position) {
+        *meshes.get_mut(&r.mesh).expect("retained plant mesh") = mesh;
+        commands
+            .entity(r.entity)
+            .insert(visibility)
+            .remove::<Aabb>();
+    } else {
+        let mesh = meshes.add(mesh);
+        let entity = commands
+            .spawn((
+                crate::session::SessionEntity,
+                Name::new("Chunk plants"),
+                Mesh3d(mesh.clone()),
+                MeshMaterial3d(material.3.clone()),
+                visibility,
+                Transform::from_translation(Vec3::from_array(std::array::from_fn(|a| {
+                    (f64::from(position.0[a]) * 16. - origin.0[a]) as f32
+                }))),
+            ))
+            .id();
+        renders.2.insert(position, ChunkRender { entity, mesh });
     }
 }

@@ -119,7 +119,7 @@ fn cube_faces_reuse_exact_original_uv_orientation_for_all_five_blocks() {
                 uv[i],
                 [
                     original.atlas_uvs[index][0] + original.uvs[index][0] * 16. / 128.,
-                    original.atlas_uvs[index][1] + original.uvs[index][1] * 16. / 96.
+                    original.atlas_uvs[index][1] + original.uvs[index][1] * 16. / 192.
                 ]
             );
         }
@@ -339,8 +339,8 @@ fn repeated_selection_animation_fov_resize_and_rebase_keep_assets_bounded() {
     }
     bytes += 24 * 48 + 36 * 4;
     assert!(
-        bytes < 80_000,
-        "retained models including three pixel item sprites: {bytes}"
+        bytes < 90_000,
+        "retained models including five plant sprites and the three existing pixel items: {bytes}"
     );
     for n in 0..600 {
         app.world_mut()
@@ -1173,5 +1173,29 @@ fn bucket_profile_changes_leave_all_existing_item_poses_unchanged() {
                 model_pose(frozen, &motion)
             );
         }
+    }
+}
+
+#[test]
+fn new_plant_items_are_thin_masked_sprites_and_species_logs_keep_cap_mapping() {
+    for item in [
+        Item::TallGrass,
+        Item::Fern,
+        Item::RedFlower,
+        Item::YellowFlower,
+        Item::DeadBush,
+    ] {
+        let m = cube(Some(item.build().unwrap().block()));
+        assert_eq!(m.count_vertices(), 4);
+        assert_eq!(m.indices().unwrap().len(), 6);
+        let Some(VertexAttributeValues::Float32x3(p)) = m.attribute(Mesh::ATTRIBUTE_POSITION)
+        else {
+            panic!("positions")
+        };
+        assert!(p.iter().all(|v| v[2] == 0.));
+    }
+    for b in [Block::BirchWood, Block::SpruceWood] {
+        assert_ne!(face_tile(b, [0, 1, 0]), face_tile(b, [1, 0, 0]));
+        assert_eq!(cube(Some(b)).count_vertices(), 24);
     }
 }

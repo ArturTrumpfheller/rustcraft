@@ -260,6 +260,7 @@ fn cleanup(world: &mut World) {
         .0
         .values()
         .chain(world.resource::<scene::ChunkRenders>().1.values())
+        .chain(world.resource::<scene::ChunkRenders>().2.values())
         .map(|r| r.mesh.id())
         .collect();
     let assets = world.remove_resource::<SessionAssets>().unwrap_or_default();

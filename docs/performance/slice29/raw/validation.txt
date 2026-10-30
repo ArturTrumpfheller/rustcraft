@@ -1,0 +1,11 @@
+Rust1.99.1; Bevy0.20.0; Linux x86-64 cloud; 2026-10-30
+cargo fmt --all -- --check: PASS
+cargo clippy --locked --workspace --all-targets -- -D warnings: PASS
+test result: ok. 196 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 71.64s
+test result: ok. 310 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 110.80s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+cargo build --release --locked -p rustcraft: PASS
+python3 tools/generate_textures.py --check: PASS
+Final floating-origin regression: PASS (opaque, water, cutout)
+F3 tests: PASS (5, one ignored measurement)
+Native Void/Wayland/Windows GUI and RX9060 XT performance: owner acceptance pending

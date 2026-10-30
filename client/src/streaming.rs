@@ -435,6 +435,19 @@ fn update_streaming(
                 scene.meshes.remove(&render.mesh);
             }
         }
+        let remove: Vec<_> = scene
+            .renders
+            .2
+            .keys()
+            .filter(|p| !desired.contains(&[p.0[0], p.0[2]]))
+            .copied()
+            .collect();
+        for p in remove {
+            if let Some(r) = scene.renders.2.remove(&p) {
+                scene.commands.entity(r.entity).despawn();
+                scene.meshes.remove(&r.mesh);
+            }
+        }
     }
     while let Some(p) = dirty.0.pop_first() {
         if state.desired.contains(&[p.0[0], p.0[2]]) && world.0.chunk(p).is_some() {
@@ -702,6 +715,13 @@ fn update_streaming(
             .0
             .values()
             .filter_map(|r| scene.meshes.get(&r.mesh))
+            .chain(
+                scene
+                    .renders
+                    .2
+                    .values()
+                    .filter_map(|r| scene.meshes.get(&r.mesh)),
+            )
             .map(|m| m.count_vertices() * 56 + m.indices().map_or(0, |i| i.len() * 4))
             .sum::<usize>()
             + scene
@@ -770,7 +790,7 @@ fn update_streaming(
         info!(
             "Stream idle: {} resident chunks, {} meshes, {} block bytes, {} terrain buffer bytes, peak {}, queue peak {}, jobs load {} mesh chunks {} discarded {}, worker total {:?} max {:?}, install max {:?}, stream update max {:?}, dirty latency max {:?}, recent frame p95 {:?} ({} samples)",
             world.0.chunks().count(),
-            scene.renders.0.len(),
+            scene.renders.0.len() + scene.renders.1.len() + scene.renders.2.len(),
             world.0.allocated_voxel_bytes(),
             state.mesh_bytes,
             state.peak_chunks,

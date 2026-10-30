@@ -1,14 +1,16 @@
-# Terrain texture and light modulation contract (Slices 8–10)
+# Terrain texture and light modulation contract
 
-Current Slice25 layout: **128×96**, eleven original16×16 tiles at32-pixel pitch
-with8-pixel extrusion. Existing slots0–7/art are unchanged; Sand/Snow Top/Snow
-Side append slots8–10. The terrain shader, inventory, held cubes/torches and
-world-item torches use the updated vertical UV scale. Embedded pixel payload is
-48KiB each on CPU/GPU before driver overhead. Snowy Ground uses the new top/side
-and original Dirt underside. Source, generation command and nearest LOD0 policy
-remain the same. See [WORLDGEN](WORLDGEN.md); historical dimensions below describe
-the original Slice8 layout.
+Current Slice29 layout: **128×192**,22 original16×16 tiles,32-pixel pitch,
+8-pixel extrusion,96KiB RGBA payload each on CPU/GPU before driver overhead.
+Existing slots0–10/pixels remain unchanged. Slots11–16 add opaque Birch/Spruce
+bark, end grain and leaves;17–21 add five binary-alpha plant sprites. All atlas
+UV consumers, shader dimensions, embedded size assertions, inventory, held items
+and dropped items use the new height. Plants have a separate optional chunk
+cutout mesh/material sharing the atlas and lighting/fog shader. Opaque cube and
+water paths retain their behavior; existing leaves remain opaque.
+[Exact tiles, mask geometry, policy and provenance](VEGETATION.md).
 
+The dimensions/material counts below describe historical releases.
 
 Slice21 extends this historical baseline with a saved day/night clock, separate
 sky/block COLOR contributions, procedural celestial bodies/stars and matching

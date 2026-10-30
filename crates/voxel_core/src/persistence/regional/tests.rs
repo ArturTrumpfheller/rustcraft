@@ -964,7 +964,7 @@ fn v7_manifest_and_region_keep_formats_and_reject_future_generator_identity() {
     assert_eq!(u32_at(&bytes, 8), 1);
     assert_eq!(decode_region(&bytes, id, p).unwrap(), edits);
     assert!(decode_region(&bytes, RegionIdentity { generator: 6, ..id }, p).is_err());
-    for future in [9, u32::MAX] {
+    for future in [10, u32::MAX] {
         let mut invalid = root.clone();
         invalid[32..36].copy_from_slice(&future.to_le_bytes());
         assert!(matches!(decode(&finish(invalid)),Err(FormatError::Generator(v)) if v==future));
@@ -1060,5 +1060,120 @@ fn v8_procedural_water_air_constructions_buckets_and_interrupted_journals_recove
         )
         .unwrap();
         assert_eq!(b.len(), 64 + 3 * 14);
+    }
+}
+
+#[test]
+fn vegetation_registry_round_trips_in_old_and_new_worlds_and_interrupted_journals() {
+    use crate::{
+        Block,
+        inventory::{Inventory, Item},
+    };
+    let materials = [
+        Block::BirchWood,
+        Block::BirchLeaves,
+        Block::SpruceWood,
+        Block::SpruceLeaves,
+        Block::TallGrass,
+        Block::Fern,
+        Block::RedFlower,
+        Block::YellowFlower,
+        Block::DeadBush,
+    ];
+    for (i, b) in materials.into_iter().enumerate() {
+        assert_eq!(block_id(b), 22 + i as u16);
+        assert_eq!(stored_block(22 + i as u16, 2).unwrap(), b);
+    }
+    assert_eq!(stored_block(31, 2), Err(FormatError::BlockId(31)));
+    for version in [3, 4, 5, 6, 7, 8, 9] {
+        for stage in [
+            SaveStage::SessionPrepared,
+            SaveStage::WorldSaved,
+            SaveStage::PlayerSaved,
+        ] {
+            let dir = Dir::new();
+            let id = RegionIdentity {
+                seed: 0,
+                generator: version,
+                nonce: [29; 16],
+            };
+            let (store, mut w, _) =
+                SaveStore::open_with(&dir.0, || Ok(World::regional(id))).unwrap();
+            let _ = store.load_player(&mut w).unwrap();
+            let root = fs::read(store.path()).unwrap();
+            load_column(&store, &mut w, [0, 0]);
+            let mut inventory = Inventory::empty();
+            for (i, b) in materials.into_iter().enumerate() {
+                let x = i as i32 + 1;
+                let support = BlockPos([x, 27, 8]);
+                let p = BlockPos([x, 28, 8]);
+                if b.is_plant() {
+                    w.set_block(
+                        support,
+                        if b == Block::DeadBush {
+                            Block::Sand
+                        } else {
+                            Block::Dirt
+                        },
+                    )
+                    .unwrap();
+                }
+                w.set_block(p, b).unwrap();
+                inventory.insert(Item::from_block(b).unwrap(), 7);
+            }
+            // A washed flower enters the same redo transaction as blocks/items.
+            w.set_block(BlockPos([7, 28, 8]), Block::WaterSource)
+                .unwrap();
+            assert_eq!(w.dropped_items().len(), 1);
+            // Explicit Air remains authoritative over generated vegetation.
+            let mut removed = None;
+            if version == 9 {
+                load_column(&store, &mut w, [-152, -256]);
+                'search: for y in 0..2 {
+                    let cp = ChunkPos([-152, y, -256]);
+                    for i in 0..4096 {
+                        let lp = crate::LocalPos::new([i % 16, i / 256, i / 16 % 16]).unwrap();
+                        if w.chunk(cp).unwrap().get(lp).is_plant() {
+                            let p = cp.block_position(lp).unwrap();
+                            w.set_block(p, Block::Air).unwrap();
+                            removed = Some(p);
+                            break 'search;
+                        }
+                    }
+                }
+                assert!(removed.is_some());
+            }
+            assert!(
+                store
+                    .save_player_with(&w, &inventory, true, |at| if at == stage {
+                        Err(io::Error::other("vegetation journal interruption"))
+                    } else {
+                        Ok(())
+                    })
+                    .is_err()
+            );
+            drop(store);
+            let (store, mut restored, _) =
+                SaveStore::open_with(&dir.0, || panic!("must preserve identity")).unwrap();
+            let actual = store.load_player(&mut restored).unwrap();
+            assert_eq!(actual.slots(), inventory.slots());
+            load_column(&store, &mut restored, [0, 0]);
+            for (i, b) in materials.into_iter().enumerate() {
+                assert_eq!(
+                    restored.block(BlockPos([i as i32 + 1, 28, 8])),
+                    if i == 6 { Block::WaterSource } else { b }
+                );
+            }
+            assert_eq!(restored.dropped_items().len(), 1);
+            assert_eq!(restored.region_identity(), Some(id));
+            assert_eq!(fs::read(store.path()).unwrap(), root);
+            if let Some(p) = removed {
+                load_column(&store, &mut restored, [-152, -256]);
+                assert_eq!(restored.block(p), Block::Air);
+                restored.evict_column([-152, -256]);
+                load_column(&store, &mut restored, [-152, -256]);
+                assert_eq!(restored.block(p), Block::Air);
+            }
+        }
     }
 }

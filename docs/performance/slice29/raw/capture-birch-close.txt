@@ -1,0 +1,5 @@
+/workspace/rustcraft/target/debug/examples/terrain_gallery 42 -1591 -4095 0 --generator=9 --eye=-1584,7,-4088 --direction=-7,0,-7 --radius=2 --capture-frames=60 --time=6000 --survey-fog --capture=/workspace/rustcraft/work/vegetation-captures/birch-close.ppm
+CAVE_CAMERA seed=42 generator=9 world_eye=Vec3(-1584.0, 7.0, -4088.0) direction=Vec3(-7.0, 0.0, -7.0) torch_fixture=false
+TERRAIN_SCENE generator=9 seed=42 x=-1591 z=-4095 surface_y=3 yaw=0 radius=2 overview=false feet=[-1592.5, 4.0, -4096.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(16.0, 7.0, 8.0)
+CAPTURE_FRAME_MS samples=30 p50=97.33 p95=208.64 p99=455.67

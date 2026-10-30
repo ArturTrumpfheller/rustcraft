@@ -1,3 +1,14 @@
+# Slice29 provenance
+
+Vegetation planning, interactions, tests, benchmarks, capture tools and docs are
+original RustCraft work, MIT OR Apache-2.0. New16×16 Birch/Spruce and plant grids
+in assets/terrain/source.json and generated PNG/RGBA artifacts are independently
+authored original art under the same explicit license. Renderer captures show
+actual RustCraft geometry and original assets. No Horizon/Minecraft source or
+assets, external noise library, dependency, toolchain or engine feature was added.
+
+---
+
 # Third-party dependencies and asset inventory
 
 ## Slice 27 provenance

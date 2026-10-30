@@ -264,10 +264,46 @@ fn setup(
             effect: Vec4::ZERO,
         },
     });
+    let plant_atlas = materials.get(&material).unwrap().extension.atlas.clone();
+    let plant_material = materials.add(TerrainSurface {
+        base: StandardMaterial {
+            unlit: true,
+            alpha_mode: AlphaMode::Mask(0.5),
+            cull_mode: None,
+            double_sided: true,
+            ..default()
+        },
+        extension: AtlasRepeat {
+            atlas: plant_atlas,
+            atmosphere: params,
+        },
+    });
     for (p, _) in world.chunks().filter(|(p, _)| {
         (p.0[0] - center[0]).abs() <= radius && (p.0[2] - center[1]).abs() <= radius
     }) {
-        let m = mesh_chunk_lit(&world, p, &lights[&batch_key(p)]);
+        let mut m = mesh_chunk_lit(&world, p, &lights[&batch_key(p)]);
+        if !m.plants.indices.is_empty() {
+            let v = std::mem::take(&mut m.plants);
+            let mesh = Mesh::new(
+                PrimitiveTopology::TriangleList,
+                RenderAssetUsages::default(),
+            )
+            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, v.positions)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, v.normals)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, v.uvs)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_UV_1, v.atlas_uvs)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, v.colors)
+            .with_inserted_indices(Indices::U32(v.indices));
+            commands.spawn((
+                Mesh3d(meshes.add(mesh)),
+                MeshMaterial3d(plant_material.clone()),
+                Transform::from_xyz(
+                    (p.0[0] * 16 - origin[0]) as f32,
+                    (p.0[1] * 16) as f32,
+                    (p.0[2] * 16 - origin[1]) as f32,
+                ),
+            ));
+        }
         if !m.water.indices.is_empty() {
             let water = m.water;
             let mesh = Mesh::new(

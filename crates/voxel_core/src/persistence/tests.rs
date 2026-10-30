@@ -121,7 +121,7 @@ fn malformed_headers_ids_coordinates_and_record_order_are_rejected() {
     let mut bytes = valid.clone();
     bytes[16..20].copy_from_slice(&0_u32.to_le_bytes());
     assert_eq!(decode(&bytes), Err(FormatError::Length));
-    for id in [0_u16, 22, 65535] {
+    for id in [0_u16, 31, 65535] {
         let mut bytes = valid.clone();
         bytes[HEADER_SIZE + 12..].copy_from_slice(&id.to_le_bytes());
         repair_checksum(&mut bytes);
@@ -425,7 +425,7 @@ fn v3_identity_empty_overlay_golden_fixture_and_strict_metadata_validation() {
         decode(&air).unwrap().edits()[&BlockPos([0, -15, 0])],
         Block::Air
     );
-    for id in [22_u16, 65535] {
+    for id in [31_u16, 65535] {
         let mut bad = air.clone();
         bad[52..54].copy_from_slice(&id.to_le_bytes());
         repair_checksum(&mut bad);
@@ -533,7 +533,7 @@ fn torch_snapshot_and_finite_overlay_roundtrip_without_reinterpreting_old_ids() 
         );
     }
     assert_eq!(stored_block(6, 1), Err(FormatError::BlockId(6)));
-    assert_eq!(stored_block(22, 2), Err(FormatError::BlockId(22)));
+    assert_eq!(stored_block(31, 2), Err(FormatError::BlockId(31)));
     for (id, block) in [
         (0, Block::Air),
         (1, Block::Grass),
@@ -579,7 +579,7 @@ fn wall_ids_are_append_only_and_orientations_round_trip_all_world_modes() {
     }
     assert_eq!(stored_block(6, 2), Ok(Block::Torch));
     assert_eq!(block_id(Block::Torch), 6);
-    assert_eq!(stored_block(22, 3), Err(FormatError::BlockId(22)));
+    assert_eq!(stored_block(31, 3), Err(FormatError::BlockId(31)));
 }
 
 #[test]

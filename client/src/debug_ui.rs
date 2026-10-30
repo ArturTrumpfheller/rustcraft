@@ -183,7 +183,7 @@ fn update(
     overlay.text.clear();
     let _ = writeln!(
         overlay.text,
-        "RUSTCRAFT {} / DEV SLICE 27",
+        "RUSTCRAFT {} / DEV SLICE 29",
         env!("CARGO_PKG_VERSION")
     );
     if let Some(seconds) = overlay.frame_seconds {
@@ -222,7 +222,9 @@ fn update(
         overlay.text,
         "CHUNKS LOADED: {} / MESH SLOTS: {}",
         data.world.as_ref().unwrap().0.chunk_count(),
-        data.renders.as_ref().map_or(0, |r| r.0.len())
+        data.renders
+            .as_ref()
+            .map_or(0, |r| r.0.len() + r.1.len() + r.2.len())
     );
     let world = &data.world.as_ref().unwrap().0;
     let _ = writeln!(

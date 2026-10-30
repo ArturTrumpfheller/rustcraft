@@ -68,6 +68,16 @@ fn block_id(block: Block) -> u16 {
         Block::TorchNorth => 10,
         Block::Sand => 20,
         Block::SnowyGround => 21,
+        Block::BirchWood => 22,
+        Block::BirchLeaves => 23,
+        Block::SpruceWood => 24,
+        Block::SpruceLeaves => 25,
+        Block::TallGrass => 26,
+        Block::Fern => 27,
+        Block::RedFlower => 28,
+        Block::YellowFlower => 29,
+        Block::DeadBush => 30,
+
         b => 11 + u16::from(b.fluid().expect("fluid variant").state_id()),
     }
 }
@@ -88,6 +98,16 @@ fn stored_block(id: u16, version: u32) -> Result<Block, FormatError> {
         10 if version >= 2 => Ok(Block::TorchNorth),
         20 if version >= 2 => Ok(Block::Sand),
         21 if version >= 2 => Ok(Block::SnowyGround),
+        22 if version >= 2 => Ok(Block::BirchWood),
+        23 if version >= 2 => Ok(Block::BirchLeaves),
+        24 if version >= 2 => Ok(Block::SpruceWood),
+        25 if version >= 2 => Ok(Block::SpruceLeaves),
+        26 if version >= 2 => Ok(Block::TallGrass),
+        27 if version >= 2 => Ok(Block::Fern),
+        28 if version >= 2 => Ok(Block::RedFlower),
+        29 if version >= 2 => Ok(Block::YellowFlower),
+        30 if version >= 2 => Ok(Block::DeadBush),
+
         11..=19 if version >= 2 => Ok(crate::fluid::Fluid::from_state_id((id - 11) as u8)
             .unwrap()
             .block()),

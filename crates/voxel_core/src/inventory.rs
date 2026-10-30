@@ -10,7 +10,7 @@ pub const MAIN_SLOTS: usize = 27;
 pub const SLOT_COUNT: usize = HOTBAR_SLOTS + MAIN_SLOTS;
 pub const MAX_STACK: u8 = 64;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Item {
     Grass,
     Dirt,
@@ -24,6 +24,15 @@ pub enum Item {
     WaterBucket,
     Sand,
     SnowyGround,
+    BirchWood,
+    BirchLeaves,
+    SpruceWood,
+    SpruceLeaves,
+    TallGrass,
+    Fern,
+    RedFlower,
+    YellowFlower,
+    DeadBush,
 }
 impl Item {
     pub fn id(self) -> u16 {
@@ -39,6 +48,15 @@ impl Item {
             Self::WaterBucket => 9,
             Self::Sand => 10,
             Self::SnowyGround => 11,
+            Self::BirchWood => 12,
+            Self::BirchLeaves => 13,
+            Self::SpruceWood => 14,
+            Self::SpruceLeaves => 15,
+            Self::TallGrass => 16,
+            Self::Fern => 17,
+            Self::RedFlower => 18,
+            Self::YellowFlower => 19,
+            Self::DeadBush => 20,
         }
     }
     pub fn from_id(id: u16) -> Option<Self> {
@@ -54,6 +72,16 @@ impl Item {
             9 => Self::WaterBucket,
             10 => Self::Sand,
             11 => Self::SnowyGround,
+            12 => Self::BirchWood,
+            13 => Self::BirchLeaves,
+            14 => Self::SpruceWood,
+            15 => Self::SpruceLeaves,
+            16 => Self::TallGrass,
+            17 => Self::Fern,
+            18 => Self::RedFlower,
+            19 => Self::YellowFlower,
+            20 => Self::DeadBush,
+
             _ => return None,
         })
     }
@@ -64,6 +92,16 @@ impl Item {
             Block::Grass => Self::Grass,
             Block::Sand => Self::Sand,
             Block::SnowyGround => Self::SnowyGround,
+            Block::BirchWood => Self::BirchWood,
+            Block::BirchLeaves => Self::BirchLeaves,
+            Block::SpruceWood => Self::SpruceWood,
+            Block::SpruceLeaves => Self::SpruceLeaves,
+            Block::TallGrass => Self::TallGrass,
+            Block::Fern => Self::Fern,
+            Block::RedFlower => Self::RedFlower,
+            Block::YellowFlower => Self::YellowFlower,
+            Block::DeadBush => Self::DeadBush,
+
             Block::Dirt => Self::Dirt,
             Block::Stone => Self::Stone,
             Block::Wood => Self::Wood,
@@ -76,7 +114,7 @@ impl Item {
             _ => return None,
         })
     }
-    pub const CREATIVE: [Self; 10] = [
+    pub const CREATIVE: [Self; 19] = [
         Self::Grass,
         Self::Dirt,
         Self::Stone,
@@ -87,6 +125,15 @@ impl Item {
         Self::WaterBucket,
         Self::Sand,
         Self::SnowyGround,
+        Self::BirchWood,
+        Self::BirchLeaves,
+        Self::SpruceWood,
+        Self::SpruceLeaves,
+        Self::TallGrass,
+        Self::Fern,
+        Self::RedFlower,
+        Self::YellowFlower,
+        Self::DeadBush,
     ];
     pub fn max_stack(self) -> u8 {
         match self {
@@ -108,6 +155,16 @@ impl Item {
             Self::Grass => BuildBlock::Grass,
             Self::Sand => BuildBlock::Sand,
             Self::SnowyGround => BuildBlock::SnowyGround,
+            Self::BirchWood => BuildBlock::BirchWood,
+            Self::BirchLeaves => BuildBlock::BirchLeaves,
+            Self::SpruceWood => BuildBlock::SpruceWood,
+            Self::SpruceLeaves => BuildBlock::SpruceLeaves,
+            Self::TallGrass => BuildBlock::TallGrass,
+            Self::Fern => BuildBlock::Fern,
+            Self::RedFlower => BuildBlock::RedFlower,
+            Self::YellowFlower => BuildBlock::YellowFlower,
+            Self::DeadBush => BuildBlock::DeadBush,
+
             Self::Dirt => BuildBlock::Dirt,
             Self::Stone => BuildBlock::Stone,
             Self::Wood => BuildBlock::Wood,

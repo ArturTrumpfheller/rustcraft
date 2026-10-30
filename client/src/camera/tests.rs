@@ -423,7 +423,9 @@ fn floating_origin_keeps_far_camera_and_chunk_transforms_precise_without_changin
     use voxel_core::{Block, Chunk, ChunkPos, LocalPos, World};
     let mut world = World::default();
     let mut chunk = Chunk::default();
-    chunk.set(LocalPos::new([0, 0, 0]).unwrap(), Block::Stone);
+    chunk.set(LocalPos::new([0, 0, 0]).unwrap(), Block::Grass);
+    chunk.set(LocalPos::new([0, 1, 0]).unwrap(), Block::RedFlower);
+    chunk.set(LocalPos::new([3, 0, 3]).unwrap(), Block::WaterSource);
     world.insert_chunk(ChunkPos([1000, 0, -1000]), chunk);
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -476,6 +478,14 @@ fn floating_origin_keeps_far_camera_and_chunk_transforms_precise_without_changin
         )
         .uvs;
         assert_eq!(uv, &bevy::mesh::VertexAttributeValues::Float32x2(expected));
+        let renders = app.world().resource::<crate::scene::ChunkRenders>();
+        assert_eq!(renders.1.len(), 1);
+        assert_eq!(renders.2.len(), 1);
+        for r in renders.1.values().chain(renders.2.values()) {
+            let t = app.world().get::<Transform>(r.entity).unwrap();
+            assert_eq!(f64::from(t.translation.x) + origin[0], 16000.);
+            assert_eq!(f64::from(t.translation.z) + origin[2], -16000.);
+        }
         assert_eq!(app.world().resource::<Assets<Image>>().len(), 2);
     }
 }
