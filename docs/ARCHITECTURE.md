@@ -1,3 +1,20 @@
+# Slice 29: bounded vegetation and chunk cutouts
+
+Generator9 layers local species/plant plans over unchanged v8 geology and water.
+Candidate roots share bounded hydrology/cave/ground caches; plants reuse column
+climate/material data. Plans are sampled consistently across signed chunk halos,
+then rasterized off-thread without loaded-neighbor dependencies.
+
+A third optional chunk mesh batches two crossed quads per plant, sharing the
+expanded original atlas, terrain shader and daylight/fog with a retained mask
+material. Terrain stays opaque; water retains its separate blended path. Full
+publication, invalidation, asset accounting, rebasing, eviction and teardown cover
+all three surfaces; water-only jobs preserve plants. No entity per generated plant.
+The existing support/inventory and fluid/drop transactions cover new decoration,
+with unchanged save envelopes and generator identities. [Full contract](VEGETATION.md).
+
+---
+
 # Slice 28: procedural hydrology and quiet water installation
 
 Generator8 composes bounded `worldgen::hydrology` surface plans with existing biome

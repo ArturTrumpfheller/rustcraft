@@ -1,0 +1,5 @@
+/workspace/rustcraft/target/debug/examples/terrain_gallery 0 -2432 -4096 0 --generator=9 --eye=-2424,9,-4082 --direction=-6,-3,-10 --radius=3 --capture-frames=60 --time=6000 --survey-fog --capture=/workspace/rustcraft/work/vegetation-captures/plains-flowers.ppm
+CAVE_CAMERA seed=0 generator=9 world_eye=Vec3(-2424.0, 9.0, -4082.0) direction=Vec3(-6.0, -3.0, -10.0) torch_fixture=false
+TERRAIN_SCENE generator=9 seed=0 x=-2432 z=-4096 surface_y=5 yaw=0 radius=3 overview=false feet=[-2431.5, 6.0, -4095.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(8.0, 9.0, 14.0)
+CAPTURE_FRAME_MS samples=30 p50=142.53 p95=191.91 p99=194.39

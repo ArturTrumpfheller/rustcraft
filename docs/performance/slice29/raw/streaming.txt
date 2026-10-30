@@ -1,0 +1,10 @@
+   Compiling rustcraft v0.1.0 (/workspace/rustcraft/client)
+    Finished `release` profile [optimized] target(s) in 35.08s
+     Running unittests src/main.rs (target/release/deps/rustcraft-766200be52c1488d)
+
+running 1 test
+test streaming::tests::vegetation_streaming_measurements ... VEGETATION_STREAM generator=8 visits=8 visit_p50_ms=14.404 visit_p95_ms=55.311 visit_p99_ms=55.311 worker_total_ms=217.510 main_install_max_ms=0.545 queue_install_max_ms=71.653 retained_mesh_bytes=1041600 plant_chunk_entities=0 source_cache_bytes=241664 elapsed_ms=211.457
+VEGETATION_STREAM generator=9 visits=8 visit_p50_ms=10.280 visit_p95_ms=33.671 visit_p99_ms=33.671 worker_total_ms=123.260 main_install_max_ms=0.549 queue_install_max_ms=41.812 retained_mesh_bytes=1076568 plant_chunk_entities=7 source_cache_bytes=278528 elapsed_ms=135.742
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 200 filtered out; finished in 0.44s

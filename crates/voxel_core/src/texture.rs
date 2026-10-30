@@ -4,7 +4,7 @@ use crate::Block;
 pub const TILE_SIZE: u32 = 16;
 pub const TILE_PITCH: u32 = 32;
 pub const TILE_PADDING: u32 = 8;
-pub const ATLAS_SIZE: [u32; 2] = [128, 96];
+pub const ATLAS_SIZE: [u32; 2] = [128, 192];
 
 /// Atlas slots, unrelated to persistence IDs. Row zero is the image's top row.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -21,6 +21,17 @@ pub enum Tile {
     Sand,
     SnowTop,
     SnowSide,
+    BirchBark,
+    BirchEnd,
+    BirchLeaves,
+    SpruceBark,
+    SpruceEnd,
+    SpruceLeaves,
+    TallGrass,
+    Fern,
+    RedFlower,
+    YellowFlower,
+    DeadBush,
 }
 
 pub fn face_tile(block: Block, normal: [i32; 3]) -> Option<Tile> {
@@ -39,6 +50,17 @@ pub fn face_tile(block: Block, normal: [i32; 3]) -> Option<Tile> {
         Block::Wood if normal[1] != 0 => Tile::EndGrain,
         Block::Wood => Tile::Bark,
         Block::Leaves => Tile::Leaves,
+        Block::BirchWood if normal[1] != 0 => Tile::BirchEnd,
+        Block::BirchWood => Tile::BirchBark,
+        Block::BirchLeaves => Tile::BirchLeaves,
+        Block::SpruceWood if normal[1] != 0 => Tile::SpruceEnd,
+        Block::SpruceWood => Tile::SpruceBark,
+        Block::SpruceLeaves => Tile::SpruceLeaves,
+        Block::TallGrass => Tile::TallGrass,
+        Block::Fern => Tile::Fern,
+        Block::RedFlower => Tile::RedFlower,
+        Block::YellowFlower => Tile::YellowFlower,
+        Block::DeadBush => Tile::DeadBush,
         Block::Torch
         | Block::TorchEast
         | Block::TorchWest
@@ -111,7 +133,7 @@ mod tests {
                 min,
                 [
                     ((i % 4) * 32 + 8) as f32 / 128.,
-                    ((i / 4) * 32 + 8) as f32 / 96.
+                    ((i / 4) * 32 + 8) as f32 / 192.
                 ]
             );
             for a in 0..2 {

@@ -44,7 +44,7 @@ fn worlds_have_unique_identity_reproducible_terrain_and_isolated_player_regions(
         .iter()
         .find(|entry| entry.key == WorldKey::Managed(a.clone()))
         .unwrap();
-    assert_eq!(entry.generator, Some(8));
+    assert_eq!(entry.generator, Some(9));
     assert_eq!(entry.kind, "Regional v5");
     let (sa, mut wa, _) = c.open(&a).unwrap();
     let (sb, mut wb, _) = c.open(&b).unwrap();
@@ -52,7 +52,7 @@ fn worlds_have_unique_identity_reproducible_terrain_and_isolated_player_regions(
     assert_ne!(wa.region_identity(), wb.region_identity());
     assert_ne!(wa.identity(), wd.identity());
     assert_eq!(wa.identity(), wb.identity());
-    assert_eq!(wa.identity().unwrap().generator, 8);
+    assert_eq!(wa.identity().unwrap().generator, 9);
     assert_eq!(wa.region_identity().unwrap().format_version(), 5);
     crate::streaming::prepare_column(&mut wa, [0, 0]).unwrap();
     crate::streaming::prepare_column(&mut wb, [0, 0]).unwrap();

@@ -1,0 +1,5 @@
+/workspace/rustcraft/target/debug/examples/terrain_gallery 0 -4096 -4096 0 --generator=9 --eye=-4077,10,-4078 --direction=-13,-3,-16 --radius=3 --capture-frames=60 --time=6000 --survey-fog --capture=/workspace/rustcraft/work/vegetation-captures/snow-spruce.ppm
+CAVE_CAMERA seed=0 generator=9 world_eye=Vec3(-4077.0, 10.0, -4078.0) direction=Vec3(-13.0, -3.0, -16.0) torch_fixture=false
+TERRAIN_SCENE generator=9 seed=0 x=-4096 z=-4096 surface_y=3 yaw=0 radius=3 overview=false feet=[-4095.5, 4.0, -4095.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(19.0, 10.0, 18.0)
+CAPTURE_FRAME_MS samples=30 p50=229.92 p95=298.22 p99=1227.70

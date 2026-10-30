@@ -22,7 +22,7 @@ pub struct BlockChange {
     pub after: Block,
 }
 
-/// Bounded authoritative result of one player action: support plus five torches.
+/// Bounded authoritative result of one player action: support plus five attachments.
 /// Fixed stack storage; all changed positions must be invalidated by the caller.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct EditBatch {
@@ -306,9 +306,9 @@ impl World {
         if before == block {
             return Ok(None);
         }
-        // Single-cell support policy: reject support removal until its torch
-        // is collected. No implicit multi-cell edits or unjournaled item drops.
-        if let Some(offset) = block.torch_support() {
+        // Single-cell support policy: attachments are collected by a staged
+        // inventory transaction, never an implicit unjournaled item change.
+        if let Some(offset) = block.support_offset() {
             let support = position.offset(offset).ok_or(EditError::Unsupported)?;
             if !self.in_bounds(support) {
                 return Err(EditError::Unsupported);
@@ -316,18 +316,21 @@ impl World {
             if !self.ready(support) {
                 return Err(EditError::NotLoaded);
             }
-            if !self.block(support).is_collidable() {
+            if !block.supported_by(self.block(support)) {
                 return Err(EditError::Unsupported);
             }
         }
-        if before.is_collidable()
-            && !block.is_collidable()
-            && self
-                .dependent_torches(position)?
-                .iter()
-                .any(Option::is_some)
-        {
-            return Err(EditError::SupportsTorch);
+        if before.is_collidable() {
+            for p in self.dependent_attachments(position)?.into_iter().flatten() {
+                let attachment = self.block(p);
+                if !attachment.supported_by(block) {
+                    return Err(if attachment.is_plant() {
+                        EditError::SupportsPlant
+                    } else {
+                        EditError::SupportsTorch
+                    });
+                }
+            }
         }
         self.validate_edit_capacity(&[position])?;
         if self.regional.is_some() {
@@ -357,7 +360,10 @@ impl World {
 
     /// Inspect at most five attachments. Known overlays can prove pending
     /// neighbors contain no torch; an actual dependent must be loaded to edit.
-    fn dependent_torches(&self, position: BlockPos) -> Result<[Option<BlockPos>; 5], EditError> {
+    fn dependent_attachments(
+        &self,
+        position: BlockPos,
+    ) -> Result<[Option<BlockPos>; 5], EditError> {
         let mut result = [None; 5];
         let mut count = 0;
         for delta in [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]] {
@@ -367,18 +373,35 @@ impl World {
             let candidate = if self.ready(neighbor) {
                 self.block(neighbor)
             } else if self.regional.is_some() {
-                // Frozen generators contain no torches; full overlays are authoritative.
+                // Historical generators contain no attachments. V9 may own a
+                // generated floor plant in the pending upper slab.
                 self.regions
                     .get(&RegionPos::of(neighbor))
                     .ok_or(EditError::NotLoaded)?
                     .edits
                     .get(&neighbor)
                     .copied()
-                    .unwrap_or(Block::Air)
+                    .unwrap_or_else(|| {
+                        // V9 can own a generated plant in the pending upper slab.
+                        // Resolve only this bounded edit-time dependency, never load a chunk.
+                        self.regional
+                            .filter(|id| id.generator == 9 && delta == [0, 1, 0])
+                            .map_or(Block::Air, |id| {
+                                crate::worldgen::Generator::new(crate::worldgen::GenerationConfig {
+                                    seed: id.seed,
+                                    version: id.generator,
+                                })
+                                .unwrap()
+                                .block(neighbor)
+                            })
+                    })
             } else {
                 self.edits.get(&neighbor).copied().unwrap_or(Block::Air)
             };
-            if candidate.torch_support() == Some(delta.map(|v| -v)) {
+            if candidate.support_offset() == Some(delta.map(|v| -v)) {
+                if !self.ready(neighbor) && candidate.is_plant() {
+                    return Err(EditError::NotLoaded);
+                }
                 result[count] = Some(neighbor);
                 count += 1;
             }
@@ -404,7 +427,7 @@ impl World {
             after: Block::Air,
         });
         if before.is_collidable() {
-            for p in self.dependent_torches(position)?.into_iter().flatten() {
+            for p in self.dependent_attachments(position)?.into_iter().flatten() {
                 if !self.ready(p) {
                     return Err(EditError::NotLoaded);
                 }

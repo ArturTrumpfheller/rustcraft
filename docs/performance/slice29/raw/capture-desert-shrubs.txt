@@ -1,0 +1,5 @@
+/workspace/rustcraft/target/debug/examples/terrain_gallery 2026 3456 -3968 0 --generator=9 --eye=3463,8,-3949 --direction=0,-3,-15 --radius=3 --capture-frames=60 --time=6000 --survey-fog --capture=/workspace/rustcraft/work/vegetation-captures/desert-shrubs.ppm
+CAVE_CAMERA seed=2026 generator=9 world_eye=Vec3(3463.0, 8.0, -3949.0) direction=Vec3(0.0, -3.0, -15.0) torch_fixture=false
+TERRAIN_SCENE generator=9 seed=2026 x=3456 z=-3968 surface_y=3 yaw=0 radius=3 overview=false feet=[3456.5, 4.0, -3967.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(7.0, 8.0, 19.0)
+CAPTURE_FRAME_MS samples=30 p50=127.92 p95=1012.96 p99=1063.73

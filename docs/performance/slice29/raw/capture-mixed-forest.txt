@@ -1,0 +1,5 @@
+/workspace/rustcraft/target/debug/examples/terrain_gallery 2026 -896 -4096 0 --generator=9 --eye=-878,13,-4068 --direction=-12,-7,-22 --radius=3 --capture-frames=60 --time=6000 --survey-fog --capture=/workspace/rustcraft/work/vegetation-captures/mixed-forest.ppm
+CAVE_CAMERA seed=2026 generator=9 world_eye=Vec3(-878.0, 13.0, -4068.0) direction=Vec3(-12.0, -7.0, -22.0) torch_fixture=false
+TERRAIN_SCENE generator=9 seed=2026 x=-896 z=-4096 surface_y=5 yaw=0 radius=3 overview=false feet=[-895.5, 6.0, -4095.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(18.0, 13.0, 28.0)
+CAPTURE_FRAME_MS samples=31 p50=201.30 p95=320.44 p99=738.17

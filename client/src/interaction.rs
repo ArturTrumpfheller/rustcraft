@@ -281,7 +281,7 @@ fn update_visuals(
     for (mut transform, mut visibility, handle, mut shape) in &mut highlights {
         if let Some(hit) = state.editor.target {
             let block = state.world.0.block(hit.position);
-            let key = if block.is_torch() {
+            let key = if block.is_torch() || block.is_plant() {
                 block
             } else {
                 voxel_core::Block::Stone

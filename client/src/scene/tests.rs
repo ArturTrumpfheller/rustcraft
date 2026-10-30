@@ -23,7 +23,7 @@ fn scene_plugin_builds_four_renderable_chunk_entities_with_one_embedded_atlas() 
         assert!(mesh.attribute(Mesh::ATTRIBUTE_UV_0).is_some());
         assert!(!mesh.indices().unwrap().is_empty());
     }
-    assert_eq!(world.resource::<Assets<TerrainSurface>>().len(), 1);
+    assert_eq!(world.resource::<Assets<TerrainSurface>>().len(), 2);
     assert_eq!(world.query::<&DirectionalLight>().iter(world).count(), 0);
 }
 
@@ -141,7 +141,7 @@ fn repeated_boundary_edits_update_neighbors_and_reuse_assets_even_when_empty() {
         edit_cell(&mut app, [16, 1, 1], voxel_core::Block::Stone);
     }
     assert_eq!(app.world().resource::<Assets<Image>>().len(), 2);
-    assert_eq!(app.world().resource::<Assets<TerrainSurface>>().len(), 1);
+    assert_eq!(app.world().resource::<Assets<TerrainSurface>>().len(), 2);
     assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
     assert_eq!(app.world().resource::<ChunkRenders>().0.len(), 2);
     assert_eq!(
@@ -204,7 +204,7 @@ fn all_materials_share_one_opaque_texture_and_mesh_layout_is_compact() {
     }
     let world = app.world_mut();
     assert_eq!(world.resource::<Assets<Image>>().len(), 2);
-    assert_eq!(world.resource::<Assets<TerrainSurface>>().len(), 1);
+    assert_eq!(world.resource::<Assets<TerrainSurface>>().len(), 2);
     let terrain = &world.resource::<TerrainMaterial>().0;
     let material = world
         .resource::<Assets<TerrainSurface>>()
@@ -424,4 +424,45 @@ fn water_uses_retained_separate_blended_meshes_and_releases_empty_surfaces() {
             .len(),
         1
     );
+}
+
+#[test]
+fn plants_use_one_cutout_surface_per_chunk_and_release_on_removal() {
+    use voxel_core::Block;
+    let mut app = terrain_app();
+    let cp = ChunkPos([0, 0, 0]);
+    edit_cell(&mut app, [1, 0, 1], Block::Grass);
+    edit_cell(&mut app, [1, 1, 1], Block::RedFlower);
+    edit_cell(&mut app, [2, 0, 1], Block::Grass);
+    edit_cell(&mut app, [2, 1, 1], Block::TallGrass);
+    let h = app.world().resource::<ChunkRenders>().2[&cp].mesh.clone();
+    let w = app.world();
+    let meshes = w.resource::<Assets<Mesh>>();
+    let mesh = meshes.get(&h).unwrap();
+    assert_eq!(mesh.count_vertices(), 16);
+    assert_eq!(mesh.indices().unwrap().len(), 24);
+    let handle = w.resource::<TerrainMaterial>();
+    let plants = w
+        .resource::<Assets<TerrainSurface>>()
+        .get(&handle.3)
+        .unwrap();
+    assert_eq!(plants.base.alpha_mode, AlphaMode::Mask(0.5));
+    assert_eq!(plants.base.cull_mode, None);
+    assert!(plants.base.double_sided);
+    assert_eq!(plants.extension.atlas, handle.1);
+    assert_eq!(w.resource::<ChunkRenders>().2.len(), 1);
+    edit_cell(&mut app, [1, 1, 1], Block::WaterSource);
+    assert_eq!(app.world().resource::<ChunkRenders>().2[&cp].mesh, h);
+    assert_eq!(
+        app.world()
+            .resource::<Assets<Mesh>>()
+            .get(&h)
+            .unwrap()
+            .count_vertices(),
+        8
+    );
+    edit_cell(&mut app, [2, 1, 1], Block::Air);
+    assert!(app.world().resource::<ChunkRenders>().2.is_empty());
+    assert!(app.world().resource::<Assets<Mesh>>().get(&h).is_none());
+    assert!(!app.world().resource::<ChunkRenders>().1.is_empty());
 }

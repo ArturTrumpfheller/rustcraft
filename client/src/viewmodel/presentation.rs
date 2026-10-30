@@ -16,6 +16,7 @@ impl Presentation {
             None => ARM,
             Some(Item::Torch) => SLENDER,
             Some(Item::EmptyBucket | Item::WaterBucket | Item::WaterSource) => BUCKET,
+            Some(item) if item.build().is_some_and(|b| b.block().is_plant()) => PLANT,
             Some(_) => BLOCK,
         }
     }
@@ -54,5 +55,15 @@ pub(super) const BUCKET: Presentation = Presentation {
     scale: 0.68,
     origin: Vec3::ZERO,
     pivot: Vec3::new(0.64, -0.46, -0.72),
+    held: true,
+};
+
+// Static thin plant items use the existing sprite motion with a modest size.
+pub(super) const PLANT: Presentation = Presentation {
+    position: Vec3::new(0.60, -0.46, -0.72),
+    angles: Vec3::new(0., -35., 18.),
+    scale: 0.55,
+    origin: Vec3::ZERO,
+    pivot: Vec3::new(0.60, -0.46, -0.72),
     held: true,
 };

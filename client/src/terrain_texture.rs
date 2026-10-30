@@ -7,7 +7,7 @@ use bevy::{
 };
 use voxel_core::texture::ATLAS_SIZE;
 
-const PIXELS: &[u8; 128 * 96 * 4] = include_bytes!("../../assets/terrain/atlas.rgba");
+const PIXELS: &[u8; 128 * 192 * 4] = include_bytes!("../../assets/terrain/atlas.rgba");
 
 pub(crate) fn atlas_image() -> Image {
     let mut image = Image::new(
@@ -82,17 +82,24 @@ mod tests {
     }
 
     #[test]
-    fn embedded_atlas_is_srgb_opaque_nearest_lod_zero_without_anisotropy() {
+    fn embedded_atlas_is_srgb_cutout_nearest_lod_zero_without_anisotropy() {
         let image = atlas_image();
         let t = &image.texture_descriptor;
         assert_eq!(
             [t.size.width, t.size.height, t.size.depth_or_array_layers],
-            [128, 96, 1]
+            [128, 192, 1]
         );
         assert_eq!(t.format, TextureFormat::Rgba8UnormSrgb);
         assert_eq!(t.mip_level_count, 1);
         assert_eq!(image.data.as_deref(), Some(PIXELS.as_slice()));
-        assert!(PIXELS.as_chunks::<4>().0.iter().all(|p| p[3] == 255));
+        assert!(
+            PIXELS
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .all(|p| p[3] == 0 || p[3] == 255)
+        );
+        assert!(PIXELS.as_chunks::<4>().0.iter().any(|p| p[3] == 0));
         let ImageSampler::Descriptor(s) = image.sampler else {
             panic!("explicit sampler required")
         };
@@ -131,6 +138,33 @@ mod tests {
             }
             assert!(palette.len() >= 4);
             assert!(unique.insert(tile));
+        }
+    }
+}
+
+#[cfg(test)]
+mod vegetation_art_tests {
+    use super::*;
+    #[test]
+    fn species_tiles_are_opaque_and_five_plant_tiles_have_binary_cutouts() {
+        for i in 0..22 {
+            let mut opaque = 0;
+            let mut clear = 0;
+            for y in 8..24 {
+                for x in 8..24 {
+                    let a = PIXELS[(((i / 4) * 32 + y) * 128 + (i % 4) * 32 + x) * 4 + 3];
+                    match a {
+                        0 => clear += 1,
+                        255 => opaque += 1,
+                        _ => panic!("blended sprite pixel"),
+                    }
+                }
+            }
+            if i < 17 {
+                assert_eq!(opaque, 256);
+            } else {
+                assert!(clear > 100 && opaque > 20, "tile {i}: {opaque}/{clear}");
+            }
         }
     }
 }

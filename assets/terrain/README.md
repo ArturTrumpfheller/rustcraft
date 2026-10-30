@@ -1,3 +1,17 @@
+# Slice29 original vegetation art
+
+The expanded128×192 atlas contains22 original16×16 tiles. Existing0–10 retain
+exact pixels;11–16 add independently authored opaque Birch/Spruce bark, end grain
+and leaves,17–21 add Tall Grass, Fern, Red Flower, Yellow Flower and Dead Bush.
+Binary alpha in plant tiles supports crossed cutout quads, UI icons and held sprites.
+Editable source grids/palettes, generated PNGs/RGBA and authoring code are original
+RustCraft work, MIT OR Apache-2.0 including artwork. No imported/reference/Minecraft
+assets were used. RGB palette entries default to255 alpha; RGBA entries specify
+binary cutouts. `python3 tools/generate_textures.py --check` reproduces every file.
+[Current tile and rendering contract](../../docs/VEGETATION.md). Historical notes follow.
+
+---
+
 # Original RustCraft terrain art
 
 **Author/origin:** original RustCraft project artwork, authored for Slice 8 in

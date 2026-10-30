@@ -1,3 +1,19 @@
+# Slice 29 — Vegetation & World Details
+
+- [x] Generator9 layered over v8 geology, climate, caves/water and extended height
+- [x] Frozen generators1–8, append-only registry and unchanged save envelopes
+- [x] Original Oak retained; distinct variable Birch and tapered Spruce
+- [x] Biome-dependent clustered grass, ferns, red/yellow flowers and desert shrubs
+- [x] Chunk-batched cutouts, non-solid support-aware edits, water drops and item art
+- [x] Focused geometry, interaction, persistence/recovery and renderer resource tests
+- [ ] Native Void X11/Wayland / RX9060 XT and Windows GUI/performance acceptance
+
+[Contract](VEGETATION.md), [measurements, genuine captures and Fish checklist](performance/slice29/README.md).
+Next: Slice30 worldgen stabilization/integration;31–34 performance/streaming/rendering;
+major terrain/biome/cave/hydrology overhaul afterward, then survival foundations.
+
+---
+
 # RustCraft development roadmap
 
 ## Slice 28 — Natural Water Generation

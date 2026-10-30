@@ -1,3 +1,27 @@
+# Slice 29 additive vegetation compatibility
+
+New manifest5 worlds pin generator9; existing generators1–8 and all old golden
+fixtures remain unchanged. Region1, player/identity and session-journal envelopes,
+record limits and checksums are unchanged. There is no migration or rewrite on load.
+
+Permanent block IDs22–30 are Birch Wood, Birch Leaves, Spruce Wood, Spruce Leaves,
+Tall Grass, Fern, Red Flower, Yellow Flower, Dead Bush respectively; corresponding
+item IDs12–20 are appended in the same order, all stacks64. Old block0–21/item1–11,
+legacy Water Source item7 and bucket IDs8/9 retain their exact meanings. Unknown
+block31+/item21+/generator10+ are rejected. Snapshot-v1 stays frozen; current v2
+snapshots, finite-v3 overlays and regional records accept the additions.
+
+Only edited vegetation enters save records. Explicit Air overrides regenerated
+plants/trees; manually placed new materials work in historical worlds. Mining
+support+plant and its inventory result use one bounded transaction; washed items
+use the existing bounded drop list and paired redo journal. Session-intent/world/
+player interruption tests cover generator3–9 and prove no duplicate washed drops,
+correct inventories, immutable manifests and persistent generated-plant removal.
+Older clients reject new IDs; test them only on complete closed-directory copies.
+[Full vegetation policy](VEGETATION.md).
+
+---
+
 # Generator8 identity (Slice 28)
 
 Generator8 uses the existing **64-byte version5 regional manifest** and **version1

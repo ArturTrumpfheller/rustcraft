@@ -7,7 +7,7 @@ pub(super) fn height(seed: u64, x: i32, z: i32) -> i32 {
         / 1024
 }
 fn surface(g: &Generator, x: i32, z: i32) -> i32 {
-    if g.config.version == 8 {
+    if g.config.version >= 8 {
         super::hydrology::surface(g.config.seed, x, z).bed
     } else if g.config.version >= 5 {
         super::biome::height(g.config.seed, x, z)
@@ -37,7 +37,7 @@ fn cave(g: &Generator, x: i32, y: i32, z: i32) -> bool {
     main || (y >= floor && y < floor + 4)
 }
 pub(super) fn terrain(g: &Generator, p: BlockPos, h: i32) -> Block {
-    if g.config.version == 8 {
+    if g.config.version >= 8 {
         let water = super::hydrology::surface(g.config.seed, p.0[0], p.0[2]);
         if water.depth() > 0 {
             return Block::Stone;
@@ -130,7 +130,7 @@ fn trees(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Vec<Tree> {
                 continue;
             }
             let ground = surface(g, x, z);
-            if g.config.version == 8 && ground <= super::hydrology::SEA_LEVEL {
+            if g.config.version >= 8 && ground <= super::hydrology::SEA_LEVEL {
                 continue;
             }
             let trunk = 4 + ((h >> 16) % 2) as i32;
@@ -198,7 +198,7 @@ fn sample(
 }
 pub(super) fn point(g: &Generator, p: BlockPos) -> Block {
     let [x, y, z] = p.0;
-    if g.config.version == 8 {
+    if g.config.version >= 8 {
         if !g.world_height().contains(y)
             || !(-g.extent..g.extent).contains(&x)
             || !(-g.extent..g.extent).contains(&z)
@@ -246,6 +246,7 @@ pub(super) struct Plan {
     trees: Vec<Tree>,
     caves: Option<super::caves::Plan>,
     water: Option<super::hydrology::Plan>,
+    vegetation: Option<super::vegetation::Plan>,
 }
 impl Plan {
     fn new(g: &Generator, c: [i32; 2]) -> Self {
@@ -257,7 +258,7 @@ impl Plan {
             Vec::new()
         };
         let water =
-            (g.config.version == 8).then(|| super::hydrology::Plan::new(g, min, max, &materials));
+            (g.config.version >= 8).then(|| super::hydrology::Plan::new(g, min, max, &materials));
         let mut heights = Vec::with_capacity(18 * 18);
         for z in min[1]..=max[1] {
             for x in min[0]..=max[0] {
@@ -270,15 +271,28 @@ impl Plan {
                 });
             }
         }
-        Self {
+        let mut plan = Self {
             min,
             heights,
             materials,
-            trees: trees(g, min, max),
+            trees: if g.config.version == 9 {
+                Vec::new()
+            } else {
+                trees(g, min, max)
+            },
+            vegetation: None,
             water,
             caves: (g.config.version >= 7)
                 .then(|| super::caves::Plan::new(g.config.seed, min, max)),
+        };
+        if g.config.version == 9 {
+            let mut vegetation = super::vegetation::Plan::trees(g, min, max);
+            vegetation.plants(g.config.seed, min, &plan.heights, &plan.materials, |p| {
+                plan.block(g, p)
+            });
+            plan.vegetation = Some(vegetation);
         }
+        plan
     }
     fn water_material(
         &self,
@@ -307,6 +321,14 @@ impl Plan {
     }
     fn water_chunk(&self, g: &Generator, p: ChunkPos) -> Chunk {
         let water = self.water.as_ref().unwrap();
+        if g.config.version == 9
+            && p.0[1] * 16
+                > (*self.heights.iter().max().unwrap())
+                    .max(super::hydrology::SEA_LEVEL)
+                    .max(self.vegetation.as_ref().map_or(i32::MIN, |v| v.max_y()))
+        {
+            return Chunk::default();
+        }
         // Every voxel is above its bed and at/below the common water datum;
         // caves cannot carve above the bed. Keep homogeneous source slabs
         // allocation-free instead of materializing and compacting 4096 cells.
@@ -351,6 +373,9 @@ impl Plan {
             },
         );
         water.fill_pools(&mut c, p);
+        if let Some(v) = &self.vegetation {
+            v.apply(&mut c, p);
+        }
         c.compact();
         c
     }
@@ -389,7 +414,15 @@ impl Plan {
                 };
             }
             let material = self.water_material(px, pz, h, column);
-            return sample(g, p, h, &self.trees, Some(material));
+            let baseline = sample(g, p, h, &self.trees, Some(material));
+            return if baseline == Block::Air && y > h {
+                self.vegetation
+                    .as_ref()
+                    .and_then(|v| v.block(p))
+                    .unwrap_or(baseline)
+            } else {
+                baseline
+            };
         }
         if p.0[1] <= h && self.caves.as_ref().is_some_and(|c| c.contains(p, h)) {
             return Block::Air;
@@ -417,6 +450,12 @@ impl<'a> Sampler<'a> {
             .then(|| Plan::new(g, c)),
         }
     }
+    pub fn vegetation_bytes(&self) -> usize {
+        self.plan
+            .as_ref()
+            .and_then(|p| p.vegetation.as_ref())
+            .map_or(0, |v| v.bytes())
+    }
     pub fn block(&self, p: BlockPos) -> Block {
         self.plan
             .as_ref()
@@ -440,10 +479,12 @@ impl<'a> Sampler<'a> {
                 return Some(Chunk::default());
             }
         }
-        if self.g.config.version == 8 && p.0[1] >= 2 {
+        if (self.g.config.version == 8 && p.0[1] >= 2)
+            || (self.g.config.version == 9 && p.0[1] >= 3)
+        {
             return Some(Chunk::default());
         }
-        if self.g.config.version == 8
+        if self.g.config.version >= 8
             && let Some(plan) = &self.plan
             && p.0[0] * 16 == plan.min[0] + 1
             && p.0[2] * 16 == plan.min[1] + 1
