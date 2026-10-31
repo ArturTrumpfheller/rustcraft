@@ -99,6 +99,7 @@ pub(super) fn height(seed: u64, x: i32, z: i32) -> i32 {
 #[derive(Clone, Copy)]
 pub(super) struct Column {
     pub height: i32,
+    pub climate: Climate,
     pub top: Block,
     pub soil: Block,
 }
@@ -121,6 +122,7 @@ fn material(seed: u64, x: i32, z: i32, h: i32, c: Climate, slope: i32) -> Column
     };
     Column {
         height: h,
+        climate: c,
         top,
         soil: if top == Block::Sand {
             Block::Sand

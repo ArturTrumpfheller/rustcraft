@@ -16,7 +16,13 @@ pub struct DroppedItems {
 impl Block {
     /// Explicit decoration policy; ordinary solids are never fluid-replaceable.
     pub fn fluid_drop(self) -> Option<Item> {
-        self.is_torch().then_some(Item::Torch)
+        if self.is_torch() {
+            Some(Item::Torch)
+        } else if self.is_plant() {
+            Item::from_block(self)
+        } else {
+            None
+        }
     }
     pub fn fluid_replaceable(self) -> bool {
         self == Self::Air || self.fluid().is_some() || self.fluid_drop().is_some()

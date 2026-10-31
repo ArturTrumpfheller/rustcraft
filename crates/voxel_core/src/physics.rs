@@ -536,7 +536,15 @@ pub fn spawn_position(world: &World, config: &PhysicsConfig, preferred: [f64; 3]
                     if !ground.is_collidable() {
                         continue;
                     }
-                    if matches!(ground, crate::Block::Wood | crate::Block::Leaves) {
+                    if matches!(
+                        ground,
+                        crate::Block::Wood
+                            | crate::Block::Leaves
+                            | crate::Block::BirchWood
+                            | crate::Block::BirchLeaves
+                            | crate::Block::SpruceWood
+                            | crate::Block::SpruceLeaves
+                    ) {
                         break;
                     }
                     let surface = f64::from(y + 1);

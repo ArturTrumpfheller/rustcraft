@@ -11,12 +11,14 @@ pub mod lighting;
 mod mesh;
 pub mod persistence;
 pub mod physics;
+pub mod plant_mesh;
 pub mod raycast;
 pub mod regions;
 pub mod shape;
 pub mod streaming;
 pub mod texture;
 pub mod time;
+pub mod vegetation;
 pub mod water_mesh;
 mod world;
 pub mod worldgen;
@@ -39,3 +41,6 @@ mod biome_block_tests;
 
 #[cfg(test)]
 mod vertical_tests;
+
+#[cfg(test)]
+mod vegetation_tests;

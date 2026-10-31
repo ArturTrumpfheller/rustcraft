@@ -1,0 +1,5 @@
+/workspace/rustcraft/target/debug/examples/terrain_gallery 0 -2176 -4096 0 --generator=9 --eye=-2190,17,-4050 --direction=20,-10,-32 --radius=4 --capture-frames=60 --time=6000 --survey-fog --capture=/workspace/rustcraft/work/vegetation-captures/density-transition.ppm
+CAVE_CAMERA seed=0 generator=9 world_eye=Vec3(-2190.0, 17.0, -4050.0) direction=Vec3(20.0, -10.0, -32.0) torch_fixture=false
+TERRAIN_SCENE generator=9 seed=0 x=-2176 z=-4096 surface_y=3 yaw=0 radius=4 overview=false feet=[-2175.5, 4.0, -4095.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(-14.0, 17.0, 46.0)
+CAPTURE_FRAME_MS samples=30 p50=155.36 p95=266.19 p99=960.75

@@ -931,7 +931,7 @@ fn large_world_travel_bounds_cpu_gpu_overlays_and_keeps_far_edits_across_restart
         let chunks = w.resource::<VoxelWorld>().0.chunks().count();
         let renders = {
             let r = w.resource::<ChunkRenders>();
-            r.0.len() + r.1.len()
+            r.0.len() + r.1.len() + r.2.len()
         };
         assert!(chunks <= 9 * w.resource::<VoxelWorld>().0.world_height().chunk_count());
         assert!(w.resource::<VoxelWorld>().0.cached_regions() <= 16);
@@ -1129,7 +1129,7 @@ fn assert_textured_residency(app: &mut App) {
     assert_eq!(
         w.resource::<Assets<crate::terrain_material::TerrainSurface>>()
             .len(),
-        1
+        2
     );
     let state = w.resource::<StreamState>();
     assert!(state.lights.len() <= 49 * w.resource::<VoxelWorld>().0.world_height().chunk_count());
@@ -1137,7 +1137,7 @@ fn assert_textured_residency(app: &mut App) {
     let renders = w.resource::<ChunkRenders>();
     assert_eq!(
         w.resource::<Assets<Mesh>>().len(),
-        renders.0.len() + renders.1.len()
+        renders.0.len() + renders.1.len() + renders.2.len()
     );
     let water_payload: usize = renders
         .1
@@ -1163,7 +1163,15 @@ fn assert_textured_residency(app: &mut App) {
             mesh.count_vertices() * 56 + mesh.indices().unwrap().len() * 4
         })
         .sum();
-    assert_eq!(state.mesh_bytes, payload + water_payload);
+    let plant_payload: usize = renders
+        .2
+        .values()
+        .map(|r| {
+            let mesh = w.resource::<Assets<Mesh>>().get(&r.mesh).unwrap();
+            mesh.count_vertices() * 56 + mesh.indices().unwrap().len() * 4
+        })
+        .sum();
+    assert_eq!(state.mesh_bytes, payload + water_payload + plant_payload);
     for render in renders.0.values() {
         let m = w.resource::<Assets<Mesh>>().get(&render.mesh).unwrap();
         assert_eq!(
@@ -1852,6 +1860,48 @@ fn v6_and_v7_upper_air_mesh_materialization_stale_rejection_eviction_and_reload(
         assert_eq!(
             app.world().resource::<VoxelWorld>().0.block(deep),
             Block::Air
+        );
+    }
+}
+
+#[test]
+#[ignore = "Matched CPU worker/install/queue measurement; run alone with --ignored --nocapture"]
+fn vegetation_streaming_measurements() {
+    for version in [8, 9] {
+        let dir = RegionalDir::new();
+        let mut app = large_app_with_generator(&dir.0, version);
+        let start = Instant::now();
+        let mut visits = Vec::new();
+        for center in [
+            [48, -248],
+            [49, -248],
+            [50, -248],
+            [51, -248],
+            [48, -248],
+            [49, -248],
+            [50, -248],
+            [51, -248],
+        ] {
+            let t = Instant::now();
+            go(&mut app, center);
+            visits.push(t.elapsed().as_secs_f64() * 1000.);
+            assert_textured_residency(&mut app);
+        }
+        visits.sort_by(f64::total_cmp);
+        let s = app.world().resource::<StreamState>();
+        println!(
+            "VEGETATION_STREAM generator={version} visits={} visit_p50_ms={:.3} visit_p95_ms={:.3} visit_p99_ms={:.3} worker_total_ms={:.3} main_install_max_ms={:.3} queue_install_max_ms={:.3} retained_mesh_bytes={} plant_chunk_entities={} source_cache_bytes={} elapsed_ms={:.3}",
+            visits.len(),
+            visits[3],
+            visits[6],
+            visits[6],
+            s.worker_time.as_secs_f64() * 1000.,
+            s.max_install.as_secs_f64() * 1000.,
+            s.max_load_latency.as_secs_f64() * 1000.,
+            s.mesh_bytes,
+            app.world().resource::<ChunkRenders>().2.len(),
+            s.cache.allocated_voxel_bytes(),
+            start.elapsed().as_secs_f64() * 1000.
         );
     }
 }

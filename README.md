@@ -1,5 +1,14 @@
 # RustCraft
 
+## Vegetation & World Details (Slice 29)
+
+New worlds use generator9: original Oak, pale Birch and tapered dark Spruce,
+clustered grass/ferns, red/yellow flowers and dry desert bushes. Small plants use
+chunk-batched crossed cutout quads, support-aware inventory edits and persistent
+water drops. Historical generators1–8 and saves retain their original output.
+[Vegetation contract and stable IDs](docs/VEGETATION.md);
+[real captures, measurements and Void/Fish acceptance](docs/performance/slice29/README.md).
+
 ## Natural Water Generation (Slice 28)
 
 New worlds use generator8: irregular ponds/lakes, connected curved river channels,
@@ -58,11 +67,11 @@ migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest upla
 
 - Deterministic seeded terrain, rolling hills/valleys, a walkable cave network with surface entrance, and blocky trees.
 - 16³ chunks streamed in a **65,536×65,536×256** new-world rollout with local generation and regional saves; configurable load radius, bounded background generation/meshing and cache eviction.
-- Eleven original 16×16 pixel textures for grass, dirt, stone, bark, end-grain, opaque leaves and torches, using one shared nearest-filtered atlas.
+- Twenty-two original 16×16 tiles for terrain, three tree species and cutout ground plants, using one shared nearest-filtered atlas.
 - Persistent 20-minute day/night cycle, procedural square sun/moon, sparse stars and matching terrain fog.
 - Placeable, persistent standing/wall torches (hotbar 6) with worker-based voxel block light.
 - Derived 0–15 voxel skylight: dark roofs/caves, gradual entrance falloff and background updates after edits.
-- At most one opaque terrain mesh and one translucent water mesh per rendered chunk; hidden faces are removed across chunk boundaries.
+- At most one opaque terrain mesh, one translucent water mesh and one optional cutout plant mesh per rendered chunk; hidden cube faces are removed across chunk boundaries.
 - Mouse look, responsive yaw-relative WASD walking, Ctrl sprint, Shift crouch with safe ledges, grounded jumping and safe respawn.
 - Fixed 60-Hz engine-independent AABB physics, wall sliding and interpolated camera movement.
 - Precise five-block targeting, visible target outline and inventory-backed click-to-break/place.
@@ -73,7 +82,7 @@ migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest upla
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 27**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 29**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -82,7 +91,7 @@ on their own, with the original atlas's correct faces. Proportions and motion ar
 visually calibrated against Java1.21.1's wide standard arm. Walking/sprint,
 crouch, jump/landing and click gestures animate only the viewmodel; targeting
 and physics stay unchanged. Menus/free cursor hide and reset it. One overlay
-view prevents wall occlusion and keeps the existing UI in front; eleven retained item
+view prevents wall occlusion and keeps the existing UI in front; twenty retained item
 meshes share the original atlas. See [rendering/resources](docs/VIEWMODEL.md)
 and [validation](docs/VALIDATION.md).
 
@@ -195,13 +204,13 @@ See [inventory controls, architecture and recovery limits](docs/INVENTORY.md).
 
 Grass has separate turf tops, grassy dirt sides and dirt undersides. Upright logs
 use bark on walls and end-grain on both ends. Stone and opaque leaves have their
-own tiles. The eleven authored 16×16 grids use restrained earth/foliage palettes;
+own tiles. The original eleven authored 16×16 grids use restrained earth/foliage palettes;
 no external texture pack or Minecraft image was used. Art, editable source and
 standard-library generator are **MIT OR Apache-2.0**: [asset provenance](assets/terrain/README.md).
 
 ![Original Slice-8 terrain, software-rendered X11](docs/images/slice8-terrain.png)
 
-A single embedded 128×96 sRGB atlas/material serves all chunks, with eight texels
+A single embedded 128×192 sRGB atlas/material serves all chunks, with eight texels
 of extruded padding per tile, nearest sampling and one mip. Chunk meshes retain
 face culling and async updates; greedy quads repeat each block tile using terrain-only UVs and an embedded shader.
 Separate sky/block/AO contributions share the existing COLOR attribute; uncompressed terrain vertices use 56 bytes. Inventory icons share that image. Intentional distant pixel shimmer is
@@ -276,7 +285,7 @@ Movement speed is independent of diagonal input. Mouse sensitivity does not depe
 Create worlds in **Spielen → Neue Welt**. A decimal unsigned 64-bit seed is
 validated before creation; an empty field generates a fresh stored seed.
 `RUSTCRAFT_WORLD_SEED` optionally prefills that form and never changes an existing
-world. New worlds use generator v8; generators v1–v7 for historical saves remain frozen.
+world. New worlds use generator v9; generators v1–v8 for historical saves remain frozen.
 Display names can repeat; internal directory IDs are unique and never renamed.
 See [safe multi-world management](docs/WORLDS.md).
 
@@ -286,7 +295,7 @@ New v5 worlds save **seed + generator version + world identity** in a manifest a
 
 ## Streaming and compatibility
 
-A confirmed new-world creation produces a **v5 regional world** with generator v8 and
+A confirmed new-world creation produces a **v5 regional world** with generator v9 and
 X/Z [-32768,32768), Y [-64,192). There is no map-sized startup allocation.
 `RUSTCRAFT_LOAD_RADIUS=1`, `2` (default) or `3` selects a radius independently of
 world extent: at most400 ready chunk descriptors by default,784 at radius3.

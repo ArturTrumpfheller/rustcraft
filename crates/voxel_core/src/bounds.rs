@@ -12,7 +12,7 @@ impl WorldHeight {
     pub fn for_generator(version: u32) -> Result<Self, UnsupportedGenerator> {
         match version {
             1..=5 => Ok(Self::HISTORICAL),
-            6..=8 => Ok(Self::EXTENDED),
+            6..=9 => Ok(Self::EXTENDED),
             v => Err(UnsupportedGenerator(v)),
         }
     }

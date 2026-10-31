@@ -27,6 +27,15 @@ pub enum Block {
     WaterFalling,
     Sand,
     SnowyGround,
+    BirchWood,
+    BirchLeaves,
+    SpruceWood,
+    SpruceLeaves,
+    TallGrass,
+    Fern,
+    RedFlower,
+    YellowFlower,
+    DeadBush,
 }
 
 impl Block {
@@ -36,13 +45,13 @@ impl Block {
 
     /// Physical collision is independent of rendering, targeting and lighting.
     pub fn is_collidable(self) -> bool {
-        self != Self::Air && !self.is_torch() && self.fluid().is_none()
+        self != Self::Air && !self.is_torch() && !self.is_plant() && self.fluid().is_none()
     }
     pub fn is_opaque(self) -> bool {
-        self != Self::Air && !self.is_torch() && self.fluid().is_none()
+        self != Self::Air && !self.is_torch() && !self.is_plant() && self.fluid().is_none()
     }
     pub fn is_cube(self) -> bool {
-        self != Self::Air && !self.is_torch() && self.fluid().is_none()
+        self != Self::Air && !self.is_torch() && !self.is_plant() && self.fluid().is_none()
     }
     pub fn is_torch(self) -> bool {
         matches!(
@@ -89,6 +98,11 @@ impl Block {
             Self::Dirt => [0.28, 0.13, 0.06, 1.0],
             Self::Stone => [0.32, 0.35, 0.38, 1.0],
             Self::Wood => [0.24, 0.12, 0.035, 1.0],
+            Self::BirchWood => [0.81, 0.78, 0.65, 1.],
+            Self::SpruceWood => [0.18, 0.10, 0.06, 1.],
+            Self::BirchLeaves => [0.34, 0.48, 0.12, 1.],
+            Self::SpruceLeaves => [0.06, 0.22, 0.15, 1.],
+            b if b.is_plant() => [0.3, 0.5, 0.13, 1.],
             Self::Leaves => [0.075, 0.29, 0.045, 1.0],
             Self::Torch
             | Self::TorchEast

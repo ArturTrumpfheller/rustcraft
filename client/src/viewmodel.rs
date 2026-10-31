@@ -73,7 +73,7 @@ struct HeldBlock;
 struct Arm;
 #[derive(Resource)]
 struct Models {
-    blocks: [Handle<Mesh>; 11],
+    blocks: [Handle<Mesh>; 20],
     textured: Handle<StandardMaterial>,
     flat: Handle<StandardMaterial>,
     root: Entity,
@@ -85,13 +85,16 @@ struct Models {
 
 // Cuboid topology comes from Bevy; art UVs use the existing original atlas.
 fn cube(block: Option<Block>) -> Mesh {
+    if let Some(block) = block.filter(|b| b.is_plant()) {
+        return plant_item_mesh(block);
+    }
     if block == Some(Block::Torch) {
         let core = voxel_core::torch_mesh();
         let tile = voxel_core::texture::Tile::Torch.uv([0, 0]);
         let uv = core
             .uvs
             .iter()
-            .map(|p| [tile[0] + p[0] * 16. / 128., tile[1] + p[1] * 16. / 96.])
+            .map(|p| [tile[0] + p[0] * 16. / 128., tile[1] + p[1] * 16. / 192.])
             .collect::<Vec<_>>();
         return Mesh::new(
             bevy::render::render_resource::PrimitiveTopology::TriangleList,
@@ -302,6 +305,9 @@ fn setup(
     });
     let textured = materials.add(StandardMaterial {
         unlit: true,
+        alpha_mode: AlphaMode::Mask(0.5),
+        cull_mode: None,
+        double_sided: true,
         base_color_texture: atlas,
         ..default()
     });
@@ -638,4 +644,34 @@ mod tests;
 
 pub(crate) fn cleanup(world: &mut World) {
     world.remove_resource::<Models>();
+}
+
+/// A single thin sprite, with both faces supplied by the retained mask material.
+pub(crate) fn plant_item_mesh(block: Block) -> Mesh {
+    let tile = face_tile(block, [0, 0, 1]).unwrap();
+    Mesh::new(
+        bevy::render::render_resource::PrimitiveTopology::TriangleList,
+        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+    )
+    .with_inserted_attribute(
+        Mesh::ATTRIBUTE_POSITION,
+        vec![
+            [-0.4, -0.5, 0.],
+            [0.4, -0.5, 0.],
+            [0.4, 0.5, 0.],
+            [-0.4, 0.5, 0.],
+        ],
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0., 0., 1.]; 4])
+    .with_inserted_attribute(
+        Mesh::ATTRIBUTE_UV_0,
+        vec![
+            tile.uv([0, 1]),
+            tile.uv([1, 1]),
+            tile.uv([1, 0]),
+            tile.uv([0, 0]),
+        ],
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, vec![[0.7, 0.7, 0.7, 1.]; 4])
+    .with_inserted_indices(bevy::mesh::Indices::U32(vec![0, 1, 2, 0, 2, 3]))
 }

@@ -6,13 +6,14 @@ pub mod biome;
 mod caves;
 pub mod hydrology;
 mod local;
+mod vegetation;
 pub use biome::{Biome, Climate, sample_biome, sample_climate};
 mod terrain;
 pub use local::Sampler;
 
 pub const GENERATOR_VERSION: u32 = 1;
 /// Default for newly created regional worlds; historical defaults remain frozen.
-pub const CURRENT_LOCAL_GENERATOR: u32 = 8;
+pub const CURRENT_LOCAL_GENERATOR: u32 = 9;
 pub const DEFAULT_SEED: u64 = 2026;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GenerationConfig {
@@ -82,7 +83,7 @@ fn noise(seed: u64, x: i32, z: i32, scale: i32, salt: u64) -> i32 {
 }
 impl Generator {
     pub fn new(config: GenerationConfig) -> Result<Self, UnsupportedGenerator> {
-        if ![GENERATOR_VERSION, 2, 3, 4, 5, 6, 7, 8].contains(&config.version) {
+        if ![GENERATOR_VERSION, 2, 3, 4, 5, 6, 7, 8, 9].contains(&config.version) {
             return Err(UnsupportedGenerator(config.version));
         }
         if config.version >= 3 {
@@ -176,7 +177,7 @@ impl Generator {
             return None;
         }
         if self.config.version >= 3 {
-            return Some(if self.config.version == 8 {
+            return Some(if self.config.version >= 8 {
                 hydrology::surface(self.config.seed, x, z).bed
             } else if self.config.version >= 5 {
                 biome::height(self.config.seed, x, z)

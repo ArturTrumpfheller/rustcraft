@@ -117,7 +117,7 @@ pub fn raycast_with(world: &World, ray: Ray, mode: TargetMode) -> Option<RayHit>
                 },
             });
         }
-        if block.is_torch() {
+        if block.is_torch() || block.is_plant() {
             let frame = block.shape_transform();
             let local = frame.inverse_point(std::array::from_fn(|a| {
                 ray.origin[a] - f64::from(cell.0[a])

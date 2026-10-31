@@ -1,3 +1,20 @@
+# Vegetation — generator v9 / Slice 29
+
+New worlds select **9**. Generators **1–8 remain frozen**, including every
+historical golden fixture. V9 retains v8 final heights/materials, biome/climate,
+hydrology, water initialization, caves and extended height; only vegetation changes.
+Local jittered species plans add Birch and tapered Spruce beside original Oak,
+with coherent groves/clearings and biome-specific grass, ferns, flowers and dry
+shrubs. Root/plant admission checks final dry supported geometry. Existing
+manifest5/region1 and player/journal envelopes carry generator9 and additive IDs;
+saved edits always override vegetation, with no migration of old worlds.
+[Algorithm, IDs, cutout rendering and interaction policy](VEGETATION.md);
+[measurements, captures and native acceptance](performance/slice29/README.md).
+
+The following sections describe historical generator releases.
+
+---
+
 # Natural water — generator v8 / Slice 28
 
 Only newly created worlds select **8**. Generators **1–7 remain frozen**, including

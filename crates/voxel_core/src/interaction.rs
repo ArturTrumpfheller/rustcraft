@@ -18,6 +18,15 @@ pub enum BuildBlock {
     WaterSource,
     Sand,
     SnowyGround,
+    BirchWood,
+    BirchLeaves,
+    SpruceWood,
+    SpruceLeaves,
+    TallGrass,
+    Fern,
+    RedFlower,
+    YellowFlower,
+    DeadBush,
 }
 
 impl BuildBlock {
@@ -32,6 +41,16 @@ impl BuildBlock {
             7 => Some(Self::WaterSource),
             10 => Some(Self::Sand),
             11 => Some(Self::SnowyGround),
+            12 => Some(Self::BirchWood),
+            13 => Some(Self::BirchLeaves),
+            14 => Some(Self::SpruceWood),
+            15 => Some(Self::SpruceLeaves),
+            16 => Some(Self::TallGrass),
+            17 => Some(Self::Fern),
+            18 => Some(Self::RedFlower),
+            19 => Some(Self::YellowFlower),
+            20 => Some(Self::DeadBush),
+
             _ => None,
         }
     }
@@ -46,6 +65,15 @@ impl BuildBlock {
             Self::WaterSource => 7,
             Self::Sand => 10,
             Self::SnowyGround => 11,
+            Self::BirchWood => 12,
+            Self::BirchLeaves => 13,
+            Self::SpruceWood => 14,
+            Self::SpruceLeaves => 15,
+            Self::TallGrass => 16,
+            Self::Fern => 17,
+            Self::RedFlower => 18,
+            Self::YellowFlower => 19,
+            Self::DeadBush => 20,
         }
     }
     pub fn block(self) -> Block {
@@ -53,6 +81,16 @@ impl BuildBlock {
             Self::Grass => Block::Grass,
             Self::Sand => Block::Sand,
             Self::SnowyGround => Block::SnowyGround,
+            Self::BirchWood => Block::BirchWood,
+            Self::BirchLeaves => Block::BirchLeaves,
+            Self::SpruceWood => Block::SpruceWood,
+            Self::SpruceLeaves => Block::SpruceLeaves,
+            Self::TallGrass => Block::TallGrass,
+            Self::Fern => Block::Fern,
+            Self::RedFlower => Block::RedFlower,
+            Self::YellowFlower => Block::YellowFlower,
+            Self::DeadBush => Block::DeadBush,
+
             Self::Dirt => Block::Dirt,
             Self::Stone => Block::Stone,
             Self::Wood => Block::Wood,
@@ -66,6 +104,16 @@ impl BuildBlock {
             Self::Grass => "Grass",
             Self::Sand => "Sand",
             Self::SnowyGround => "Snowy Ground",
+            Self::BirchWood => "Birch Wood",
+            Self::BirchLeaves => "Birch Leaves",
+            Self::SpruceWood => "Spruce Wood",
+            Self::SpruceLeaves => "Spruce Leaves",
+            Self::TallGrass => "Tall Grass",
+            Self::Fern => "Fern",
+            Self::RedFlower => "Red Flower",
+            Self::YellowFlower => "Yellow Flower",
+            Self::DeadBush => "Dead Bush",
+
             Self::Dirt => "Dirt",
             Self::Stone => "Stone",
             Self::Wood => "Wood",
@@ -95,6 +143,7 @@ pub enum EditError {
     NoPlacementFace,
     Unsupported,
     SupportsTorch,
+    SupportsPlant,
     StaleEdit,
     DropCapacity,
 }
@@ -124,6 +173,9 @@ pub fn edit(
             }
             if world.block(position) != Block::Air && world.block(position).fluid().is_none() {
                 return Err(EditError::Occupied);
+            }
+            if selection.block().is_plant() && world.block(position).fluid().is_some() {
+                return Err(EditError::Unsupported);
             }
             if selection.block().is_collidable() && player.intersects_block(position, config) {
                 return Err(EditError::IntersectsPlayer);

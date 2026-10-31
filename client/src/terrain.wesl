@@ -14,10 +14,11 @@ fn fragment(in: VertexOutput, @builtin(front_facing) front: bool) -> FragmentOut
     // Repeat in tile-local space, never across the padded atlas. Explicit LOD0
     // avoids discontinuous fract derivatives; the original image has one mip,
     // nearest filters, no anisotropy, and eight extruded texels per edge.
-    let uv = in.uv_b + fract(in.uv) * vec2<f32>(16.0 / 128.0, 16.0 / 96.0);
+    let uv = in.uv_b + fract(in.uv) * vec2<f32>(16.0 / 128.0, 16.0 / 192.0);
     var pbr = pbr_input_from_vertex_output(in, front, false);
     let brightness = max(in.color.r * atmosphere.sun.w, in.color.g);
     pbr.material.base_color = textureSampleLevel(atlas, atlas_sampler, uv, 0.0) * vec4<f32>(vec3<f32>(brightness), in.color.a);
+    if pbr.material.base_color.a < 0.5 { discard; }
     var out: FragmentOutput;
     let shaded = terrain_fog(atmosphere, pbr.material.base_color, in.world_position.xyz - view.world_position.xyz, in.color.rgb);
     out.color = main_pass_post_lighting_processing(pbr, shaded);

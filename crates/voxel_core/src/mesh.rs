@@ -8,6 +8,7 @@ pub struct ChunkMesh {
     /// A water-only worker result leaves the retained opaque surface untouched.
     pub water_only: bool,
     pub water: crate::water_mesh::WaterMesh,
+    pub plants: crate::plant_mesh::PlantMesh,
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
     pub uvs: Vec<[f32; 2]>,
@@ -99,6 +100,10 @@ pub fn mesh_chunk_lit(
                 let p = [x, y, z];
                 let local = LocalPos::new(p).unwrap();
                 let block = chunk.get(local);
+                if block.is_plant() {
+                    let bp = origin.offset(p.map(|v| v as i32)).unwrap();
+                    mesh.plants.append(block, p.map(|v| v as f32), bp, light);
+                }
                 if block.is_torch() {
                     let bp = origin.offset(p.map(|v| v as i32)).unwrap();
                     append_torch(
