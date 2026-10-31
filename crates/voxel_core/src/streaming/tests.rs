@@ -7,6 +7,59 @@ use crate::{
     raycast::Ray,
 };
 use std::collections::BTreeMap;
+
+#[test]
+fn generated_border_volume_metrics_follow_the_saved_world_height() {
+    for version in [2, 9] {
+        let generator = Generator::new(GenerationConfig { seed: 42, version }).unwrap();
+        let targets = BTreeSet::from([ChunkPos([0, 0, 0])]);
+        let batch = remesh_cached(
+            &generator,
+            World::default(),
+            EditSnapshot::default(),
+            targets.clone(),
+        );
+        let expected = 9 * generator.world_height().chunk_count() * 4096;
+        assert_eq!(batch.sampled_border_cells, expected);
+        assert_eq!(batch.lighting.generated_columns, 9);
+        let water = remesh_water(
+            &generator,
+            World::default(),
+            EditSnapshot::default(),
+            &targets,
+            &mut TerrainCache::default(),
+            &batch.lights,
+        );
+        assert_eq!(water.sampled_border_cells, expected);
+        assert_eq!(water.lighting.generated_columns, 9);
+        if version == 9 {
+            let sky = BTreeSet::from([ChunkPos([0, 10, 0])]);
+            let mut cache = TerrainCache::default();
+            let first = remesh_lit(
+                &generator,
+                World::default(),
+                EditSnapshot::default(),
+                &sky,
+                &mut cache,
+                &BTreeMap::new(),
+                &sky,
+            );
+            assert!(first.lights.is_empty());
+            assert_eq!(first.sampled_border_cells, expected);
+            let warm = remesh_lit(
+                &generator,
+                World::default(),
+                EditSnapshot::default(),
+                &sky,
+                &mut cache,
+                &BTreeMap::new(),
+                &sky,
+            );
+            assert_eq!(warm.sampled_border_cells, 0);
+            assert_eq!(warm.lighting.generated_columns, 0);
+        }
+    }
+}
 fn gen2(seed: u64) -> Arc<Generator> {
     Arc::new(Generator::new(GenerationConfig { seed, version: 2 }).unwrap())
 }

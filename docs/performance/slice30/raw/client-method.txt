@@ -1,0 +1,7 @@
+Baseline f9f027daffae8571ce90358685b7e3eff7c2d122; current production differs only in logical halo-volume diagnostics.
+Same vegetation_streaming_measurements and stabilization_world_switch_measurements bodies copied into both source trees; no historical production behavior backported.
+Eight exploration visits;12 A/B session switches. Percentile index floor((N-1)*p/100). CPU-only Bevy asset/entity publication and worker queues; no renderer/GPU timing.
+Both orders retained.
+client/src/streaming/tests.rs: fc0b8da08d3aa1be26912619fd65e5ac9c47fb82a153cb68f0fae6f8ba8cf01c
+client/src/session/tests.rs: 59da5233b5ffadae15a09063234995119609ccfc0794c5d059bf1967d2a23cd5
+crates/voxel_core/src/streaming.rs: 1667290323d5ff7924e31ad8e920d112196368ecbf932e34eb537482d737d9bb

@@ -56,3 +56,5 @@ jobs:
               print("::error title=Workspace test failure::" + detail)
       - name: Cargo build
         run: cargo build --locked --workspace
+      - name: Optimized AO regression
+        run: cargo test --release --locked -p voxel_core mesh::ao_tests -- --test-threads=1

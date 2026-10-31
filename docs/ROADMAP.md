@@ -1,3 +1,23 @@
+# Slice 30 — Worldgen Stabilization & Integration
+
+- [x] Audit current terrain/biome/cave/water/vegetation and runtime integration
+- [x] Preserve generators1–9, original historical fixtures, IDs and save envelopes
+- [x] Bounded three-seed integration audit with actionable coordinates/reproductions
+- [x] Combined saved-Air, generated-content, signed-region and restart lifecycle tests
+- [x] V9 bucket journal recovery, full drop capacity and three-surface eviction checks
+- [x] Reproduce/fix optimized AO test rounding; correct extended-height diagnostics
+- [x] Reproducible matched Slice29/current v9 CPU and resource baseline tooling
+- [ ] Native Void X11/Wayland / RX9060 XT and Windows GUI acceptance by owner
+
+[Audit, validation, measurements, limitations and Fish acceptance](performance/slice30/README.md).
+
+Next: **31 Performance Profiling & Optimization →32 Chunk Streaming v2 →33
+Rendering & Meshing Optimization →34 Render Distance Expansion**. Major terrain,
+caves, rivers, oceans and biome-variety overhaul follows those phases; survival
+foundations follow the worldgen overhaul. None of that future scope is added here.
+
+---
+
 # Slice 29 — Vegetation & World Details
 
 - [x] Generator9 layered over v8 geology, climate, caves/water and extended height

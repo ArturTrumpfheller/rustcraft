@@ -1,3 +1,35 @@
+# Slice 30: frozen output and repeatable integration audit
+
+**No generator v10 and no change to v9 output. Generators v1–v9 remain frozen.**
+The stabilization slice adds integration coverage and measurement tools, not new
+terrain, caves, water bodies or vegetation distributions. Existing historical
+golden fixtures retain their original values; explicit saved Air remains an
+authoritative overlay. Existing worlds are never regenerated or migrated on load.
+
+Run the bounded read-only audit with:
+
+```sh
+cargo run --release --locked -p voxel_core --example worldgen_audit
+# Reproduce one finding: generator, seed, chunk X, chunk Z
+cargo run --release --locked -p voxel_core --example worldgen_audit -- 9 42 -28 1
+```
+
+The default visits 15 fixed locations for each of seeds 0, 42 and 2026, retaining
+at most nine columns at once. It reports actual biomes, block CRCs, vegetation,
+surface/underground water and cave cells; failures include world coordinates,
+expected/actual behavior and an exact reproduction command. Full-height neighbor
+order/parallel generation, point samples, halo seams, foundation, bounds, roots,
+plant support and idle fluids are checked. Crown-anchor checks are deliberately
+limited to the released tree shapes; they do not grade aesthetics or establish
+global cave connectivity. Version arguments 3–9 select historical local worlds;
+the integration tests also cover parallel/eviction parity for v1/v2.
+
+[Scope, fixed coordinates, limitations, baseline and native acceptance](performance/slice30/README.md).
+The following sections describe their original generator releases; statements
+about the default or rejected future versions apply to that historical release.
+
+---
+
 # Vegetation — generator v9 / Slice 29
 
 New worlds select **9**. Generators **1–8 remain frozen**, including every

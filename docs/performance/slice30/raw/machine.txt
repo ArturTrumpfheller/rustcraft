@@ -1,0 +1,7 @@
+Cloud CPU environment; not native owner hardware.
+OS: Linux-6.18.57-x86_64-with-glibc2.41
+Container CPU model: AMD EPYC 9V74 80-Core Processor
+/sys/fs/cgroup/cpu.max: 200000 100000
+/sys/fs/cgroup/memory.max: 8589934592
+Baseline: f9f027daffae8571ce90358685b7e3eff7c2d122
+Measurement date: 2026-10-31

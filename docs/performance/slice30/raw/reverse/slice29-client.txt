@@ -1,0 +1,18 @@
+
+running 1 test
+test streaming::tests::vegetation_streaming_measurements ... VEGETATION_STREAM generator=8 visits=8 visit_p50_ms=14.751 visit_p95_ms=56.886 visit_p99_ms=56.886 worker_total_ms=234.759 main_install_max_ms=0.566 queue_install_max_ms=77.298 retained_mesh_bytes=1041600 plant_chunk_entities=0 source_cache_bytes=241664 elapsed_ms=220.898
+STABILIZATION_RESIDENCY generator=8 descriptors=144 voxel_bytes=73728 mesh_assets=27 surfaces=27 cache_columns=25 region_overlays=4 pending=0 peak_pending=24 fluid_pending=0 discarded=0 max_update_ms=0.643
+VEGETATION_STREAM generator=9 visits=8 visit_p50_ms=9.892 visit_p95_ms=34.677 visit_p99_ms=34.677 worker_total_ms=143.244 main_install_max_ms=0.670 queue_install_max_ms=43.774 retained_mesh_bytes=1076568 plant_chunk_entities=7 source_cache_bytes=278528 elapsed_ms=141.042
+STABILIZATION_RESIDENCY generator=9 descriptors=144 voxel_bytes=81920 mesh_assets=36 surfaces=36 cache_columns=25 region_overlays=4 pending=0 peak_pending=24 fluid_pending=0 discarded=0 max_update_ms=0.741
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 201 filtered out; finished in 0.46s
+
+
+running 1 test
+test session::tests::stabilization_world_switch_measurements ... RustCraft new streamed world: seed 2026, generator v9, regional 65536x65536 blocks; identity created in 8.783µs
+RustCraft new streamed world: seed 2026, generator v9, regional 65536x65536 blocks; identity created in 1.382µs
+STABILIZATION_SWITCH samples=12 p50_ms=6.322 p95_ms=8.000 p99_ms=8.000 retained_assets=(2, 2, 0, 0)
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 201 filtered out; finished in 0.08s

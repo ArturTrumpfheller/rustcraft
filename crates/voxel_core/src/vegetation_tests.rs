@@ -168,3 +168,42 @@ fn crossed_quads_transmit_light_and_do_not_change_opaque_geometry_or_water() {
         );
     }
 }
+
+#[test]
+fn full_drop_capacity_preserves_a_plant_and_retries_displacement_without_duplication() {
+    use crate::{drops::MAX_DROPS, inventory::Stack};
+    let p = BlockPos([0, 1, 0]);
+    let mut w = planted(Block::RedFlower);
+    w.insert_chunk(ChunkPos([-2, 0, -2]), crate::Chunk::default());
+    for i in 0..MAX_DROPS {
+        let at = BlockPos([
+            (i % 64) as i32 - 32,
+            10 + (i / 64) as i32 / 64,
+            (i / 64 % 64) as i32 - 32,
+        ]);
+        assert!(w.drops.add(at, Stack::new(Item::Stone, 1).unwrap()));
+    }
+    let before = w.revision();
+    assert_eq!(
+        w.set_block(p, Block::WaterSource),
+        Err(EditError::DropCapacity)
+    );
+    assert_eq!(w.revision(), before);
+    assert_eq!(w.block(p), Block::RedFlower);
+    assert_eq!(w.dropped_items().len(), MAX_DROPS);
+    let mut inv = Inventory::empty();
+    inv.insert(Item::Stone, 36 * 64);
+    assert_eq!(w.collect_items([-31.5, 9.6, -31.5], &mut inv), 0);
+    assert_eq!(w.dropped_items().len(), MAX_DROPS);
+    inv = Inventory::empty();
+    assert!(w.collect_items([-31.5, 9.6, -31.5], &mut inv) > 0);
+    w.set_block(p, Block::WaterSource).unwrap();
+    w.set_block(p, Block::WaterSource).unwrap();
+    let flowers: u16 = w
+        .dropped_items()
+        .iter()
+        .filter(|(_, s)| s.item() == Item::RedFlower)
+        .map(|(_, s)| u16::from(s.count()))
+        .sum();
+    assert_eq!(flowers, 1);
+}

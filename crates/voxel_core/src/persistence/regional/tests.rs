@@ -972,94 +972,97 @@ fn v7_manifest_and_region_keep_formats_and_reject_future_generator_identity() {
 }
 
 #[test]
-fn v8_procedural_water_air_constructions_buckets_and_interrupted_journals_recover() {
+fn v8_v9_procedural_water_air_constructions_buckets_and_interrupted_journals_recover() {
     use crate::{
         Block,
         inventory::{Inventory, Item, SLOT_COUNT, Stack, edit_inventory},
         physics::{PhysicsConfig, Player},
         raycast::Ray,
     };
-    for stage in [
-        SaveStage::SessionPrepared,
-        SaveStage::WorldSaved,
-        SaveStage::PlayerSaved,
-    ] {
-        let dir = Dir::new();
-        let id = RegionIdentity {
-            seed: 2026,
-            generator: 8,
-            nonce: [28; 16],
-        };
-        let (store, mut w, _) = SaveStore::open_with(&dir.0, || Ok(World::regional(id))).unwrap();
-        let _ = store.load_player(&mut w).unwrap();
-        let root = fs::read(store.path()).unwrap();
-        assert_eq!(u32_at(&root, 8), 5);
-        assert_eq!(u32_at(&root, 32), 8);
-        for c in [[6, -16], [7, -16]] {
-            load_column(&store, &mut w, c);
+    for version in [8, 9] {
+        for stage in [
+            SaveStage::SessionPrepared,
+            SaveStage::WorldSaved,
+            SaveStage::PlayerSaved,
+        ] {
+            let dir = Dir::new();
+            let id = RegionIdentity {
+                seed: 2026,
+                generator: version,
+                nonce: [28; 16],
+            };
+            let (store, mut w, _) =
+                SaveStore::open_with(&dir.0, || Ok(World::regional(id))).unwrap();
+            let _ = store.load_player(&mut w).unwrap();
+            let root = fs::read(store.path()).unwrap();
+            assert_eq!(u32_at(&root, 8), 5);
+            assert_eq!(u32_at(&root, 32), version);
+            for c in [[6, -16], [7, -16]] {
+                load_column(&store, &mut w, c);
+            }
+            assert_eq!(w.edit_count(), 0);
+            assert_eq!(w.fluid_updates().pending(), 0);
+            let source = BlockPos([107, 2, -243]);
+            let construction = BlockPos([108, 2, -243]);
+            let unchanged = BlockPos([109, 2, -243]);
+            assert_eq!(w.block(source), Block::WaterSource);
+            assert_eq!(w.block(unchanged), Block::WaterSource);
+            let mut slots = [None; SLOT_COUNT];
+            slots[0] = Stack::new(Item::EmptyBucket, 1);
+            let mut inv = Inventory::from_parts(slots, None, 0).unwrap();
+            edit_inventory(
+                &mut w,
+                &mut inv,
+                Ray {
+                    origin: [107.5, 4., -242.5],
+                    direction: [0., -1., 0.],
+                    reach: 5.,
+                },
+                true,
+                &Player::new([115., 4., -235.]),
+                &PhysicsConfig::default(),
+            )
+            .unwrap()
+            .unwrap();
+            w.set_block(construction, Block::Stone).unwrap();
+            let air = BlockPos([107, 1, -243]);
+            w.set_block(air, Block::Air).unwrap();
+            assert_eq!(w.edit_count(), 3);
+            assert_eq!(inv.selected_stack().unwrap().item(), Item::WaterBucket);
+            assert!(
+                store
+                    .save_player_with(&w, &inv, true, |at| if at == stage {
+                        Err(io::Error::other("v8 journal fault fixture"))
+                    } else {
+                        Ok(())
+                    })
+                    .is_err()
+            );
+            drop(store);
+            let (store, mut restored, _) =
+                SaveStore::open_with(&dir.0, || panic!("no identity conversion")).unwrap();
+            let inventory = store.load_player(&mut restored).unwrap();
+            assert_eq!(inventory.slots(), inv.slots());
+            assert_eq!(inventory.cursor(), inv.cursor());
+            assert_eq!(inventory.selected(), inv.selected());
+            assert_eq!(restored.region_identity(), Some(id));
+            for c in [[7, -16], [6, -16]] {
+                load_column(&store, &mut restored, c);
+            }
+            assert_eq!(restored.block(source), Block::Air);
+            assert_eq!(restored.block(air), Block::Air);
+            assert_eq!(restored.block(construction), Block::Stone);
+            assert_eq!(restored.block(unchanged), Block::WaterSource);
+            assert_eq!(restored.edit_count(), 3);
+            assert_eq!(fs::read(store.path()).unwrap(), root);
+            let b = encode_region(
+                id,
+                RegionPos::of(source),
+                &store.read_region(id, RegionPos::of(source)).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(b.len(), 64 + 3 * 14);
         }
-        assert_eq!(w.edit_count(), 0);
-        assert_eq!(w.fluid_updates().pending(), 0);
-        let source = BlockPos([107, 2, -243]);
-        let construction = BlockPos([108, 2, -243]);
-        let unchanged = BlockPos([109, 2, -243]);
-        assert_eq!(w.block(source), Block::WaterSource);
-        assert_eq!(w.block(unchanged), Block::WaterSource);
-        let mut slots = [None; SLOT_COUNT];
-        slots[0] = Stack::new(Item::EmptyBucket, 1);
-        let mut inv = Inventory::from_parts(slots, None, 0).unwrap();
-        edit_inventory(
-            &mut w,
-            &mut inv,
-            Ray {
-                origin: [107.5, 4., -242.5],
-                direction: [0., -1., 0.],
-                reach: 5.,
-            },
-            true,
-            &Player::new([115., 4., -235.]),
-            &PhysicsConfig::default(),
-        )
-        .unwrap()
-        .unwrap();
-        w.set_block(construction, Block::Stone).unwrap();
-        let air = BlockPos([107, 1, -243]);
-        w.set_block(air, Block::Air).unwrap();
-        assert_eq!(w.edit_count(), 3);
-        assert_eq!(inv.selected_stack().unwrap().item(), Item::WaterBucket);
-        assert!(
-            store
-                .save_player_with(&w, &inv, true, |at| if at == stage {
-                    Err(io::Error::other("v8 journal fault fixture"))
-                } else {
-                    Ok(())
-                })
-                .is_err()
-        );
-        drop(store);
-        let (store, mut restored, _) =
-            SaveStore::open_with(&dir.0, || panic!("no identity conversion")).unwrap();
-        let inventory = store.load_player(&mut restored).unwrap();
-        assert_eq!(inventory.slots(), inv.slots());
-        assert_eq!(inventory.cursor(), inv.cursor());
-        assert_eq!(inventory.selected(), inv.selected());
-        assert_eq!(restored.region_identity(), Some(id));
-        for c in [[7, -16], [6, -16]] {
-            load_column(&store, &mut restored, c);
-        }
-        assert_eq!(restored.block(source), Block::Air);
-        assert_eq!(restored.block(air), Block::Air);
-        assert_eq!(restored.block(construction), Block::Stone);
-        assert_eq!(restored.block(unchanged), Block::WaterSource);
-        assert_eq!(restored.edit_count(), 3);
-        assert_eq!(fs::read(store.path()).unwrap(), root);
-        let b = encode_region(
-            id,
-            RegionPos::of(source),
-            &store.read_region(id, RegionPos::of(source)).unwrap(),
-        )
-        .unwrap();
-        assert_eq!(b.len(), 64 + 3 * 14);
     }
 }
 
