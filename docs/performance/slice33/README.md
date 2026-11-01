@@ -29,18 +29,12 @@ that greedy emission can also dominate; one isolated timing is insufficient.
    of repeated block/property lookups. Uniform Air or fluid slabs return after
    water meshing, because they contain no cubes, torches or cutout plants.
    Compact descriptors never acquire a dense voxel allocation.
-3. **Keep retained render entities structurally stable.** Replacing a populated
-   surface updates its existing asset through the same handle. Do not remove
-   `Aabb` or rewrite unchanged `Visibility`. Bevy's asset-change path updates
-   bounds before visibility; real engine-system tests verify the publication
-   frame. Worker buffers already move into Bevy attributes without application
-   cloning; no additional intermediate copy or content hash was added.
-4. **Release empty legacy opaque surfaces.** Both legacy and streamed paths now
+3. **Release empty legacy opaque surfaces.** Both legacy and streamed paths now
    despawn/remove empty surfaces, preserving water and plants where present.
    Handles persist while a surface stays populated; an emptied/refilled surface
    legitimately receives a new entity/handle. This closes a legacy-only hidden
    entity/resource retention case; it does not change streamed world authority.
-5. **Bounded F3 diagnostics.** At the existing maximum5Hz visible refresh, report
+4. **Bounded F3 diagnostics.** At the existing maximum5Hz visible refresh, report
    previous completed world-camera visible opaque/water/cutout mesh counts and
    resident triangle counts by surface. The world-camera list excludes UI and
    viewmodel cameras. These are **not draw calls** or submitted triangle counts.
@@ -60,11 +54,19 @@ transform propagation and `AssetEventSystems`, and before `CheckVisibility`.
 selected by `AssetChanged<Mesh3d>`/`Changed<Mesh3d>`. `MeshAabb::get_aabb` uses
 `Mesh::final_aabb` when present, otherwise scans Float32x3 positions.
 
-Slice32's explicit bound removal worked: Bevy added a fresh bound before culling.
-There was no demonstrated missing-bounds bug. The new path keeps the bound and
-uses the existing asset-change update, avoiding redundant ECS commands and
-archetype transitions. No custom culling, fixed full-chunk bounds, `NoAutoAabb`,
-`NoFrustumCulling` or GPU worker mutation is introduced.
+Slice32's explicit bound removal works: Bevy adds a fresh bound before culling.
+There is no demonstrated missing-bounds bug. The final implementation retains
+that lifecycle. Worker buffers already move into Bevy attributes; populated
+surfaces retain their asset handles and entities. No new clone/hash is added.
+
+An attempted optimization kept `Aabb` and used asset-change refresh, saving most
+command-application cost. Its matched whole-publication results did not establish
+a consistent gain and exhibited large adverse wall-time tails. It was rejected;
+see the retained candidate evidence below. The engine source distinguishes its
+serial missing-bounds loop from its parallel existing-bounds update. These
+observations do not diagnose a general Bevy bug or a native GPU stall.
+No custom culling, fixed full-chunk bounds, `NoAutoAabb`, `NoFrustumCulling` or
+GPU worker mutation is introduced.
 
 Actual Bevy CPU-system tests cover all three surfaces in the same asset publication
 frame, negative/vertical coordinates, expanding/moving geometry, falling water,
@@ -100,7 +102,9 @@ metadata accompany the raw output. Percentiles use index `floor((N-1)*p/100)`.
 
 Core cases: open plains, dense forest, flowering plains, snow/spruce, rocky
 highlands, desert, shoreline, ocean, river, small/large cave, underground lake,
-edited water, torch cave, dense player construction and exposed cliff. Underground
+edited water, torch cave, dense player construction and exposed cliff. The two
+synthetic construction/cliff columns explicitly clear decorative plants before
+ground edits through the ordinary public edit API; support validation stays enabled. Underground
 column cases still include the complete column; they are not isolated camera views.
 Instrumented opaque time excludes separately measured water and plant append
 calls but includes scan/key/clock overhead. Worker thread CPU and wall time are
@@ -148,7 +152,22 @@ surface preservation. Existing streaming fairness, cancellation, stale-result,
 atomic seam, generator1–9, save/journal, explicit Air, fluid, inventory, eviction
 and session teardown regressions remain required.
 
-<!-- VALIDATION -->
+All required commands pass, including locked workspace Clippy, workspace tests,
+optimized core/AO and focused release streaming/session/scene tests, normal release
+client build and original-texture verification. Local workspace invocation:
+534 passed plus one subsequently added focused F3 test;6 optional measurements
+ignored. Optimized core:322; integration/lifecycle:3; focused streaming:40;
+sessions:11; scene/visibility:10; explicit AO:11. The ignored workload probes are
+run separately by the matched harness.
+
+[Ubuntu and Windows CI on production commit2d3465b](https://github.com/ArturTrumpfheller/rustcraft/actions/runs/41343127345)
+both pass the complete workflow:535 ordinary tests on Linux and532 on Windows
+(the difference is Unix-only filesystem tests), plus the retained optimized checks. [Commands/environment/counts](raw/validation.txt),
+[machine-readable local results](raw/validation.json), [CI record](raw/ci-production.json).
+No Linux result substitutes for native Windows/Void GUI acceptance. Debug example
+symbols were stripped to fit scratch space; source/assertions and optimization
+profiles were not weakened. Final documentation/evidence commits preserve the
+measured production code.
 
 ## Reproduction
 
@@ -240,6 +259,17 @@ Native checklist (radii1/2/3 separately):
   memory and upload activity. Keep unfavorable observations and state limitations.
 
 ## Rejected/deferred changes and Slice 34 plan
+
+The retained-bounds attempt is **not shipped**. With identical fixture geometry,
+command application dropped from about1.7/8.8/36.8µs to0.04/0.09/0.24µs for
+1/9/49 changed chunks in the forward run, but complete publication medians varied
+by order. Worst49-chunk publication increased6.07→35.92ms forward and
+6.19→37.59ms reverse; the reverse9-chunk case recorded5.00→182.78ms.
+These are CPU/ECS wall intervals, not rendered/GPU frame times. All samples and
+source/executable IDs remain in the rejected-candidate raw directories. Since
+frame-tail stability matters more than an isolated command microbenchmark, final
+publication keeps the baseline missing-bounds path. New visibility regressions
+prove that path is correct; final accepted-source comparisons are separate.
 
 No giant combined mesh, custom renderer, new occlusion system or GPU upload worker:
 no measured GPU/submission bottleneck justifies sacrificing per-chunk culling,

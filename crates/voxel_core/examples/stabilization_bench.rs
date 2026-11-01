@@ -185,6 +185,18 @@ fn main() {
             }
         }
         if name == "dense-structure" || name == "exposed-cliff" {
+            // Retain the ordinary support-validation contract: clear existing
+            // decorations before replacing their ground in this edited fixture.
+            for y in g.world_height().min..g.world_height().max {
+                for z in 0..16 {
+                    for x in 0..16 {
+                        let p = BlockPos([c[0] * 16 + x, y, c[1] * 16 + z]);
+                        if world.block(p).is_plant() {
+                            world.set_block(p, voxel_core::Block::Air).unwrap();
+                        }
+                    }
+                }
+            }
             for y in -32..64 {
                 for z in 0..16 {
                     for x in 0..16 {

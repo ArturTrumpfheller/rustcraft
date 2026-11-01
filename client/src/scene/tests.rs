@@ -172,14 +172,14 @@ fn idle_frames_do_not_remesh_and_negative_seams_refresh_both_chunks() {
             .len(),
         30
     );
-    // Retained bounds stay on the entity; the real visibility pipeline below
-    // separately verifies their AssetChanged-driven refresh.
+    // Idle frames preserve bounds. A rebuild removes them, and the real
+    // visibility pipeline below verifies same-frame reconstruction.
     let entity = app.world().resource::<ChunkRenders>().0[&ChunkPos([-1, 0, 0])].entity;
     app.world_mut().entity_mut(entity).insert(Aabb::default());
     app.update();
     assert!(app.world().get::<Aabb>(entity).is_some());
     edit_cell(&mut app, [0, 1, 1], voxel_core::Block::Air);
-    assert!(app.world().get::<Aabb>(entity).is_some());
+    assert!(app.world().get::<Aabb>(entity).is_none());
     assert_eq!(
         app.world()
             .resource::<Assets<Mesh>>()

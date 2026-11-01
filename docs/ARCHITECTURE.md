@@ -5,10 +5,11 @@ rows (1296 stack bytes). Six row intersections derive exact face masks. Uniform
 halo spans and opaque-empty slabs skip redundant reads; greedy affine AO/light,
 UVs and complete geometry buffers remain exact. No persistent cache grows.
 
-Populated opaque/water/cutout assets retain handles/entities. Bevy0.20 updates
-existing Aabb through AssetChanged<Mesh3d> after asset events and before visibility;
-publication no longer removes/reinserts bounds. Real engine tests verify same-frame
-bounds, culling, water-only ownership and rebasing. Empty legacy and streamed
+Populated opaque/water/cutout assets retain handles/entities. After replacement,
+Bevy0.20 reconstructs the removed Aabb before visibility. An attempted retained-
+bounds/asset-change update saved commands but worsened measured publication tails,
+so the baseline missing-bounds lifecycle is preserved. Real engine tests verify
+same-frame bounds, culling, water-only ownership and rebasing. Empty legacy and streamed
 surfaces now release entity and asset alike. World authority, atomic connected
 publication, generation1–9, saves, materials and radius1–3 stay unchanged.
 F3 reports previous world-camera visible mesh counts and resident triangles by

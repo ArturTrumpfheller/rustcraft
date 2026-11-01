@@ -101,7 +101,7 @@ fn visible(app: &App, camera: Entity, e: Entity) -> bool {
 }
 
 #[test]
-fn bevy_refreshes_all_three_retained_bounds_in_the_publication_frame() {
+fn bevy_reconstructs_all_three_changed_bounds_in_the_publication_frame() {
     let mut app = app();
     let cp = ChunkPos([-1, -1, -1]);
     publish(&mut app, cp, surface(cp, 1));
@@ -110,8 +110,11 @@ fn bevy_refreshes_all_three_retained_bounds_in_the_publication_frame() {
     assert_bounds(&app, &retained);
     let old = *app.world().get::<Aabb>(retained[0].0).unwrap();
     publish(&mut app, cp, surface(cp, 13));
-    // No component removal and no deferred entity reconstruction.
-    assert_eq!(*app.world().get::<Aabb>(retained[0].0).unwrap(), old);
+    // Removal is flushed before PostUpdate; Bevy must reconstruct the changed
+    // bounds before its visibility pass, while retaining entity/asset ownership.
+    for (entity, _) in &retained {
+        assert!(app.world().get::<Aabb>(*entity).is_none());
+    }
     app.update();
     assert_eq!(slots(&app, cp), retained);
     assert_bounds(&app, &retained);
