@@ -1,0 +1,16 @@
+{
+  "commit": "f9fe8c1b47693f56ef6c7fb24a5672d266a04954",
+  "url": "https://github.com/ArturTrumpfheller/rustcraft/actions/runs/41345842257",
+  "jobs": [
+    {
+      "name": "ubuntu-latest",
+      "conclusion": "success",
+      "job_id": 124965344746
+    },
+    {
+      "name": "windows-latest",
+      "conclusion": "success",
+      "job_id": 124965344953
+    }
+  ]
+}

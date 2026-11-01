@@ -1,0 +1,9 @@
+{
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+  "logical_cpus": 3,
+  "cgroup_cpu_max": "200000 100000",
+  "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "gpu_device_directory_present": false,
+  "baseline": "d1d4c699ec07bc7afe1563494e7b4b15719b3e32"
+}

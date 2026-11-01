@@ -1,0 +1,20 @@
+     Locking 2 packages to highest Rust 1.99.1 compatible versions
+   Compiling crc32fast v1.5.3
+   Compiling cfg-if v1.0.5
+   Compiling voxel_core v0.1.0 (/tmp/rustcraft-profile-s1561fqc)
+    Finished `release` profile [optimized] target(s) in 13.99s
+     Running `/tmp/rustcraft-profile-s1561fqc/target/release/examples/meshing_bench`
+PROFILE,solid,501,12036,2208,48764,9952
+AO_DETAIL,solid,393216,4330100
+PROFILE,flat,501,12739,3465,18459,1253
+AO_DETAIL,flat,65536,416089
+PROFILE,mixed,501,12101,2110,19343,60336
+AO_DETAIL,mixed,135168,1040766
+PROFILE,cave,501,11200,2635,29115,21846
+AO_DETAIL,cave,215552,1798156
+PROFILE,trees,501,16215,2417,29367,30451
+AO_DETAIL,trees,148480,2293350
+PROFILE,edits,501,15156,3232,25083,67366
+AO_DETAIL,edits,133888,1070868
+PROFILE,stream,9519,16189,2450,32596,56063
+AO_DETAIL,stream,3652096,31250555
