@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT OR Apache-2.0
-"""Exact merged Slice31/current headless streaming comparison; no production probes.
+"""Exact merged baseline/current headless streaming comparison; no production probes.
 
 Both executables build first, each core is forcibly recompiled, and executable
 source fingerprints are asserted at runtime. Raw events and all outliers retained.
@@ -129,6 +129,23 @@ pub fn slice32_cache_stats()->(usize,usize){S32_CACHE.with(|v|v.get())}
     return core_hash, client_hash
 
 
+def instrument_rendering(root):
+    """Additional CPU-only boundaries, identical for both Slice32+ exports."""
+    stream = root / "client/src/streaming.rs"
+    replace(stream, "        match job.handle.join() {", '''        match {
+            let start=Instant::now(); let result=job.handle.join();
+            crate::slice32_probe::duration("worker_join_us",start.elapsed()); result
+        } {''')
+    scene = root / "client/src/scene.rs"
+    text = scene.read_text()
+    assert text.count("    let mesh = Mesh::new(") == 2
+    text = text.replace("    let mesh = Mesh::new(", "    let construct_start=std::time::Instant::now();\n    let mesh = Mesh::new(")
+    marker = ".with_inserted_indices(Indices::U32(surface.indices));"
+    assert text.count(marker) == 2
+    text = text.replace(marker, marker + '\n    crate::slice32_probe::duration("bevy_mesh_construct_us",construct_start.elapsed());')
+    scene.write_text(text)
+
+
 def summarize_traces(paths, out):
     """Preserve all valid trace observations; report malformed lines explicitly."""
     groups = {}
@@ -172,6 +189,8 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--baseline", default=BASE)
+    p.add_argument("--labels", nargs=2, default=["slice31", "slice32"],
+                   help="Distinct baseline/current output labels for later slices.")
     p.add_argument("--reverse", action="store_true")
     p.add_argument("--repeats", type=int, default=3)
     p.add_argument("--frames", type=int, default=120)
@@ -187,6 +206,8 @@ def main():
         help="Build optional instrumented GUI executables instead of running headless tests.",
     )
     p.add_argument("--reuse", action="store_true")
+    p.add_argument("--rendering-install", action="store_true",
+                   help="Also measure retained connected batches with real Bevy CPU visibility.")
     p.add_argument(
         "--trace",
         nargs="+",
@@ -204,7 +225,8 @@ def main():
     baseline = subprocess.check_output(
         ["git", "rev-parse", a.baseline], cwd=ROOT, text=True
     ).strip()
-    names = ["slice31", "slice32"]
+    names = a.labels
+    assert names[0].casefold() != names[1].casefold() and all(n.replace("-", "").replace("_", "").isalnum() for n in names)
     sources = {}
     ids = {}
     if not a.reuse:
@@ -229,7 +251,7 @@ def main():
             )
             with tarfile.open(fileobj=io.BytesIO(archive)) as t:
                 t.extractall(root, filter="data")
-            if name == "slice32":
+            if name == names[1]:
                 for d in ["client", "crates/voxel_core"]:
                     shutil.rmtree(root / d)
                     shutil.copytree(ROOT / d, root / d)
@@ -238,10 +260,16 @@ def main():
                 for d in ["client/src", "crates/voxel_core/src"]
                 for f in sorted((root / d).rglob("*.rs"))
             }
-            ids[name] = instrument(root, name == "slice32")
+            ids[name] = instrument(root, "fn record_cancel(" in (root / "client/src/streaming.rs").read_text())
+            if a.rendering_install:
+                tests = root / "client/src/scene/tests.rs"
+                tests.write_text(tests.read_text() + "\n" + (ROOT / "tools/rendering_bench/install.rs").read_text())
+                instrument_rendering(root)
         (out / "sources.json").write_text(
             json.dumps(
-                {"baseline": baseline, "files": sources, "runtime_ids": ids}, indent=2
+                {"baseline": baseline, "files": sources, "runtime_ids": ids,
+                 "harness_sha256": {str(f.relative_to(ROOT)): hashlib.sha256(f.read_bytes()).hexdigest()
+                    for f in [Path(__file__).resolve(), ROOT / "tools/rendering_bench/install.rs", *sorted((ROOT / "tools/streaming_bench").glob("*.rs"))]}}, indent=2
             )
             + "\n"
         )
@@ -352,9 +380,18 @@ def main():
             ]
             assert len(binaries) == 1
             shutil.copy2(binaries[0], out / f"{name}-bench")
+        (out / "executables-sha256.json").write_text(json.dumps({
+            name: hashlib.sha256((out / f"{name}-bench").read_bytes()).hexdigest()
+            for name in names}, indent=2) + "\n")
     if a.build_only:
         return
-    ids = json.loads((out / "sources.json").read_text())["runtime_ids"]
+    manifest = json.loads((out / "sources.json").read_text())
+    assert manifest["baseline"] == baseline, "Reused baseline differs from requested revision"
+    ids = manifest["runtime_ids"]
+    assert set(ids) == set(names), "Reused build labels differ"
+    executables = json.loads((out / "executables-sha256.json").read_text())
+    for name in names:
+        assert hashlib.sha256((out / f"{name}-bench").read_bytes()).hexdigest() == executables[name], "Reused executable changed"
     for name in reversed(names) if a.reverse else names:
         with (out / f"{name}.txt").open("w") as log:
             subprocess.run(
@@ -396,6 +433,12 @@ def main():
                     "S32_EXPECT_CLIENT": ids[name][1],
                 },
             )
+            if a.rendering_install:
+                subprocess.run(
+                    [str(out / f"{name}-bench"), "slice33_install_measurements", "--ignored", "--nocapture", "--test-threads=1"],
+                    cwd=scratch / name, stdout=log, stderr=log, check=True,
+                    env={**os.environ, "S32_REPEATS": str(a.repeats), "S32_EXPECT_CORE": ids[name][0], "S32_EXPECT_CLIENT": ids[name][1]},
+                )
         print(out / f"{name}.txt", flush=True)
     states = {}
     samples = []
@@ -459,6 +502,7 @@ def main():
                 "repeats": a.repeats,
                 "frames": a.frames,
                 "frame_hz": 240,
+                "rendering_install": a.rendering_install,
                 "machine": platform.platform(),
                 "note": "Headless scripted position/velocity, fixed 240Hz deadlines, no rendered frames/GPU. RSS is process-wide; requested heap peak is additional process heap during worker window, excludes stacks/allocator metadata/GPU and may include concurrent main allocations.",
             },

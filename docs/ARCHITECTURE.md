@@ -1,3 +1,20 @@
+# Slice 33: exact row visibility and retained asset bounds
+
+Opaque meshing keeps the18³ scalar AO halo and adds324 temporary32-bit occupancy
+rows (1296 stack bytes). Six row intersections derive exact face masks. Uniform
+halo spans and opaque-empty slabs skip redundant reads; greedy affine AO/light,
+UVs and complete geometry buffers remain exact. No persistent cache grows.
+
+Populated opaque/water/cutout assets retain handles/entities. Bevy0.20 updates
+existing Aabb through AssetChanged<Mesh3d> after asset events and before visibility;
+publication no longer removes/reinserts bounds. Real engine tests verify same-frame
+bounds, culling, water-only ownership and rebasing. Empty legacy and streamed
+surfaces now release entity and asset alike. World authority, atomic connected
+publication, generation1–9, saves, materials and radius1–3 stay unchanged.
+F3 reports previous world-camera visible mesh counts and resident triangles by
+surface; neither is a draw-submission measurement.
+See [matched measurements, contracts and native acceptance](performance/slice33/README.md).
+
 # Slice 32: bounded fair streaming and cooperative stops
 
 One terrain worker now alternates eligible load/dirty work with at most two

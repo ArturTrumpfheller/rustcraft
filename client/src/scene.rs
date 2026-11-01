@@ -5,8 +5,8 @@ pub(crate) fn cleanup_drops(world: &mut bevy::prelude::World) {
 }
 use crate::terrain_material::{AtlasRepeat, TerrainSurface};
 use bevy::{
-    asset::RenderAssetUsages, camera::primitives::Aabb, ecs::system::SystemParam, mesh::Indices,
-    prelude::*, render::render_resource::PrimitiveTopology,
+    asset::RenderAssetUsages, ecs::system::SystemParam, mesh::Indices, prelude::*,
+    render::render_resource::PrimitiveTopology,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use voxel_core::{CHUNK_SIZE, ChunkPos, World, demo_world};
@@ -201,6 +201,13 @@ pub(crate) fn upsert_chunk(
     material: &TerrainMaterial,
     origin: &RenderOrigin,
 ) {
+    if surface.indices.is_empty() {
+        // Legacy and streamed publication share the empty-surface lifecycle.
+        upsert_stream_mesh(
+            commands, meshes, renders, position, surface, material, origin,
+        );
+        return;
+    }
     // Full legacy/streamed publication owns all three chunk surfaces.
     upsert_plants(
         commands,
@@ -225,10 +232,9 @@ pub(crate) fn upsert_chunk(
     let (mesh, visibility) = convert_mesh(surface);
     if let Some(render) = renders.0.get(&position) {
         *meshes.get_mut(&render.mesh).expect("retained terrain mesh") = mesh;
-        commands
-            .entity(render.entity)
-            .insert(visibility)
-            .remove::<Aabb>();
+        // Bevy 0.20 refreshes existing bounds through AssetChanged<Mesh3d>
+        // after AssetEventSystems and before CheckVisibility. Keep the entity's
+        // archetype stable; no explicit Aabb removal or visibility write needed.
         return;
     }
     let handle = meshes.add(mesh);
@@ -636,7 +642,6 @@ fn upsert_water(
     .with_inserted_indices(Indices::U32(surface.indices));
     if let Some(r) = renders.1.get(&position) {
         *meshes.get_mut(&r.mesh).expect("retained water mesh") = mesh;
-        commands.entity(r.entity).remove::<Aabb>();
         return;
     }
     let mesh = meshes.add(mesh);
@@ -698,10 +703,6 @@ fn upsert_plants(
     let (mesh, visibility) = convert_mesh(surface.into_surface());
     if let Some(r) = renders.2.get(&position) {
         *meshes.get_mut(&r.mesh).expect("retained plant mesh") = mesh;
-        commands
-            .entity(r.entity)
-            .insert(visibility)
-            .remove::<Aabb>();
     } else {
         let mesh = meshes.add(mesh);
         let entity = commands

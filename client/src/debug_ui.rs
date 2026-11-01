@@ -111,7 +111,7 @@ fn facing(direction: [f64; 3]) -> (&'static str, f64, f64) {
 }
 
 #[derive(bevy::ecs::system::SystemParam)]
-struct Diagnostics<'w> {
+struct Diagnostics<'w, 's> {
     flow: Res<'w, ClientFlow>,
     keys: Res<'w, ButtonInput<KeyCode>>,
     world: Option<Res<'w, VoxelWorld>>,
@@ -122,6 +122,12 @@ struct Diagnostics<'w> {
     input: Res<'w, crate::player::ControllerInput>,
     renders: Option<Res<'w, crate::scene::ChunkRenders>>,
     fluids: Option<Res<'w, crate::player::FluidRuntime>>,
+    views: Query<
+        'w,
+        's,
+        &'static bevy::camera::visibility::VisibleEntities,
+        With<crate::camera::FirstPersonCamera>,
+    >,
 }
 fn update(
     mut overlay: ResMut<DebugOverlay>,
@@ -183,7 +189,7 @@ fn update(
     overlay.text.clear();
     let _ = writeln!(
         overlay.text,
-        "RUSTCRAFT {} / DEV SLICE 32",
+        "RUSTCRAFT {} / DEV SLICE 33",
         env!("CARGO_PKG_VERSION")
     );
     if let Some(seconds) = overlay.frame_seconds {
@@ -239,6 +245,38 @@ fn update(
             .as_ref()
             .map_or(0, |r| r.0.len() + r.1.len() + r.2.len())
     );
+    if let Some(renders) = &data.renders {
+        // Previous completed world-camera visibility pass, excluding overlay
+        // views. This is a mesh count, never a GPU draw-call measurement.
+        let view = data.views.single().ok();
+        let mut visible = [0; 3];
+        let mut triangles = [0; 3];
+        for (i, map) in [&renders.0, &renders.1, &renders.2].into_iter().enumerate() {
+            for render in map.values() {
+                if view.is_some_and(|v| {
+                    v.get(std::any::TypeId::of::<Mesh3d>())
+                        .binary_search(&render.entity)
+                        .is_ok()
+                }) {
+                    visible[i] += 1;
+                }
+                triangles[i] += meshes
+                    .get(&render.mesh)
+                    .and_then(Mesh::indices)
+                    .map_or(0, |v| v.len() / 3);
+            }
+        }
+        let _ = writeln!(
+            overlay.text,
+            "VIEW MESH O/W/P: {} / {} / {} (PREVIOUS)",
+            visible[0], visible[1], visible[2]
+        );
+        let _ = writeln!(
+            overlay.text,
+            "RESIDENT TRIS O/W/P: {} / {} / {}",
+            triangles[0], triangles[1], triangles[2]
+        );
+    }
     let world = &data.world.as_ref().unwrap().0;
     let _ = writeln!(
         overlay.text,

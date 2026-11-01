@@ -84,6 +84,7 @@ def main():
                         help='Exact merged baseline commit (default: Slice29).')
     parser.add_argument('--labels', nargs=2, metavar=('BASELINE', 'CURRENT'),
                         help='Optional output labels for later matched slice comparisons.')
+    parser.add_argument('--rendering-scenarios', action='store_true', help='Add flowering plains, dense construction and exposed cliff fixtures.')
     parser.add_argument('--reverse', action='store_true',
                         help='Measure current before baseline to check order-dependent noise.')
     args = parser.parse_args()
@@ -133,7 +134,8 @@ def main():
             subprocess.run([str(root / f'target/release/examples/stabilization_bench{executable_suffix}')],
                            cwd=root, stdout=log, check=True,
                            env={**os.environ, 'RUSTCRAFT_BENCH_SAMPLES': str(args.samples),
-                                'RUSTCRAFT_BENCH_WARMUPS': str(args.warmups)})
+                                'RUSTCRAFT_BENCH_WARMUPS': str(args.warmups),
+                                **({'RUSTCRAFT_BENCH_RENDERING': '1'} if args.rendering_scenarios else {})})
         results[name] = list(csv.DictReader((out / f'{name}.csv').open()))
         for example, suffix in [('stabilization_water_bench', 'water'),
                                 ('vegetation_edits_bench', 'vegetation-edits')]:
@@ -143,7 +145,7 @@ def main():
         print(out / f'{name}.csv', flush=True)
     fields = ['scene', 'seed', 'chunk_x', 'chunk_z', 'sample', 'block_crc',
               'mesh_bytes', 'vertices', 'indices', 'surfaces', 'voxel_bytes', 'cache_bytes', 'geometry_crc', 'light_crc', 'light_cache_bytes', 'water_cache_bytes']
-    assert len(results[names[0]]) == len(results[names[1]]) == 13 * args.samples
+    assert len(results[names[0]]) == len(results[names[1]]) == (16 if args.rendering_scenarios else 13) * args.samples
     for old, new in zip(results[names[0]], results[names[1]]):
         assert all(old[f] == new[f] for f in fields), (old, new)
     old_water = list(csv.DictReader((out / f'{names[0]}-water.csv').open()))
@@ -192,7 +194,7 @@ def main():
         f'Baseline {baseline}\nCurrent working tree based on ' + subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True) +
         subprocess.check_output(['rustc', '--version'], text=True) +
         platform.platform() + '\n' +
-        f'13 identical full-height generator9 column jobs (11 natural, edited water, torch cave); {args.warmups} warmups + {args.samples} samples each. '
+        f'{16 if args.rendering_scenarios else 13} identical full-height generator9 column jobs (natural, edited water, torch cave; optionally flowering/construction/cliff); {args.warmups} warmups + {args.samples} samples each. '
         'Same source instrumentation and requested-heap allocator. Core install is CPU descriptor publication, '
         'not Bevy installation or GPU upload. Worker us is wall time; worker_cpu_us is thread CPU on Linux. '
         'Opaque us is combined mesher minus measured water and per-plant append calls; loop/clock overhead stays in opaque. '

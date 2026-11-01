@@ -24,11 +24,17 @@ pub(super) fn colors() -> &'static ColorTable {
     &COLORS
 }
 
-pub(super) struct Occlusion([bool; SIZE * SIZE * SIZE]);
+pub(super) struct Occlusion {
+    cells: [bool; SIZE * SIZE * SIZE],
+    rows: [u32; SIZE * SIZE],
+}
 
 impl Occlusion {
     pub fn new(world: &World, cp: ChunkPos) -> Self {
-        let mut out = Self([false; SIZE * SIZE * SIZE]);
+        let mut out = Self {
+            cells: [false; SIZE * SIZE * SIZE],
+            rows: [0; SIZE * SIZE],
+        };
         // Query each chunk once, then copy only its part of the halo. This
         // avoids a world-map lookup for every vertex's three occupancy samples.
         for dy in -1..=1 {
@@ -51,15 +57,33 @@ impl Occlusion {
                         0 => 1..17,
                         _ => 17..18,
                     };
+                    let uniform = if pending {
+                        Some(true)
+                    } else {
+                        chunk.map_or(Some(false), |c| c.uniform().map(|b| b.is_opaque()))
+                    };
+                    let xs = range(dx);
                     for y in range(dy) {
                         for z in range(dz) {
-                            for x in range(dx) {
-                                let local = [x, y, z].map(|v: usize| (v + 15) % 16);
-                                out.0[y * SIZE * SIZE + z * SIZE + x] = pending
-                                    || chunk.is_some_and(|c| {
-                                        c.get(LocalPos::new(local).unwrap()).is_opaque()
-                                    });
+                            let row = y * SIZE + z;
+                            let mut bits = 0;
+                            if let Some(solid) = uniform {
+                                out.cells[row * SIZE + xs.start..row * SIZE + xs.end].fill(solid);
+                                if solid {
+                                    bits = ((1u32 << xs.len()) - 1) << xs.start;
+                                }
+                            } else {
+                                for x in xs.clone() {
+                                    let local = [x, y, z].map(|v: usize| (v + 15) % 16);
+                                    let solid = chunk
+                                        .unwrap()
+                                        .get(LocalPos::new(local).unwrap())
+                                        .is_opaque();
+                                    out.cells[row * SIZE + x] = solid;
+                                    bits |= u32::from(solid) << x;
+                                }
                             }
+                            out.rows[row] |= bits;
                         }
                     }
                 }
@@ -72,16 +96,33 @@ impl Occlusion {
         ((p[1] + 1) * SIZE * SIZE + (p[2] + 1) * SIZE + p[0] + 1) as i32
     }
 
+    /// Six exact face masks for one X row, in FACES order. Bits 0..16 are
+    /// chunk-local X; the two halo bits supply signed/seam neighbors.
+    pub fn visible_row(&self, y: usize, z: usize) -> [u16; 6] {
+        let row = (y + 1) * SIZE + z + 1;
+        let c = self.rows[row];
+        [
+            c & !(c >> 1),
+            c & !(c << 1),
+            c & !self.rows[row + SIZE],
+            c & !self.rows[row - SIZE],
+            c & !self.rows[row + 1],
+            c & !self.rows[row - 1],
+        ]
+        .map(|bits| (bits >> 1) as u16)
+    }
+
+    #[cfg(test)]
     pub fn solid(&self, center: i32, offset: i32) -> bool {
-        self.0[(center + offset) as usize]
+        self.cells[(center + offset) as usize]
     }
 
     pub fn sample_index(&self, base: i32, offsets: [[i32; 3]; 4]) -> [u8; 4] {
         offsets.map(|[a, b, c]| {
             level(
-                self.0[(base + a) as usize],
-                self.0[(base + b) as usize],
-                self.0[(base + c) as usize],
+                self.cells[(base + a) as usize],
+                self.cells[(base + b) as usize],
+                self.cells[(base + c) as usize],
             )
         })
     }
@@ -181,6 +222,7 @@ pub(super) fn modulate(mut color: [f32; 4], sky: u8, ao: u8) -> [f32; 4] {
     color
 }
 
+#[cfg(test)]
 pub(super) fn normal_offset(face: &Face) -> i32 {
     (0..3).map(|a| face.normal[a] * STRIDE[a]).sum()
 }
