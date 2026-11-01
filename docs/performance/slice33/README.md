@@ -1,7 +1,5 @@
 # Slice 33 — Rendering and meshing optimization
 
-Draft evidence: final matched repetitions and release validation are still running.
-
 Baseline: merged Slice32 `d1d4c699ec07bc7afe1563494e7b4b15719b3e32`.
 Rust1.99.1, Bevy0.20.0, generator9, one terrain worker and maximum radius3.
 This slice preserves the renderer, shaders, textures, world generation, save
@@ -133,7 +131,131 @@ mesh/visibility/resource counts and CPU update distributions cannot establish an
 FPS, native P50/P95/P99 frame-time or Radeon speedup. Rapid rotation/underwater
 visual acceptance remains native work, with the reproducible procedure below.
 
-<!-- RESULTS -->
+## Matched results
+
+### Core, forward order
+
+Times are µs;128 warm samples/scene/build,8 warmups. All geometry/light/block/resource checks match.
+
+| Scene | Opaque P50 32→33 | Worker CPU P50 32→33 | CPU Δ | Worker wall P99 32→33 |
+| --- | ---: | ---: | ---: | ---: |
+|open-plains|551.2→202.9|1272.1→869.4|-31.7%|2033.8→1501.0|
+|dense-forest|500.1→187.4|1000.1→678.0|-32.2%|2009.1→2025.6|
+|snow-spruce|523.9→375.8|1309.2→1163.3|-11.1%|2171.9→2164.8|
+|desert|538.5→293.7|1202.3→999.6|-16.9%|2316.1→3088.9|
+|rocky|567.8→237.8|1197.6→931.6|-22.2%|2328.9→1600.5|
+|lake-shore|458.0→184.8|1161.5→930.7|-19.9%|1712.7→1757.3|
+|river|733.2→405.3|1514.6→1225.6|-19.1%|2255.1→2429.9|
+|ocean|382.8→181.8|1216.5→1096.1|-9.9%|2186.3→1977.5|
+|small-cave|478.8→280.0|1282.5→1132.9|-11.7%|3478.3→1990.2|
+|large-cavern|435.4→365.7|1323.7→1315.6|-0.6%|2126.4→1984.5|
+|underground-lake|319.6→153.8|1291.2→1119.3|-13.3%|2301.3→1718.8|
+|edited-water|388.6→183.2|1310.8→1150.5|-12.2%|2362.2→2199.0|
+|torch-cave|521.5→307.5|1450.6→1294.8|-10.7%|3480.4→1980.8|
+|flower-plains|601.7→320.2|1136.2→885.0|-22.1%|1938.4→1709.6|
+|dense-structure|2672.8→2887.3|3967.4→4137.8|+4.3%|5925.2→7091.6|
+|exposed-cliff|702.4→347.1|1673.1→1301.5|-22.2%|2667.8→2195.2|
+
+### Core, reverse order
+
+Times are µs;128 warm samples/scene/build,8 warmups. All geometry/light/block/resource checks match.
+
+| Scene | Opaque P50 32→33 | Worker CPU P50 32→33 | CPU Δ | Worker wall P99 32→33 |
+| --- | ---: | ---: | ---: | ---: |
+|open-plains|537.8→207.4|1287.1→906.4|-29.6%|2368.5→1886.0|
+|dense-forest|504.1→189.1|1000.3→685.3|-31.5%|1710.4→1354.1|
+|snow-spruce|526.9→362.2|1291.7→1159.2|-10.3%|2116.2→2412.9|
+|desert|592.2→277.8|1290.0→984.0|-23.7%|2965.5→2302.0|
+|rocky|561.7→236.9|1178.2→885.6|-24.8%|2432.9→1561.7|
+|lake-shore|489.7→187.0|1227.8→917.0|-25.3%|2075.4→2127.4|
+|river|712.6→401.7|1496.2→1208.7|-19.2%|3011.1→2914.9|
+|ocean|410.3→179.7|1293.1→1040.8|-19.5%|3814.9→1694.0|
+|small-cave|484.2→276.6|1252.3→1067.9|-14.7%|2024.9→2475.3|
+|large-cavern|427.3→344.7|1285.4→1262.5|-1.8%|2348.9→2921.3|
+|underground-lake|316.5→154.3|1240.0→1100.3|-11.3%|2670.9→1678.6|
+|edited-water|385.1→188.1|1318.3→1181.5|-10.4%|2153.5→2097.3|
+|torch-cave|502.7→298.0|1516.5→1266.1|-16.5%|2955.6→2187.4|
+|flower-plains|573.8→327.7|1108.6→919.3|-17.1%|2196.4→2257.6|
+|dense-structure|2562.7→2781.0|3792.3→3970.0|+4.7%|6957.5→6599.8|
+|exposed-cliff|670.1→338.2|1625.8→1291.2|-20.6%|2722.2→2199.4|
+
+### CPU publication with real Bevy visibility
+
+Three repetitions per build/order;128 retained publications/repetition/case. Values are µs, P50 / P95 / P99.
+
+| Order / changed chunks | Total 32 | Total 33 | Command application 32 | Command application 33 |
+| --- | ---: | ---: | ---: | ---: |
+|forward / 1|192.26 / 425.41 / 1097.56|206.73 / 417.55 / 656.35|1.55 / 2.35 / 4.70|1.78 / 2.36 / 3.70|
+|forward / 9|409.88 / 604.17 / 760.57|434.04 / 767.31 / 1073.93|9.98 / 11.54 / 72.94|9.16 / 11.19 / 77.61|
+|forward / 49|1385.03 / 2571.94 / 4788.49|1398.25 / 2446.02 / 3292.62|31.20 / 82.70 / 156.83|37.02 / 71.46 / 135.18|
+|reverse / 1|216.28 / 542.39 / 830.08|200.21 / 499.90 / 1423.23|1.91 / 2.50 / 4.60|1.61 / 2.64 / 4.21|
+|reverse / 9|445.18 / 1263.53 / 2119.34|410.49 / 764.92 / 1295.33|9.35 / 11.92 / 45.91|9.80 / 11.31 / 38.10|
+|reverse / 49|1353.51 / 2472.16 / 4639.31|1358.01 / 2224.74 / 4147.27|36.88 / 116.44 / 193.52|30.98 / 70.58 / 166.50|
+
+All per-surface construction, asset replacement, creation, visibility update, cleanup, exploration, worker handoff, queue latency, memory and resource observations remain in the raw CSVs and compressed complete event logs. No headless update timing is labelled GPU/frame time.
+
+
+### Interpretation, memory and limits
+
+In both core orders,15/16 scenes have lower worker CPU medians. Natural and cliff
+cases generally improve about10–32%; the large cavern changes only0.6–1.8%, so
+no meaningful general cavern gain is established. Dense construction is a real
+tradeoff: opaque P50 worsens8.0–8.5% and total worker CPU4.3–4.7% in both orders.
+The change is retained for the broad measured full-height terrain benefit, with
+this adverse workload explicitly carried into native acceptance and Slice34
+budgets. It is not a universal mesher speedup or a frame-time guarantee.
+
+The small synthetic mesh-only fixtures also vary: solid124.7→67.7µs, mixed
+87.6→92.8µs, trees47.5→70.5µs and the27-chunk stream batch2492.8→2090.6µs.
+Their same geometry is retained in the raw profile CSVs. Sparse synthetic trees
+must not be mistaken for the full generator9 dense-forest column, whose entire
+worker improves in both orders. Greedy/emission costs can rise even though their
+semantics are unchanged. No density fallback, additional mesher implementation
+or relaxed merge key is introduced to hide these cases.
+
+Isolated packed AO sampling spans about6.5–8.9ns/face baseline and6.3–15.4ns/current
+across these fixtures. Halo/input preparation is excluded, repeated sampling and
+black-box/loop overhead remain. The AO kernel and visible-face evaluation count
+are unchanged; no AO-per-face speedup is claimed. Savings come from occupancy
+classification and uniform/opaque-empty preparation. The initial source-identical
+13-scene A/A control varied worker medians from−6.6% to+8.0%, illustrating host
+variation. It does not cancel the separately repeated dense-construction regression.
+The earlier13-scene candidate, including a+6.4% snow/spruce observation, is retained.
+
+All 4096 matched core sample pairs (2048/order) have exactly equal allocation calls,
+requested bytes, peak requested heap, geometry/light/block CRCs, vertices, indices,
+surface counts and logical mesh payloads. Payloads range44,392–2,944,504 bytes per
+column fixture. Plains remain69,440 bytes/236 allocation calls; dense construction
+2,944,504 bytes/549 calls. Requested heap excludes allocator metadata, stacks,
+preexisting caches and GPU resources; the additional1296 stack bytes are explicit.
+See [complete equality checks](raw/core-equivalence.json).
+
+Each final client order checks144 identical final authority/resource signatures
+(288 matched signatures across both orders), including repeated world switches.
+The 49-chunk installation fixture has147 resident meshes,99 visible and48 culled
+by the actual Bevy CPU visibility pass in both builds. Its resident triangle
+counts are31,360 opaque,51,940 water and16,856 cutout; these are fixture instance
+counts, not renderer submissions or GPU draws.
+
+With the final baseline bounds path, no general publication speedup is claimed.
+Worst49-chunk CPU publication is5.60→6.29ms forward and17.09→6.08ms reverse;
+small-batch P50/tails also vary. These results preserve the favorable and adverse
+observations, and do not establish native frame-time stability. Process-RSS P50
+differences across the45 workload/radius groups range−5144..+3240KiB forward and
+−4056..+6744KiB reverse. This includes process allocator/probe/cache history; final
+mesh/cache/voxel authority signatures remain identical. No RSS reduction is claimed.
+
+Final client counters, process RSS, visibility, resident triangles, asset cleanup,
+worker handoff, installation and ECS tails are retained per scene/radius/order.
+[Matched client comparison](raw/client-comparison.csv) joins worker CPU, install,
+ECS update, handoff, request-to-publication, session and RSS observations with
+P50/P95/P99/max and sample counts. Source/executable hashes and complete event
+logs accompany the full per-order percentile CSVs.
+Resource identity/count/payload equality does not establish a process RSS or GPU
+memory reduction. CPU asset conversion and actual GPU preparation/upload remain
+separate costs. No native frame-time improvement is inferred from the headless
+update/publication distributions.
+
 
 ## Correctness and automated validation
 
@@ -154,13 +276,16 @@ and session teardown regressions remain required.
 
 All required commands pass, including locked workspace Clippy, workspace tests,
 optimized core/AO and focused release streaming/session/scene tests, normal release
-client build and original-texture verification. Local workspace invocation:
+client build and original-texture verification. Local full-workspace invocation before the bounds decision:
 534 passed plus one subsequently added focused F3 test;6 optional measurements
-ignored. Optimized core:322; integration/lifecycle:3; focused streaming:40;
+ignored. After rejecting the bounds attempt, Clippy, focused debug scene tests,
+release streaming/session/scene tests and the normal release client build were
+repeated on the final production source. Full final-source workspace validation
+also runs on both CI platforms. Optimized core:322; integration/lifecycle:3; focused streaming:40;
 sessions:11; scene/visibility:10; explicit AO:11. The ignored workload probes are
 run separately by the matched harness.
 
-[Ubuntu and Windows CI on production commit2d3465b](https://github.com/ArturTrumpfheller/rustcraft/actions/runs/41343127345)
+[Ubuntu and Windows CI on production commit f9fe8c1](https://github.com/ArturTrumpfheller/rustcraft/actions/runs/41345842257)
 both pass the complete workflow:535 ordinary tests on Linux and532 on Windows
 (the difference is Unix-only filesystem tests), plus the retained optimized checks. [Commands/environment/counts](raw/validation.txt),
 [machine-readable local results](raw/validation.json), [CI record](raw/ci-production.json).
@@ -266,7 +391,8 @@ command application dropped from about1.7/8.8/36.8µs to0.04/0.09/0.24µs for
 by order. Worst49-chunk publication increased6.07→35.92ms forward and
 6.19→37.59ms reverse; the reverse9-chunk case recorded5.00→182.78ms.
 These are CPU/ECS wall intervals, not rendered/GPU frame times. All samples and
-source/executable IDs remain in the rejected-candidate raw directories. Since
+source/executable IDs remain in the [forward](raw/rejected-retained-bounds-forward/percentiles.csv)
+and [reverse](raw/rejected-retained-bounds-reverse/percentiles.csv) candidate directories. Since
 frame-tail stability matters more than an isolated command microbenchmark, final
 publication keeps the baseline missing-bounds path. New visibility regressions
 prove that path is correct; final accepted-source comparisons are separate.

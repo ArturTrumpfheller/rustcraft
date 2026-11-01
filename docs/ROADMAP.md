@@ -3,7 +3,7 @@
 - [x] Exact row-based face visibility and uniform halo fast paths; unchanged greedy/AO/light output
 - [x] Real Bevy0.20 bounds/visibility lifecycle tests and retained populated entities
 - [x] Empty legacy surface cleanup; previous-world-view mesh and resident triangle diagnostics
-- [ ] Final matched CPU/installation/resource comparisons and required validation recorded
+- [x] Matched CPU/installation/resource comparisons, rejected bounds experiment and required validation recorded
 - [ ] Native Void X11/Wayland / Radeon and Windows GUI/GPU acceptance by the owner
 
 See [Slice33 evidence and Fish procedure](performance/slice33/README.md).

@@ -1,0 +1,21 @@
+Local validation (Rust1.99.1 / Bevy0.20.0):
+PASS cargo fmt --all -- --check
+PASS cargo clippy --locked --workspace --all-targets -- -D warnings
+PASS cargo test --locked --workspace: 209 client +322 core +3 integration/lifecycle =534 passed;6 intentionally ignored measurement tests.
+PASS subsequent focused F3 diagnostic test:1 passed (new test added after the workspace invocation).
+PASS cargo test --release --locked -p voxel_core --lib:322 passed, including the expanded all-current-block reference fixture.
+PASS cargo test --release --locked -p voxel_core --test worldgen_integration --test worldgen_lifecycle:3 passed.
+PASS cargo test --release --locked -p voxel_core mesh::ao_tests --lib -- --test-threads=1:11 passed.
+PASS cargo test --release --locked -p rustcraft --bin rustcraft streaming:: -- --test-threads=1:40 passed,2 measurements ignored.
+PASS cargo test --release --locked -p rustcraft --bin rustcraft session:: -- --test-threads=1:11 passed,1 measurement ignored.
+PASS cargo test --release --locked -p rustcraft --bin rustcraft scene:: -- --test-threads=1:10 passed,1 measurement ignored.
+PASS cargo build --release --locked -p rustcraft
+PASS python3 tools/generate_textures.py --check
+PASS git diff --check
+
+Local shells source /workspace/setup/env.sh (pinned toolchain/native library paths,4 build jobs). CARGO_INCREMENTAL=0 was used for client/Clippy/workspace builds. Core release validation uses CARGO_TARGET_DIR=work/slice33/core-validation-target to avoid the client benchmark's shared-package cleans. Optimization levels and assertions are unchanged.
+Generated debug example executable symbols were stripped after compilation to fit scratch disk; no test/source assertion was removed. Release builds use the normal release profile.
+Final production source CI: both Ubuntu and Windows passed the full workflow for f9fe8c1, including535 Linux tests (210 client +322 core +3 integration/lifecycle) and532 Windows tests (209 client +320 core +3 integration/lifecycle), with6 optional measurements ignored, plus optimized core/AO/streaming/session checks. Unix-only filesystem tests account for the platform difference; exact job result lines are retained in ci-test-results.json. CI uses repository default profiles.
+No physical GPU, native Void/Windows GUI acceptance, GPU execution or actual draw-call measurement is claimed.
+
+The complete local debug workspace invocation preceded the bounds experiment rejection. After restoring the baseline bounds lifecycle, local Clippy, debug scene tests, release streaming/session/scene tests and the normal release build were repeated. Both CI platforms run the complete final-source workspace and optimized checks. Native source files were not changed after f9fe8c1; subsequent changes publish documentation/evidence only.
