@@ -1,3 +1,20 @@
+# Slice 32 — Chunk Streaming v2
+
+- [x] Bounded load/dirty class fairness, collision priority and deterministic aging
+- [x] Cooperative stale/session stop boundaries returning worker-owned pristine cache
+- [x] Whole-component revision validation/publication and existing water-only path
+- [x] Separate outcome/timing summaries and compact retained F3 streaming diagnostics
+- [x] Deterministic priority/stop/cache lifecycle tests and optional matched trace tooling
+- [x] Matched radius1/2/3 comparisons in both orders, including slower observations
+- [x] Required local checks and Ubuntu/Windows debug/release CI
+- [ ] Native Void X11/Wayland / RX9060 XT and Windows GUI acceptance
+
+[Policy, measurements, limitations and Fish comparison](performance/slice32/README.md).
+Next: **33 Rendering & Meshing Optimization →34 Render Distance Expansion**.
+The current maximum radius remains three; no renderer, generation or save redesign.
+
+---
+
 # Slice 31 — Performance Profiling & Optimization
 
 - [x] Reproduce merged Slice30 and isolate source collection, floods and fluid installation

@@ -1,0 +1,9 @@
+- `cargo fmt --all -- --check`: passed.
+- `cargo clippy --locked --workspace --all-targets -- -D warnings`: passed.
+- `cargo test --locked --workspace`:207 client +319 core +3 integration/example tests passed;6 intentional benchmark tests ignored.
+- `cargo test --release --locked -p voxel_core --lib`:319 passed, including optimized AO, frozen generators and cancellation/cache oracles.
+- `cargo test --release --locked -p rustcraft --bin rustcraft streaming:: -- --test-threads=1`:40 passed,2 intentional benchmarks ignored.
+- `cargo test --release --locked -p rustcraft --bin rustcraft session:: -- --test-threads=1`:11 passed,1 intentional benchmark ignored.
+- `cargo test --release --locked -p voxel_core --test worldgen_integration`:2 passed.
+- `cargo build --release --locked -p rustcraft` and `python3 tools/generate_textures.py --check`: passed.
+- [Ubuntu and Windows CI on the final production/test commit](https://github.com/ArturTrumpfheller/rustcraft/actions/runs/41315352820): passed, including the unchanged optimized AO check plus complete core, streaming and session release checks. The final documentation/tooling commit has its own PR checks.

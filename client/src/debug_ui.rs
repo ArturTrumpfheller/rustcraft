@@ -183,7 +183,7 @@ fn update(
     overlay.text.clear();
     let _ = writeln!(
         overlay.text,
-        "RUSTCRAFT {} / DEV SLICE 29",
+        "RUSTCRAFT {} / DEV SLICE 32",
         env!("CARGO_PKG_VERSION")
     );
     if let Some(seconds) = overlay.frame_seconds {
@@ -215,6 +215,19 @@ fn update(
     );
     if let Some(stream) = &data.stream {
         let _ = writeln!(overlay.text, "RENDER DISTANCE: {} CHUNKS", stream.radius());
+        let (job, age) = stream.job_status();
+        let _ = writeln!(
+            overlay.text,
+            "STREAM: {} LOAD / {} DIRTY / {job} {:.0} MS",
+            stream.pending_loads(),
+            stream.pending_dirty(),
+            age.as_secs_f64() * 1000.
+        );
+        let _ = writeln!(
+            overlay.text,
+            "JOBS: {} OK / {} STALE / {} STOP / {} FAIL",
+            stream.completed, stream.discarded, stream.metrics.cancelled, stream.metrics.failed
+        );
     } else {
         let _ = writeln!(overlay.text, "RENDER DISTANCE: UNAVAILABLE");
     }

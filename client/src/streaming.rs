@@ -23,6 +23,10 @@ use voxel_core::{
     worldgen::Generator,
 };
 
+mod policy;
+#[cfg(test)]
+use policy::nearest_dirty;
+
 pub struct StreamingPlugin;
 impl Plugin for StreamingPlugin {
     fn build(&self, app: &mut App) {
@@ -72,8 +76,29 @@ impl WorkResult {
         }
     }
 }
+enum JobError {
+    Cancelled(streaming::Cancelled),
+    Failed(SaveError),
+}
+impl From<SaveError> for JobError {
+    fn from(error: SaveError) -> Self {
+        Self::Failed(error)
+    }
+}
+impl From<streaming::Cancelled> for JobError {
+    fn from(error: streaming::Cancelled) -> Self {
+        Self::Cancelled(error)
+    }
+}
+#[derive(Default)]
+struct WorkerTiming {
+    wall: Duration,
+    regions: Duration,
+    compute: Duration,
+}
 struct JobResult {
-    result: WorkResult,
+    result: Result<WorkResult, JobError>,
+    timing: WorkerTiming,
     overlays: EditSnapshot,
     cache: streaming::TerrainCache,
 }
@@ -83,6 +108,8 @@ struct StreamJob {
     handle: JoinHandle<Result<JobResult, SaveError>>,
     versions: BTreeMap<ChunkPos, u64>,
     work: Work,
+    control: streaming::JobControl,
+    started: Instant,
 }
 impl StreamJob {
     #[allow(clippy::too_many_arguments)] // Bounded captured worker inputs.
@@ -95,60 +122,98 @@ impl StreamJob {
         previous: BTreeMap<ChunkPos, voxel_core::lighting::ChunkLight>,
         force: BTreeSet<ChunkPos>,
         water_only: bool,
+        #[cfg(test)] gate: Option<(std::sync::mpsc::Sender<()>, std::sync::mpsc::Receiver<()>)>,
     ) -> io::Result<Self> {
-        let versions = work
-            .targets(world.world_height())
-            .into_iter()
+        let started = Instant::now();
+        let control = streaming::JobControl::default();
+        let worker_control = control.clone();
+        let targets = work.targets(world.world_height());
+        let versions = targets
+            .iter()
+            .copied()
             .map(|p| (p, world.mesh_revision(p)))
             .collect();
         let mut edits = world.overlay_snapshot();
         let regional = world.region_identity();
-        let needed = streaming::lighting_regions(&work.targets(world.world_height()));
+        let needed = streaming::lighting_regions(&targets);
         edits.retain_regions(&needed);
         let revision = world.revision();
         let request = work.clone();
-        let snapshot = streaming::mesh_snapshot(world, &work.targets(world.world_height()));
+        let snapshot = streaming::mesh_snapshot(world, &targets);
         let handle = thread::Builder::new()
             .name("rustcraft-terrain".into())
             .spawn(move || {
-                if let Some(id) = regional {
-                    let store = store
-                        .ok_or_else(|| io::Error::other("regional world has no save store"))?;
-                    for p in needed {
-                        if !edits.contains_region(p) {
-                            edits.insert_region(p, store.read_region(id, p)?);
-                        }
-                    }
+                let worker_start = Instant::now();
+                #[cfg(test)]
+                if let Some((entered, release)) = gate {
+                    entered.send(()).unwrap();
+                    release.recv().unwrap();
                 }
-                let result = match request {
-                    Work::Load(column) => WorkResult::Load(streaming::build_column_cached(
-                        &generator,
-                        snapshot,
-                        edits.clone(),
-                        column,
-                        revision,
-                        &mut cache,
-                    )),
-                    Work::Mesh(targets) if water_only => WorkResult::Mesh(streaming::remesh_water(
-                        &generator,
-                        snapshot,
-                        edits.clone(),
-                        &targets,
-                        &mut cache,
-                        &previous,
-                    )),
-                    Work::Mesh(targets) => WorkResult::Mesh(streaming::remesh_lit(
-                        &generator,
-                        snapshot,
-                        edits.clone(),
-                        &targets,
-                        &mut cache,
-                        &previous,
-                        &force,
-                    )),
-                };
+                let mut timing = WorkerTiming::default();
+                let result = (|| -> Result<WorkResult, JobError> {
+                    let region_start = Instant::now();
+                    let regions = (|| -> Result<(), JobError> {
+                        worker_control.checkpoint(streaming::WorkStage::Regions)?;
+                        if let Some(id) = regional {
+                            let store = store.ok_or_else(|| {
+                                SaveError::from(io::Error::other(
+                                    "regional world has no save store",
+                                ))
+                            })?;
+                            for p in needed {
+                                worker_control.checkpoint(streaming::WorkStage::Regions)?;
+                                if !edits.contains_region(p) {
+                                    edits.insert_region(p, store.read_region(id, p)?);
+                                }
+                            }
+                        }
+                        worker_control.checkpoint(streaming::WorkStage::Regions)?;
+                        Ok(())
+                    })();
+                    timing.regions = region_start.elapsed();
+                    regions?;
+                    let compute_start = Instant::now();
+                    let computed = match request {
+                        Work::Load(column) => streaming::build_column_controlled(
+                            &generator,
+                            snapshot,
+                            edits.clone(),
+                            column,
+                            revision,
+                            &mut cache,
+                            &worker_control,
+                        )
+                        .map(WorkResult::Load),
+                        Work::Mesh(targets) if water_only => streaming::remesh_water_controlled(
+                            &generator,
+                            snapshot,
+                            edits.clone(),
+                            &targets,
+                            &mut cache,
+                            &previous,
+                            &worker_control,
+                        )
+                        .map(WorkResult::Mesh),
+                        Work::Mesh(targets) => streaming::remesh_lit_controlled(
+                            &generator,
+                            snapshot,
+                            edits.clone(),
+                            &targets,
+                            &mut cache,
+                            &previous,
+                            &force,
+                            &worker_control,
+                        )
+                        .map(WorkResult::Mesh),
+                    };
+                    timing.compute = compute_start.elapsed();
+                    Ok(computed?)
+                })();
+                timing.wall = worker_start.elapsed();
+                // Always return the owned cache, even on I/O failure or a stop.
                 Ok(JobResult {
                     result,
+                    timing,
                     overlays: edits,
                     cache,
                 })
@@ -157,13 +222,49 @@ impl StreamJob {
             handle,
             versions,
             work,
+            control,
+            started,
         })
     }
 }
 
+/// Constant-space counters; optional benchmark tools retain individual events.
+#[derive(Default)]
+pub(crate) struct TimingSummary {
+    pub count: usize,
+    pub total: Duration,
+    pub max: Duration,
+}
+impl TimingSummary {
+    fn record(&mut self, elapsed: Duration) {
+        self.count += 1;
+        self.total += elapsed;
+        self.max = self.max.max(elapsed);
+    }
+}
+#[derive(Default)]
+pub(crate) struct StreamMetrics {
+    pub cancelled: usize,
+    pub cancelled_before_mesh: usize,
+    pub failed: usize,
+    pub prepare: TimingSummary,
+    pub region_reads: TimingSummary,
+    pub execution: TimingSummary,
+    pub compute: TimingSummary,
+    pub queue_wait: TimingSummary,
+    pub ready: TimingSummary,
+    pub cpu_visible: TimingSummary,
+    pub dirty_visible: TimingSummary,
+    pub install: TimingSummary,
+    pub eviction: TimingSummary,
+}
 #[derive(Resource, Default)]
 pub(crate) struct StreamState {
     generator: Option<Arc<Generator>>,
+    scheduler: policy::Scheduler,
+    pub metrics: StreamMetrics,
+    first_load_dispatch: BTreeSet<Column>,
+    first_mesh_dispatch: BTreeSet<ChunkPos>,
     cache: streaming::TerrainCache,
     lights: BTreeMap<ChunkPos, voxel_core::lighting::ChunkLight>,
     geometry_dirty: BTreeSet<ChunkPos>,
@@ -210,14 +311,32 @@ impl StreamState {
         }
     }
     pub(crate) fn drain(&mut self) -> bool {
+        self.cancel_running();
         if self.job.as_ref().is_some_and(|j| j.handle.is_finished()) {
-            let _ = self.job.take().unwrap().handle.join();
+            match self.job.take().unwrap().handle.join() {
+                Ok(Ok(payload)) => {
+                    self.cache = payload.cache;
+                    self.metrics.execution.record(payload.timing.wall);
+                    self.metrics.compute.record(payload.timing.compute);
+                    self.metrics.region_reads.record(payload.timing.regions);
+                    match payload.result {
+                        Err(JobError::Cancelled(stage)) => self.record_cancel(stage),
+                        Err(JobError::Failed(_)) => self.metrics.failed += 1,
+                        Ok(_) => self.discarded += 1,
+                    }
+                }
+                _ => self.metrics.failed += 1,
+            }
         }
         self.job.is_none()
     }
     pub fn new(generator: Arc<Generator>, radius: i32) -> Self {
         Self {
             generator: Some(generator),
+            scheduler: policy::Scheduler::default(),
+            metrics: StreamMetrics::default(),
+            first_load_dispatch: BTreeSet::new(),
+            first_mesh_dispatch: BTreeSet::new(),
             cache: streaming::TerrainCache::default(),
             lights: BTreeMap::new(),
             geometry_dirty: BTreeSet::new(),
@@ -251,6 +370,56 @@ impl StreamState {
             recent_jobs: VecDeque::new(),
         }
     }
+    fn cancel_running(&self) {
+        if let Some(job) = &self.job {
+            job.control.cancel();
+        }
+    }
+    fn record_cancel(&mut self, stage: streaming::Cancelled) {
+        self.metrics.cancelled += 1;
+        if matches!(
+            stage.0,
+            streaming::WorkStage::Regions
+                | streaming::WorkStage::Source
+                | streaming::WorkStage::Lighting
+        ) {
+            self.metrics.cancelled_before_mesh += 1;
+        }
+    }
+    fn failed(&mut self, work: &Work, versions: &BTreeMap<ChunkPos, u64>, message: String) {
+        self.metrics.failed += 1;
+        error!("Terrain worker failed: {message}; data preserved; F5 retries");
+        for p in versions.keys() {
+            let c = [p.0[0], p.0[2]];
+            if self.desired.contains(&c) {
+                self.failures.insert(
+                    c,
+                    (Instant::now() + Duration::from_secs(1), message.clone()),
+                );
+            }
+        }
+        self.retry(work);
+    }
+    pub(crate) fn is_idle(&self) -> bool {
+        self.queued.is_empty() && self.dirty.is_empty() && self.job.is_none()
+    }
+    pub(crate) fn pending_loads(&self) -> usize {
+        self.queued.len()
+    }
+    pub(crate) fn pending_dirty(&self) -> usize {
+        self.dirty.len()
+    }
+    pub(crate) fn job_status(&self) -> (&'static str, Duration) {
+        self.job.as_ref().map_or(("IDLE", Duration::ZERO), |j| {
+            (
+                match j.work {
+                    Work::Load(_) => "LOAD",
+                    Work::Mesh(_) => "MESH",
+                },
+                j.started.elapsed(),
+            )
+        })
+    }
     fn retry(&mut self, work: &Work) {
         if let Work::Load(c) = work
             && self.desired.contains(c)
@@ -263,6 +432,7 @@ impl StreamState {
 impl Drop for StreamState {
     fn drop(&mut self) {
         if let Some(job) = self.job.take() {
+            job.control.cancel();
             let _ = job.handle.join();
         }
     }
@@ -276,35 +446,6 @@ struct StreamScene<'w, 's> {
     origin: Res<'w, RenderOrigin>,
     windows: Query<'w, 's, &'static mut Window, With<PrimaryWindow>>,
     flow: Option<Res<'w, crate::session::ClientFlow>>,
-}
-
-// A connected dirty component is one publication unit: splitting shared dirty
-// faces between frames can expose holes. Separate components can be prioritized.
-fn nearest_dirty(dirty: &BTreeMap<ChunkPos, Instant>, player: [f64; 3]) -> BTreeSet<ChunkPos> {
-    let pc = player.map(|v| (v.floor() as i32).div_euclid(16));
-    let Some(&first) = dirty.keys().min_by_key(|p| {
-        p.0.iter()
-            .zip(pc)
-            .map(|(&a, b)| (i64::from(a) - i64::from(b)).pow(2))
-            .sum::<i64>()
-    }) else {
-        return BTreeSet::new();
-    };
-    let mut result = BTreeSet::from([first]);
-    let mut frontier = vec![first];
-    while let Some(p) = frontier.pop() {
-        for axis in 0..3 {
-            for sign in [-1, 1] {
-                let mut n = p.0;
-                n[axis] += sign; // Only bounded world chunk positions enter dirty.
-                let n = ChunkPos(n);
-                if dirty.contains_key(&n) && result.insert(n) {
-                    frontier.push(n);
-                }
-            }
-        }
-    }
-    result
 }
 
 #[derive(SystemParam)]
@@ -323,6 +464,7 @@ fn update_streaming(
     mut io: StreamIo,
 ) {
     if scene.flow.as_ref().is_some_and(|f| f.leaving()) {
+        state.cancel_running();
         return;
     }
     let Some(generator) = state.generator.clone() else {
@@ -374,6 +516,10 @@ fn update_streaming(
         state.cache.retain(&desired);
         state.queued.retain(|c| desired.contains(c));
         state.queued_at.retain(|c, _| desired.contains(c));
+        state.first_load_dispatch.retain(|c| desired.contains(c));
+        state
+            .first_mesh_dispatch
+            .retain(|p| desired.contains(&[p.0[0], p.0[2]]));
         state.failures.retain(|c, _| desired.contains(c));
         state
             .dirty
@@ -393,6 +539,7 @@ fn update_streaming(
                 }
             }
         }
+        let eviction_start = Instant::now();
         let evict: BTreeSet<_> = world
             .0
             .chunks()
@@ -448,6 +595,7 @@ fn update_streaming(
                 scene.meshes.remove(&r.mesh);
             }
         }
+        state.metrics.eviction.record(eviction_start.elapsed());
     }
     while let Some(p) = dirty.0.pop_first() {
         if state.desired.contains(&[p.0[0], p.0[2]]) && world.0.chunk(p).is_some() {
@@ -470,6 +618,14 @@ fn update_streaming(
             state.dirty.entry(p).or_insert_with(Instant::now);
         }
     }
+    if let Some(job) = &state.job {
+        let relevant = job.versions.iter().all(|(&p, &v)| {
+            state.desired.contains(&[p.0[0], p.0[2]]) && world.0.mesh_revision(p) == v
+        });
+        if !relevant {
+            job.control.cancel();
+        }
+    }
     if state
         .job
         .as_ref()
@@ -489,182 +645,169 @@ fn update_streaming(
                 state.cache = payload.cache;
                 let desired = state.desired.clone();
                 state.cache.retain(&desired);
-                let result = payload.result;
-                state.worker_time += result.elapsed();
-                if state.recent_jobs.len() == 128 {
-                    state.recent_jobs.pop_front();
-                }
-                state.recent_jobs.push_back(result.elapsed());
-                state.max_job = state.max_job.max(result.elapsed());
-                let metrics = match &result {
-                    WorkResult::Load(r) => &r.lighting,
-                    WorkResult::Mesh(r) => &r.lighting,
-                };
-                state.light_cells += metrics.cells;
-                state.light_propagated += metrics.propagated;
-                state.source_columns_generated += metrics.generated_columns;
-                if wanted && current {
-                    let install_start = Instant::now();
-                    changed = true;
-                    if world.0.region_identity().is_some() {
-                        for (p, m) in payload.overlays.regions() {
-                            world.0.install_region(p, m);
+                state.metrics.region_reads.record(payload.timing.regions);
+                state.metrics.execution.record(payload.timing.wall);
+                state.metrics.compute.record(payload.timing.compute);
+                match payload.result {
+                    Err(JobError::Cancelled(stage)) => {
+                        state.record_cancel(stage);
+                        state.retry(&job.work);
+                    }
+                    Err(JobError::Failed(error)) => {
+                        state.failed(&job.work, &job.versions, error.to_string())
+                    }
+                    Ok(result) => {
+                        state.worker_time += result.elapsed();
+                        if state.recent_jobs.len() == 128 {
+                            state.recent_jobs.pop_front();
                         }
-                    }
-                    for p in job.versions.keys() {
-                        state.failures.remove(&[p.0[0], p.0[2]]);
-                    }
-                    state.completed += 1;
-                    let light_samples = match &result {
-                        WorkResult::Load(r) => &r.lights,
-                        WorkResult::Mesh(r) => &r.lights,
-                    };
+                        state.recent_jobs.push_back(result.elapsed());
+                        state.max_job = state.max_job.max(result.elapsed());
+                        let metrics = match &result {
+                            WorkResult::Load(r) => &r.lighting,
+                            WorkResult::Mesh(r) => &r.lighting,
+                        };
+                        state.light_cells += metrics.cells;
+                        state.light_propagated += metrics.propagated;
+                        state.source_columns_generated += metrics.generated_columns;
+                        if wanted && current && !job.control.is_cancelled() {
+                            let install_start = Instant::now();
+                            changed = true;
+                            if world.0.region_identity().is_some() {
+                                for (p, m) in payload.overlays.regions() {
+                                    world.0.install_region(p, m);
+                                }
+                            }
+                            for p in job.versions.keys() {
+                                state.failures.remove(&[p.0[0], p.0[2]]);
+                            }
+                            state.completed += 1;
+                            let light_samples = match &result {
+                                WorkResult::Load(r) => &r.lights,
+                                WorkResult::Mesh(r) => &r.lights,
+                            };
 
-                    // Water-only results deliberately carry no new light data.
-                    // Only a full replacement can prune sparse exact-light caches.
-                    let water_only_result = matches!(&result, WorkResult::Mesh(r) if r.meshes.iter().all(|(_,m)| m.water_only));
-                    if !water_only_result {
-                        for p in job.versions.keys() {
-                            if !light_samples.contains_key(p) {
-                                state.lights.remove(p);
+                            // Water-only results deliberately carry no new light data.
+                            // Only a full replacement can prune sparse exact-light caches.
+                            let water_only_result = matches!(&result, WorkResult::Mesh(r) if r.meshes.iter().all(|(_,m)| m.water_only));
+                            if !water_only_result {
+                                for p in job.versions.keys() {
+                                    if !light_samples.contains_key(p) {
+                                        state.lights.remove(p);
+                                    }
+                                }
                             }
-                        }
-                    }
-                    state
-                        .lights
-                        .extend(light_samples.iter().map(|(&p, l)| (p, l.clone())));
-                    let meshes = match result {
-                        WorkResult::Load(result) => {
-                            // A center change may have rediscovered this pending
-                            // in-flight column. Its valid install satisfies that
-                            // request too; do not generate it a second time.
-                            state.queued.remove(&result.column);
-                            if let Some(since) = state.queued_at.remove(&result.column) {
-                                state.max_load_latency =
-                                    state.max_load_latency.max(since.elapsed());
+                            state
+                                .lights
+                                .extend(light_samples.iter().map(|(&p, l)| (p, l.clone())));
+                            let meshes = match result {
+                                WorkResult::Load(result) => {
+                                    // A center change may have rediscovered this pending
+                                    // in-flight column. Its valid install satisfies that
+                                    // request too; do not generate it a second time.
+                                    state.queued.remove(&result.column);
+                                    state.first_load_dispatch.remove(&result.column);
+                                    result
+                                        .chunks
+                                        .into_iter()
+                                        .map(|(p, c, m)| {
+                                            world.0.insert_chunk(p, c);
+                                            (p, m)
+                                        })
+                                        .collect()
+                                }
+                                WorkResult::Mesh(result) => {
+                                    state.sampled_border_cells += result.sampled_border_cells;
+                                    result.meshes
+                                }
+                            };
+                            if matches!(job.work, Work::Mesh(_)) {
+                                state.remeshed_chunks += meshes.len();
                             }
-                            result
-                                .chunks
-                                .into_iter()
-                                .map(|(p, c, m)| {
-                                    world.0.insert_chunk(p, c);
-                                    (p, m)
-                                })
-                                .collect()
+                            let dirty_since = job
+                                .versions
+                                .keys()
+                                .filter_map(|p| state.dirty.get(p).copied())
+                                .min();
+                            for p in job.versions.keys() {
+                                state.first_mesh_dispatch.remove(p);
+                                state.geometry_dirty.remove(p);
+                                state.water_dirty.remove(p);
+                                state.dirty.remove(p);
+                            }
+                            if let Work::Load(c) = job.work
+                                && let Some(since) = state.queued_at.get(&c).copied()
+                            {
+                                state.metrics.ready.record(since.elapsed());
+                            }
+                            // All targets are validated first, then published in this
+                            // single Update (including both sides of dirty seams).
+                            for (p, surface) in meshes {
+                                upsert_stream_mesh(
+                                    &mut scene.commands,
+                                    &mut scene.meshes,
+                                    &mut scene.renders,
+                                    p,
+                                    surface,
+                                    &scene.material,
+                                    &scene.origin,
+                                );
+                            }
+                            if let Some(since) = dirty_since {
+                                let elapsed = since.elapsed();
+                                state.max_dirty_latency = state.max_dirty_latency.max(elapsed);
+                                state.metrics.dirty_visible.record(elapsed);
+                            }
+                            if let Work::Load(c) = job.work
+                                && let Some(since) = state.queued_at.remove(&c)
+                            {
+                                let elapsed = since.elapsed();
+                                state.max_load_latency = state.max_load_latency.max(elapsed);
+                                state.metrics.cpu_visible.record(elapsed);
+                            }
+                            state.peak_chunks = state.peak_chunks.max(world.0.chunks().count());
+                            let elapsed = install_start.elapsed();
+                            state.max_install = state.max_install.max(elapsed);
+                            state.metrics.install.record(elapsed);
+                        } else {
+                            state.discarded += 1;
+                            state.retry(&job.work);
                         }
-                        WorkResult::Mesh(result) => {
-                            state.sampled_border_cells += result.sampled_border_cells;
-                            result.meshes
-                        }
-                    };
-                    if matches!(job.work, Work::Mesh(_)) {
-                        state.remeshed_chunks += meshes.len();
                     }
-                    for p in job.versions.keys() {
-                        state.geometry_dirty.remove(p);
-                        state.water_dirty.remove(p);
-                        if let Some(since) = state.dirty.remove(p) {
-                            state.max_dirty_latency = state.max_dirty_latency.max(since.elapsed());
-                        }
-                    }
-                    // All targets are validated first, then published in this
-                    // single Update (including both sides of dirty seams).
-                    for (p, surface) in meshes {
-                        upsert_stream_mesh(
-                            &mut scene.commands,
-                            &mut scene.meshes,
-                            &mut scene.renders,
-                            p,
-                            surface,
-                            &scene.material,
-                            &scene.origin,
-                        );
-                        if let Some(since) = state.dirty.remove(&p) {
-                            state.max_dirty_latency = state.max_dirty_latency.max(since.elapsed());
-                        }
-                    }
-                    state.peak_chunks = state.peak_chunks.max(world.0.chunks().count());
-                    state.max_install = state.max_install.max(install_start.elapsed());
-                } else {
-                    state.discarded += 1;
-                    state.retry(&job.work);
                 }
             }
-            Ok(Err(e)) => {
-                error!("Terrain region load failed: {e}; data preserved; F5 retries");
-                for p in job
-                    .versions
-                    .keys()
-                    .filter(|p| state.desired.contains(&[p.0[0], p.0[2]]))
-                    .copied()
-                    .collect::<Vec<_>>()
-                {
-                    state.failures.insert(
-                        [p.0[0], p.0[2]],
-                        (Instant::now() + Duration::from_secs(1), e.to_string()),
-                    );
-                }
-                state.retry(&job.work);
-            }
-            Err(_) => {
-                error!(
-                    "Terrain worker stopped; pending terrain remains a safe barrier; retrying bounded requests"
-                );
-                state.retry(&job.work);
-            }
+            Ok(Err(e)) => state.failed(&job.work, &job.versions, e.to_string()),
+            Err(_) => state.failed(&job.work, &job.versions, "terrain worker panicked".into()),
         }
     }
     if state.job.is_none() {
         let now = Instant::now();
-        let blocked = |c: &Column| {
-            state
-                .failures
-                .get(c)
-                .is_some_and(|(deadline, _)| *deadline > now)
-        };
-        let mut eligible = state.dirty.clone();
-        let mut targets = BTreeSet::new();
-        while !eligible.is_empty() {
-            let group = nearest_dirty(&eligible, player.body.position);
-            if group.iter().all(|p| !blocked(&[p.0[0], p.0[2]])) {
-                targets = group;
-                break;
-            }
-            for p in group {
-                eligible.remove(&p);
-            }
-        }
-        let work = if !targets.is_empty() {
-            Some(Work::Mesh(targets))
-        } else {
-            let queued = state
-                .queued
-                .iter()
-                .filter(|c| !blocked(c))
-                .copied()
-                .collect();
-            streaming::nearest_ahead(
-                &queued,
-                center,
-                [player.body.velocity[0], player.body.velocity[2]],
-            )
-            .map(Work::Load)
-        };
+        let work = state.scheduler.choose(
+            &state.queued,
+            &state.queued_at,
+            &state.dirty,
+            &state.failures,
+            &player.body,
+            center,
+            now,
+        );
         if let Some(work) = work {
+            let prepare_start = Instant::now();
             let cache = std::mem::take(&mut state.cache);
-            let previous = work
-                .targets(world.0.world_height())
-                .into_iter()
+            let targets = work.targets(world.0.world_height());
+            let previous = targets
+                .iter()
+                .copied()
                 .filter_map(|p| state.lights.get(&p).map(|l| (p, l.clone())))
                 .collect();
             let force = state
                 .geometry_dirty
                 .union(&state.water_dirty)
+                .filter(|p| targets.contains(p))
                 .copied()
                 .collect();
             let water_only = matches!(work, Work::Mesh(_))
-                && work
-                    .targets(world.0.world_height())
+                && targets
                     .iter()
                     .all(|p| state.water_dirty.contains(p) && state.lights.contains_key(p));
             match StreamJob::spawn(
@@ -676,8 +819,37 @@ fn update_streaming(
                 previous,
                 force,
                 water_only,
+                #[cfg(test)]
+                None,
             ) {
                 Ok(job) => {
+                    state.metrics.prepare.record(prepare_start.elapsed());
+                    state.scheduler.dispatched(&work);
+                    let first_request = match &work {
+                        Work::Load(c) => {
+                            if state.first_load_dispatch.insert(*c) {
+                                state.queued_at.get(c).copied()
+                            } else {
+                                None
+                            }
+                        }
+                        Work::Mesh(targets) => targets
+                            .iter()
+                            .filter_map(|p| {
+                                if state.first_mesh_dispatch.insert(*p) {
+                                    state.dirty.get(p).copied()
+                                } else {
+                                    None
+                                }
+                            })
+                            .min(),
+                    };
+                    if let Some(since) = first_request {
+                        state
+                            .metrics
+                            .queue_wait
+                            .record(prepare_start.saturating_duration_since(since));
+                    }
                     match work {
                         Work::Load(c) => {
                             state.queued.remove(&c);
@@ -687,7 +859,18 @@ fn update_streaming(
                     }
                     state.job = Some(job);
                 }
-                Err(e) => error!("Could not start terrain worker: {e}"),
+                Err(e) => {
+                    let versions = work
+                        .targets(world.0.world_height())
+                        .into_iter()
+                        .map(|p| (p, world.0.mesh_revision(p)))
+                        .collect();
+                    state.failed(
+                        &work,
+                        &versions,
+                        format!("could not start terrain worker: {e}"),
+                    );
+                }
             }
         }
     }
@@ -733,7 +916,7 @@ fn update_streaming(
                 .sum::<usize>();
     }
     state.max_update = state.max_update.max(update_start.elapsed());
-    if changed && state.queued.is_empty() && state.dirty.is_empty() && state.job.is_none() {
+    if changed && state.is_idle() {
         let mut frames: Vec<_> = state.recent_frames.iter().copied().collect();
         frames.sort_unstable();
         let frame_p95 = frames
@@ -786,6 +969,25 @@ fn update_streaming(
             frame_p95,
             frame_p99,
             fps
+        );
+        info!(
+            "Stream service: installed {} stale {} cancelled {} ({} before mesh) failed {}; first queue wait max {:?}, request-ready max {:?}, request-CPU-visible max {:?}, dirty-CPU-visible max {:?}; worker wall total {:?}, compute {:?}, region reads {:?}, preparation {:?}, eviction {:?}; cache hits {} misses {}",
+            state.completed,
+            state.discarded,
+            state.metrics.cancelled,
+            state.metrics.cancelled_before_mesh,
+            state.metrics.failed,
+            state.metrics.queue_wait.max,
+            state.metrics.ready.max,
+            state.metrics.cpu_visible.max,
+            state.metrics.dirty_visible.max,
+            state.metrics.execution.total,
+            state.metrics.compute.total,
+            state.metrics.region_reads.total,
+            state.metrics.prepare.total,
+            state.metrics.eviction.total,
+            state.cache.hits,
+            state.cache.misses
         );
         info!(
             "Stream idle: {} resident chunks, {} meshes, {} block bytes, {} terrain buffer bytes, peak {}, queue peak {}, jobs load {} mesh chunks {} discarded {}, worker total {:?} max {:?}, install max {:?}, stream update max {:?}, dirty latency max {:?}, recent frame p95 {:?} ({} samples)",

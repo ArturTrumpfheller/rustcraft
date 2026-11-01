@@ -82,13 +82,17 @@ def main():
     parser.add_argument('--warmups', type=int, default=4)
     parser.add_argument('--baseline', default=BASE,
                         help='Exact merged baseline commit (default: Slice29).')
+    parser.add_argument('--labels', nargs=2, metavar=('BASELINE', 'CURRENT'),
+                        help='Optional output labels for later matched slice comparisons.')
     parser.add_argument('--reverse', action='store_true',
                         help='Measure current before baseline to check order-dependent noise.')
     args = parser.parse_args()
     if not 1 <= args.samples <= 10000 or not 0 <= args.warmups <= 1000:
         parser.error('samples must be 1..10000 and warmups 0..1000')
     baseline = subprocess.check_output(['git', 'rev-parse', args.baseline], cwd=ROOT, text=True).strip()
-    names = ['slice29', 'slice30'] if baseline == BASE else ['slice30', 'slice31']
+    names = args.labels or (['slice29', 'slice30'] if baseline == BASE else ['slice30', 'slice31'])
+    if any(not name.replace('-', '').replace('_', '').isalnum() for name in names) or names[0].casefold() == names[1].casefold():
+        parser.error('labels must be distinct simple names')
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
     scratch = ROOT / 'work/stabilization-benchmark'

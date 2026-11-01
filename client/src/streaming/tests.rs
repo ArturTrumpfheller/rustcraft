@@ -157,12 +157,13 @@ fn blocked_column(app: &mut App, column: Column) -> std::sync::mpsc::Sender<()> 
     let handle = thread::spawn(move || {
         rx.recv().unwrap();
         Ok(JobResult {
-            result: WorkResult::Load(streaming::build_column(
+            timing: WorkerTiming::default(),
+            result: Ok(WorkResult::Load(streaming::build_column(
                 &generator,
                 edits.clone(),
                 column,
                 revision,
-            )),
+            ))),
             overlays: edits,
             cache: streaming::TerrainCache::default(),
         })
@@ -171,6 +172,8 @@ fn blocked_column(app: &mut App, column: Column) -> std::sync::mpsc::Sender<()> 
         handle,
         versions,
         work,
+        control: streaming::JobControl::default(),
+        started: Instant::now(),
     });
     tx
 }
@@ -513,18 +516,21 @@ fn newer_seam_edits_reject_the_entire_mesh_batch_then_publish_both_current_faces
         Ok(JobResult {
             overlays: EditSnapshot::default(),
             cache: streaming::TerrainCache::default(),
-            result: WorkResult::Mesh(streaming::remesh_cached(
+            timing: WorkerTiming::default(),
+            result: Ok(WorkResult::Mesh(streaming::remesh_cached(
                 &generator,
                 snapshot,
                 edits,
                 output_targets,
-            )),
+            ))),
         })
     });
     app.world_mut().resource_mut::<StreamState>().job = Some(StreamJob {
         handle,
         versions,
         work,
+        control: streaming::JobControl::default(),
+        started: Instant::now(),
     });
     app.update();
     let bytes = app.world().resource::<StreamState>().mesh_bytes;
@@ -1948,3 +1954,6 @@ fn v9_all_surfaces_are_bounded_reclaimed_and_recreated_across_shore_eviction() {
     let r = app.world().resource::<ChunkRenders>();
     assert!(!r.0.is_empty() && !r.1.is_empty() && !r.2.is_empty());
 }
+
+#[path = "slice32_tests.rs"]
+mod slice32;
