@@ -1,0 +1,12 @@
+{
+  "baseline": "1b7e405a854fc2717e0ef368778a1c96c3961e6e",
+  "order": [
+    "slice32",
+    "slice31"
+  ],
+  "repeats": 3,
+  "frames": 120,
+  "frame_hz": 240,
+  "machine": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "note": "Headless scripted position/velocity, fixed 240Hz deadlines, no rendered frames/GPU. RSS is process-wide; requested heap peak is additional process heap during worker window, excludes stacks/allocator metadata/GPU and may include concurrent main allocations."
+}

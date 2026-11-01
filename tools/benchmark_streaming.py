@@ -129,6 +129,45 @@ pub fn slice32_cache_stats()->(usize,usize){S32_CACHE.with(|v|v.get())}
     return core_hash, client_hash
 
 
+def summarize_traces(paths, out):
+    """Preserve all valid trace observations; report malformed lines explicitly."""
+    groups = {}
+    malformed = []
+    for path in paths:
+        for number, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
+            if "S32_TRACE," not in line:
+                continue
+            try:
+                _, metric, value = line[line.index("S32_TRACE,") :].split(",")
+                value = float(value)
+            except ValueError:
+                malformed.append(f"{path.name}:{number}: {line}")
+                continue
+            groups.setdefault((path.name, metric), []).append(value)
+    if not groups:
+        raise ValueError("no S32_TRACE observations found")
+    with (out / "trace-percentiles.csv").open("w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(
+            ["file", "metric", "count", "p50", "p95", "p99", "total", "max"]
+        )
+        for key, values in sorted(groups.items()):
+            values.sort()
+            writer.writerow(
+                [
+                    *key,
+                    len(values),
+                    *(values[(len(values) - 1) * p // 100] for p in [50, 95, 99]),
+                    sum(values),
+                    max(values),
+                ]
+            )
+    (out / "trace-parse-errors.txt").write_text(
+        "\n".join(malformed) + ("\n" if malformed else "")
+    )
+    print(f"{out / 'trace-percentiles.csv'}; malformed trace lines: {len(malformed)}")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--output", type=Path, required=True)
@@ -148,10 +187,19 @@ def main():
         help="Build optional instrumented GUI executables instead of running headless tests.",
     )
     p.add_argument("--reuse", action="store_true")
+    p.add_argument(
+        "--trace",
+        nargs="+",
+        type=Path,
+        help="Summarize native S32_TRACE logs without building or running tests.",
+    )
     a = p.parse_args()
     assert 1 <= a.repeats <= 100 and 1 <= a.frames <= 10000
     out = a.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
+    if a.trace:
+        summarize_traces(a.trace, out)
+        return
     scratch = ROOT / "work/streaming-benchmark"
     baseline = subprocess.check_output(
         ["git", "rev-parse", a.baseline], cwd=ROOT, text=True
@@ -353,14 +401,18 @@ def main():
     samples = []
     for name in names:
         states[name] = [
-            l
+            l[l.index("S32_STATE,") :]
             for l in (out / f"{name}.txt").read_text().splitlines()
-            if l.startswith("S32_STATE,")
+            if "S32_STATE," in l
         ]
         for l in (out / f"{name}.txt").read_text().splitlines():
-            if l.startswith("S32_SAMPLE,"):
-                _, scene, radius, repeat, metric, index, value = l.split(",")
+            if "S32_SAMPLE," in l:
+                _, scene, radius, repeat, metric, index, value = l[
+                    l.index("S32_SAMPLE,") :
+                ].split(",")
                 samples.append([name, scene, radius, repeat, metric, index, value])
+    # The Rust harness may prefix the first state with its test-name banner.
+    assert len(states[names[0]]) == len(states[names[1]]) == 16 * 3 * a.repeats
     assert (
         states[names[0]] == states[names[1]]
     ), "Final authority/resources differ: inspect raw states"

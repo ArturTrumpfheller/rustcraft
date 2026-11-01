@@ -1,0 +1,1 @@
+Same immutable executables as core-forward, current then merged Slice31; 8 warmups, 64 samples per full-height scene. No rebuild, test or renderer running during measurement. Separate water/save workloads ran in core-forward only.

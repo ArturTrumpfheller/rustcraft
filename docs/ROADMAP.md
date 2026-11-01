@@ -5,7 +5,8 @@
 - [x] Whole-component revision validation/publication and existing water-only path
 - [x] Separate outcome/timing summaries and compact retained F3 streaming diagnostics
 - [x] Deterministic priority/stop/cache lifecycle tests and optional matched trace tooling
-- [ ] Final matched benchmark and complete local/CI validation results
+- [x] Matched radius1/2/3 comparisons in both orders, including slower observations
+- [x] Required local checks and Ubuntu/Windows debug/release CI
 - [ ] Native Void X11/Wayland / RX9060 XT and Windows GUI acceptance
 
 [Policy, measurements, limitations and Fish comparison](performance/slice32/README.md).
