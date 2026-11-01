@@ -63,7 +63,7 @@ impl Skylight {
     #[cfg(test)]
     pub(crate) fn full_reference(world: &World, targets: &BTreeSet<ChunkPos>) -> Self {
         let h = world.world_height();
-        Self::calculate(world, targets, (h.min, h.max))
+        reference::calculate(world, targets, (h.min, h.max))
     }
     fn calculate(world: &World, targets: &BTreeSet<ChunkPos>, (min_y, max_y): (i32, i32)) -> Self {
         assert!(!targets.is_empty());
@@ -80,43 +80,74 @@ impl Skylight {
         let mut queue = VecDeque::<u32>::new();
         let mut sources = Vec::new();
         let mut floors = vec![0usize; size[0] * size[1]];
-        for z in 0..size[1] {
-            for x in 0..size[0] {
-                let wx = min[0] + x as i32;
-                let wz = min[1] + z as i32;
-                let base = (z * size[0] + x) * height;
-                let mut sky = true;
-                for cy in (min_y.div_euclid(16)..(max_y + 15).div_euclid(16)).rev() {
-                    let cp = ChunkPos([wx.div_euclid(16), cy, wz.div_euclid(16)]);
-                    let chunk = world.chunk(cp);
-                    let pending = chunk.is_none() && !world.ready(BlockPos([wx, cy * 16, wz]));
-                    for ly in (0..16).rev() {
-                        let y = cy * 16 + ly as i32;
-                        if !(min_y..max_y).contains(&y) {
-                            continue;
-                        }
-                        let i = base + (y - min_y) as usize;
-                        let block = chunk.map_or(crate::Block::Air, |c| {
-                            c.get(
-                                LocalPos::new([
-                                    wx.rem_euclid(16) as usize,
-                                    ly,
-                                    wz.rem_euclid(16) as usize,
-                                ])
-                                .unwrap(),
-                            )
-                        });
-                        let opaque = pending || block.is_opaque();
-                        if !pending && block.emission() > 0 {
-                            sources.push((i as u32, block.emission()));
-                        }
-                        solid[i] = opaque;
-                        if sky && opaque {
-                            floors[z * size[0] + x] = (y - min_y + 1) as usize;
-                        }
-                        sky &= !opaque;
-                        if sky {
-                            levels[i] = SKY;
+        // Resolve each vertical descriptor stack once, instead of looking up
+        // the same BTreeMap entry for every X/Z cell. The supported world is at
+        // most sixteen slabs tall; these borrowed descriptors live on the stack.
+        let first_y = min_y.div_euclid(16);
+        let end_y = (max_y + 15).div_euclid(16);
+        assert!(end_y - first_y <= 16);
+        for cz in min[1].div_euclid(16)..=(max[1] - 1).div_euclid(16) {
+            for cx in min[0].div_euclid(16)..=(max[0] - 1).div_euclid(16) {
+                let slabs: [_; 16] = std::array::from_fn(|i| {
+                    let cy = first_y + i as i32;
+                    let cp = ChunkPos([cx, cy, cz]);
+                    let chunk = (cy < end_y).then(|| world.chunk(cp)).flatten();
+                    let pending = cy < end_y
+                        && chunk.is_none()
+                        && !world.ready(BlockPos([cx * 16, cy * 16, cz * 16]));
+                    (chunk, pending)
+                });
+                for wz in min[1].max(cz * 16)..max[1].min((cz + 1) * 16) {
+                    for wx in min[0].max(cx * 16)..max[0].min((cx + 1) * 16) {
+                        let column = (wz - min[1]) as usize * size[0] + (wx - min[0]) as usize;
+                        let base = column * height;
+                        let mut sky = true;
+                        for cy in (first_y..end_y).rev() {
+                            let (chunk, pending) = slabs[(cy - first_y) as usize];
+                            let low = (cy * 16).max(min_y);
+                            let high = ((cy + 1) * 16).min(max_y);
+                            let range =
+                                base + (low - min_y) as usize..base + (high - min_y) as usize;
+                            let uniform = if pending {
+                                Some(crate::Block::Stone)
+                            } else {
+                                chunk.map_or(Some(crate::Block::Air), crate::Chunk::uniform)
+                            };
+                            if let Some(block) = uniform.filter(|b| b.emission() == 0) {
+                                let opaque = block.is_opaque();
+                                solid[range.clone()].fill(opaque);
+                                if sky && opaque {
+                                    floors[column] = (high - min_y) as usize;
+                                    sky = false;
+                                }
+                                if sky {
+                                    levels[range].fill(SKY);
+                                }
+                                continue;
+                            }
+                            for y in (low..high).rev() {
+                                let i = base + (y - min_y) as usize;
+                                let block = chunk.unwrap().get(
+                                    LocalPos::new([
+                                        wx.rem_euclid(16) as usize,
+                                        y.rem_euclid(16) as usize,
+                                        wz.rem_euclid(16) as usize,
+                                    ])
+                                    .unwrap(),
+                                );
+                                let opaque = block.is_opaque();
+                                if block.emission() > 0 {
+                                    sources.push((i as u32, block.emission()));
+                                }
+                                solid[i] = opaque;
+                                if sky && opaque {
+                                    floors[column] = (y - min_y + 1) as usize;
+                                }
+                                sky &= !opaque;
+                                if sky {
+                                    levels[i] = SKY;
+                                }
+                            }
                         }
                     }
                 }
@@ -326,3 +357,9 @@ pub fn face_color(level: u8, normal: [i32; 3]) -> [f32; 4] {
 }
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod reference;
+
+#[cfg(test)]
+mod optimization_tests;
