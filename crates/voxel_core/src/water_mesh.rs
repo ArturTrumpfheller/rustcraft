@@ -10,19 +10,27 @@ pub struct WaterMesh {
 }
 /// Exact shared world-corner sampling, including diagonals across chunk seams.
 pub fn corner_height(world: &World, p: BlockPos, cx: i32, cz: i32) -> f32 {
+    corner_height_sampled(|q| world.block(q), p, cx, cz)
+}
+fn corner_height_sampled(
+    block: impl Fn(BlockPos) -> crate::Block,
+    p: BlockPos,
+    cx: i32,
+    cz: i32,
+) -> f32 {
     let mut total = 0.;
     let mut count = 0.;
     for dx in [cx - 1, cx] {
         for dz in [cz - 1, cz] {
             let q = p.offset([dx, 0, dz]).unwrap();
-            if let Some(f) = world.block(q).fluid() {
-                if world.block(q.offset([0, 1, 0]).unwrap()).fluid().is_some() || f.is_falling() {
+            if let Some(f) = block(q).fluid() {
+                if block(q.offset([0, 1, 0]).unwrap()).fluid().is_some() || f.is_falling() {
                     return 1.;
                 }
                 let weight = if f.is_source() { 8. } else { 1. };
                 total += f.height() * weight;
                 count += weight;
-            } else if world.block(q) == crate::Block::Air {
+            } else if block(q) == crate::Block::Air {
                 // Dry edges taper gently; shared world corners stay identical.
                 count += 1.;
             }
@@ -54,6 +62,13 @@ fn mesh_water_sampled(
     let Some(chunk) = world.chunk(cp).filter(|c| c.water_cells() != 0) else {
         return out;
     };
+    let origin = cp.block_position(LocalPos::new([0; 3]).unwrap()).unwrap();
+    // Most samples belong to this borrowed chunk. Cross-boundary and diagonal
+    // samples keep the ordinary World semantics, including pending barriers.
+    let block = |q: BlockPos| {
+        let local = std::array::from_fn(|a| (q.0[a] - origin.0[a]) as usize);
+        LocalPos::new(local).map_or_else(|| world.block(q), |lp| chunk.get(lp))
+    };
     for y in 0..16 {
         for z in 0..16 {
             for x in 0..16 {
@@ -64,13 +79,21 @@ fn mesh_water_sampled(
                 let p = cp.block_position(local).unwrap();
                 let mut heights = None;
                 for face in &crate::mesh::FACES {
-                    let neighbor = world.block(p.offset(face.normal).unwrap());
+                    let neighbor = block(p.offset(face.normal).unwrap());
                     if neighbor.fluid().is_some() || neighbor.is_opaque() {
                         continue;
                     }
-                    let h = heights.get_or_insert_with(|| {
-                        [[0, 0], [1, 0], [0, 1], [1, 1]]
-                            .map(|[cx, cz]| corner_height(world, p, cx, cz))
+                    let (h, light, sky, block) = heights.get_or_insert_with(|| {
+                        let h = [[0, 0], [1, 0], [0, 1], [1, 1]]
+                            .map(|[cx, cz]| corner_height_sampled(block, p, cx, cz));
+                        let light = sample(p);
+                        let sky = 0.06 + 0.94 * (f32::from(light[0]) / 15.).powf(1.6);
+                        let block = if light[1] == 0 {
+                            0.
+                        } else {
+                            0.06 + 0.94 * (f32::from(light[1]) / 15.).powf(1.6)
+                        };
+                        (h, light, sky, block)
                     });
                     let start = out.positions.len() as u32;
                     let shade = match face.normal {
@@ -78,12 +101,6 @@ fn mesh_water_sampled(
                         [0, -1, 0] => 0.55,
                         [0, 0, _] => 0.8,
                         _ => 0.7,
-                    };
-                    let sky = 0.06 + 0.94 * (f32::from(sample(p)[0]) / 15.).powf(1.6);
-                    let block = if sample(p)[1] == 0 {
-                        0.
-                    } else {
-                        0.06 + 0.94 * (f32::from(sample(p)[1]) / 15.).powf(1.6)
                     };
                     for c in face.corners {
                         let height = if c[1] == 0 {
@@ -106,9 +123,9 @@ fn mesh_water_sampled(
                             ]
                         });
                         out.colors.push([
-                            sky * shade,
-                            block * shade,
-                            f32::from(sample(p)[0]) / 15.,
+                            *sky * shade,
+                            *block * shade,
+                            f32::from(light[0]) / 15.,
                             0.65,
                         ]);
                     }
@@ -120,3 +137,8 @@ fn mesh_water_sampled(
     }
     out
 }
+
+#[cfg(test)]
+mod reference;
+#[cfg(test)]
+mod tests;

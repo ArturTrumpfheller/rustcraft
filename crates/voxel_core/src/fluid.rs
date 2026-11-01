@@ -209,10 +209,23 @@ impl World {
             if self.chunk(np).is_none_or(|c| c.water_cells() == 0) {
                 continue;
             }
-            for y in 0..16 {
-                for z in 0..16 {
-                    for x in 0..16 {
+            // Clip to the existing lifecycle footprint before visiting cells.
+            // Preserve Y/Z/X order and the horizontal diamond predicate below.
+            let ranges: [_; 3] = std::array::from_fn(|a| {
+                let radius = if a == 1 { 2 } else { ROUTE_DISTANCE };
+                let delta = (cp.0[a] - np.0[a]) * 16;
+                delta.saturating_sub(radius).clamp(0, 16) as usize
+                    ..(delta + 16 + radius).clamp(0, 16) as usize
+            });
+            for y in ranges[1].clone() {
+                for z in ranges[2].clone() {
+                    for x in ranges[0].clone() {
                         let lp = LocalPos::new([x, y, z]).unwrap();
+                        let chunk = self.chunk(np).unwrap();
+                        let block = chunk.get(lp);
+                        if block.fluid().is_none() {
+                            continue;
+                        }
                         let p = np.block_position(lp).unwrap();
                         let distance = |a: usize| {
                             let low = cp.0[a] * 16;
@@ -224,7 +237,6 @@ impl World {
                         if distance(1) > 2 || distance(0) + distance(2) > ROUTE_DISTANCE {
                             continue;
                         }
-                        let block = self.chunk(np).unwrap().get(lp);
                         let active = if block == Block::WaterSource {
                             // A generated source body is already stable. Sources
                             // cannot flow upward, into solids, or into sources.
@@ -232,10 +244,20 @@ impl World {
                             // will be reconsidered by the next lifecycle event.
                             NEIGHBORS.iter().filter(|d| **d != [0, 1, 0]).any(|&d| {
                                 p.offset(d).is_some_and(|n| {
-                                    self.in_bounds(n)
-                                        && self.ready(n)
-                                        && self.block(n) != Block::WaterSource
-                                        && self.block(n).fluid_replaceable()
+                                    if !self.in_bounds(n) {
+                                        return false;
+                                    }
+                                    let local = std::array::from_fn(|a| {
+                                        ([x, y, z][a] as i32 + d[a]) as usize
+                                    });
+                                    let neighbor = if let Some(local) = LocalPos::new(local) {
+                                        chunk.get(local)
+                                    } else if self.ready(n) {
+                                        self.block(n)
+                                    } else {
+                                        return false;
+                                    };
+                                    neighbor != Block::WaterSource && neighbor.fluid_replaceable()
                                 })
                             })
                         } else {
@@ -468,3 +490,8 @@ fn route_directions(world: &World, origin: BlockPos, fluid: Fluid) -> u8 {
 mod routing_tests;
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod lifecycle_reference;
+#[cfg(test)]
+mod lifecycle_tests;

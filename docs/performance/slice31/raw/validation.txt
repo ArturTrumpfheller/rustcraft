@@ -1,0 +1,26 @@
+Local managed Linux validation; all commands exit0.
+Workspace test profile omits debug symbols to fit the writable disk; assertions/optimization unchanged.
+CARGO_PROFILE_TEST_DEBUG=0 CARGO_INCREMENTAL=0. Release uses ordinary release optimization.
+
+cargo fmt --all -- --check : PASS
+cargo clippy --locked --workspace --all-targets -- -D warnings : PASS
+cargo test --locked --workspace : PASS
+test result: ok. 197 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 60.15s
+test result: ok. 317 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 53.66s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.79s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+cargo test --release --locked -p voxel_core --lib : PASS
+test result: ok. 317 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.69s
+cargo build --release --locked -p rustcraft : PASS
+python3 tools/generate_textures.py --check : PASS
+cargo test --release --locked -p voxel_core --test worldgen_integration --test worldgen_lifecycle : PASS
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.92s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+cargo test --release --locked -p rustcraft streaming::tests -- --test-threads=2 : PASS
+test result: ok. 30 passed; 0 failed; 2 ignored; 0 measured; 171 filtered out; finished in 3.45s
+cargo test --release --locked -p voxel_core mesh::ao_tests -- --test-threads=1 : PASS
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 306 filtered out; finished in 0.07s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+cargo run --release --locked -p voxel_core --example worldgen_audit : PASS

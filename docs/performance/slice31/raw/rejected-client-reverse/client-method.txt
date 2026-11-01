@@ -1,0 +1,2 @@
+Baseline 571a728b43bb115604fdb94de0b79b1d92a170fb; measurement order ['slice31', 'slice30']. Both executables built first.
+Exact baseline/current production sources; identical headless ECS harness. Visits, worker totals, main-install/queue maxima and session switches are CPU wall times, not GPU measurements.

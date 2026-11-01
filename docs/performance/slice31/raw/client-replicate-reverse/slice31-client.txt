@@ -1,0 +1,22 @@
+
+running 1 test
+test streaming::tests::vegetation_streaming_measurements ... STABILIZATION_LATENCY generator=8 metric=main_install_us count=45 p50=28.854 p95=91.848 p99=203.827 raw=[65.729, 72.981, 91.848, 25.619, 157.818, 33.61, 25.488, 312.061, 203.827, 32.388999999999996, 26.78, 28.022000000000002, 27.642, 27.592, 28.072000000000003, 27.011, 28.483, 27.932, 28.854, 35.224000000000004, 29.064, 28.323, 30.426, 27.561, 27.902, 29.314, 35.924, 28.212, 28.243000000000002, 30.125, 76.776, 29.604, 27.141, 26.911, 30.436, 26.73, 36.866, 29.404, 27.591, 29.275, 31.408, 27.822, 28.343, 29.104000000000003, 26.86]
+STABILIZATION_LATENCY generator=8 metric=queue_install_us count=44 p50=18633.882 p95=47700.142 p99=55817.621 raw=[18012.436, 20506.927, 24246.875, 29032.399, 31669.725000000002, 33065.089, 35475.422, 39226.287, 18633.882, 24454.538, 30235.053, 38451.309, 44186.375, 47700.142, 52326.677, 55817.621, 60430.585, 3523.201, 5911.262, 9434.212000000001, 5830.400000000001, 9337.277, 12810.342, 4660.156, 7046.704, 9409.156, 11844.006000000001, 17571.62, 23368.87, 29189.656000000003, 30558.66, 34042.052, 38612.142, 40982.215000000004, 42210.145, 3589.982, 6029.589999999999, 9555.606, 6074.568, 9535.425, 13032.677, 6018.354, 8452.823999999999, 10826.192000000001]
+VEGETATION_STREAM generator=8 visits=8 visit_p50_ms=10.911 visit_p95_ms=42.300 visit_p99_ms=42.300 worker_total_ms=169.829 main_install_max_ms=0.312 queue_install_max_ms=60.431 retained_mesh_bytes=1041600 plant_chunk_entities=0 source_cache_bytes=241664 elapsed_ms=168.513
+STABILIZATION_RESIDENCY generator=8 descriptors=144 voxel_bytes=73728 mesh_assets=27 surfaces=27 cache_columns=25 region_overlays=4 pending=0 peak_pending=24 fluid_pending=0 discarded=0 max_update_ms=0.532
+STABILIZATION_LATENCY generator=9 metric=main_install_us count=45 p50=31.938 p95=215.124 p99=545.303 raw=[17.557000000000002, 28.743, 72.91000000000001, 141.824, 545.303, 61.233000000000004, 26.49, 616.239, 386.172, 27.832, 29.595, 30.026, 37.437, 159.57999999999998, 26.73, 27.932, 30.917, 30.335, 215.124, 30.056, 30.857, 62.594, 29.895, 28.172, 28.782999999999998, 75.453, 48.211999999999996, 39.78, 53.33, 31.938, 36.425, 33.881, 29.615, 102.64500000000001, 63.055, 34.532000000000004, 34.150999999999996, 29.304, 29.234, 58.397999999999996, 28.943, 27.752000000000002, 29.414, 32.74, 27.682]
+STABILIZATION_LATENCY generator=9 metric=queue_install_us count=44 p50=10103.581 p95=31657.026 p99=36679.187 raw=[7650.283, 10103.581, 13832.834, 17800.236, 19891.418, 21405.351, 22976.38, 26377.367, 8810.552, 14762.145, 18344.775, 24420.285, 28017.599000000002, 31657.025999999998, 34124.335999999996, 36679.187000000005, 39084.163, 3366.3999999999996, 6350.563, 8720.916000000001, 2649.435, 5269.0740000000005, 7630.734, 3709.964, 6088.910000000001, 7386.287, 7100.695, 13027.114, 15490.227, 17924.696, 20475.654, 23909.079999999998, 26308.21, 28864.54, 30215.605, 3617.86, 6027.139, 8601.437, 2552.435, 5028.073, 7420.888, 2465.774, 4819.109, 6207.861]
+VEGETATION_STREAM generator=9 visits=8 visit_p50_ms=7.786 visit_p95_ms=30.319 visit_p99_ms=30.319 worker_total_ms=103.637 main_install_max_ms=0.616 queue_install_max_ms=39.084 retained_mesh_bytes=1076568 plant_chunk_entities=7 source_cache_bytes=278528 elapsed_ms=116.289
+STABILIZATION_RESIDENCY generator=9 descriptors=144 voxel_bytes=81920 mesh_assets=36 surfaces=36 cache_columns=25 region_overlays=4 pending=0 peak_pending=24 fluid_pending=0 discarded=0 max_update_ms=0.810
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 201 filtered out; finished in 0.36s
+
+
+running 1 test
+test session::tests::stabilization_world_switch_measurements ... RustCraft new streamed world: seed 2026, generator v9, regional 65536x65536 blocks; identity created in 6.239µs
+RustCraft new streamed world: seed 2026, generator v9, regional 65536x65536 blocks; identity created in 1.803µs
+STABILIZATION_SWITCH samples=12 p50_ms=4.622 p95_ms=6.043 p99_ms=6.043 retained_assets=(2, 2, 0, 0)
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 201 filtered out; finished in 0.06s

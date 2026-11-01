@@ -1,0 +1,17 @@
+order,build,metric,unit,samples,p50,p95,p99
+forward,slice30,exploration,ms,8,8.586,28.883,28.883
+forward,slice30,session_switch,ms,12,4.255,4.847,4.847
+forward,slice31,exploration,ms,8,7.362,24.254,24.254
+forward,slice31,session_switch,ms,12,3.829,4.933,4.933
+reverse,slice30,exploration,ms,8,8.599,28.722,28.722
+reverse,slice30,session_switch,ms,12,4.490,4.768,4.768
+reverse,slice31,exploration,ms,8,7.411,22.883,22.883
+reverse,slice31,session_switch,ms,12,3.781,4.548,4.548
+forward,slice30,main_install_us,us,45,30.887,118.568,479.792
+forward,slice30,queue_install_us,us,44,9916.139,29878.535,32427.759
+forward,slice31,main_install_us,us,45,30.676,108.784,301.475
+forward,slice31,queue_install_us,us,44,9346.111,25033.633,27597.818
+reverse,slice30,main_install_us,us,45,31.557,74.091,370.258
+reverse,slice30,queue_install_us,us,44,9706.979,28620.060,30321.518
+reverse,slice31,main_install_us,us,45,31.147,173.832,265.681
+reverse,slice31,queue_install_us,us,44,9405.435,24916.232,27250.471

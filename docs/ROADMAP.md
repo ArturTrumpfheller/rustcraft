@@ -1,3 +1,20 @@
+# Slice 31 — Performance Profiling & Optimization
+
+- [x] Reproduce merged Slice30 and isolate source collection, floods and fluid installation
+- [x] Borrowed lighting descriptor stacks and exact uniform-slab fills
+- [x] Direct local water sampling and one light/brightness evaluation per visible cell
+- [x] Clipped fluid lifecycle inspection with unchanged wake/route/queue semantics
+- [x] Independent frozen lighting/water/lifecycle oracles and exact edited/seam checks
+- [x] Matched CPU/wall, allocation, geometry/cache and client latency instrumentation
+- [x] Repeated128-sample comparisons in both orders with exact geometry/light invariants
+- [ ] Native Void X11/Wayland / RX9060 XT and Windows GUI performance acceptance
+
+[Matched results, validation, limitations and native Fish commands](performance/slice31/README.md).
+Next: **32 Chunk Streaming v2 →33 Rendering & Meshing Optimization →34 Render
+Distance Expansion**. Later worldgen overhaul and survival scope remain deferred.
+
+---
+
 # Slice 30 — Worldgen Stabilization & Integration
 
 - [x] Audit current terrain/biome/cave/water/vegetation and runtime integration

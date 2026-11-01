@@ -1,3 +1,33 @@
+# Slice 31: exact processing with fewer repeated reads
+
+The lighting collector borrows at most sixteen vertical chunk descriptors on
+its stack per source column. It resolves map/readiness metadata once per slab,
+fills uniform opaque/transparent slices directly, and scans mixed/emitting
+slabs normally. The active-span proof, independent integer sky/block channels,
+flood algorithm and exact applied-light caches retain their contracts. A frozen
+Slice30 full-height collector/flood now supplies the test-only reference oracle.
+
+Water meshing samples the current borrowed chunk directly when a neighbor or
+corner lies inside it, retaining World sampling across signed/diagonal seams.
+Each visible water cell reuses its exact light sample/brightness with the existing
+lazy corner heights. All mesh vectors and float bits remain identical.
+
+Fluid lifecycle loops clip to the existing vertical-two/horizontal-four footprint
+before visiting cells, preserving its diamond, order, consumers and invalidation.
+Dry cells skip position work and local consumers read the current chunk directly.
+Source interiors remain quiet; readiness and deferred boundaries retain their
+existing behavior. No simulation tick/routing, persistence, renderer, scheduler,
+worldgen or resident cache change is made.
+
+Stage/allocation probes and per-install/per-load histograms are injected only
+into disposable benchmark sources. Production retains its existing bounded
+metrics, without new clocks, buffers or benchmark branches. The existing harnesses
+accept an exact baseline and both measurement orders, and compare full geometry
+and packed light CRCs as well as authoritative blocks/payloads.
+[Evidence, independent correctness checks and native Fish procedure](performance/slice31/README.md).
+
+---
+
 # Slice 30: integration stabilization
 
 Generator **9 remains the default and all v1–v9 procedural output is frozen**.

@@ -1,0 +1,8 @@
+slice30
+0000000000fda3a0 00000000000014cd T voxel_core::water_mesh::mesh_water
+0000000000fdbf80 000000000000125c T voxel_core::water_mesh::mesh_water_cached
+slice31
+0000000000fbc7e0 0000000000000683 t voxel_core::water_mesh::corner_height_sampled::<voxel_core::water_mesh::mesh_water_sampled<voxel_core::water_mesh::mesh_water::{closure#0}>::{closure#1}>
+0000000000fbc7e0 0000000000000683 t voxel_core::water_mesh::corner_height_sampled::<voxel_core::water_mesh::mesh_water_sampled<voxel_core::water_mesh::mesh_water_cached::{closure#0}>::{closure#1}>
+0000000000fca2c0 0000000000001189 T voxel_core::water_mesh::mesh_water
+0000000000fcbb70 0000000000000fe2 T voxel_core::water_mesh::mesh_water_cached

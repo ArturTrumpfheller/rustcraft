@@ -1,0 +1,7 @@
+Managed cloud CPU measurement; no native GPU results.
+OS: Linux-6.18.57-x86_64-with-glibc2.41
+CPU model: AMD EPYC 9V74 80-Core Processor
+CPU cgroup: 200000 100000
+Memory cgroup: 8589934592
+Baseline: 571a728b43bb115604fdb94de0b79b1d92a170fb
+Date: 2026-11-01

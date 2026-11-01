@@ -1,0 +1,68 @@
+{
+  "environment_overrides": {
+    "CARGO_PROFILE_TEST_DEBUG": "0",
+    "CARGO_INCREMENTAL": "0"
+  },
+  "checks": [
+    {
+      "command": "cargo fmt --all -- --check",
+      "exit": 0,
+      "seconds": 0.579,
+      "log": "work/validation-00.txt"
+    },
+    {
+      "command": "cargo clippy --locked --workspace --all-targets -- -D warnings",
+      "exit": 0,
+      "seconds": 71.374,
+      "log": "work/validation-01.txt"
+    },
+    {
+      "command": "cargo test --locked --workspace",
+      "exit": 0,
+      "seconds": 333.73,
+      "log": "work/validation-02.txt"
+    },
+    {
+      "command": "cargo test --release --locked -p voxel_core --lib",
+      "exit": 0,
+      "seconds": 30.12,
+      "log": "work/validation-03.txt"
+    },
+    {
+      "command": "cargo build --release --locked -p rustcraft",
+      "exit": 0,
+      "seconds": 42.277,
+      "log": "work/validation-04.txt"
+    },
+    {
+      "command": "python3 tools/generate_textures.py --check",
+      "exit": 0,
+      "seconds": 0.043,
+      "log": "work/validation-05.txt"
+    },
+    {
+      "command": "cargo test --release --locked -p voxel_core --test worldgen_integration --test worldgen_lifecycle",
+      "exit": 0,
+      "seconds": 3.047,
+      "log": "work/validation-06.txt"
+    },
+    {
+      "command": "cargo test --release --locked -p rustcraft streaming::tests -- --test-threads=2",
+      "exit": 0,
+      "seconds": 38.611,
+      "log": "work/validation-07.txt"
+    },
+    {
+      "command": "cargo test --release --locked -p voxel_core mesh::ao_tests -- --test-threads=1",
+      "exit": 0,
+      "seconds": 0.188,
+      "log": "work/validation-08.txt"
+    },
+    {
+      "command": "cargo run --release --locked -p voxel_core --example worldgen_audit",
+      "exit": 0,
+      "seconds": 3.017,
+      "log": "work/validation-09.txt"
+    }
+  ]
+}
