@@ -1,0 +1,7 @@
+Release client / Xvfb 1280x720 / Mesa lavapipe Vulkan / LP_NUM_THREADS=2.
+Disposable data directory; title -> create seed42 -> catalog confirms generator9 -> play start column(-26,3).
+Observed opaque terrain, transparent water, original held block and inventory textures, sky/fog and F3.
+F3: position(-407.5,2,56.5), radius1,144 ready descriptors,51 terrain mesh slots,5354 water cells,0 pending fluid work.
+F5 -> SAVED -> Escape -> Save and Quit to Title -> Quit Game.
+After exit:64-byte manifest5, seed42, generator9; player sidecar present; no pending journal; exclusive world lock can be acquired.
+No rendered FPS/GPU performance claim: GUI ran alongside correctness tests, not alongside matched performance measurements. No native Void/Wayland/Windows GUI acceptance claim.

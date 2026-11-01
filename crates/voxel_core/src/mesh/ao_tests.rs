@@ -29,6 +29,20 @@ fn put(world: &mut World, p: [i32; 3], b: Block) {
     world.insert_chunk(cp, chunk);
 }
 
+// Release constant folding and runtime powi may round the same brightness
+// formula differently. Permit at most two representable positive f32 steps;
+// retain exact alpha, finite channels and all integer geometry/light checks.
+fn assert_color(actual: [f32; 4], expected: [f32; 4]) {
+    assert_eq!(actual[3], expected[3]);
+    for (a, e) in actual[..3].iter().zip(&expected[..3]) {
+        assert!(a.is_finite() && e.is_finite() && *a >= 0. && *e >= 0.);
+        assert!(
+            a.to_bits().abs_diff(e.to_bits()) <= 2,
+            "{actual:?} != {expected:?}"
+        );
+    }
+}
+
 #[test]
 fn all_occupancy_combinations_and_orientations_at_signed_seams() {
     // All six faces, four corners, eight occupancy patterns, every combination
@@ -77,7 +91,7 @@ fn isolated_and_flat_surfaces_remain_bright_and_merge() {
     let light = Skylight::for_chunks(&w, &BTreeSet::from([cp]));
     for (q, face) in FACES.iter().enumerate() {
         assert_eq!(reference_ao(&w, BlockPos([8, 2, 8]), face), [0; 4]);
-        assert_eq!(m.colors[q * 4], {
+        assert_color(m.colors[q * 4], {
             let sky = light.level(BlockPos([8, 2, 8]).offset(face.normal).unwrap());
             [
                 crate::lighting::face_color(sky, face.normal)[0],
@@ -117,7 +131,7 @@ fn opaque_enclosure_and_skylight_floor_are_preserved() {
         for face in &FACES {
             let base = crate::lighting::face_color(sky, face.normal);
             let colors = [0, 1, 2, 3].map(|a| ao::color(sky, face.normal, a));
-            assert_eq!(colors[0], base);
+            assert_color(colors[0], base);
             assert!(colors.windows(2).all(|p| p[0][0] > p[1][0]));
             assert!(colors[3][0] >= base[0] * 0.579);
             if sky == 0 {

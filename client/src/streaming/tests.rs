@@ -1903,5 +1903,48 @@ fn vegetation_streaming_measurements() {
             s.cache.allocated_voxel_bytes(),
             start.elapsed().as_secs_f64() * 1000.
         );
+        let world = &app.world().resource::<VoxelWorld>().0;
+        let renders = app.world().resource::<ChunkRenders>();
+        println!(
+            "STABILIZATION_RESIDENCY generator={version} descriptors={} voxel_bytes={} mesh_assets={} surfaces={} cache_columns={} region_overlays={} pending={} peak_pending={} fluid_pending={} discarded={} max_update_ms={:.3}",
+            world.chunk_count(),
+            world.allocated_voxel_bytes(),
+            app.world().resource::<Assets<Mesh>>().len(),
+            renders.0.len() + renders.1.len() + renders.2.len(),
+            s.cache.columns(),
+            world.cached_regions(),
+            s.queued.len() + s.dirty.len() + usize::from(s.job.is_some()),
+            s.peak_pending,
+            world.fluid_updates().pending(),
+            s.discarded,
+            s.max_update.as_secs_f64() * 1000.
+        );
     }
+}
+
+// Slice30 integration and repeatable CPU measurement.
+#[test]
+fn v9_all_surfaces_are_bounded_reclaimed_and_recreated_across_shore_eviction() {
+    let dir = RegionalDir::new();
+    let mut app = large_app_with_generator(&dir.0, 9);
+    go(&mut app, [-28, 1]);
+    assert_textured_residency(&mut app);
+    let r = app.world().resource::<ChunkRenders>();
+    assert!(!r.0.is_empty() && !r.1.is_empty() && !r.2.is_empty());
+    let old_entities: Vec<_> =
+        r.0.values()
+            .chain(r.1.values())
+            .chain(r.2.values())
+            .map(|r| (r.entity, r.mesh.clone()))
+            .collect();
+    go(&mut app, [100, -100]);
+    assert_textured_residency(&mut app);
+    for (entity, mesh) in old_entities {
+        assert!(app.world().get_entity(entity).is_err());
+        assert!(app.world().resource::<Assets<Mesh>>().get(&mesh).is_none());
+    }
+    go(&mut app, [-28, 1]);
+    assert_textured_residency(&mut app);
+    let r = app.world().resource::<ChunkRenders>();
+    assert!(!r.0.is_empty() && !r.1.is_empty() && !r.2.is_empty());
 }

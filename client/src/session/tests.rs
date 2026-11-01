@@ -688,3 +688,44 @@ fn airborne_pause_settings_and_inventory_focus_loss_freeze_until_explicit_resume
     assert!(app.world().resource::<player::PlayerState>().body.position[1] < frozen.position[1]);
     leave(&mut app);
 }
+
+// Slice30 integration and repeatable CPU measurement.
+#[test]
+#[ignore = "CPU-only session measurement; run alone with --ignored --nocapture"]
+fn stabilization_world_switch_measurements() {
+    let mut app = app();
+    let dirs = [Directory::new(), Directory::new()];
+    let baseline = assets(&app);
+    let mut switches = Vec::new();
+    for i in 0..12 {
+        let start = std::time::Instant::now();
+        open(&mut app, &dirs[i % 2]);
+        assert_eq!(
+            app.world()
+                .resource::<scene::VoxelWorld>()
+                .0
+                .identity()
+                .unwrap()
+                .generator,
+            9
+        );
+        leave(&mut app);
+        switches.push(start.elapsed().as_secs_f64() * 1000.);
+        assert_eq!(assets(&app), baseline);
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<SessionEntity>>()
+                .iter(app.world())
+                .count(),
+            0
+        );
+    }
+    switches.sort_by(f64::total_cmp);
+    println!(
+        "STABILIZATION_SWITCH samples={} p50_ms={:.3} p95_ms={:.3} p99_ms={:.3} retained_assets={baseline:?}",
+        switches.len(),
+        switches[5],
+        switches[10],
+        switches[10]
+    );
+}

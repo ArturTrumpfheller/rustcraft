@@ -1,3 +1,30 @@
+# Slice 30: integration stabilization
+
+Generator **9 remains the default and all v1–v9 procedural output is frozen**.
+The current architecture is retained: coordinate-only planning, authoritative
+regional overlays (including Air), one bounded terrain worker and three optional
+chunk surfaces. No save migration, new generator or streaming redesign is added.
+
+A bounded read-only audit and consolidated integration tests now exercise seeds
+0/42/2026 at 45 fixed locations, signed and extreme coordinates, full-height
+point/sampler/chunk parity, dry vegetation support, crown anchors, quiet natural
+water and regeneration. Adjacent-region lifecycle tests preserve edits, inventory
+and identity through save, eviction, reverse loading and restart. Existing journal
+fault injection remains authoritative and now covers natural-water buckets in
+both v8 and v9. A v9 shoreline ECS regression reclaims all three surfaces before
+recreating them after eviction.
+
+The halo-volume diagnostic now uses the saved generator's actual height, rather
+than reporting three slabs for a sixteen-slab column. It counts logical generated
+volume, including compact descriptors, not executed point queries. Release AO
+checks permit only two positive-f32 ULP of brightness rounding and exact alpha;
+integer light, visibility, topology and AO endpoint requirements remain exact.
+Linux and Windows CI explicitly run these optimized AO regressions.
+
+[Audit, matched CPU baseline, bounds, limitations and acceptance](performance/slice30/README.md).
+
+---
+
 # Slice 29: bounded vegetation and chunk cutouts
 
 Generator9 layers local species/plant plans over unchanged v8 geology and water.
@@ -246,6 +273,18 @@ bounded per-column retry deadlines. F5 retries promptly. Other eligible work can
 continue; no silent backup fallback or procedural replacement of invalid data.
 
 ## Memory and lifetime bounds
+
+For current extended-height generators6–9, the conservative dense voxel payload
+is25×16×4096 =1,638,400 bytes at default radius2 and49×16×4096 =3,211,264 bytes at
+radius3 (one-byte in-memory Blocks). An81-column worker cache or source can hold
+1,296 descriptors /5,308,416 dense voxel bytes each; actual uniform descriptors
+allocate no voxel array. Exact applied light samples cap at784×5,832 =4,572,288
+bytes. A maximal light solve is bounded to142×142×256 =5,161,984 cells per channel;
+solid masks, flood queues, maps, mesh and driver storage are additional. Source,
+pristine cache and main-thread storage are separate owners. These are conservative
+payload bounds, not measured RSS. See Slice30 for representative measured scenes.
+
+The following smaller numerical bounds describe historical generators1–5:
 
 Default resident block payload remains 307,200 bytes; radius3 caps it at 602,112.
 New light inputs require full-height square halos instead of Slice8's thin faces.

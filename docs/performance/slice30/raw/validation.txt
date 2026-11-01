@@ -1,0 +1,27 @@
+- `cargo fmt --all -- --check`: passed.
+- `cargo clippy --locked --workspace --all-targets -- -D warnings`: passed.
+- `cargo test --locked --workspace`:197 client +312 core +3 consolidated integration
+  tests passed;6 explicit measurement tests remain ignored in the ordinary run.
+- `cargo test --release --locked -p voxel_core --lib`: all312 passed, including
+  all optimized AO and historical generator tests.
+- `cargo build --release --locked -p rustcraft`: passed.
+- `python3 tools/generate_textures.py --check`: passed; no art/atlas changes.
+- Read-only audit:45 v9 sites, byte-identical baseline/current reports, plus270
+  historical local sites (generators3–8), all without findings.
+- Both matched core/interaction benchmarks and both headless ECS measurements
+  passed in both execution orders, including their state/resource assertions.
+- Actual release GUI smoke under Xvfb/Mesa software Vulkan: create seed42/gen9,
+  load distant shoreline, inspect opaque/water/held textures and F3, F5, save to
+  title, exit; identity/player files and released lock verified. [Exact scope](raw/gui-smoke.txt).
+- Linux and Windows GitHub Actions run the ordinary workspace checks plus the
+  optimized AO regression; their live result is attached to the PR checks.
+  Headless CI does not replace the owner acceptance checklist below.
+
+The8-GiB cloud scratch disk initially filled while linking large debug gallery
+executables alongside release dependencies. Only rebuildable Cargo artifacts were
+removed. The final workspace run was serialized with incremental compilation off
+and a temporary local rustc wrapper that passes `--strip-debug` to the executable
+linker. This removes DWARF only; test code, assertions and optimization settings
+remain unchanged. The wrapper is not a project change and CI runs ordinary commands.
+The unmodified baseline ordinary workspace run had already passed196 client /310
+core tests; its optimized AO run reproduced the two documented failures.

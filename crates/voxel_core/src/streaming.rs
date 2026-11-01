@@ -294,6 +294,8 @@ pub struct MeshBatchResult {
     pub meshes: Vec<(ChunkPos, ChunkMesh)>,
     pub lights: BTreeMap<ChunkPos, crate::lighting::ChunkLight>,
     pub lighting: LightMetrics,
+    /// Logical voxel volume of newly generated halo columns, including compact
+    /// uniform descriptors; not a count of individual procedural point queries.
     pub sampled_border_cells: usize,
     pub elapsed: Duration,
 }
@@ -318,7 +320,7 @@ fn lit_batch(
                 generated_columns: generated,
                 ..Default::default()
             },
-            sampled_border_cells: 0,
+            sampled_border_cells: generated * source.world_height().chunk_count() * 4096,
             elapsed: start.elapsed(),
         };
     }
@@ -348,9 +350,7 @@ fn lit_batch(
             propagated: light.propagated + light.block_propagated,
             generated_columns: generated,
         },
-        sampled_border_cells: generated
-            * crate::bounds::WorldHeight::HISTORICAL.chunk_count()
-            * 4096,
+        sampled_border_cells: generated * source.world_height().chunk_count() * 4096,
         elapsed: start.elapsed(),
     }
 }
@@ -417,9 +417,7 @@ pub fn remesh_water(
             generated_columns: generated,
             ..Default::default()
         },
-        sampled_border_cells: generated
-            * crate::bounds::WorldHeight::HISTORICAL.chunk_count()
-            * 4096,
+        sampled_border_cells: generated * source.world_height().chunk_count() * 4096,
         elapsed: start.elapsed(),
     }
 }

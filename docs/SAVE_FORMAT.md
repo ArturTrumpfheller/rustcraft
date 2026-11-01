@@ -1,3 +1,21 @@
+# Slice 30: integration verification, unchanged byte contracts
+
+No format, generator identity, registry ID, checksum, journal envelope, record
+limit or migration policy changes. Explicit Air remains durable over regenerated
+terrain, trees and plants. Combined tests span adjacent signed regions and the
+full Generate → Edit → Save → Evict → Regenerate → Restart → Reload lifecycle for
+generators3/6/8/9, including placed Birch Wood in older worlds. Existing recovery
+fixtures remain; natural-water bucket/construction journal interruptions now run
+against both generators8 and9. Unknown support overlays continue to defer edits
+without mutating inventory or blocks; reading an adjacent overlay does not make
+its chunks resident. Full item-drop capacity preserves the plant until a drop
+slot becomes available; retries produce one item.
+
+The eight-dirty-region /196,608-record /32 MiB journal budgets are retained.
+[Evidence and remaining durability limits](performance/slice30/README.md).
+
+---
+
 # Slice 29 additive vegetation compatibility
 
 New manifest5 worlds pin generator9; existing generators1–8 and all old golden

@@ -1,0 +1,47 @@
+Unmodified merged Slice29 f9f027daffae8571ce90358685b7e3eff7c2d122
+Command: cargo test --release --locked -p voxel_core mesh::ao_tests -- --test-threads=1
+
+   Compiling crc32fast v1.5.3
+   Compiling cfg-if v1.0.5
+   Compiling voxel_core v0.1.0 (/workspace/rustcraft/crates/voxel_core)
+    Finished `release` profile [optimized] target(s) in 1m 07s
+     Running unittests src/lib.rs (target/release/deps/voxel_core-84a419f58c17abe2)
+
+running 11 tests
+test mesh::ao_tests::affine_fields_match_exactly_for_every_packed_pattern_and_face_orientation ... ok
+test mesh::ao_tests::all_occupancy_combinations_and_orientations_at_signed_seams ... ok
+test mesh::ao_tests::both_triangle_diagonals_follow_the_ao_field_with_outward_winding ... ok
+test mesh::ao_tests::cached_colors_preserve_the_formula_and_documented_endpoints ... ok
+test mesh::ao_tests::constant_and_transverse_affine_patterns_merge_without_stretching ... ok
+test mesh::ao_tests::edits_split_and_restore_greedy_geometry_without_touching_light_data ... ok
+test mesh::ao_tests::isolated_and_flat_surfaces_remain_bright_and_merge ... FAILED
+test mesh::ao_tests::opaque_enclosure_and_skylight_floor_are_preserved ... FAILED
+test mesh::ao_tests::pending_streamed_neighbors_are_opaque_and_finite_outside_is_air ... ok
+test mesh::ao_tests::split_channels_preserve_noon_ao_and_leave_blocklight_independent_at_night ... ok
+test mesh::ao_tests::visibility_halo_treats_unrepresentable_coordinates_as_air ... ok
+
+failures:
+
+---- mesh::ao_tests::isolated_and_flat_surfaces_remain_bright_and_merge stdout ----
+
+thread 'mesh::ao_tests::isolated_and_flat_surfaces_remain_bright_and_merge' (5608) panicked at crates/voxel_core/src/mesh/ao_tests.rs:80:9:
+assertion `left == right` failed
+  left: [0.75, 0.044478588, 1.0, 1.0]
+ right: [0.75, 0.04447858, 1.0, 1.0]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- mesh::ao_tests::opaque_enclosure_and_skylight_floor_are_preserved stdout ----
+
+thread 'mesh::ao_tests::opaque_enclosure_and_skylight_floor_are_preserved' (5609) panicked at crates/voxel_core/src/mesh/ao_tests.rs:120:13:
+assertion `left == right` failed
+  left: [0.044478588, 0.044478588, 0.044478588, 1.0]
+ right: [0.04447858, 0.04447858, 0.04447858, 1.0]
+
+
+failures:
+    mesh::ao_tests::isolated_and_flat_surfaces_remain_bright_and_merge
+    mesh::ao_tests::opaque_enclosure_and_skylight_floor_are_preserved
+
+test result: FAILED. 9 passed; 2 failed; 0 ignored; 0 measured; 299 filtered out; finished in 0.60s
+
+error: test failed, to rerun pass `-p voxel_core --lib`

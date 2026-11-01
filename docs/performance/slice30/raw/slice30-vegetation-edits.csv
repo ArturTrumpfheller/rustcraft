@@ -1,0 +1,5 @@
+operation,samples,p50_us,p95_us,p99_us
+plant-inventory-break,24,0.90,0.94,0.98
+paired-save,24,78.00,213.71,239.71
+paired-reload-and-column,24,493.37,780.16,808.11
+eviction-regeneration,24,459.98,673.07,717.78
