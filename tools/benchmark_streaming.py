@@ -138,6 +138,11 @@ def main():
     p.add_argument("--frames", type=int, default=120)
     p.add_argument("--prepare-only", action="store_true")
     p.add_argument(
+        "--build-only",
+        action="store_true",
+        help="Build both verified executables without measuring yet.",
+    )
+    p.add_argument(
         "--native",
         action="store_true",
         help="Build optional instrumented GUI executables instead of running headless tests.",
@@ -299,6 +304,8 @@ def main():
             ]
             assert len(binaries) == 1
             shutil.copy2(binaries[0], out / f"{name}-bench")
+    if a.build_only:
+        return
     ids = json.loads((out / "sources.json").read_text())["runtime_ids"]
     for name in reversed(names) if a.reverse else names:
         with (out / f"{name}.txt").open("w") as log:
@@ -357,6 +364,7 @@ def main():
     assert (
         states[names[0]] == states[names[1]]
     ), "Final authority/resources differ: inspect raw states"
+    (out / "states.json").write_text(json.dumps(states, indent=2) + "\n")
     with (out / "samples.csv").open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["build", "scene", "radius", "repeat", "metric", "index", "value"])

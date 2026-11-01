@@ -232,8 +232,11 @@ fn dropped_items_survive_session_switches_without_leaking_entities_or_assets() {
     let initial = assets(&app);
     for _ in 0..3 {
         open(&mut app, &dir);
-        // Initial terrain may legitimately add meshes during arbitrary frames.
-        // Compare item asset reuse only after its independent queue converges.
+        // Freeze fluid simulation before waiting: a saved water source may
+        // legitimately wash other plants while initial terrain is loading.
+        key(&mut app, KeyCode::Escape);
+        assert_eq!(state(&app), ClientState::Paused);
+        // Compare item asset reuse only after independent terrain converges.
         until(&mut app, |a| {
             a.world().resource::<streaming::StreamState>().is_idle()
         });
