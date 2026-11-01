@@ -6,7 +6,10 @@ use crate::{
 };
 use std::{
     collections::{BTreeMap, BTreeSet},
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
     time::{Duration, Instant},
 };
 pub const DEFAULT_RADIUS: i32 = 2;
@@ -36,6 +39,45 @@ pub fn nearest(columns: &BTreeSet<Column>, center: Column) -> Option<Column> {
         })
         .copied()
 }
+/// Cooperative stop boundaries; a stopped job returns no publishable payload.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum WorkStage {
+    Regions,
+    Source,
+    Lighting,
+    Meshing,
+    Complete,
+}
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Cancelled(pub WorkStage);
+/// One token per job, shared only to request a stop. Source/cache ownership
+/// stays on the worker until its joined completion, including cancellation.
+#[derive(Clone, Default)]
+pub struct JobControl {
+    cancelled: Arc<AtomicBool>,
+    #[cfg(test)]
+    on_check: Option<Arc<dyn Fn(WorkStage) + Send + Sync>>,
+}
+impl JobControl {
+    pub fn cancel(&self) {
+        self.cancelled.store(true, Ordering::Relaxed);
+    }
+    pub fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::Relaxed)
+    }
+    pub fn checkpoint(&self, stage: WorkStage) -> Result<(), Cancelled> {
+        #[cfg(test)]
+        if let Some(hook) = &self.on_check {
+            hook(stage);
+        }
+        if self.is_cancelled() {
+            Err(Cancelled(stage))
+        } else {
+            Ok(())
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct LightMetrics {
     pub cells: usize,
@@ -46,6 +88,8 @@ pub struct LightMetrics {
 pub struct TerrainCache {
     identity: Option<GenerationConfig>,
     columns: BTreeMap<Column, Vec<Chunk>>,
+    pub hits: usize,
+    pub misses: usize,
 }
 impl TerrainCache {
     pub fn retain(&mut self, desired: &BTreeSet<Column>) {
@@ -104,6 +148,27 @@ pub fn build_column_cached(
     revision: u64,
     cache: &mut TerrainCache,
 ) -> ColumnResult {
+    build_column_controlled(
+        generator,
+        snapshot,
+        edits,
+        column,
+        revision,
+        cache,
+        &JobControl::default(),
+    )
+    .expect("uncancelled column")
+}
+/// Like `build_column_cached`, but returns no partial result when stopped.
+pub fn build_column_controlled(
+    generator: &Generator,
+    snapshot: World,
+    edits: EditSnapshot,
+    column: Column,
+    revision: u64,
+    cache: &mut TerrainCache,
+    control: &JobControl,
+) -> Result<ColumnResult, Cancelled> {
     let start = Instant::now();
     let limit = generator.chunk_limit();
     let targets = if column.iter().all(|c| (-limit..limit).contains(c)) {
@@ -116,16 +181,16 @@ pub fn build_column_cached(
         BTreeSet::new()
     };
     if targets.is_empty() {
-        return ColumnResult {
+        return Ok(ColumnResult {
             column,
             revision,
             chunks: vec![],
             lights: BTreeMap::new(),
             lighting: LightMetrics::default(),
             elapsed: start.elapsed(),
-        };
+        });
     }
-    let (source, generated) = lit_source(generator, snapshot, &edits, &targets, cache);
+    let (source, generated) = lit_source(generator, snapshot, &edits, &targets, cache, control)?;
     let batch = lit_batch(
         &source,
         &targets,
@@ -133,7 +198,8 @@ pub fn build_column_cached(
         &targets,
         generated,
         start,
-    );
+        control,
+    )?;
     let mut meshes: BTreeMap<_, _> = batch.meshes.into_iter().collect();
     let chunks = targets
         .iter()
@@ -145,14 +211,15 @@ pub fn build_column_cached(
             )
         })
         .collect();
-    ColumnResult {
+    control.checkpoint(WorkStage::Complete)?;
+    Ok(ColumnResult {
         column,
         revision,
         chunks,
         lights: batch.lights,
         lighting: batch.lighting,
         elapsed: start.elapsed(),
-    }
+    })
 }
 /// Initial spawn preparation is one compact column, before the App.
 /// No full-world generation is performed by the streamed client.
@@ -215,7 +282,8 @@ fn lit_source(
     edits: &EditSnapshot,
     targets: &BTreeSet<ChunkPos>,
     cache: &mut TerrainCache,
-) -> (World, usize) {
+    control: &JobControl,
+) -> Result<(World, usize), Cancelled> {
     if cache.identity != Some(generator.config()) {
         cache.columns.clear();
         cache.identity = Some(generator.config());
@@ -228,6 +296,7 @@ fn lit_source(
     let mut generated = 0;
     let limit = generator.chunk_limit();
     for c in crate::lighting::source_columns(targets) {
+        control.checkpoint(WorkStage::Source)?;
         if !c.iter().all(|v| (-limit..limit).contains(v)) {
             continue;
         }
@@ -236,6 +305,11 @@ fn lit_source(
             .all(|y| source.chunk(ChunkPos([c[0], y, c[1]])).is_some())
         {
             continue;
+        }
+        if cache.columns.contains_key(&c) {
+            cache.hits += 1;
+        } else {
+            cache.misses += 1;
         }
         let chunks = cache.columns.entry(c).or_insert_with(|| {
             generated += 1;
@@ -261,7 +335,8 @@ fn lit_source(
             source.apply_cached_edit(p, b);
         }
     }
-    (source, generated)
+    control.checkpoint(WorkStage::Lighting)?;
+    Ok((source, generated))
 }
 pub fn needs_mesh(world: &World, p: ChunkPos) -> bool {
     let Some(c) = world.chunk(p) else {
@@ -306,10 +381,12 @@ fn lit_batch(
     force: &BTreeSet<ChunkPos>,
     generated: usize,
     start: Instant,
-) -> MeshBatchResult {
+    control: &JobControl,
+) -> Result<MeshBatchResult, Cancelled> {
     let sparse = source.world_height() == crate::bounds::WorldHeight::EXTENDED;
     if sparse && targets.iter().all(|&p| !needs_mesh(source, p)) {
-        return MeshBatchResult {
+        control.checkpoint(WorkStage::Complete)?;
+        return Ok(MeshBatchResult {
             meshes: targets
                 .iter()
                 .filter(|p| force.contains(p) || previous.contains_key(p))
@@ -322,12 +399,14 @@ fn lit_batch(
             },
             sampled_border_cells: generated * source.world_height().chunk_count() * 4096,
             elapsed: start.elapsed(),
-        };
+        });
     }
+    control.checkpoint(WorkStage::Lighting)?;
     let light = crate::lighting::Skylight::for_chunks(source, targets);
     let mut meshes = vec![];
     let mut lights = BTreeMap::new();
     for &p in targets {
+        control.checkpoint(WorkStage::Meshing)?;
         // Air has no faces and needs no 18³ light cache. Enclosed uniform Stone
         // likewise has no geometry. Edits can materialize either on the next job.
         if sparse && !needs_mesh(source, p) {
@@ -342,7 +421,8 @@ fn lit_batch(
         }
         lights.insert(p, data);
     }
-    MeshBatchResult {
+    control.checkpoint(WorkStage::Complete)?;
+    Ok(MeshBatchResult {
         meshes,
         lights,
         lighting: LightMetrics {
@@ -352,7 +432,7 @@ fn lit_batch(
         },
         sampled_border_cells: generated * source.world_height().chunk_count() * 4096,
         elapsed: start.elapsed(),
-    }
+    })
 }
 /// Reference entry point: remesh every requested chunk. Production additionally
 /// compares exact applied light samples to avoid remeshing unaffected geometry.
@@ -381,9 +461,32 @@ pub fn remesh_lit(
     previous: &BTreeMap<ChunkPos, crate::lighting::ChunkLight>,
     force: &BTreeSet<ChunkPos>,
 ) -> MeshBatchResult {
+    remesh_lit_controlled(
+        generator,
+        snapshot,
+        edits,
+        targets,
+        cache,
+        previous,
+        force,
+        &JobControl::default(),
+    )
+    .expect("uncancelled meshes")
+}
+#[allow(clippy::too_many_arguments)] // The exact-light/forced-geometry contract is unchanged.
+pub fn remesh_lit_controlled(
+    generator: &Generator,
+    snapshot: World,
+    edits: EditSnapshot,
+    targets: &BTreeSet<ChunkPos>,
+    cache: &mut TerrainCache,
+    previous: &BTreeMap<ChunkPos, crate::lighting::ChunkLight>,
+    force: &BTreeSet<ChunkPos>,
+    control: &JobControl,
+) -> Result<MeshBatchResult, Cancelled> {
     let start = Instant::now();
-    let (source, generated) = lit_source(generator, snapshot, &edits, targets, cache);
-    lit_batch(&source, targets, previous, force, generated, start)
+    let (source, generated) = lit_source(generator, snapshot, &edits, targets, cache, control)?;
+    lit_batch(&source, targets, previous, force, generated, start, control)
 }
 
 /// Water-only geometry publication reuses exact applied light and skips solid greedy meshing.
@@ -395,22 +498,44 @@ pub fn remesh_water(
     cache: &mut TerrainCache,
     previous: &BTreeMap<ChunkPos, crate::lighting::ChunkLight>,
 ) -> MeshBatchResult {
+    remesh_water_controlled(
+        generator,
+        snapshot,
+        edits,
+        targets,
+        cache,
+        previous,
+        &JobControl::default(),
+    )
+    .expect("uncancelled water")
+}
+pub fn remesh_water_controlled(
+    generator: &Generator,
+    snapshot: World,
+    edits: EditSnapshot,
+    targets: &BTreeSet<ChunkPos>,
+    cache: &mut TerrainCache,
+    previous: &BTreeMap<ChunkPos, crate::lighting::ChunkLight>,
+    control: &JobControl,
+) -> Result<MeshBatchResult, Cancelled> {
     let start = Instant::now();
-    let (source, generated) = lit_source(generator, snapshot, &edits, targets, cache);
+    let (source, generated) = lit_source(generator, snapshot, &edits, targets, cache, control)?;
     let meshes = targets
         .iter()
         .map(|&p| {
-            (
+            control.checkpoint(WorkStage::Meshing)?;
+            Ok((
                 p,
                 ChunkMesh {
                     water_only: true,
                     water: crate::water_mesh::mesh_water_cached(&source, p, &previous[&p]),
                     ..Default::default()
                 },
-            )
+            ))
         })
-        .collect();
-    MeshBatchResult {
+        .collect::<Result<_, Cancelled>>()?;
+    control.checkpoint(WorkStage::Complete)?;
+    Ok(MeshBatchResult {
         meshes,
         lights: BTreeMap::new(),
         lighting: LightMetrics {
@@ -419,7 +544,7 @@ pub fn remesh_water(
         },
         sampled_border_cells: generated * source.world_height().chunk_count() * 4096,
         elapsed: start.elapsed(),
-    }
+    })
 }
 
 #[cfg(test)]

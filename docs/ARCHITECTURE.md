@@ -1,3 +1,18 @@
+# Slice 32: bounded fair streaming and cooperative stops
+
+One terrain worker now alternates eligible load/dirty work with at most two
+consecutive dispatches per class. Immediate missing collision columns precede
+ordinary loads; nearest rings retain motion bias, with a bounded fourth-service
+aging exception after250ms. Dirty aging chooses a complete connected component.
+Monotonic per-job stop tokens check regional/source/light/mesh stage boundaries.
+Normal success, cancellation and I/O errors all return the owned pristine cache;
+joined completion still validates the whole output unit before atomic publication.
+Save-and-drain retains session authority; no thread is detached or cache shared
+mutably across workers. Radius, formats, generators, physics and rendering remain.
+Constant-space timing/outcome summaries and two F3 lines distinguish queue wait,
+CPU publication, stale completion, stop and failure. [Policy, ownership contracts,
+matched measurements and native acceptance](performance/slice32/README.md).
+
 # Slice 31: exact processing with fewer repeated reads
 
 The lighting collector borrows at most sixteen vertical chunk descriptors on
@@ -276,8 +291,9 @@ and local output tokens (geometry plus full-height bounded light dependencies). 
 The radius remains 1–3 (default 2): at most 147 chunks, default 75, regardless of
 world extent. Desired/queued sets are bounded. One terrain job is in flight.
 Connected dirty components coalesce and publish together only if all local output
-tokens are current. Near dirty geometry precedes new loads. New loads prefer the
-nearest rings and the direction of motion inside a ring. Unrelated edits do not
+tokens are current. Eligible dirty work and loads have bounded class fairness. New loads prefer
+collision readiness, nearest rings and motion inside a ring, with explicit aging
+service for persistently waiting work (see Slice32 above). Unrelated edits do not
 invalidate useful work. Obsolete work cannot recreate evicted data/assets; valid
 installs satisfy duplicate requests discovered during movement.
 

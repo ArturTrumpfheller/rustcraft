@@ -384,3 +384,130 @@ fn motion_priority_prefers_forward_inside_near_ring_without_skipping_nearby_chun
     );
     assert!(nearest_ahead(&set, [1000, -1000], [f64::NAN, f64::INFINITY]).is_some());
 }
+
+#[test]
+fn cooperative_stops_return_no_payload_at_each_expensive_boundary_and_keep_pristine_cache() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let generator = Generator::new(GenerationConfig {
+        seed: 42,
+        version: 9,
+    })
+    .unwrap();
+    for stop in [
+        WorkStage::Source,
+        WorkStage::Lighting,
+        WorkStage::Meshing,
+        WorkStage::Complete,
+    ] {
+        let mut cache = TerrainCache::default();
+        let mut control = JobControl::default();
+        let cancelled = control.cancelled.clone();
+        let visits = Arc::new(AtomicUsize::new(0));
+        let checked = visits.clone();
+        control.on_check = Some(Arc::new(move |stage| {
+            if stage == stop
+                && checked.fetch_add(1, Ordering::Relaxed) == usize::from(stop == WorkStage::Source)
+            {
+                cancelled.store(true, Ordering::Relaxed);
+            }
+        }));
+        let old = EditSnapshot::from(Arc::new(BTreeMap::from([(
+            BlockPos([8, -32, 8]),
+            Block::Wood,
+        )])));
+        let result = build_column_controlled(
+            &generator,
+            World::default(),
+            old,
+            [0, 0],
+            0,
+            &mut cache,
+            &control,
+        );
+        assert!(matches!(result, Err(Cancelled(stage)) if stage == stop));
+        assert!(cache.columns() > 0 && cache.columns() <= 9);
+        let reuse = build_column_cached(
+            &generator,
+            World::default(),
+            EditSnapshot::default(),
+            [0, 0],
+            1,
+            &mut cache,
+        );
+        let fresh = build_column(&generator, EditSnapshot::default(), [0, 0], 1);
+        assert_eq!(
+            reuse.chunks, fresh.chunks,
+            "cancelled edits must not enter pristine cache"
+        );
+        assert_eq!(reuse.lights, fresh.lights);
+        assert!(cache.hits > 0);
+        assert_eq!(cache.misses, 9);
+    }
+}
+
+#[test]
+fn stopped_full_and_water_remeshes_do_not_return_partial_connected_geometry() {
+    let generator = Generator::new(GenerationConfig {
+        seed: 42,
+        version: 9,
+    })
+    .unwrap();
+    let targets: BTreeSet<_> = [ChunkPos([0, -1, 0]), ChunkPos([1, -1, 0])].into();
+    let mut snapshot = World::default();
+    for &p in &targets {
+        let mut chunk = Chunk::default();
+        chunk.set(crate::LocalPos::new([8, 8, 8]).unwrap(), Block::WaterSource);
+        snapshot.insert_mesh_chunk(p, chunk);
+    }
+    let baseline = remesh_cached(
+        &generator,
+        snapshot.clone(),
+        EditSnapshot::default(),
+        targets.clone(),
+    );
+    for water in [false, true] {
+        let mut control = JobControl::default();
+        let cancelled = control.cancelled.clone();
+        let visits = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        control.on_check = Some(Arc::new(move |stage| {
+            if stage == WorkStage::Meshing && visits.fetch_add(1, Ordering::Relaxed) == 1 {
+                cancelled.store(true, Ordering::Relaxed);
+            }
+        }));
+        let mut cache = TerrainCache::default();
+        let result = if water {
+            remesh_water_controlled(
+                &generator,
+                snapshot.clone(),
+                EditSnapshot::default(),
+                &targets,
+                &mut cache,
+                &baseline.lights,
+                &control,
+            )
+        } else {
+            remesh_lit_controlled(
+                &generator,
+                snapshot.clone(),
+                EditSnapshot::default(),
+                &targets,
+                &mut cache,
+                &BTreeMap::new(),
+                &targets,
+                &control,
+            )
+        };
+        assert!(matches!(result, Err(Cancelled(WorkStage::Meshing))));
+        let current = remesh_lit(
+            &generator,
+            snapshot.clone(),
+            EditSnapshot::default(),
+            &targets,
+            &mut cache,
+            &BTreeMap::new(),
+            &targets,
+        );
+        assert_eq!(current.meshes, baseline.meshes);
+        assert_eq!(current.lights, baseline.lights);
+    }
+}
