@@ -160,20 +160,36 @@ fn cpu_us() -> f64 {
 fn cpu_us() -> f64 {
     f64::NAN
 }
+type Gate = (std::sync::mpsc::Sender<()>, std::sync::mpsc::Receiver<()>);
+static GATE: Mutex<Option<Gate>> = Mutex::new(None);
+pub fn hold_next_worker() -> (std::sync::mpsc::Receiver<()>, std::sync::mpsc::Sender<()>) {
+    let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+    *GATE.lock().unwrap() = Some((entered_tx, release_rx));
+    (entered_rx, release_tx)
+}
 pub struct Worker {
     start: Instant,
     cpu: f64,
     heap: usize,
+    obsolete_probe: bool,
 }
 impl Worker {
     pub fn new() -> Self {
         let heap = LIVE.load(Ordering::Relaxed);
         PEAK.store(heap, Ordering::Relaxed);
-        Self {
+        let mut timer = Self {
             start: Instant::now(),
             cpu: cpu_us(),
             heap,
+            obsolete_probe: false,
+        };
+        if let Some((entered, release)) = GATE.lock().unwrap().take() {
+            timer.obsolete_probe = true;
+            entered.send(()).unwrap();
+            release.recv().unwrap();
         }
+        timer
     }
 }
 impl Drop for Worker {
@@ -184,6 +200,9 @@ impl Drop for Worker {
         let (hits, misses) = voxel_core::streaming::slice32_cache_stats();
         duration("worker_wall_us", wall);
         value("worker_cpu_us", cpu);
+        if self.obsolete_probe {
+            value("obsolete_before_regions_cpu_us", cpu);
+        }
         value("worker_window_peak_requested_heap", heap as f64);
         value("cache_hits", hits as f64);
         value("cache_misses", misses as f64);

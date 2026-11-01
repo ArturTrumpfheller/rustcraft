@@ -23,6 +23,7 @@ fn slice32_streaming_measurements() {
                 "diagonal",
                 "reversal",
                 "teleport",
+                "gated_teleport",
                 "return",
                 "forest",
                 "coast",
@@ -45,6 +46,18 @@ fn slice32_streaming_measurements() {
                     _ => [-28, 1],
                 };
                 go(&mut app, origin);
+                if scene == "gated_teleport" {
+                    let (entered, release) = probe::hold_next_worker();
+                    app.world_mut().resource_mut::<PlayerState>().body.position =
+                        [1600.5, 24., -1600.5];
+                    app.update();
+                    entered.recv_timeout(Duration::from_secs(10)).unwrap();
+                    app.world_mut().resource_mut::<PlayerState>().body.position =
+                        [-1600.5, 24., 1600.5];
+                    app.update();
+                    release.send(()).unwrap();
+                    drain(&mut app);
+                }
                 let start = Instant::now();
                 let initial = [
                     f64::from(origin[0] * 16) + 15.8,

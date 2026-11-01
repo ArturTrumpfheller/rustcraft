@@ -61,6 +61,6 @@ jobs:
       - name: Optimized voxel processing regressions
         run: cargo test --release --locked -p voxel_core --lib
       - name: Optimized streaming and lifecycle regressions
-        run: cargo test --release --locked -p rustcraft --bin rustcraft streaming:: -- --test-threads=1
+        run: 'cargo test --release --locked -p rustcraft --bin rustcraft streaming:: -- --test-threads=1'
       - name: Optimized session regressions
-        run: cargo test --release --locked -p rustcraft --bin rustcraft session:: -- --test-threads=1
+        run: 'cargo test --release --locked -p rustcraft --bin rustcraft session:: -- --test-threads=1'

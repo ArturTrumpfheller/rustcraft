@@ -162,3 +162,74 @@ fn continuous_signed_motion_reversals_diagonals_and_radius_changes_keep_bounded_
         assert!(s.first_load_dispatch.is_empty() && s.first_mesh_dispatch.is_empty());
     }
 }
+
+#[test]
+fn regional_failure_returns_owned_cache_without_a_procedural_fallback_payload() {
+    let dir = RegionalDir::new();
+    let mut app = large_app(&dir.0);
+    let cache = std::mem::take(&mut app.world_mut().resource_mut::<StreamState>().cache);
+    let columns = cache.columns();
+    let job = StreamJob::spawn(
+        Work::Load([100, 100]),
+        &app.world().resource::<VoxelWorld>().0,
+        app.world()
+            .resource::<StreamState>()
+            .generator
+            .clone()
+            .unwrap(),
+        None,
+        cache,
+        BTreeMap::new(),
+        BTreeSet::new(),
+        false,
+        None,
+    )
+    .unwrap();
+    let payload = job.handle.join().unwrap().unwrap();
+    assert!(matches!(payload.result, Err(JobError::Failed(_))));
+    assert_eq!(payload.cache.columns(), columns);
+    assert!(
+        !app.world()
+            .resource::<VoxelWorld>()
+            .0
+            .ready(BlockPos([1600, 24, 1600]))
+    );
+}
+
+#[test]
+fn leaving_then_returning_cannot_revive_a_stopped_job_and_normal_completion_counts_the_stop() {
+    let mut app = app(1);
+    drain(&mut app);
+    let release = gated(&mut app, Work::Load([0, 0]));
+    for position in [[48.5, 24., 48.5], [0.5, 24., 0.5]] {
+        app.world_mut().resource_mut::<PlayerState>().body.position = position;
+        app.update();
+    }
+    assert!(
+        app.world()
+            .resource::<StreamState>()
+            .job
+            .as_ref()
+            .unwrap()
+            .control
+            .is_cancelled()
+    );
+    release.send(()).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while !app
+        .world()
+        .resource::<StreamState>()
+        .job
+        .as_ref()
+        .unwrap()
+        .handle
+        .is_finished()
+    {
+        assert!(Instant::now() < deadline);
+        thread::yield_now();
+    }
+    app.update();
+    assert_eq!(app.world().resource::<StreamState>().metrics.cancelled, 1);
+    drain(&mut app);
+    assert_geometry(&app, &BTreeSet::from([ChunkPos([0, 1, 0])]));
+}
