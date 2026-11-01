@@ -120,7 +120,8 @@ regional-input time, total worker wall, computation, first queue wait,
 request-to-ready, request-to-CPU-publication, dirty-to-CPU-publication, installation
 and eviction. First queue wait stops **before** preparation at the first dispatch;
 it does not include worker processing/retry time. Request latency includes retries.
-Dirty summaries use the oldest invalidation in each published component. The
+Dirty summaries start when Update ingests invalidations and use the oldest
+ingested time in each published component; pre-Update edit time is not captured. The
 benchmark additionally records per-target dirty events with identical probes in
 both versions. Regional-input time includes cache checks; detailed disk-read calls
 are separately measured by optional probes.
@@ -148,14 +149,17 @@ artifact reuse. It keeps raw event samples, final authority/resource signatures,
 P50/P95/P99, counts, totals, maxima and machine/method metadata. Percentiles use
 `floor((N-1)*p/100)`. No observations are trimmed.
 
-Thirteen terrain scenarios at each radius cover stationary loading,4.317-block/s
+Thirteen ordinary terrain scenarios at each radius cover stationary loading,4.317-block/s
 walking,5.612 sprinting, normalized diagonal movement, rapid reversals, repeated
 teleports, returns after eviction, forest, coast, cavern, concurrent repeated edits,
 water at a chunk edge and radius changes. Positions/velocities follow fixed240Hz
 deadlines, with actual sleep only until the next benchmark frame. This is a
 scripted headless streaming workload, not a physics traversal or rendered FPS test.
 Cold preparation and full convergence are included; both builds must finish with
-identical resident blocks and mesh payloads. A fourteenth scenario separately
+identical resident blocks and mesh payloads. Two extra controlled scenarios hold a job before regional reads while moving
+away, and keep dirty invalidations eligible across twelve completed service slots.
+They isolate early-abandonment CPU and actual class-service behavior rather than
+claiming those interleavings are typical native workloads. A separate scenario
 measures twelve A/B session switches during requested terrain work at each radius,
 verifying exact menu asset/entity reclamation. Deterministic barrier tests supply
 interleavings independent of benchmark host timing.

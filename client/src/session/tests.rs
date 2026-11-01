@@ -232,6 +232,11 @@ fn dropped_items_survive_session_switches_without_leaking_entities_or_assets() {
     let initial = assets(&app);
     for _ in 0..3 {
         open(&mut app, &dir);
+        // Initial terrain may legitimately add meshes during arbitrary frames.
+        // Compare item asset reuse only after its independent queue converges.
+        until(&mut app, |a| {
+            a.world().resource::<streaming::StreamState>().is_idle()
+        });
         let p = BlockPos([8, 30, 8]);
         {
             let mut w = app.world_mut().resource_mut::<scene::VoxelWorld>();

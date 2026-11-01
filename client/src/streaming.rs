@@ -400,6 +400,9 @@ impl StreamState {
         }
         self.retry(work);
     }
+    pub(crate) fn is_idle(&self) -> bool {
+        self.queued.is_empty() && self.dirty.is_empty() && self.job.is_none()
+    }
     pub(crate) fn pending_loads(&self) -> usize {
         self.queued.len()
     }
@@ -913,7 +916,7 @@ fn update_streaming(
                 .sum::<usize>();
     }
     state.max_update = state.max_update.max(update_start.elapsed());
-    if changed && state.queued.is_empty() && state.dirty.is_empty() && state.job.is_none() {
+    if changed && state.is_idle() {
         let mut frames: Vec<_> = state.recent_frames.iter().copied().collect();
         frames.sort_unstable();
         let frame_p95 = frames

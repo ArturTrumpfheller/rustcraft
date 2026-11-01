@@ -29,6 +29,7 @@ fn slice32_streaming_measurements() {
                 "coast",
                 "cavern",
                 "editing",
+                "dirty_pressure",
                 "water",
                 "radius",
             ] {
@@ -56,6 +57,53 @@ fn slice32_streaming_measurements() {
                         [-1600.5, 24., 1600.5];
                     app.update();
                     release.send(()).unwrap();
+                    drain(&mut app);
+                }
+                if scene == "dirty_pressure" {
+                    let pressure = Instant::now();
+                    app.world_mut().resource_mut::<PlayerState>().body.position = [
+                        f64::from(origin[0] * 16) + 16.5,
+                        24.,
+                        f64::from(origin[1] * 16) + 8.5,
+                    ];
+                    let mut load_services = 0;
+                    for slot in 0..12 {
+                        if let Some(job) = &app.world().resource::<StreamState>().job {
+                            let deadline = Instant::now() + Duration::from_secs(10);
+                            while !job.handle.is_finished() {
+                                assert!(Instant::now() < deadline);
+                                std::thread::yield_now();
+                            }
+                        }
+                        edit(
+                            &mut app,
+                            BlockPos([origin[0] * 16 + 8, 128, origin[1] * 16 + 8]),
+                            if slot % 2 == 0 {
+                                Block::Wood
+                            } else {
+                                Block::Air
+                            },
+                        );
+                        app.update();
+                        if matches!(
+                            app.world()
+                                .resource::<StreamState>()
+                                .job
+                                .as_ref()
+                                .map(|j| &j.work),
+                            Some(Work::Load(_))
+                        ) {
+                            load_services += 1;
+                            if load_services == 1 {
+                                probe::duration(
+                                    "pressure_first_load_dispatch_us",
+                                    pressure.elapsed(),
+                                );
+                            }
+                        }
+                    }
+                    probe::value("pressure_load_services_in_12", load_services as f64);
+                    probe::duration("pressure_schedule_us", pressure.elapsed());
                     drain(&mut app);
                 }
                 let start = Instant::now();
