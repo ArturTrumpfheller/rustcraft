@@ -70,8 +70,10 @@ impl Skylight {
         let min = [0, 2].map(|a| targets.iter().map(|p| p.0[a]).min().unwrap() * 16 - HALO);
         let max = [0, 2].map(|a| (targets.iter().map(|p| p.0[a]).max().unwrap() + 1) * 16 + HALO);
         let size = [(max[0] - min[0]) as usize, (max[1] - min[1]) as usize];
-        // Callers bound targets to resident radius (maximum 7x7 columns).
-        assert!(size[0] <= 7 * 16 + 2 * HALO as usize && size[1] <= 7 * 16 + 2 * HALO as usize);
+        // Connected dirty units can span the complete validated render square.
+        let max_width =
+            (2 * crate::streaming::MAX_RADIUS + 1) as usize * crate::CHUNK_SIZE + 2 * HALO as usize;
+        assert!(size[0] <= max_width && size[1] <= max_width);
         let world_height = world.world_height();
         let height = (max_y - min_y) as usize;
         let count = size[0] * size[1] * height;

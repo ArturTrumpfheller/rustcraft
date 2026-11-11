@@ -154,6 +154,92 @@ fn title_first_has_no_world_lock_workers_or_gameplay_camera() {
     let (store, _, _) = SaveStore::open(&dir.0).unwrap();
     drop(store);
 }
+
+#[test]
+fn radius_four_regional_world_switches_reclaim_resources_and_preserve_independent_edits() {
+    let mut app = app();
+    let baseline = assets(&app);
+    let dirs = [Directory::new(), Directory::new()];
+    for (i, dir) in dirs.iter().enumerate() {
+        let (store, world, _) = SaveStore::open_with(&dir.0, || {
+            Ok(voxel_core::World::regional(
+                voxel_core::regions::RegionIdentity {
+                    seed: 42 + i as u64,
+                    generator: 9,
+                    nonce: [60 + i as u8; 16],
+                },
+            ))
+        })
+        .unwrap();
+        store.save(&world).unwrap();
+    }
+    for i in 0..6 {
+        open(&mut app, &dirs[i % 2]);
+        crate::settings::apply(
+            app.world_mut(),
+            crate::settings::Preferences {
+                radius: 4,
+                ..default()
+            },
+        );
+        frame(&mut app);
+        until(&mut app, |a| {
+            a.world().resource::<streaming::StreamState>().is_idle()
+        });
+        assert_eq!(
+            app.world().resource::<scene::VoxelWorld>().0.chunk_count(),
+            81 * 16
+        );
+        let pos = BlockPos([0, 128, 0]);
+        let expected = if i % 2 == 0 {
+            Block::Wood
+        } else {
+            Block::Stone
+        };
+        if i >= 2 {
+            assert_eq!(
+                app.world().resource::<scene::VoxelWorld>().0.block(pos),
+                expected
+            );
+        } else {
+            app.world_mut()
+                .resource_mut::<scene::VoxelWorld>()
+                .0
+                .set_block(pos, expected)
+                .unwrap();
+        }
+        app.world_mut()
+            .resource_mut::<player::PlayerState>()
+            .body
+            .position = [-1600.5, 24., 1600.5];
+        frame(&mut app);
+        // Leave during active distant work, exercising save plus joined stop.
+        leave(&mut app);
+        assert_eq!(assets(&app), baseline);
+        assert!(!app.world().contains_resource::<streaming::StreamState>());
+        assert_eq!(
+            app.world()
+                .resource::<Assets<crate::terrain_material::WaterSurface>>()
+                .len(),
+            0
+        );
+        assert_eq!(
+            app.world()
+                .resource::<Assets<crate::atmosphere::SkyMaterial>>()
+                .len(),
+            0
+        );
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<SessionEntity>>()
+                .iter(app.world())
+                .count(),
+            0
+        );
+        let (store, _, _) = SaveStore::open(&dirs[i % 2].0).unwrap();
+        drop(store);
+    }
+}
 #[test]
 fn repeated_sessions_save_edits_inventory_release_lock_and_reclaim_assets() {
     let mut app = app();
@@ -608,7 +694,7 @@ fn atmosphere_is_world_only_and_reclaimed_across_session_and_settings_transition
     let dir = Directory::new();
     let baseline = assets(&app);
     assert_eq!(app.world().resource::<Assets<SkyMaterial>>().len(), 0);
-    for radius in [1, 3, 2] {
+    for radius in [1, 4, 1, 3, 2] {
         open(&mut app, &dir);
         assert_eq!(app.world().resource::<Assets<SkyMaterial>>().len(), 1);
         let sky = app.world().resource::<SkyAssets>();

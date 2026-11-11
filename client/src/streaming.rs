@@ -45,7 +45,10 @@ pub(crate) fn radius_from(value: Option<OsString>) -> io::Result<i32> {
             .ok_or_else(|| {
                 io::Error::new(
                     io::ErrorKind::InvalidInput,
-                    "RUSTCRAFT_LOAD_RADIUS must be 1, 2 or 3",
+                    format!(
+                        "RUSTCRAFT_LOAD_RADIUS must be in 1..={}",
+                        streaming::MAX_RADIUS
+                    ),
                 )
             }),
     }
@@ -405,6 +408,9 @@ impl StreamState {
     }
     pub(crate) fn pending_loads(&self) -> usize {
         self.queued.len()
+    }
+    pub(crate) fn desired_columns(&self) -> usize {
+        self.desired.len()
     }
     pub(crate) fn pending_dirty(&self) -> usize {
         self.dirty.len()

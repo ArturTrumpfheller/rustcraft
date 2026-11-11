@@ -1,0 +1,198 @@
+{
+  "forward": {
+    "worker_cpu_us": {
+      "stat": "p99",
+      "limit": 30000,
+      "observed": 12311.039,
+      "scene": "sprinting",
+      "radius": 3,
+      "count": 195,
+      "max": 19920.479,
+      "max_scene": "return",
+      "max_radius": 4,
+      "passed": true
+    },
+    "worker_wall_us": {
+      "stat": "p99",
+      "limit": 30000,
+      "observed": 12616.829,
+      "scene": "sprinting",
+      "radius": 3,
+      "count": 195,
+      "max": 21165.402,
+      "max_scene": "gated_teleport",
+      "max_radius": 4,
+      "passed": true
+    },
+    "main_install_us": {
+      "stat": "p99",
+      "limit": 8000,
+      "observed": 2209.225,
+      "scene": "cavern",
+      "radius": 1,
+      "count": 63,
+      "max": 8066.883,
+      "max_scene": "teleport",
+      "max_radius": 1,
+      "passed": true
+    },
+    "ecs_update_us": {
+      "stat": "p99",
+      "limit": 10000,
+      "observed": 7465.206,
+      "scene": "editing",
+      "radius": 1,
+      "count": 360,
+      "max": 84646.554,
+      "max_scene": "teleport",
+      "max_radius": 3,
+      "passed": true
+    },
+    "request_cpu_visible_us": {
+      "stat": "p99",
+      "limit": 1000000,
+      "observed": 360647.874,
+      "scene": "gated_teleport",
+      "radius": 4,
+      "count": 753,
+      "max": 378743.741,
+      "max_scene": "gated_teleport",
+      "max_radius": 4,
+      "passed": true
+    },
+    "resident_rss_kib": {
+      "stat": "max",
+      "limit": 131072,
+      "observed": 56360.0,
+      "scene": "editing",
+      "radius": 4,
+      "count": 3,
+      "max": 56360.0,
+      "max_scene": "editing",
+      "max_radius": 4,
+      "passed": true
+    },
+    "mesh_payload": {
+      "stat": "max",
+      "limit": 33554432,
+      "observed": 16192408.0,
+      "scene": "cavern",
+      "radius": 4,
+      "count": 3,
+      "max": 16192408.0,
+      "max_scene": "cavern",
+      "max_radius": 4,
+      "passed": true
+    },
+    "publication_total_us": {
+      "stat": "p99",
+      "limit": 12000,
+      "observed": 4629.317,
+      "scene": "retained-install",
+      "radius": 4,
+      "count": 384,
+      "max": 7911.724,
+      "max_scene": "retained-install",
+      "max_radius": 4,
+      "passed": true
+    }
+  },
+  "reverse": {
+    "worker_cpu_us": {
+      "stat": "p99",
+      "limit": 30000,
+      "observed": 13701.131,
+      "scene": "gated_teleport",
+      "radius": 1,
+      "count": 111,
+      "max": 30410.824,
+      "max_scene": "dense-construction",
+      "max_radius": 4,
+      "passed": true
+    },
+    "worker_wall_us": {
+      "stat": "p99",
+      "limit": 30000,
+      "observed": 14782.659,
+      "scene": "gated_teleport",
+      "radius": 1,
+      "count": 111,
+      "max": 30447.05,
+      "max_scene": "dense-construction",
+      "max_radius": 4,
+      "passed": true
+    },
+    "main_install_us": {
+      "stat": "p99",
+      "limit": 8000,
+      "observed": 2734.643,
+      "scene": "cavern",
+      "radius": 4,
+      "count": 282,
+      "max": 13841.014,
+      "max_scene": "cavern",
+      "max_radius": 4,
+      "passed": true
+    },
+    "ecs_update_us": {
+      "stat": "p99",
+      "limit": 10000,
+      "observed": 6020.091,
+      "scene": "walking",
+      "radius": 3,
+      "count": 360,
+      "max": 37173.635,
+      "max_scene": "gated_teleport",
+      "max_radius": 4,
+      "passed": true
+    },
+    "request_cpu_visible_us": {
+      "stat": "p99",
+      "limit": 1000000,
+      "observed": 362329.674,
+      "scene": "gated_teleport",
+      "radius": 4,
+      "count": 753,
+      "max": 383347.117,
+      "max_scene": "gated_teleport",
+      "max_radius": 4,
+      "passed": true
+    },
+    "resident_rss_kib": {
+      "stat": "max",
+      "limit": 131072,
+      "observed": 57240.0,
+      "scene": "cavern",
+      "radius": 4,
+      "count": 3,
+      "max": 57240.0,
+      "max_scene": "cavern",
+      "max_radius": 4,
+      "passed": true
+    },
+    "mesh_payload": {
+      "stat": "max",
+      "limit": 33554432,
+      "observed": 16192408.0,
+      "scene": "cavern",
+      "radius": 4,
+      "count": 3,
+      "max": 16192408.0,
+      "max_scene": "cavern",
+      "max_radius": 4,
+      "passed": true
+    },
+    "publication_total_us": {
+      "stat": "p99",
+      "limit": 12000,
+      "observed": 2899.816,
+      "scene": "retained-install",
+      "radius": 4,
+      "count": 384,
+      "max": 16401.183,
+      "max_scene": "retained-install",
+      "max_radius": 2,
+      "passed": true
+    }
+  }
+}

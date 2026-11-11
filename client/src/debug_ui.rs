@@ -116,6 +116,7 @@ struct Diagnostics<'w, 's> {
     keys: Res<'w, ButtonInput<KeyCode>>,
     world: Option<Res<'w, VoxelWorld>>,
     player: Res<'w, PlayerState>,
+    physics: Option<Res<'w, crate::player::PlayerSettings>>,
     pose: Res<'w, crate::camera::ViewPose>,
     stream: Option<Res<'w, crate::streaming::StreamState>>,
     inventory: Res<'w, crate::inventory_ui::GameInventory>,
@@ -189,7 +190,7 @@ fn update(
     overlay.text.clear();
     let _ = writeln!(
         overlay.text,
-        "RUSTCRAFT {} / DEV SLICE 33",
+        "RUSTCRAFT {} / DEV SLICE 34",
         env!("CARGO_PKG_VERSION")
     );
     if let Some(seconds) = overlay.frame_seconds {
@@ -219,8 +220,26 @@ fn update(
         overlay.text,
         "FACING: {cardinal} / YAW: {yaw:.1} / PITCH: {pitch:.1}"
     );
-    if let Some(stream) = &data.stream {
+    if let Some(stream) = &data.stream
+        && data
+            .world
+            .as_ref()
+            .is_some_and(|w| w.0.identity().is_some())
+    {
         let _ = writeln!(overlay.text, "RENDER DISTANCE: {} CHUNKS", stream.radius());
+        let world = &data.world.as_ref().unwrap().0;
+        let config = data.physics.as_ref().map_or_else(Default::default, |s| s.0);
+        let body = if p.cache_ready(world, &config) {
+            "READY"
+        } else {
+            "WAIT"
+        };
+        let _ = writeln!(
+            overlay.text,
+            "VIEW COL: {} / {} / BODY: {body}",
+            world.chunk_count() / world.world_height().chunk_count(),
+            stream.desired_columns()
+        );
         let (job, age) = stream.job_status();
         let _ = writeln!(
             overlay.text,

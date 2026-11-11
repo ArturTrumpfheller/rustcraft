@@ -1,5 +1,28 @@
 use super::*;
 struct Dir(PathBuf);
+
+#[test]
+fn version_one_radius_files_remain_compatible_and_four_round_trips_without_migration() {
+    let dir = Dir::new();
+    let historical = "RUSTCRAFT_SETTINGS 1\nfov=78\nsensitivity=100\ninvert_y=false\nradius=2\nborderless=false\nsize=1\nvsync=true\nkeys=KeyW,KeyS,KeyA,KeyD,Space,ControlLeft,ShiftLeft,KeyR,KeyE,Escape,Digit1,Digit2,Digit3,Digit4,Digit5,Digit6,Digit7,Digit8,Digit9\n";
+    for radius in 1..=3 {
+        let bytes = historical.replace("radius=2", &format!("radius={radius}"));
+        fs::write(dir.0.join("settings.rcs"), bytes.as_bytes()).unwrap();
+        let (_, prefs) = Store::load(&dir.0);
+        assert_eq!(prefs.unwrap().radius, radius);
+        assert_eq!(
+            fs::read(dir.0.join("settings.rcs")).unwrap(),
+            bytes.as_bytes()
+        );
+    }
+    let (mut store, prefs) = Store::load(&dir.0);
+    let mut prefs = prefs.unwrap();
+    prefs.radius = 4;
+    store.save(&prefs, false).unwrap();
+    assert_eq!(Store::load(&dir.0).1.unwrap().radius, 4);
+    prefs.radius = 5;
+    assert!(prefs.validate().is_err());
+}
 impl Dir {
     fn new() -> Self {
         let p = std::env::temp_dir().join(format!(

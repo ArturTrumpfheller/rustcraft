@@ -1,0 +1,11 @@
+    Finished `release` profile [optimized] target(s) in 0.06s
+     Running unittests src/lib.rs (target/release/deps/voxel_core-84a419f58c17abe2)
+
+running 1 test
+test fluid::tests::radius_four_full_volume_queue_capacity_and_eviction_stress ... RADIUS4_FLUID_STRESS events=5308416 queue_capacity=8388608 set_capacity=7340032 enqueue_ms=1259.659
+VmHWM:	  205524 kB
+VmRSS:	  171788 kB
+RADIUS4_FLUID_STRESS drained_ms=2638.458
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 324 filtered out; finished in 2.65s

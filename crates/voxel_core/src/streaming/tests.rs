@@ -71,7 +71,7 @@ fn install(world: &mut World, result: ColumnResult) {
 
 #[test]
 fn radius_policy_caps_pending_and_handles_extreme_fast_travel_without_spawn_pin() {
-    for r in 1..=3 {
+    for r in 1..=MAX_RADIUS {
         for x in -4..4 {
             for z in -4..4 {
                 let wanted = desired([x, z], r);
@@ -85,8 +85,29 @@ fn radius_policy_caps_pending_and_handles_extreme_fast_travel_without_spawn_pin(
     }
     for center in [[i32::MAX; 2], [i32::MIN; 2]] {
         let wanted = desired(center, 99);
-        assert!(wanted.len() <= 49);
+        assert!(wanted.len() <= MAX_COLUMNS);
         assert!(nearest(&wanted, center).is_some());
+    }
+}
+
+#[test]
+fn radius_four_regional_view_and_source_halo_are_bounded_at_signed_and_world_edges() {
+    for center in [[0, 0], [-17, 19], [-1990, 1990]] {
+        let desired = desired_with_limit(center, 4, 2048);
+        assert_eq!(desired.len(), 81);
+        let targets = desired.iter().map(|c| ChunkPos([c[0], 0, c[1]])).collect();
+        assert_eq!(crate::lighting::source_columns(&targets).len(), 121);
+        assert_eq!(desired_with_limit(center, i32::MAX, 2048), desired);
+    }
+    for center in [[2047, -2048], [i32::MAX, i32::MIN]] {
+        let desired = desired_with_limit(center, 4, 2048);
+        assert_eq!(desired.len(), 25);
+        assert!(
+            desired
+                .iter()
+                .all(|c| c.iter().all(|v| (-2048..2048).contains(v)))
+        );
+        assert!(desired.contains(&[2047, -2048]));
     }
 }
 

@@ -1,5 +1,5 @@
 use super::*;
-fn gated(app: &mut App, work: Work) -> std::sync::mpsc::Sender<()> {
+pub(super) fn gated(app: &mut App, work: Work) -> std::sync::mpsc::Sender<()> {
     let (entered_tx, entered_rx) = std::sync::mpsc::channel();
     let (release_tx, release_rx) = std::sync::mpsc::channel();
     let cache = std::mem::take(&mut app.world_mut().resource_mut::<StreamState>().cache);

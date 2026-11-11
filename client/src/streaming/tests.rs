@@ -298,10 +298,10 @@ fn legacy_snapshots_do_not_stream_and_radius_configuration_is_bounded() {
     assert_eq!(app.world().resource::<VoxelWorld>().0.chunks().count(), 4);
     assert!(app.world().resource::<StreamState>().job.is_none());
     assert_eq!(radius_from(None).unwrap(), 2);
-    for r in ["1", "2", "3"] {
+    for r in ["1", "2", "3", "4"] {
         assert!(radius_from(Some(r.into())).is_ok());
     }
-    for r in ["0", "4", "-1", "abc", ""] {
+    for r in ["0", "5", "-1", "abc", ""] {
         assert!(radius_from(Some(r.into())).is_err());
     }
 }
@@ -1138,8 +1138,11 @@ fn assert_textured_residency(app: &mut App) {
         2
     );
     let state = w.resource::<StreamState>();
-    assert!(state.lights.len() <= 49 * w.resource::<VoxelWorld>().0.world_height().chunk_count());
-    assert!(state.cache.columns() <= 81);
+    assert!(
+        state.lights.len()
+            <= streaming::MAX_COLUMNS * w.resource::<VoxelWorld>().0.world_height().chunk_count()
+    );
+    assert!(state.cache.columns() <= (2 * streaming::MAX_RADIUS + 3).pow(2) as usize);
     let renders = w.resource::<ChunkRenders>();
     assert_eq!(
         w.resource::<Assets<Mesh>>().len(),
@@ -1957,3 +1960,6 @@ fn v9_all_surfaces_are_bounded_reclaimed_and_recreated_across_shore_eviction() {
 
 #[path = "slice32_tests.rs"]
 mod slice32;
+
+#[path = "slice34_tests.rs"]
+mod slice34;

@@ -1,0 +1,35 @@
+{
+  "measured_variant": "client forward/reverse source/executable hashes retained in respective sources.json",
+  "final_source_differences": {
+    "client/src/debug_ui/tests.rs": {
+      "measured": "fb6347b778c32b2f2476872beb03ae9eec30df0462dca0828e71ad5e6e4ed718",
+      "final": "86dad2ac59b1bdcf16556b05f44ef2fc53df7fc201001ae0c0260c1fcf2edb19"
+    },
+    "client/src/debug_ui.rs": {
+      "measured": "b13fa59dc365c0730090c562c2c8286969e0505edfb6d3df574d0c44ca1bb478",
+      "final": "451be6cb5cfde13bbab626ddbce22073594955f6e6a288c81c32727062403902"
+    },
+    "client/src/menu/settings/tests.rs": {
+      "measured": "6c0830e53706f24372e33d7c270720581e168f1becb2bcb09a886e0cdff30d9a",
+      "final": "f80024ab7bdd270411dabbe0ce26d5824ea72221cdb626c4099abe1c2a67a591"
+    },
+    "client/src/session/tests.rs": {
+      "measured": "20250b510955810ad8c509d8fa2c9eb8950ae59e054e2bf84fef22f649cd6374",
+      "final": "d9d4e82adf3d21be8ed9fe6ceb360257d24ff7e7197b2275f37ef467cdff997b"
+    },
+    "client/src/streaming/slice34_tests.rs": {
+      "measured": "3f4caa6b6e97526f4ffbb2a8c75ba85e6642d56e568125202eadd6b51c543234",
+      "final": "550bc66dbb467f94557f38eba7771b8a5d86e022caee52c5ff024ab60ef0525e"
+    }
+  },
+  "timed_code_unchanged": [
+    "generation",
+    "lighting",
+    "meshing",
+    "fluid",
+    "streaming worker/scheduler/publication",
+    "scene assets/bounds/visibility",
+    "shaders/materials/atlas"
+  ],
+  "reason": "Finite-snapshot F3 guard is after the disabled-overlay early return; timed terrain apps have no F3 plugin and session benchmark never enables F3. Other changes are test assertions/diagnostic output. Final-source debug/release validation is separate."
+}

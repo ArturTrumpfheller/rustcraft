@@ -3,7 +3,7 @@ use bevy::camera::CameraProjection;
 
 #[test]
 fn radius_bounds_cover_the_guaranteed_streamed_circle_and_preserve_interaction_range() {
-    for radius in 1..=3 {
+    for radius in 1..=voxel_core::streaming::MAX_RADIUS {
         let a = AtmosphereUniform::for_radius(radius);
         assert_eq!(a.fog.y, radius as f32 * voxel_core::CHUNK_SIZE as f32);
         assert!(a.fog.x > 5. && a.fog.x < a.fog.y);
@@ -21,7 +21,7 @@ fn radius_bounds_cover_the_guaranteed_streamed_circle_and_preserve_interaction_r
     );
     assert_eq!(
         AtmosphereUniform::for_radius(i32::MAX),
-        AtmosphereUniform::for_radius(3)
+        AtmosphereUniform::for_radius(voxel_core::streaming::MAX_RADIUS)
     );
 }
 

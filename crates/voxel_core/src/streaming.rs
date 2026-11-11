@@ -13,7 +13,9 @@ use std::{
     time::{Duration, Instant},
 };
 pub const DEFAULT_RADIUS: i32 = 2;
-pub const MAX_RADIUS: i32 = 3;
+/// Initial measured expansion. See docs/performance/slice34 before raising again.
+pub const MAX_RADIUS: i32 = 4;
+pub const MAX_COLUMNS: usize = ((2 * MAX_RADIUS + 1) * (2 * MAX_RADIUS + 1)) as usize;
 pub type Column = [i32; 2];
 pub fn desired(center: Column, radius: i32) -> BTreeSet<Column> {
     desired_with_limit(center, radius, 4)

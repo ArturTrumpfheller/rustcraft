@@ -119,7 +119,13 @@ pub fn slice32_cache_stats()->(usize,usize){S32_CACHE.with(|v|v.get())}
         ),
     )
     tests = root / "client/src/streaming/tests.rs"
-    tests.write_text(tests.read_text() + "\n" + fixture)
+    distance_fixture = (ROOT / "tools/streaming_bench/distance.rs").read_text()
+    if not current:
+        # Slice31 has no first-dispatch tracking sets. Keep its original default
+        # reproduction buildable even when the expansion helpers are unused.
+        distance_fixture = distance_fixture.replace(
+            "    assert!(state.first_load_dispatch.is_empty() && state.first_mesh_dispatch.is_empty());\n", "")
+    tests.write_text(tests.read_text() + "\n" + fixture + "\n" + distance_fixture)
     sessions = root / "client/src/session/tests.rs"
     sessions.write_text(
         sessions.read_text()
@@ -146,6 +152,50 @@ def instrument_rendering(root):
     scene.write_text(text)
 
 
+def instrument_distance(root):
+    """Identical stage/visibility probes for the radius expansion; no game probes."""
+    from benchmark_stabilization import instrument as stages
+    stages(root)
+    core = root / "crates/voxel_core/src/streaming.rs"
+    replace(core, "            let sampler = generator.sampler(c);",
+            "            let generation_start=Instant::now();\n            let sampler = generator.sampler(c);")
+    replace(core, "                .collect()\n        });",
+            "                .collect::<Vec<_>>();\n            crate::worldgen::slice30_add(15,generation_start.elapsed().as_nanos());\n            generated_chunks\n        });")
+    # Name the generation closure result so the timer covers the complete column.
+    replace(core, "            height\n                .chunks()", "            let generated_chunks = height\n                .chunks()")
+    stream = root / "client/src/streaming.rs"
+    replace(stream, "                timing.wall = worker_start.elapsed();", '''                timing.wall = worker_start.elapsed();
+                crate::slice32_probe::value("worker_cache_columns", cache.columns() as f64);
+                crate::slice32_probe::value("worker_cache_bytes", cache.allocated_voxel_bytes() as f64);''')
+    replace(stream, "    state.max_update = state.max_update.max(update_start.elapsed());", '''    state.max_update = state.max_update.max(update_start.elapsed());
+    crate::slice32_probe::duration("stream_update_us",update_start.elapsed());
+    crate::slice32_probe::value("resident_descriptors_update",world.0.chunk_count() as f64);
+    crate::slice32_probe::value("pending_loads_update",state.queued.len() as f64);
+    crate::slice32_probe::value("pending_dirty_update",state.dirty.len() as f64);
+    crate::slice32_probe::value("resident_mesh_bytes_update",state.mesh_bytes as f64);''')
+    probe = root / "client/src/slice32_probe.rs"
+    replace(probe, '        duration("worker_wall_us", wall);', '''        let stages=voxel_core::worldgen::slice30_take();
+        for (metric,index) in [("generation_us",15),("lighting_us",2),("meshing_us",3),("water_mesh_us",4),("plant_mesh_us",5)] {
+            value(metric,stages[index] as f64/1000.);
+        }
+        duration("worker_wall_us", wall);''')
+    tests = root / "client/src/streaming/tests.rs"
+    before, after = tests.read_text().split("fn large_app_with_generator(", 1)
+    marker = "    app.add_plugins(MinimalPlugins)\n        .insert_resource("
+    assert after.count(marker) == 1
+    after = after.replace(marker, '''    app.add_plugins(MinimalPlugins);
+    if std::env::var("S34_DISTANCE").as_deref()==Ok("1") {
+        app.add_plugins((bevy::asset::AssetPlugin::default(),bevy::mesh::MeshPlugin,
+            bevy::transform::TransformPlugin,bevy::camera::visibility::VisibilityPlugin));
+        app.add_systems(PostUpdate,crate::camera::rebase_scene.before(bevy::transform::TransformSystems::Propagate));
+    }
+    app.insert_resource(''')
+    tests.write_text(before + "fn large_app_with_generator(" + after)
+    camera = root / "client/src/camera.rs"
+    if "\nfn rebase_scene(" in camera.read_text():
+        replace(camera, "\nfn rebase_scene(", "\npub(crate) fn rebase_scene(")
+
+
 def summarize_traces(paths, out):
     """Preserve all valid trace observations; report malformed lines explicitly."""
     groups = {}
@@ -164,7 +214,7 @@ def summarize_traces(paths, out):
     if not groups:
         raise ValueError("no S32_TRACE observations found")
     with (out / "trace-percentiles.csv").open("w", newline="") as file:
-        writer = csv.writer(file)
+        writer = csv.writer(file, lineterminator="\n")
         writer.writerow(
             ["file", "metric", "count", "p50", "p95", "p99", "total", "max"]
         )
@@ -208,6 +258,8 @@ def main():
     p.add_argument("--reuse", action="store_true")
     p.add_argument("--rendering-install", action="store_true",
                    help="Also measure retained connected batches with real Bevy CPU visibility.")
+    p.add_argument("--distance-expansion", action="store_true",
+                   help="Measure supported radii through 4, dense edits, stage costs and real CPU visibility.")
     p.add_argument(
         "--trace",
         nargs="+",
@@ -265,9 +317,12 @@ def main():
                 tests = root / "client/src/scene/tests.rs"
                 tests.write_text(tests.read_text() + "\n" + (ROOT / "tools/rendering_bench/install.rs").read_text())
                 instrument_rendering(root)
+            if a.distance_expansion:
+                instrument_distance(root)
         (out / "sources.json").write_text(
             json.dumps(
                 {"baseline": baseline, "files": sources, "runtime_ids": ids,
+                 "probes": {"distance_expansion": a.distance_expansion, "rendering_install": a.rendering_install},
                  "harness_sha256": {str(f.relative_to(ROOT)): hashlib.sha256(f.read_bytes()).hexdigest()
                     for f in [Path(__file__).resolve(), ROOT / "tools/rendering_bench/install.rs", *sorted((ROOT / "tools/streaming_bench").glob("*.rs"))]}}, indent=2
             )
@@ -387,6 +442,8 @@ def main():
         return
     manifest = json.loads((out / "sources.json").read_text())
     assert manifest["baseline"] == baseline, "Reused baseline differs from requested revision"
+    if "probes" in manifest:
+        assert manifest["probes"] == {"distance_expansion": a.distance_expansion, "rendering_install": a.rendering_install}, "Reused probes differ"
     ids = manifest["runtime_ids"]
     assert set(ids) == set(names), "Reused build labels differ"
     executables = json.loads((out / "executables-sha256.json").read_text())
@@ -412,6 +469,7 @@ def main():
                     "S32_FRAMES": str(a.frames),
                     "S32_EXPECT_CORE": ids[name][0],
                     "S32_EXPECT_CLIENT": ids[name][1],
+                    "S34_DISTANCE": str(int(a.distance_expansion)),
                 },
             )
             subprocess.run(
@@ -431,13 +489,14 @@ def main():
                     "S32_REPEATS": str(a.repeats),
                     "S32_EXPECT_CORE": ids[name][0],
                     "S32_EXPECT_CLIENT": ids[name][1],
+                    "S34_DISTANCE": str(int(a.distance_expansion)),
                 },
             )
             if a.rendering_install:
                 subprocess.run(
                     [str(out / f"{name}-bench"), "slice33_install_measurements", "--ignored", "--nocapture", "--test-threads=1"],
                     cwd=scratch / name, stdout=log, stderr=log, check=True,
-                    env={**os.environ, "S32_REPEATS": str(a.repeats), "S32_EXPECT_CORE": ids[name][0], "S32_EXPECT_CLIENT": ids[name][1]},
+                    env={**os.environ, "S32_REPEATS": str(a.repeats), "S32_EXPECT_CORE": ids[name][0], "S32_EXPECT_CLIENT": ids[name][1], "S34_DISTANCE": str(int(a.distance_expansion))},
                 )
         print(out / f"{name}.txt", flush=True)
     states = {}
@@ -455,20 +514,27 @@ def main():
                 ].split(",")
                 samples.append([name, scene, radius, repeat, metric, index, value])
     # The Rust harness may prefix the first state with its test-name banner.
-    assert len(states[names[0]]) == len(states[names[1]]) == 16 * 3 * a.repeats
-    assert (
-        states[names[0]] == states[names[1]]
-    ), "Final authority/resources differ: inspect raw states"
+    if a.distance_expansion:
+        # The exact baseline cannot run radius4. Compare all common keys exactly,
+        # retain expansion-only states separately, and check coverage explicitly.
+        keyed = {name: {tuple(s.split(",")[1:4]): s for s in states[name]} for name in names}
+        common = keyed[names[0]].keys() & keyed[names[1]].keys()
+        assert len(common) == 19 * 3 * a.repeats
+        assert all(keyed[names[0]][k] == keyed[names[1]][k] for k in common), "Final authority/resources differ"
+        assert len(states[names[1]]) == 19 * 4 * a.repeats
+    else:
+        assert len(states[names[0]]) == len(states[names[1]]) == 16 * 3 * a.repeats
+        assert states[names[0]] == states[names[1]], "Final authority/resources differ: inspect raw states"
     (out / "states.json").write_text(json.dumps(states, indent=2) + "\n")
     with (out / "samples.csv").open("w", newline="") as f:
-        w = csv.writer(f)
+        w = csv.writer(f, lineterminator="\n")
         w.writerow(["build", "scene", "radius", "repeat", "metric", "index", "value"])
         w.writerows(samples)
     grouped = {}
     for name, scene, radius, repeat, metric, index, value in samples:
         grouped.setdefault((name, scene, radius, metric), []).append(float(value))
     with (out / "percentiles.csv").open("w", newline="") as f:
-        w = csv.writer(f)
+        w = csv.writer(f, lineterminator="\n")
         w.writerow(
             [
                 "build",
@@ -494,6 +560,22 @@ def main():
                     f"{max(v):.6f}",
                 ]
             )
+    if a.distance_expansion:
+        with (out / "comparison.csv").open("w", newline="") as f:
+            w = csv.writer(f, lineterminator="\n")
+            w.writerow(["comparison", "scene", "radius", "reference_radius", "metric", "base_n", "new_n",
+                        *[f"{side}_{stat}" for stat in ["p50", "p95", "p99", "max"] for side in ["base", "new"]]])
+            for (name, scene, radius, metric), values in sorted(grouped.items()):
+                if name != names[1]:
+                    continue
+                reference_radius = "3" if radius == "4" else radius
+                reference_name = names[1] if radius == "4" else names[0]
+                base_values = grouped.get((reference_name, scene, reference_radius, metric))
+                if base_values:
+                    stats = lambda v: [v[(len(v)-1)*p//100] for p in [50,95,99]] + [max(v)]
+                    comparison = "transition" if scene == "radius" else ("expansion" if radius == "4" else "matched")
+                    w.writerow([comparison, scene, radius, reference_radius, metric,
+                                len(base_values), len(values), *[n for pair in zip(stats(base_values),stats(values)) for n in pair]])
     (out / "method.json").write_text(
         json.dumps(
             {
@@ -503,6 +585,8 @@ def main():
                 "frames": a.frames,
                 "frame_hz": 240,
                 "rendering_install": a.rendering_install,
+                "distance_expansion": a.distance_expansion,
+                "transition_scope": "In distance mode, radius stress visits each build's own maximum (baseline3, candidate4); common final signatures match but these rows are not matched-workload regression evidence.",
                 "machine": platform.platform(),
                 "note": "Headless scripted position/velocity, fixed 240Hz deadlines, no rendered frames/GPU. RSS is process-wide; requested heap peak is additional process heap during worker window, excludes stacks/allocator metadata/GPU and may include concurrent main allocations.",
             },

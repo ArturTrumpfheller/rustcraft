@@ -45,9 +45,9 @@ fn slice33_install_measurements() {
     }
     let fixture = voxel_core::mesh_chunk(&fixture, ChunkPos([0; 3]));
     for repeat in 0..repeats {
-        for radius in 1..=3 {
+        for radius in 1..=if std::env::var("S34_DISTANCE").as_deref()==Ok("1") { voxel_core::streaming::MAX_RADIUS } else { 3 } {
             // 1, 9 and 49 changed chunks form single publication units.
-            let edge = [0, 1, 3][radius as usize - 1];
+            let edge = [0, 1, 3, 4][radius as usize - 1];
             let targets: Vec<_> = (-edge..=edge)
                 .flat_map(|z| (-edge..=edge).map(move |x| ChunkPos([x, 0, z])))
                 .collect();

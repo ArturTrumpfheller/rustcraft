@@ -1,0 +1,7 @@
+{
+  "matched_workload_groups_per_order": 162,
+  "transition_final_signature_groups_per_order": 9,
+  "common_final_signature_groups_per_order": 171,
+  "candidate_radius4_only_groups_per_order": 57,
+  "transition": "Each build cycles 1 to its own maximum to 1; raw row radius is initial. Transition classification corrects derived comparison labels; no sample or numeric result changed."
+}

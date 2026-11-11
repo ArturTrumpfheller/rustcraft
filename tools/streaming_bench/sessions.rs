@@ -10,7 +10,7 @@ fn slice32_session_measurements() {
     assert_eq!(probe::SOURCE, std::env::var("S32_EXPECT_CLIENT").unwrap());
     let repeats: usize = std::env::var("S32_REPEATS").unwrap().parse().unwrap();
     for repeat in 0..repeats {
-        for radius in 1..=3 {
+        for radius in 1..=if std::env::var("S34_DISTANCE").as_deref() == Ok("1") { voxel_core::streaming::MAX_RADIUS } else { 3 } {
             let mut app = app();
             let baseline = assets(&app);
             let dirs = [Directory::new(), Directory::new()];

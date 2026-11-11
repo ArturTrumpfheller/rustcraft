@@ -1,4 +1,46 @@
 use super::*;
+
+#[test]
+#[ignore = "Full radius4 event-capacity/RSS stress; run alone in release with --ignored --nocapture"]
+fn radius_four_full_volume_queue_capacity_and_eviction_stress() {
+    let start = std::time::Instant::now();
+    let mut updates = FluidUpdates::default();
+    for x in -64..80 {
+        for z in -64..80 {
+            for y in -64..192 {
+                updates.enqueue(BlockPos([x, y, z]));
+            }
+        }
+    }
+    assert_eq!(updates.pending(), 81 * 16 * 4096);
+    updates.enqueue(BlockPos([0; 3]));
+    assert_eq!(updates.pending.len(), updates.queue.len());
+    println!(
+        "RADIUS4_FLUID_STRESS events={} queue_capacity={} set_capacity={} enqueue_ms={:.3}",
+        updates.pending(),
+        updates.queue.capacity(),
+        updates.pending.capacity(),
+        start.elapsed().as_secs_f64() * 1000.
+    );
+    if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
+        for line in status
+            .lines()
+            .filter(|l| l.starts_with("VmRSS:") || l.starts_with("VmHWM:"))
+        {
+            println!("{line}");
+        }
+    }
+    for x in -4..=4 {
+        for z in -4..=4 {
+            updates.evict([x, z]);
+        }
+    }
+    assert!(updates.pending.is_empty() && updates.queue.is_empty() && updates.routes.is_empty());
+    println!(
+        "RADIUS4_FLUID_STRESS drained_ms={:.3}",
+        start.elapsed().as_secs_f64() * 1000.
+    );
+}
 fn flat() -> World {
     let mut w = World::default();
     for x in -12..=12 {

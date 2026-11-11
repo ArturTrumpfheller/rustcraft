@@ -1,0 +1,40 @@
+{
+  "forward": {
+    "matched_pairs": 2048,
+    "exact_fields": {
+      "block_crc": true,
+      "geometry_crc": true,
+      "light_crc": true,
+      "mesh_bytes": true,
+      "vertices": true,
+      "indices": true,
+      "surfaces": true,
+      "voxel_bytes": true,
+      "cache_bytes": true,
+      "water_cache_bytes": true,
+      "light_cache_bytes": true,
+      "allocation_calls": true,
+      "requested_bytes": true,
+      "peak_heap": true
+    }
+  },
+  "reverse": {
+    "matched_pairs": 2048,
+    "exact_fields": {
+      "block_crc": true,
+      "geometry_crc": true,
+      "light_crc": true,
+      "mesh_bytes": true,
+      "vertices": true,
+      "indices": true,
+      "surfaces": true,
+      "voxel_bytes": true,
+      "cache_bytes": true,
+      "water_cache_bytes": true,
+      "light_cache_bytes": true,
+      "allocation_calls": true,
+      "requested_bytes": true,
+      "peak_heap": true
+    }
+  }
+}

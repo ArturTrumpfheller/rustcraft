@@ -1,3 +1,22 @@
+# Slice 34: measured radius4 residency
+
+Maximum horizontal radius4 retains81×16 ready descriptors; default2 is unchanged.
+The pristine cache retains only the current view plus one column of light halo,
+at most121 columns. Desired rendering is separate from body-terrain readiness:
+physics still gates on authoritative loaded cells, never distant meshes. F3 labels
+resident/desired view columns and body readiness separately. Existing collision
+priority, bounded class fairness, monotonic cancellation, whole-component revision
+validation/publication and save/drain/teardown are preserved. No extra worker,
+simulation rate, persistent history cache, renderer or LOD is added.
+
+The lighting guard covers a9×9 target rectangle plus15 blocks on each side
+(174×174×256 cells worst case). The independent frozen light oracle extends only
+its input guard. Fluid event capacity now covers all81 extended columns without
+silently dropping events; its256-event tick budget stays unchanged. Cache/snapshot,
+light, mesh, event and process-memory bounds are separate. See [Slice34 budgets,
+measurements, scaling analysis and native acceptance](performance/slice34/README.md).
+This section supersedes historical radius3 numerical limits below.
+
 # Slice 33: exact row visibility and retained asset bounds
 
 Opaque meshing keeps the18³ scalar AO halo and adds324 temporary32-bit occupancy

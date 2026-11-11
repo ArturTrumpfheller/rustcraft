@@ -1,0 +1,4 @@
+CAVE_CAMERA seed=42 generator=9 world_eye=Vec3(-397.0, 16.0, 62.0) direction=Vec3(-32.0, -12.0, -26.0) torch_fixture=false
+TERRAIN_SCENE generator=9 seed=42 x=-434 z=31 surface_y=-7 yaw=0 radius=4 overview=false feet=[-433.5, -6.0, 31.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(51.0, 16.0, 46.0)
+CAPTURE_FRAME_MS samples=29 p50=177.70 p95=253.07 p99=1153.00

@@ -89,9 +89,10 @@ impl Block {
         Fluid::from_state_id(state)
     }
 }
-/// Hard cap matches the maximum supported resident volume (49 extended columns).
+/// Hard cap covers every cell of the validated resident volume. This changes
+/// capacity only; the fixed per-tick service budget remains 256.
 /// A bit/set entry is never retained for an unknown or evicted cell.
-pub const MAX_PENDING: usize = 49
+pub const MAX_PENDING: usize = crate::streaming::MAX_COLUMNS
     * ((crate::bounds::WorldHeight::EXTENDED.max - crate::bounds::WorldHeight::EXTENDED.min)
         as usize
         / 16)
@@ -111,7 +112,7 @@ pub const ROUTE_DISTANCE: i32 = 4;
 const ROUTE_WIDTH: usize = (2 * ROUTE_DISTANCE + 1) as usize;
 const ROUTE_CELLS: usize = 1 + 2 * (ROUTE_DISTANCE * (ROUTE_DISTANCE + 1)) as usize;
 // Low four bits are directions, bit four means computed (including mask zero).
-// Lazily allocated only for queried resident chunks: at most 49 * crate::bounds::WorldHeight::EXTENDED.chunk_count() * 4096 bytes.
+// Lazily allocated only for queried resident chunks, bounded by MAX_PENDING bytes.
 type RouteCache = BTreeMap<ChunkPos, Box<[u8; 4096]>>;
 #[derive(Clone, Copy, Debug)]
 pub struct FluidConfig {
