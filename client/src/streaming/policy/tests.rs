@@ -59,6 +59,46 @@ fn both_classes_progress_under_continuous_loads_and_edit_bursts() {
     }
     assert!(counts.iter().all(|n| *n >= 40));
 }
+
+#[test]
+fn radius_four_backlog_services_collision_first_and_cannot_starve_near_edits() {
+    let now = Instant::now();
+    let old = now - Duration::from_secs(1);
+    let mut loads: BTreeMap<_, _> = streaming::desired_with_limit([-1, -1], 4, 2048)
+        .into_iter()
+        .map(|c| (c, old))
+        .collect();
+    assert_eq!(loads.len(), 81);
+    // Even an aging turn must dispatch the missing body column first.
+    let mut scheduler = Scheduler {
+        loads: 3,
+        ..Default::default()
+    };
+    let dirty = BTreeMap::from([(ChunkPos([-1, 1, -1]), old)]);
+    let mut edits = 0;
+    for service in 0..243 {
+        let work = select(&scheduler, &loads, &dirty, [5.612, -5.612], now).unwrap();
+        if service == 0 {
+            assert!(matches!(work, Work::Load([-1, -1])));
+        }
+        if let Work::Load(c) = &work {
+            loads.remove(c);
+        } else {
+            edits += 1;
+        }
+        if service == 2 {
+            assert!(edits > 0, "near edits must run within three service turns");
+        }
+        scheduler.dispatched(&work);
+        if loads.is_empty() {
+            break;
+        }
+    }
+    assert!(
+        loads.is_empty(),
+        "finite distant requests also converge under edit pressure"
+    );
+}
 #[test]
 fn aged_far_loads_and_independent_dirty_groups_receive_bounded_service() {
     let now = Instant::now();

@@ -1,0 +1,57 @@
+{
+  "baseline": "29db8c4548f7c5116fef35482bbb8c7fc4a8d037",
+  "defined_after": "work/s34-baseline, before changing production cap",
+  "baseline_envelope": {
+    "worker_cpu_us": {
+      "p99": 14884.349,
+      "max": 43585.479
+    },
+    "worker_wall_us": {
+      "p99": 14891.186,
+      "max": 44021.676
+    },
+    "main_install_us": {
+      "p99": 2745.234,
+      "max": 4704.54
+    },
+    "ecs_update_us": {
+      "p99": 6051.744,
+      "max": 19608.021
+    },
+    "queue_wait_us": {
+      "p99": 272980.154,
+      "max": 281363.215
+    },
+    "request_cpu_visible_us": {
+      "p99": 277156.056,
+      "max": 285502.822
+    },
+    "dirty_cpu_visible_us": {
+      "p99": 181381.66,
+      "max": 181387.779
+    },
+    "resident_rss_kib": {
+      "p99": 59468.0,
+      "max": 59468.0
+    },
+    "mesh_payload": {
+      "p99": 10787560.0,
+      "max": 10787560.0
+    },
+    "publication_total_us": {
+      "p99": 1598.162,
+      "max": 2869.751
+    }
+  },
+  "ordinary_scene_review_thresholds": {
+    "worker_cpu_p99_us": 30000,
+    "worker_wall_p99_us": 30000,
+    "main_install_p99_us": 8000,
+    "ecs_update_p99_us": 10000,
+    "request_cpu_visible_p99_us": 1000000,
+    "resident_rss_kib": 131072,
+    "mesh_payload_bytes": 33554432,
+    "retained_install_p99_us": 12000
+  },
+  "scope": "Headless observed scene matrix, not hard runtime byte caps, native frame deadlines, or guarantees for arbitrary edited worlds. Record and investigate every exceedance; keep outliers. Full-volume light/fluid stress is separate. Native frame/GPU/VRAM budgets require target-hardware measurements."
+}

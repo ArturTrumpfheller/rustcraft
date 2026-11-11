@@ -1,0 +1,30 @@
+   Compiling voxel_core v0.1.0 (/workspace/rustcraft/crates/voxel_core)
+    Finished `release` profile [optimized] target(s) in 1.06s
+     Running unittests src/lib.rs (target/release/deps/voxel_core-84a419f58c17abe2)
+
+running 11 tests
+test mesh::ao_tests::affine_fields_match_exactly_for_every_packed_pattern_and_face_orientation ... ok
+test mesh::ao_tests::all_occupancy_combinations_and_orientations_at_signed_seams ... ok
+test mesh::ao_tests::both_triangle_diagonals_follow_the_ao_field_with_outward_winding ... ok
+test mesh::ao_tests::cached_colors_preserve_the_formula_and_documented_endpoints ... ok
+test mesh::ao_tests::constant_and_transverse_affine_patterns_merge_without_stretching ... ok
+test mesh::ao_tests::edits_split_and_restore_greedy_geometry_without_touching_light_data ... ok
+test mesh::ao_tests::isolated_and_flat_surfaces_remain_bright_and_merge ... ok
+test mesh::ao_tests::opaque_enclosure_and_skylight_floor_are_preserved ... ok
+test mesh::ao_tests::pending_streamed_neighbors_are_opaque_and_finite_outside_is_air ... ok
+test mesh::ao_tests::split_channels_preserve_noon_ao_and_leave_blocklight_independent_at_night ... ok
+test mesh::ao_tests::visibility_halo_treats_unrepresentable_coordinates_as_air ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 314 filtered out; finished in 0.06s
+
+     Running tests/worldgen_integration.rs (target/release/deps/worldgen_integration-769007c11330a392)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/worldgen_lifecycle.rs (target/release/deps/worldgen_lifecycle-d4a9d2b764c1fe0b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s

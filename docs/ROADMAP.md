@@ -1,3 +1,16 @@
+# Slice 34 — Render Distance Expansion
+
+- [x] Initial measured radius4 step; default2 and version1 settings retained
+- [x] Full-view light/event capacity bounds, one worker and existing near/dirty fairness
+- [x] Inflight1→4→1, signed travel/teleports/rebase, seam edits and save/session regressions
+- [x] Exact merged-Slice33 matched CPU/resource evidence and complete required checks
+- [ ] Native Gentoo/Void X11/Wayland / Radeon and Windows GUI/frame/GPU acceptance
+
+[Architecture, budgets, evidence and native procedure](performance/slice34/README.md).
+This is the final current performance/streaming/rendering slice. Radius8/12/16
+remain future measured work; the major worldgen overhaul and survival foundations
+are separate phases and are not started here.
+
 # Slice 33 — Rendering & Meshing Optimization
 
 - [x] Exact row-based face visibility and uniform halo fast paths; unchanged greedy/AO/light output

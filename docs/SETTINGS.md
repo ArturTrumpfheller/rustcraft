@@ -18,7 +18,7 @@ when in a world, the usual final world-save barrier. No per-frame settings IO.
 | FOV | 45–110 degrees, integer slider including **78** | Immediate; base **vertical** perspective FOV |
 | Mouse sensitivity | 10–300%, 100% = 0.002 radians per physical motion unit | Immediate, independent of frame delta |
 | Invert Y | on/off | Immediate |
-| Render radius | 1/2/3 horizontal chunk radii | Live safe cache reconciliation; no reload, pending jobs validate desired targets |
+| Render radius | 1/2/3/4 horizontal chunk radii (Slice34) | Live safe cache reconciliation; no reload, pending jobs validate desired targets |
 | Display mode | windowed / borderless on current monitor | 15-second confirmation before saving; Escape, timeout or focus loss restores previous window mode/size |
 | Window size | 960×540, 1280×720, 1600×900, 1920×1080 logical pixels | Preview/confirmation; compositor/DPI decides physical pixels; size is meaningful in windowed mode |
 | VSync | requested on/off | Bevy AutoVsync / AutoNoVsync; supported fallback chosen by engine |
@@ -29,6 +29,12 @@ asynchronously as chunks load/unload. Legacy full snapshots retain their finite
 resident behavior. The displayed radius is a chunk radius, not a block distance.
 VSync Off is a request: a compositor/driver may enforce synchronization. The UI
 never promises an unsupported exclusive mode or guaranteed frame rate.
+
+Slice34 validates the initial radius4 step; default2 and settings format1 stay
+unchanged. Existing1/2/3 preferences remain byte-compatible and are not migrated.
+Older builds reject a new radius4 preference, so benchmark old builds with their
+own copied data roots. World/save formats are unchanged. [Measured limits,
+resource budgets and native acceptance](performance/slice34/README.md).
 
 The original 45-degree vertical FOV remains the default; at 16:9 this is about
 72.7 degrees horizontally. 78 degrees **vertical** is about110.4 degrees horizontal
@@ -98,7 +104,7 @@ keep all evidence first. No automatic backup fallback, silent reset or migration
 An external edit requires a restart/reload; the running client never overwrites it.
 
 Priority: explicit development environment override → saved preferences → defaults
-on genuinely absent configuration. `RUSTCRAFT_LOAD_RADIUS` still validates1–3 at
+on genuinely absent configuration. `RUSTCRAFT_LOAD_RADIUS` validates1–4 at
 world load and overrides the session radius. The graphics page marks that override;
 Apply persists the user's selected radius, **never the environment value**.
 `RUSTCRAFT_START_CHUNK` remains session-only; `RUSTCRAFT_WORLD_SEED` only prefills
@@ -203,7 +209,7 @@ Actual RustCraft Xvfb/Mesa captures (not native GPU acceptance):
 
 English is now the default for all application-authored menus, dialogs and errors.
 Existing world names and data are never translated. Video Settings uses a discrete
-**Render Distance: N chunks** slider (still a horizontal radius1–3). Clicking or
+**Render Distance: N chunks** slider (a horizontal radius1–4 since Slice34). Clicking or
 holding/dragging snaps to integers; Left/Right steps exactly one. Slider ranges
 share one input/drawing adapter with FOV/sensitivity; future range increases need
 an explicit streaming/configuration decision, not another cycling button.

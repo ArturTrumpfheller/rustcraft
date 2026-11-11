@@ -1,4 +1,38 @@
 use super::*;
+
+#[test]
+fn radius_four_full_width_connected_light_unit_matches_frozen_collector() {
+    let mut world = World::regional(crate::regions::RegionIdentity {
+        seed: 42,
+        generator: 9,
+        nonce: [34; 16],
+    });
+    for x in -5..=5 {
+        for z in -5..=5 {
+            for y in -4..12 {
+                world.insert_mesh_chunk(
+                    ChunkPos([x, y, z]),
+                    crate::Chunk::filled(crate::Block::Air),
+                );
+            }
+        }
+    }
+    let mut chunk = crate::Chunk::default();
+    chunk.set(LocalPos::new([8, 0, 8]).unwrap(), crate::Block::Stone);
+    chunk.set(LocalPos::new([8, 1, 8]).unwrap(), crate::Block::Torch);
+    world.insert_mesh_chunk(ChunkPos([0; 3]), chunk);
+    let targets = (-4..=4)
+        .flat_map(|x| (-4..=4).map(move |z| ChunkPos([x, 0, z])))
+        .collect();
+    let light = Skylight::for_chunks(&world, &targets);
+    assert_eq!(light.size, [174, 174]);
+    let reference = Skylight::full_reference(&world, &targets);
+    for p in targets {
+        assert_eq!(light.chunk(p), reference.chunk(p), "{p:?}");
+    }
+    assert_eq!(light.block_level(BlockPos([8, 1, 8])), 14);
+    assert_eq!(light.level(BlockPos([-64, 1, -64])), 15);
+}
 use crate::{Block, Chunk};
 fn room(origin: [i32; 3]) -> World {
     let mut w = World::default();

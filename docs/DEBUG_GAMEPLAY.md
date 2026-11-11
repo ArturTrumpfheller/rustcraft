@@ -1,5 +1,11 @@
 # Slice 19 — F3 debug overlay and gameplay polish
 
+Slice34 adds radius4 and `VIEW COL: resident / desired / BODY: READY|WAIT`.
+The body flag uses the same authoritative readiness query as physics; it can be
+ready while distant visual requests remain queued. It does not report GPU upload
+completion. Previous-world-view visible surface counts and resident triangles
+retain their Slice33 meanings. [Current evidence and native checks](performance/slice34/README.md).
+
 Based on merged Slice 18 `f381ce196bb3162fa3e834b412b943375d24facf`.
 No save-format, generator, atlas, skylight/AO, sky/fog shader, fixed timestep,
 engine dependency or graphics-backend changes. Torches, emissive block light,

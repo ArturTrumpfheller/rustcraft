@@ -345,7 +345,7 @@ fn sync_sprint_fov(
 #[cfg(test)]
 mod tests;
 
-fn rebase_scene(
+pub(crate) fn rebase_scene(
     player: Res<PlayerState>,
     mut origin: ResMut<RenderOrigin>,
     renders: Option<Res<ChunkRenders>>,

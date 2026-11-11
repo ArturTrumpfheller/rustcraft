@@ -292,12 +292,14 @@ fn discrete_render_slider_snaps_clamps_and_handles_mouse_and_keyboard() {
     for (fraction, expected) in [
         (-1., 1),
         (0., 1),
-        (0.24, 1),
+        (0.16, 1),
+        (0.17, 2),
         (0.25, 2),
-        (0.5, 2),
+        (0.5, 3),
         (0.75, 3),
-        (1., 3),
-        (2., 3),
+        (0.84, 4),
+        (1., 4),
+        (2., 4),
     ] {
         slider(
             &mut a.world_mut().resource_mut::<Editor>(),
@@ -308,6 +310,7 @@ fn discrete_render_slider_snaps_clamps_and_handles_mouse_and_keyboard() {
     }
     a.world_mut().resource_mut::<Editor>().focus = 1;
     for (key, expected) in [
+        (KeyCode::ArrowLeft, 3),
         (KeyCode::ArrowLeft, 2),
         (KeyCode::ArrowLeft, 1),
         (KeyCode::ArrowLeft, 1),
@@ -345,16 +348,16 @@ fn discrete_render_slider_snaps_clamps_and_handles_mouse_and_keyboard() {
         .clear();
     set_pointer(a.world_mut(), 103.);
     input(a.world_mut());
-    assert_eq!(a.world().resource::<Editor>().draft.radius, 2);
+    assert_eq!(a.world().resource::<Editor>().draft.radius, 3);
     set_pointer(a.world_mut(), 230.); // Drag beyond the track, then release.
     input(a.world_mut());
-    assert_eq!(a.world().resource::<Editor>().draft.radius, 3);
+    assert_eq!(a.world().resource::<Editor>().draft.radius, 4);
     a.world_mut()
         .resource_mut::<ButtonInput<MouseButton>>()
         .release(MouseButton::Left);
     input(a.world_mut());
     assert!(a.world().resource::<Editor>().drag.is_none());
-    assert_eq!(a.world().resource::<Editor>().draft.radius, 3);
+    assert_eq!(a.world().resource::<Editor>().draft.radius, 4);
     assert_eq!(a.world().resource::<Preferences>().radius, 2);
 }
 #[test]
@@ -378,8 +381,8 @@ fn render_distance_slider_persists_after_apply() {
         crate::settings::poll(a.world_mut());
         std::thread::yield_now();
     }
-    assert_eq!(a.world().resource::<Preferences>().radius, 3);
-    assert_eq!(crate::settings::Store::load(&root).1.unwrap().radius, 3);
+    assert_eq!(a.world().resource::<Preferences>().radius, 4);
+    assert_eq!(crate::settings::Store::load(&root).1.unwrap().radius, 4);
     assert!(a.world().resource::<Editor>().preview.is_none());
     std::fs::remove_dir_all(root).unwrap();
 }

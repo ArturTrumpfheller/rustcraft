@@ -1,0 +1,184 @@
+    Checking voxel_core v0.1.0 (/workspace/rustcraft/crates/voxel_core)
+    Checking rustcraft v0.1.0 (/workspace/rustcraft/client)
+error[E0433]: cannot find `JobControl` in `streaming`
+   --> client/src/streaming.rs:131:34
+    |
+131 |         let control = streaming::JobControl::default();
+    |                                  ^^^^^^^^^^ could not find `JobControl` in `streaming`
+
+error[E0433]: cannot find `WorkStage` in `streaming`
+   --> client/src/streaming.rs:159:62
+    |
+159 |                         worker_control.checkpoint(streaming::WorkStage::Regions)?;
+    |                                                              ^^^^^^^^^ could not find `WorkStage` in `streaming`
+
+error[E0433]: cannot find `WorkStage` in `streaming`
+   --> client/src/streaming.rs:167:70
+    |
+167 | ...                   worker_control.checkpoint(streaming::WorkStage::Regions)?;
+    |                                                            ^^^^^^^^^ could not find `WorkStage` in `streaming`
+
+error[E0433]: cannot find `WorkStage` in `streaming`
+   --> client/src/streaming.rs:173:62
+    |
+173 |                         worker_control.checkpoint(streaming::WorkStage::Regions)?;
+    |                                                              ^^^^^^^^^ could not find `WorkStage` in `streaming`
+
+error[E0433]: cannot find `WorkStage` in `streaming`
+   --> client/src/streaming.rs:385:24
+    |
+385 |             streaming::WorkStage::Regions
+    |                        ^^^^^^^^^ could not find `WorkStage` in `streaming`
+
+error[E0433]: cannot find `WorkStage` in `streaming`
+   --> client/src/streaming.rs:386:30
+    |
+386 |                 | streaming::WorkStage::Source
+    |                              ^^^^^^^^^ could not find `WorkStage` in `streaming`
+
+error[E0433]: cannot find `WorkStage` in `streaming`
+   --> client/src/streaming.rs:387:30
+    |
+387 |                 | streaming::WorkStage::Lighting
+    |                              ^^^^^^^^^ could not find `WorkStage` in `streaming`
+
+error[E0433]: cannot find `JobControl` in `streaming`
+   --> client/src/streaming/tests.rs:175:29
+    |
+175 |         control: streaming::JobControl::default(),
+    |                             ^^^^^^^^^^ could not find `JobControl` in `streaming`
+
+error[E0433]: cannot find `JobControl` in `streaming`
+   --> client/src/streaming/tests.rs:532:29
+    |
+532 |         control: streaming::JobControl::default(),
+    |                             ^^^^^^^^^^ could not find `JobControl` in `streaming`
+
+error[E0433]: cannot find `WorkStage` in `streaming`
+  --> client/src/streaming/slice32_tests.rs:51:24
+   |
+51 |             streaming::WorkStage::Regions
+   |                        ^^^^^^^^^ could not find `WorkStage` in `streaming`
+
+error[E0425]: cannot find type `Cancelled` in module `streaming`
+  --> client/src/streaming.rs:83:26
+   |
+83 |     Cancelled(streaming::Cancelled),
+   |                          ^^^^^^^^^ not found in `streaming`
+   |
+help: there is an enum variant `crate::streaming::JobError::Cancelled`; try using the variant's enum
+   |
+83 -     Cancelled(streaming::Cancelled),
+83 +     Cancelled(crate::streaming::JobError),
+   |
+
+error[E0425]: cannot find type `Cancelled` in module `streaming`
+  --> client/src/streaming.rs:91:22
+   |
+91 | impl From<streaming::Cancelled> for JobError {
+   |                      ^^^^^^^^^ not found in `streaming`
+   |
+help: there is an enum variant `crate::streaming::JobError::Cancelled`; try using the variant's enum
+   |
+91 - impl From<streaming::Cancelled> for JobError {
+91 + impl From<crate::streaming::JobError> for JobError {
+   |
+
+error[E0425]: cannot find type `Cancelled` in module `streaming`
+  --> client/src/streaming.rs:92:31
+   |
+92 |     fn from(error: streaming::Cancelled) -> Self {
+   |                               ^^^^^^^^^ not found in `streaming`
+   |
+help: there is an enum variant `crate::streaming::JobError::Cancelled`; try using the variant's enum
+   |
+92 -     fn from(error: streaming::Cancelled) -> Self {
+92 +     fn from(error: crate::streaming::JobError) -> Self {
+   |
+
+error[E0425]: cannot find type `JobControl` in module `streaming`
+   --> client/src/streaming.rs:114:25
+    |
+114 |     control: streaming::JobControl,
+    |                         ^^^^^^^^^^ not found in `streaming`
+
+error[E0425]: cannot find function `build_column_controlled` in module `streaming`
+   --> client/src/streaming.rs:180:58
+    |
+180 |                         Work::Load(column) => streaming::build_column_controlled(
+    |                                                          ^^^^^^^^^^^^^^^^^^^^^^^
+    |
+   --> crates/voxel_core/src/streaming.rs:99:0
+   ::: crates/voxel_core/src/streaming.rs:106:17
+    |
+    = note: similarly named function `build_column_cached` defined here
+help: a function with a similar name exists
+    |
+180 -                         Work::Load(column) => streaming::build_column_controlled(
+180 +                         Work::Load(column) => streaming::build_column_cached(
+    |
+
+error[E0425]: cannot find function `remesh_water_controlled` in module `streaming`
+   --> client/src/streaming.rs:190:73
+    |
+190 |                         Work::Mesh(targets) if water_only => streaming::remesh_water_controlled(
+    |                                                                         ^^^^^^^^^^^^^^^^^^^^^^^ not found in `streaming`
+
+error[E0425]: cannot find function `remesh_lit_controlled` in module `streaming`
+   --> client/src/streaming.rs:200:59
+    |
+200 |                         Work::Mesh(targets) => streaming::remesh_lit_controlled(
+    |                                                           ^^^^^^^^^^^^^^^^^^^^^ not found in `streaming`
+
+error[E0425]: cannot find type `Cancelled` in module `streaming`
+   --> client/src/streaming.rs:381:51
+    |
+381 |     fn record_cancel(&mut self, stage: streaming::Cancelled) {
+    |                                                   ^^^^^^^^^ not found in `streaming`
+    |
+help: there is an enum variant `crate::streaming::JobError::Cancelled`; try using the variant's enum
+    |
+381 -     fn record_cancel(&mut self, stage: streaming::Cancelled) {
+381 +     fn record_cancel(&mut self, stage: crate::streaming::JobError) {
+    |
+
+error[E0425]: cannot find value `MAX_COLUMNS` in module `streaming`
+    --> client/src/streaming/tests.rs:1143:27
+     |
+1143 |             <= streaming::MAX_COLUMNS * w.resource::<VoxelWorld>().0.world_height().chunk_count()
+     |                           ^^^^^^^^^^^ not found in `streaming`
+
+error[E0531]: cannot find tuple struct or tuple variant `Cancelled` in module `streaming`
+  --> client/src/streaming/slice32_tests.rs:50:44
+   |
+50 |         Err(JobError::Cancelled(streaming::Cancelled(
+   |                                            ^^^^^^^^^ not found in `streaming`
+   |
+help: consider importing this tuple variant
+   |
+ 1 + use crate::streaming::JobError::Cancelled;
+   |
+help: if you import `Cancelled`, refer to it directly
+   |
+50 -         Err(JobError::Cancelled(streaming::Cancelled(
+50 +         Err(JobError::Cancelled(Cancelled(
+   |
+
+error[E0609]: no field `hits` on type `TerrainCache`
+   --> client/src/streaming.rs:995:25
+    |
+995 |             state.cache.hits,
+    |                         ^^^^ unknown field
+
+error[E0609]: no field `misses` on type `TerrainCache`
+   --> client/src/streaming.rs:996:25
+    |
+996 |             state.cache.misses
+    |                         ^^^^^^ unknown field
+
+Some errors have detailed explanations: E0425, E0433, E0609.
+For more information about an error, try `rustc --explain E0425`.
+error: could not compile `rustcraft` (bin "rustcraft") due to 17 previous errors
+warning: build failed, waiting for other jobs to finish...
+Some errors have detailed explanations: E0425, E0433, E0531, E0609.
+error: could not compile `rustcraft` (bin "rustcraft" test) due to 22 previous errors

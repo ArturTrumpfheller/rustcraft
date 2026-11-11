@@ -2,6 +2,47 @@ use super::*;
 use bevy::time::TimeUpdateStrategy;
 use std::time::Duration;
 
+#[test]
+fn radius_four_diagnostics_separate_desired_view_from_body_readiness() {
+    let mut app = app();
+    let mut world = voxel_core::World::regional(voxel_core::regions::RegionIdentity {
+        seed: 42,
+        generator: 9,
+        nonce: [34; 16],
+    });
+    let generator = voxel_core::streaming::prepare_spawn(&mut world).unwrap();
+    app.insert_resource(VoxelWorld(world));
+    app.insert_resource(crate::streaming::StreamState::new(generator, 4));
+    app.world_mut().resource_mut::<PlayerState>().body.position = [0.5, 128., 0.5];
+    app.world_mut().resource_mut::<DebugOverlay>().enabled = true;
+    frame(&mut app);
+    let text = &app.world().resource::<DebugOverlay>().text;
+    assert!(text.contains("RENDER DISTANCE: 4 CHUNKS"));
+    // Before the first streaming reconciliation there is no desired square yet.
+    assert!(text.contains("VIEW COL: 1 / 0 / BODY: READY"));
+    app.world_mut().resource_mut::<PlayerState>().body.position = [-1600.5, 128., 1600.5];
+    for _ in 0..12 {
+        frame(&mut app);
+    }
+    assert!(
+        app.world()
+            .resource::<DebugOverlay>()
+            .text
+            .contains("BODY: WAIT")
+    );
+}
+
+#[test]
+fn finite_snapshots_do_not_report_a_streamed_column_target_or_zero_radius() {
+    let mut app = app();
+    app.insert_resource(crate::streaming::StreamState::default());
+    app.world_mut().resource_mut::<DebugOverlay>().enabled = true;
+    frame(&mut app);
+    let text = &app.world().resource::<DebugOverlay>().text;
+    assert!(text.contains("RENDER DISTANCE: UNAVAILABLE"));
+    assert!(!text.contains("VIEW COL:"));
+}
+
 fn app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)

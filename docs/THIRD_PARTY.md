@@ -1,3 +1,10 @@
+# Slice34 provenance
+
+Radius bounds, diagnostics, tests, disposable benchmark tooling and documentation
+are original RustCraft work, MIT OR Apache-2.0. The radius4 software-Vulkan capture
+shows the existing original assets and production shaders. No new dependency,
+engine feature, downloaded source, texture, font or third-party artwork is added.
+
 # Slice29 provenance
 
 Vegetation planning, interactions, tests, benchmarks, capture tools and docs are

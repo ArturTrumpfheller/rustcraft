@@ -275,18 +275,19 @@ fn v8_cache_eviction_and_overlay_remain_bounded_and_authoritative() {
 
 #[test]
 fn maximum_resident_uniform_source_volume_does_not_enqueue_or_allocate_voxel_arrays() {
-    let mut w = World::streaming(crate::StreamIdentity {
+    let mut w = World::regional(crate::regions::RegionIdentity {
         seed: 42,
         generator: 8,
+        nonce: [34; 16],
     });
-    for z in -3..=3 {
-        for x in -3..=3 {
+    for z in -crate::streaming::MAX_RADIUS..=crate::streaming::MAX_RADIUS {
+        for x in -crate::streaming::MAX_RADIUS..=crate::streaming::MAX_RADIUS {
             for y in -4..12 {
                 w.insert_chunk(ChunkPos([x, y, z]), Chunk::filled(Block::WaterSource));
             }
         }
     }
-    assert_eq!(w.chunk_count(), 49 * 16);
+    assert_eq!(w.chunk_count(), crate::streaming::MAX_COLUMNS * 16);
     assert_eq!(w.allocated_voxel_bytes(), 0);
     assert_eq!(w.fluid_updates().pending(), 0);
     let mut changes = Vec::new();

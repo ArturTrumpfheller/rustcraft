@@ -1,0 +1,8 @@
+    Finished `release` profile [optimized] target(s) in 0.32s
+     Running unittests src/main.rs (target/release/deps/rustcraft-766200be52c1488d)
+
+running 1 test
+test streaming::tests::slice34::radius_four_connected_edits_span_the_entire_light_domain_and_publish_together ... RADIUS4_CONNECTED max_worker_wall_ms=20.280 max_compute_wall_ms=20.278 max_install_ms=1.335 max_stream_update_ms=2.863 light_bytes=2350296 mesh_bytes=14218384
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 225 filtered out; finished in 0.31s

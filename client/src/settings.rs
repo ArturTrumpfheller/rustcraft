@@ -125,7 +125,7 @@ impl Preferences {
     pub fn validate(&self) -> Result<(), String> {
         if !(45..=110).contains(&self.fov)
             || !(10..=300).contains(&self.sensitivity)
-            || !(1..=3).contains(&self.radius)
+            || !(1..=voxel_core::streaming::MAX_RADIUS).contains(&self.radius)
             || self.size >= SIZES.len()
         {
             return Err("Setting value is out of range".into());

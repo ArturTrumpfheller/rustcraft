@@ -1,5 +1,13 @@
 # RustCraft
 
+## Render Distance Expansion (Slice 34)
+
+The supported horizontal render radius is now1–4 (default2). Radius4 retains up
+to81 full-height columns, with one bounded terrain worker, coherent lighting/mesh
+publication, collision-safe pending terrain and independent chunk eviction.
+Generators, saves and original visuals remain unchanged. [CPU/resource evidence,
+budgets, limitations and Gentoo/Void/Windows native acceptance](docs/performance/slice34/README.md).
+
 ## Vegetation & World Details (Slice 29)
 
 New worlds use generator9: original Oak, pale Birch and tapered dark Spruce,
@@ -82,7 +90,7 @@ migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest upla
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 29**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 34**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
@@ -117,7 +125,7 @@ and [session architecture](docs/MENUS.md).
 ## User settings (Slice 15)
 
 Title/Pause → Options provides persistent vertical FOV (including78°),
-mouse sensitivity/inversion, complete key bindings, live radius1–3, VSync,
+mouse sensitivity/inversion, complete key bindings, live radius1–4, VSync,
 window size and windowed/borderless with timed rollback. Apply saves separate
 user preferences; worlds and inventory keep their own identities.
 See [settings format, limits, Fish/Windows tests and stacked PR workflow](docs/SETTINGS.md).
@@ -297,10 +305,11 @@ New v5 worlds save **seed + generator version + world identity** in a manifest a
 
 A confirmed new-world creation produces a **v5 regional world** with generator v9 and
 X/Z [-32768,32768), Y [-64,192). There is no map-sized startup allocation.
-`RUSTCRAFT_LOAD_RADIUS=1`, `2` (default) or `3` selects a radius independently of
-world extent: at most400 ready chunk descriptors by default,784 at radius3.
+`RUSTCRAFT_LOAD_RADIUS=1`, `2` (default), `3` or `4` selects a radius independently of
+world extent: at most400 ready chunk descriptors by default,1296 at radius4.
 Uniform Air/Stone descriptors allocate no voxel arrays; mixed chunks materialize
-on demand. Historical worlds keep75/default and147/max descriptors. Distant voxel data,
+on demand. Historical streamed three-slab worlds keep75/default and243/max descriptors
+(finite horizontal bounds can clip this further). Distant voxel data,
 meshes, GPU assets and clean regional overlays unload. Spawn is not pinned.
 
 One background terrain worker loads regional edits, locally generates new columns

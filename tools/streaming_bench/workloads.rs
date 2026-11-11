@@ -14,9 +14,11 @@ fn slice32_streaming_measurements() {
     );
     let repeats: usize = std::env::var("S32_REPEATS").unwrap().parse().unwrap();
     let frames: usize = std::env::var("S32_FRAMES").unwrap().parse().unwrap();
+    let distance = std::env::var("S34_DISTANCE").as_deref() == Ok("1");
+    let max_radius = if distance { streaming::MAX_RADIUS } else { 3 };
     for repeat in 0..repeats {
-        for radius in 1..=3 {
-            for scene in [
+        for radius in 1..=max_radius {
+            let mut scenes = vec![
                 "stationary",
                 "walking",
                 "sprinting",
@@ -32,11 +34,13 @@ fn slice32_streaming_measurements() {
                 "dirty_pressure",
                 "water",
                 "radius",
-            ] {
+            ];
+            if distance { scenes.extend(["dense-construction", "edited-water", "origin"]); }
+            for scene in scenes {
                 let dir = RegionalDir::new();
                 let observation = Instant::now();
                 probe::reset();
-                let mut app = large_app_with_generator(&dir.0, 9);
+                let mut app = if distance { distance_app(&dir.0, scene) } else { large_app_with_generator(&dir.0, 9) };
                 app.world_mut()
                     .resource_mut::<StreamState>()
                     .set_radius(radius);
@@ -44,9 +48,15 @@ fn slice32_streaming_measurements() {
                     "forest" => [-136, -256],
                     "coast" => [6, 6],
                     "cavern" => [3, -4],
+                    "origin" => [-1990, 1990],
+                    _ if distance => [-160, -256],
                     _ => [-28, 1],
                 };
                 go(&mut app, origin);
+                let camera = distance.then(|| distance_view(&mut app));
+                if matches!(scene, "dense-construction" | "edited-water") {
+                    distance_edits(&mut app, origin, scene == "edited-water");
+                }
                 if scene == "gated_teleport" {
                     let (entered, release) = probe::hold_next_worker();
                     app.world_mut().resource_mut::<PlayerState>().body.position =
@@ -109,7 +119,7 @@ fn slice32_streaming_measurements() {
                 let start = Instant::now();
                 let initial = [
                     f64::from(origin[0] * 16) + 15.8,
-                    24.,
+                    if matches!(scene,"dense-construction"|"edited-water") { 130. } else { 24. },
                     f64::from(origin[1] * 16) + 15.8,
                 ];
                 for frame in 0..frames {
@@ -150,7 +160,7 @@ fn slice32_streaming_measurements() {
                             if frame % 12 == 0 {
                                 app.world_mut()
                                     .resource_mut::<StreamState>()
-                                    .set_radius((frame / 12 % 3 + 1) as i32);
+                                    .set_radius(if distance { [1, max_radius, 1][frame / 12 % 3] } else { (frame / 12 % 3 + 1) as i32 });
                             }
                         }
                         "editing" | "water" => {
@@ -178,6 +188,7 @@ fn slice32_streaming_measurements() {
                     }
                     app.world_mut().resource_mut::<PlayerState>().body.position = pos;
                     app.world_mut().resource_mut::<PlayerState>().body.velocity = velocity;
+                    if let Some(camera) = camera { distance_camera(&mut app, camera); }
                     let update = Instant::now();
                     app.update();
                     probe::duration("ecs_update_us", update.elapsed());
@@ -190,7 +201,8 @@ fn slice32_streaming_measurements() {
                 assert_textured_residency(&mut app);
                 let state = app.world().resource::<StreamState>();
                 let world = &app.world().resource::<VoxelWorld>().0;
-                assert!(state.cache.columns() <= 81 && world.chunk_count() <= 49 * 16);
+                assert!(state.cache.columns() <= (2 * max_radius + 3).pow(2) as usize && world.chunk_count() <= (2 * max_radius + 1).pow(2) as usize * 16);
+                if let Some(camera) = camera { distance_resources(&app, camera); }
                 let renders = app.world().resource::<ChunkRenders>();
                 let surfaces = renders.0.len() + renders.1.len() + renders.2.len();
                 assert_eq!(app.world().resource::<Assets<Mesh>>().len(), surfaces);
