@@ -1,0 +1,4 @@
+   Compiling crc32fast v1.5.3
+   Compiling cfg-if v1.0.5
+   Compiling voxel_core v0.1.0 (/workspace/rustcraft/work/stabilization-benchmark/slice33/crates/voxel_core)
+    Finished `release` profile [optimized] target(s) in 16.51s

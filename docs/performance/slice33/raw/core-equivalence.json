@@ -1,0 +1,40 @@
+{
+  "forward": {
+    "paired_samples": 2048,
+    "exact_equal": {
+      "allocation_calls": true,
+      "requested_bytes": true,
+      "peak_heap": true,
+      "geometry_crc": true,
+      "light_crc": true,
+      "block_crc": true,
+      "vertices": true,
+      "indices": true,
+      "surfaces": true,
+      "mesh_bytes": true
+    },
+    "mesh_bytes_range": [
+      44392,
+      2944504
+    ]
+  },
+  "reverse": {
+    "paired_samples": 2048,
+    "exact_equal": {
+      "allocation_calls": true,
+      "requested_bytes": true,
+      "peak_heap": true,
+      "geometry_crc": true,
+      "light_crc": true,
+      "block_crc": true,
+      "vertices": true,
+      "indices": true,
+      "surfaces": true,
+      "mesh_bytes": true
+    },
+    "mesh_bytes_range": [
+      44392,
+      2944504
+    ]
+  }
+}

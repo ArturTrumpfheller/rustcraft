@@ -1,0 +1,1 @@
+All recorded final core/client source hashes match the final working tree. Runtime source files also match CI-tested production commit f9fe8c1b47693f56ef6c7fb24a5672d266a04954. Measured executable SHA-256 files are retained with each client order. Subsequent commits publish evidence/documentation only.

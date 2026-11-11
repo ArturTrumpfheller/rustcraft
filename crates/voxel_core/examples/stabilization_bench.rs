@@ -134,7 +134,7 @@ fn main() {
     println!(
         "scene,seed,chunk_x,chunk_z,sample,raw_us,worker_us,worker_cpu_us,tree_plan_us,plant_plan_us,light_us,opaque_us,water_us,plant_mesh_us,core_install_us,mesh_bytes,vertices,indices,surfaces,voxel_bytes,cache_bytes,water_cache_bytes,peak_heap,block_crc,span_us,source_us,frontier_us,sky_flood_us,block_flood_us,sky_propagated,block_propagated,light_cells,fluid_install_us,allocation_calls,requested_bytes,geometry_crc,light_crc,water_only_us,light_cache_bytes"
     );
-    for (name, seed, c) in [
+    let mut scenes = vec![
         ("open-plains", 0, [-160, -256]),
         ("dense-forest", 0, [-136, -256]),
         ("snow-spruce", 0, [-256, -256]),
@@ -148,7 +148,15 @@ fn main() {
         ("underground-lake", 0, [-7, -2]),
         ("edited-water", 42, [6, 6]),
         ("torch-cave", 42, [-4, -9]),
-    ] {
+    ];
+    if std::env::var_os("RUSTCRAFT_BENCH_RENDERING").is_some() {
+        scenes.extend([
+            ("flower-plains", 0, [-152, -256]),
+            ("dense-structure", 42, [-28, 1]),
+            ("exposed-cliff", 0, [-236, -256]),
+        ]);
+    }
+    for (name, seed, c) in scenes {
         let g = Generator::new(GenerationConfig { seed, version: 9 }).unwrap();
         let mut world = prepare(&g, c);
         if name == "edited-water" || name == "torch-cave" {
@@ -174,6 +182,43 @@ fn main() {
                     .unwrap();
             } else {
                 world.set_block(p, voxel_core::Block::Torch).unwrap();
+            }
+        }
+        if name == "dense-structure" || name == "exposed-cliff" {
+            // Retain the ordinary support-validation contract: clear existing
+            // decorations before replacing their ground in this edited fixture.
+            for y in g.world_height().min..g.world_height().max {
+                for z in 0..16 {
+                    for x in 0..16 {
+                        let p = BlockPos([c[0] * 16 + x, y, c[1] * 16 + z]);
+                        if world.block(p).is_plant() {
+                            world.set_block(p, voxel_core::Block::Air).unwrap();
+                        }
+                    }
+                }
+            }
+            for y in -32..64 {
+                for z in 0..16 {
+                    for x in 0..16 {
+                        let p = BlockPos([c[0] * 16 + x, y, c[1] * 16 + z]);
+                        let b = if name == "exposed-cliff" {
+                            if x < 8 {
+                                voxel_core::Block::Stone
+                            } else {
+                                voxel_core::Block::Air
+                            }
+                        } else if y.rem_euclid(4) == 0 || (x % 4 == 0 && z % 4 == 0) {
+                            if y % 8 == 0 {
+                                voxel_core::Block::Wood
+                            } else {
+                                voxel_core::Block::Stone
+                            }
+                        } else {
+                            voxel_core::Block::Air
+                        };
+                        world.set_block(p, b).unwrap();
+                    }
+                }
             }
         }
         let edits = world.overlay_snapshot();

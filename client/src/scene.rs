@@ -201,6 +201,13 @@ pub(crate) fn upsert_chunk(
     material: &TerrainMaterial,
     origin: &RenderOrigin,
 ) {
+    if surface.indices.is_empty() {
+        // Legacy and streamed publication share the empty-surface lifecycle.
+        upsert_stream_mesh(
+            commands, meshes, renders, position, surface, material, origin,
+        );
+        return;
+    }
     // Full legacy/streamed publication owns all three chunk surfaces.
     upsert_plants(
         commands,
@@ -225,6 +232,9 @@ pub(crate) fn upsert_chunk(
     let (mesh, visibility) = convert_mesh(surface);
     if let Some(render) = renders.0.get(&position) {
         *meshes.get_mut(&render.mesh).expect("retained terrain mesh") = mesh;
+        // Reconstruct through Bevy's serial missing-bounds path before culling.
+        // Retaining Aabb selected its parallel changed-bounds path and worsened
+        // publication tails in the matched probe; keep the measured baseline.
         commands
             .entity(render.entity)
             .insert(visibility)

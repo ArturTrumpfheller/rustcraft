@@ -1,4 +1,5 @@
 use super::*;
+use bevy::camera::primitives::Aabb;
 
 #[test]
 fn scene_plugin_builds_four_renderable_chunk_entities_with_one_embedded_atlas() {
@@ -101,21 +102,33 @@ fn item_presentation_cpu_measurements() {
 }
 
 #[test]
-fn repeated_boundary_edits_update_neighbors_and_reuse_assets_even_when_empty() {
+fn repeated_boundary_edits_update_neighbors_and_release_empty_surfaces() {
     let mut app = terrain_app();
     edit_cell(&mut app, [15, 1, 1], voxel_core::Block::Stone);
     edit_cell(&mut app, [16, 1, 1], voxel_core::Block::Dirt);
-    let renders = app.world().resource::<ChunkRenders>();
-    let left = renders.0[&ChunkPos([0, 0, 0])].mesh.clone();
-    let right = renders.0[&ChunkPos([1, 0, 0])].mesh.clone();
-    let meshes = app.world().resource::<Assets<Mesh>>();
-    assert_eq!(meshes.get(&left).unwrap().indices().unwrap().len(), 30);
-    assert_eq!(meshes.get(&right).unwrap().indices().unwrap().len(), 30);
+    let left = app.world().resource::<ChunkRenders>().0[&ChunkPos([0, 0, 0])]
+        .mesh
+        .clone();
     for _ in 0..50 {
+        let right = app.world().resource::<ChunkRenders>().0[&ChunkPos([1, 0, 0])]
+            .mesh
+            .clone();
+        let entity = app.world().resource::<ChunkRenders>().0[&ChunkPos([1, 0, 0])].entity;
         edit_cell(&mut app, [16, 1, 1], voxel_core::Block::Air);
-        let world = app.world();
+        assert!(
+            !app.world()
+                .resource::<ChunkRenders>()
+                .0
+                .contains_key(&ChunkPos([1, 0, 0]))
+        );
+        assert!(app.world().resource::<Assets<Mesh>>().get(&right).is_none());
+        assert!(app.world().get_entity(entity).is_err());
         assert_eq!(
-            world
+            app.world().resource::<ChunkRenders>().0[&ChunkPos([0, 0, 0])].mesh,
+            left
+        );
+        assert_eq!(
+            app.world()
                 .resource::<Assets<Mesh>>()
                 .get(&left)
                 .unwrap()
@@ -124,30 +137,21 @@ fn repeated_boundary_edits_update_neighbors_and_reuse_assets_even_when_empty() {
                 .len(),
             36
         );
-        assert!(
-            world
+        edit_cell(&mut app, [16, 1, 1], voxel_core::Block::Stone);
+        assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
+        assert_eq!(
+            app.world()
                 .resource::<Assets<Mesh>>()
-                .get(&right)
+                .get(&left)
                 .unwrap()
                 .indices()
                 .unwrap()
-                .is_empty()
+                .len(),
+            30
         );
-        let entity = world.resource::<ChunkRenders>().0[&ChunkPos([1, 0, 0])].entity;
-        assert_eq!(
-            *world.get::<Visibility>(entity).unwrap(),
-            Visibility::Hidden
-        );
-        edit_cell(&mut app, [16, 1, 1], voxel_core::Block::Stone);
     }
     assert_eq!(app.world().resource::<Assets<Image>>().len(), 2);
     assert_eq!(app.world().resource::<Assets<TerrainSurface>>().len(), 2);
-    assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 2);
-    assert_eq!(app.world().resource::<ChunkRenders>().0.len(), 2);
-    assert_eq!(
-        app.world().resource::<ChunkRenders>().0[&ChunkPos([1, 0, 0])].mesh,
-        right
-    );
 }
 
 #[test]
@@ -168,7 +172,8 @@ fn idle_frames_do_not_remesh_and_negative_seams_refresh_both_chunks() {
             .len(),
         30
     );
-    // A sentinel bound is preserved on idle frames, removed only on a rebuild.
+    // Idle frames preserve bounds. A rebuild removes them, and the real
+    // visibility pipeline below verifies same-frame reconstruction.
     let entity = app.world().resource::<ChunkRenders>().0[&ChunkPos([-1, 0, 0])].entity;
     app.world_mut().entity_mut(entity).insert(Aabb::default());
     app.update();
@@ -466,3 +471,6 @@ fn plants_use_one_cutout_surface_per_chunk_and_release_on_removal() {
     assert!(app.world().resource::<Assets<Mesh>>().get(&h).is_none());
     assert!(!app.world().resource::<ChunkRenders>().1.is_empty());
 }
+
+#[path = "visibility_tests.rs"]
+mod visibility_tests;

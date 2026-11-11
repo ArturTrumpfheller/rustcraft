@@ -1,0 +1,8 @@
+scene,chunk_calls,halo_ns_per_chunk,mask_init_ns_per_chunk,visibility_ao_ns_per_chunk,merge_emit_ns_per_chunk
+solid,501,14457,2550,43418,12940
+flat,501,13823,2117,14721,1314
+mixed,501,12609,2396,21277,62592
+cave,501,12081,2238,25750,19546
+trees,501,13002,2878,24340,22951
+edits,501,14661,4147,25446,80352
+stream,9519,17938,2717,32388,59105

@@ -80,6 +80,13 @@ pub fn mesh_chunk_lit(
     let Some(origin) = position.block_position(LocalPos::new([0; 3]).unwrap()) else {
         return mesh;
     };
+    // Air and fluid-only uniform slabs have no opaque/plant/torch geometry.
+    if chunk
+        .uniform()
+        .is_some_and(|b| b == crate::Block::Air || b.fluid().is_some())
+    {
+        return mesh;
+    }
     // Fixed visibility planes, filled in one storage-order pass. Empty slices
     // are skipped. Only exact affine AO fields may grow into larger rectangles.
     #[derive(Clone, Copy, PartialEq)]
@@ -96,6 +103,8 @@ pub fn mesh_chunk_lit(
     let mut planes = [[[None; CHUNK_SIZE * CHUNK_SIZE]; CHUNK_SIZE]; 6];
     for y in 0..CHUNK_SIZE {
         for z in 0..CHUNK_SIZE {
+            let visible = occlusion.visible_row(y, z);
+            let exposed = visible.iter().fold(0, |a, b| a | b);
             for x in 0..CHUNK_SIZE {
                 let p = [x, y, z];
                 let local = LocalPos::new(p).unwrap();
@@ -113,7 +122,7 @@ pub fn mesh_chunk_lit(
                         [light.level(bp), light.block_level(bp)],
                     );
                 }
-                if !block.is_cube() {
+                if !block.is_cube() || exposed & (1 << x) == 0 {
                     continue;
                 }
                 let center = ao::Occlusion::index(p);
@@ -124,8 +133,7 @@ pub fn mesh_chunk_lit(
                         1 => [0, 2],
                         _ => [0, 1],
                     };
-                    let solid = occlusion.solid(center, ao::normal_offset(face));
-                    if !solid {
+                    if visible[f] & (1 << x) != 0 {
                         active_slices[f] |= 1 << p[axis];
                         planes[f][p[axis]][p[v] * CHUNK_SIZE + p[u]] = Some(MergeKey {
                             tile: crate::texture::face_tile(block, face.normal).unwrap(),
@@ -1000,3 +1008,9 @@ mod wall_torch_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod optimization_tests;
+#[cfg(test)]
+#[allow(dead_code)] // Frozen oracle keeps its own unchanged scalar AO helpers.
+mod reference;

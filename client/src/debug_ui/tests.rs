@@ -273,3 +273,46 @@ fn overlay_cpu_cost_and_retained_buffer_size() {
         mesh.count_vertices() * 40 + mesh.indices().unwrap().len() * 4
     );
 }
+
+#[test]
+fn mesh_diagnostics_use_only_world_view_and_label_resident_triangles() {
+    use crate::scene::{ChunkRender, ChunkRenders};
+    use bevy::camera::visibility::VisibleEntities;
+    use voxel_core::ChunkPos;
+    let mut app = app();
+    let mesh = app
+        .world_mut()
+        .resource_mut::<Assets<Mesh>>()
+        .add(Cuboid::new(1., 1., 1.));
+    let opaque = app.world_mut().spawn_empty().id();
+    let water = app.world_mut().spawn_empty().id();
+    let plant = app.world_mut().spawn_empty().id();
+    let mut renders = ChunkRenders::default();
+    for (map, entity) in [
+        (&mut renders.0, opaque),
+        (&mut renders.1, water),
+        (&mut renders.2, plant),
+    ] {
+        map.insert(
+            ChunkPos([0; 3]),
+            ChunkRender {
+                entity,
+                mesh: mesh.clone(),
+            },
+        );
+    }
+    app.insert_resource(renders);
+    let mut world_view = VisibleEntities::default();
+    world_view.push(opaque, std::any::TypeId::of::<Mesh3d>());
+    app.world_mut()
+        .spawn((crate::camera::FirstPersonCamera, world_view));
+    let mut overlay = VisibleEntities::default();
+    overlay.push(water, std::any::TypeId::of::<Mesh3d>());
+    overlay.push(plant, std::any::TypeId::of::<Mesh3d>());
+    app.world_mut().spawn(overlay);
+    app.world_mut().resource_mut::<DebugOverlay>().enabled = true;
+    frame(&mut app);
+    let text = &app.world().resource::<DebugOverlay>().text;
+    assert!(text.contains("VIEW MESH O/W/P: 1 / 0 / 0 (PREVIOUS)"));
+    assert!(text.contains("RESIDENT TRIS O/W/P: 12 / 12 / 12"));
+}
