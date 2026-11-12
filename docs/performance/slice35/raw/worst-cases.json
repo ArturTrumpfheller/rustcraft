@@ -1,0 +1,846 @@
+{
+  "forward": {
+    "slice34": {
+      "worker_cpu_us": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "gated_teleport",
+          "radius": "1",
+          "metric": "worker_cpu_us",
+          "count": "74",
+          "p50": "1879.937000",
+          "p95": "4452.285000",
+          "p99": "13803.560000",
+          "total": "169419.966000",
+          "max": "14256.886000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "gated_teleport",
+          "radius": "3",
+          "metric": "worker_cpu_us",
+          "count": "314",
+          "p50": "1223.801000",
+          "p95": "2572.969000",
+          "p99": "8109.557000",
+          "total": "534223.959000",
+          "max": "31669.076000"
+        }
+      },
+      "worker_wall_us": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "gated_teleport",
+          "radius": "1",
+          "metric": "worker_wall_us",
+          "count": "74",
+          "p50": "1879.468000",
+          "p95": "4451.922000",
+          "p99": "13816.059000",
+          "total": "170337.741000",
+          "max": "14283.686000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "gated_teleport",
+          "radius": "3",
+          "metric": "worker_wall_us",
+          "count": "314",
+          "p50": "1232.842000",
+          "p95": "2590.030000",
+          "p99": "8109.344000",
+          "total": "537884.923000",
+          "max": "31670.108000"
+        }
+      },
+      "main_install_us": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "cavern",
+          "radius": "4",
+          "metric": "main_install_us",
+          "count": "188",
+          "p50": "731.865000",
+          "p95": "1195.425000",
+          "p99": "1883.003000",
+          "total": "132010.222000",
+          "max": "2714.238000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "editing",
+          "radius": "3",
+          "metric": "main_install_us",
+          "count": "155",
+          "p50": "41.162000",
+          "p95": "253.994000",
+          "p99": "397.309000",
+          "total": "27265.831000",
+          "max": "16587.956000"
+        }
+      },
+      "stream_update_us": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "editing",
+          "radius": "3",
+          "metric": "stream_update_us",
+          "count": "289",
+          "p50": "133.532000",
+          "p95": "511.573000",
+          "p99": "7018.097000",
+          "total": "93995.962000",
+          "max": "20927.649000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "stream_update_us",
+          "count": "711",
+          "p50": "179.821000",
+          "p95": "1170.918000",
+          "p99": "1482.618000",
+          "total": "300673.187000",
+          "max": "25371.716000"
+        }
+      },
+      "request_ready_us": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "request_ready_us",
+          "count": "502",
+          "p50": "123626.605000",
+          "p95": "290170.926000",
+          "p99": "327297.196000",
+          "total": "68704994.011000",
+          "max": "341486.290000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "request_ready_us",
+          "count": "502",
+          "p50": "123626.605000",
+          "p95": "290170.926000",
+          "p99": "327297.196000",
+          "total": "68704994.011000",
+          "max": "341486.290000"
+        }
+      },
+      "process_high_water_rss_kib": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "dense-construction",
+          "radius": "4",
+          "metric": "process_high_water_rss_kib",
+          "count": "2",
+          "p50": "57052.000000",
+          "p95": "57052.000000",
+          "p99": "57052.000000",
+          "total": "114420.000000",
+          "max": "57368.000000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "cavern",
+          "radius": "4",
+          "metric": "process_high_water_rss_kib",
+          "count": "2",
+          "p50": "56440.000000",
+          "p95": "56440.000000",
+          "p99": "56440.000000",
+          "total": "113808.000000",
+          "max": "57368.000000"
+        }
+      },
+      "worker_cache_columns": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "coast",
+          "radius": "4",
+          "metric": "worker_cache_columns",
+          "count": "198",
+          "p50": "77.000000",
+          "p95": "119.000000",
+          "p99": "121.000000",
+          "total": "14623.000000",
+          "max": "121.000000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "coast",
+          "radius": "4",
+          "metric": "worker_cache_columns",
+          "count": "198",
+          "p50": "77.000000",
+          "p95": "119.000000",
+          "p99": "121.000000",
+          "total": "14623.000000",
+          "max": "121.000000"
+        }
+      },
+      "resident_descriptors_update": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "cavern",
+          "radius": "4",
+          "metric": "resident_descriptors_update",
+          "count": "452",
+          "p50": "864.000000",
+          "p95": "1296.000000",
+          "p99": "1296.000000",
+          "total": "352368.000000",
+          "max": "1296.000000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "cavern",
+          "radius": "4",
+          "metric": "resident_descriptors_update",
+          "count": "452",
+          "p50": "864.000000",
+          "p95": "1296.000000",
+          "p99": "1296.000000",
+          "total": "352368.000000",
+          "max": "1296.000000"
+        }
+      }
+    },
+    "slice35": {
+      "worker_cpu_us": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "gated_teleport",
+          "radius": "1",
+          "metric": "worker_cpu_us",
+          "count": "74",
+          "p50": "1663.325000",
+          "p95": "4671.131000",
+          "p99": "14050.759000",
+          "total": "162314.939000",
+          "max": "15650.320000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "editing",
+          "radius": "3",
+          "metric": "worker_cpu_us",
+          "count": "160",
+          "p50": "1342.858000",
+          "p95": "2508.113000",
+          "p99": "4469.701000",
+          "total": "264199.407000",
+          "max": "27818.066000"
+        }
+      },
+      "worker_wall_us": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "gated_teleport",
+          "radius": "1",
+          "metric": "worker_wall_us",
+          "count": "74",
+          "p50": "1663.090000",
+          "p95": "4670.643000",
+          "p99": "14067.546000",
+          "total": "162997.306000",
+          "max": "15675.230000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "editing",
+          "radius": "3",
+          "metric": "worker_wall_us",
+          "count": "160",
+          "p50": "1345.822000",
+          "p95": "2507.295000",
+          "p99": "4468.957000",
+          "total": "266259.553000",
+          "max": "29245.565000"
+        }
+      },
+      "main_install_us": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "coast",
+          "radius": "2",
+          "metric": "main_install_us",
+          "count": "78",
+          "p50": "44.367000",
+          "p95": "324.580000",
+          "p99": "483.189000",
+          "total": "8840.045000",
+          "max": "775.030000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "teleport",
+          "radius": "4",
+          "metric": "main_install_us",
+          "count": "422",
+          "p50": "36.956000",
+          "p95": "76.596000",
+          "p99": "144.568000",
+          "total": "20576.728000",
+          "max": "2787.289000"
+        }
+      },
+      "stream_update_us": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "radius",
+          "radius": "4",
+          "metric": "stream_update_us",
+          "count": "514",
+          "p50": "134.894000",
+          "p95": "314.074000",
+          "p99": "930.585000",
+          "total": "77071.604000",
+          "max": "2397.239000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "stream_update_us",
+          "count": "762",
+          "p50": "132.700000",
+          "p95": "363.619000",
+          "p99": "813.378000",
+          "total": "119682.542000",
+          "max": "11369.735000"
+        }
+      },
+      "request_ready_us": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "request_ready_us",
+          "count": "502",
+          "p50": "112077.648000",
+          "p95": "274274.191000",
+          "p99": "288070.347000",
+          "total": "62814189.217000",
+          "max": "300047.701000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "request_ready_us",
+          "count": "502",
+          "p50": "112077.648000",
+          "p95": "274274.191000",
+          "p99": "288070.347000",
+          "total": "62814189.217000",
+          "max": "300047.701000"
+        }
+      },
+      "process_high_water_rss_kib": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "process_high_water_rss_kib",
+          "count": "2",
+          "p50": "53260.000000",
+          "p95": "53260.000000",
+          "p99": "53260.000000",
+          "total": "106984.000000",
+          "max": "53724.000000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "process_high_water_rss_kib",
+          "count": "2",
+          "p50": "53260.000000",
+          "p95": "53260.000000",
+          "p99": "53260.000000",
+          "total": "106984.000000",
+          "max": "53724.000000"
+        }
+      },
+      "worker_cache_columns": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "coast",
+          "radius": "4",
+          "metric": "worker_cache_columns",
+          "count": "198",
+          "p50": "77.000000",
+          "p95": "119.000000",
+          "p99": "121.000000",
+          "total": "14624.000000",
+          "max": "121.000000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "coast",
+          "radius": "4",
+          "metric": "worker_cache_columns",
+          "count": "198",
+          "p50": "77.000000",
+          "p95": "119.000000",
+          "p99": "121.000000",
+          "total": "14624.000000",
+          "max": "121.000000"
+        }
+      },
+      "resident_descriptors_update": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "cavern",
+          "radius": "4",
+          "metric": "resident_descriptors_update",
+          "count": "379",
+          "p50": "896.000000",
+          "p95": "1296.000000",
+          "p99": "1296.000000",
+          "total": "300112.000000",
+          "max": "1296.000000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "cavern",
+          "radius": "4",
+          "metric": "resident_descriptors_update",
+          "count": "379",
+          "p50": "896.000000",
+          "p95": "1296.000000",
+          "p99": "1296.000000",
+          "total": "300112.000000",
+          "max": "1296.000000"
+        }
+      }
+    }
+  },
+  "reverse": {
+    "slice34": {
+      "worker_cpu_us": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "walking",
+          "radius": "4",
+          "metric": "worker_cpu_us",
+          "count": "198",
+          "p50": "1144.714000",
+          "p95": "2665.757000",
+          "p99": "14560.818000",
+          "total": "332471.262000",
+          "max": "35686.494000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "walking",
+          "radius": "4",
+          "metric": "worker_cpu_us",
+          "count": "198",
+          "p50": "1144.714000",
+          "p95": "2665.757000",
+          "p99": "14560.818000",
+          "total": "332471.262000",
+          "max": "35686.494000"
+        }
+      },
+      "worker_wall_us": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "walking",
+          "radius": "4",
+          "metric": "worker_wall_us",
+          "count": "198",
+          "p50": "1144.618000",
+          "p95": "2664.994000",
+          "p99": "14560.256000",
+          "total": "334591.409000",
+          "max": "36977.058000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "walking",
+          "radius": "4",
+          "metric": "worker_wall_us",
+          "count": "198",
+          "p50": "1144.618000",
+          "p95": "2664.994000",
+          "p99": "14560.256000",
+          "total": "334591.409000",
+          "max": "36977.058000"
+        }
+      },
+      "main_install_us": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "teleport",
+          "radius": "4",
+          "metric": "main_install_us",
+          "count": "416",
+          "p50": "443.349000",
+          "p95": "1076.817000",
+          "p99": "1643.502000",
+          "total": "200157.912000",
+          "max": "7651.185000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "teleport",
+          "radius": "4",
+          "metric": "main_install_us",
+          "count": "416",
+          "p50": "443.349000",
+          "p95": "1076.817000",
+          "p99": "1643.502000",
+          "total": "200157.912000",
+          "max": "7651.185000"
+        }
+      },
+      "stream_update_us": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "dirty_pressure",
+          "radius": "3",
+          "metric": "stream_update_us",
+          "count": "350",
+          "p50": "2.644000",
+          "p95": "383.218000",
+          "p99": "1892.117000",
+          "total": "59235.073000",
+          "max": "12193.912000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "stream_update_us",
+          "count": "734",
+          "p50": "151.669000",
+          "p95": "1198.690000",
+          "p99": "1683.272000",
+          "total": "293434.674000",
+          "max": "27631.729000"
+        }
+      },
+      "request_ready_us": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "request_ready_us",
+          "count": "502",
+          "p50": "131371.084000",
+          "p95": "282153.343000",
+          "p99": "304292.439000",
+          "total": "69975901.625000",
+          "max": "316030.436000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "request_ready_us",
+          "count": "502",
+          "p50": "131371.084000",
+          "p95": "282153.343000",
+          "p99": "304292.439000",
+          "total": "69975901.625000",
+          "max": "316030.436000"
+        }
+      },
+      "process_high_water_rss_kib": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "editing",
+          "radius": "4",
+          "metric": "process_high_water_rss_kib",
+          "count": "2",
+          "p50": "55644.000000",
+          "p95": "55644.000000",
+          "p99": "55644.000000",
+          "total": "111616.000000",
+          "max": "55972.000000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "cavern",
+          "radius": "4",
+          "metric": "process_high_water_rss_kib",
+          "count": "2",
+          "p50": "55252.000000",
+          "p95": "55252.000000",
+          "p99": "55252.000000",
+          "total": "111224.000000",
+          "max": "55972.000000"
+        }
+      },
+      "worker_cache_columns": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "coast",
+          "radius": "4",
+          "metric": "worker_cache_columns",
+          "count": "198",
+          "p50": "77.000000",
+          "p95": "119.000000",
+          "p99": "121.000000",
+          "total": "14621.000000",
+          "max": "121.000000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "coast",
+          "radius": "4",
+          "metric": "worker_cache_columns",
+          "count": "198",
+          "p50": "77.000000",
+          "p95": "119.000000",
+          "p99": "121.000000",
+          "total": "14621.000000",
+          "max": "121.000000"
+        }
+      },
+      "resident_descriptors_update": {
+        "largest_case_p99": {
+          "build": "slice34",
+          "scene": "cavern",
+          "radius": "4",
+          "metric": "resident_descriptors_update",
+          "count": "429",
+          "p50": "896.000000",
+          "p95": "1296.000000",
+          "p99": "1296.000000",
+          "total": "343616.000000",
+          "max": "1296.000000"
+        },
+        "largest_observation": {
+          "build": "slice34",
+          "scene": "cavern",
+          "radius": "4",
+          "metric": "resident_descriptors_update",
+          "count": "429",
+          "p50": "896.000000",
+          "p95": "1296.000000",
+          "p99": "1296.000000",
+          "total": "343616.000000",
+          "max": "1296.000000"
+        }
+      }
+    },
+    "slice35": {
+      "worker_cpu_us": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "gated_teleport",
+          "radius": "1",
+          "metric": "worker_cpu_us",
+          "count": "74",
+          "p50": "1711.597000",
+          "p95": "4967.441000",
+          "p99": "14380.085000",
+          "total": "168708.122000",
+          "max": "15826.591000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "teleport",
+          "radius": "4",
+          "metric": "worker_cpu_us",
+          "count": "441",
+          "p50": "1325.582000",
+          "p95": "3585.846000",
+          "p99": "5843.526000",
+          "total": "710119.436000",
+          "max": "28076.521000"
+        }
+      },
+      "worker_wall_us": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "gated_teleport",
+          "radius": "1",
+          "metric": "worker_wall_us",
+          "count": "74",
+          "p50": "1731.034000",
+          "p95": "4973.358000",
+          "p99": "15275.643000",
+          "total": "170799.307000",
+          "max": "15839.675000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "worker_wall_us",
+          "count": "506",
+          "p50": "1211.379000",
+          "p95": "2644.262000",
+          "p99": "4503.680000",
+          "total": "769773.025000",
+          "max": "33244.753000"
+        }
+      },
+      "main_install_us": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "forest",
+          "radius": "3",
+          "metric": "main_install_us",
+          "count": "130",
+          "p50": "72.299000",
+          "p95": "508.938000",
+          "p99": "1767.529000",
+          "total": "28056.294000",
+          "max": "4819.647000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "teleport",
+          "radius": "4",
+          "metric": "main_install_us",
+          "count": "423",
+          "p50": "37.176000",
+          "p95": "94.142000",
+          "p99": "247.984000",
+          "total": "29750.529000",
+          "max": "10278.297000"
+        }
+      },
+      "stream_update_us": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "forest",
+          "radius": "3",
+          "metric": "stream_update_us",
+          "count": "329",
+          "p50": "2.073000",
+          "p95": "622.800000",
+          "p99": "3166.911000",
+          "total": "66880.853000",
+          "max": "8494.435000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "teleport",
+          "radius": "4",
+          "metric": "stream_update_us",
+          "count": "590",
+          "p50": "171.048000",
+          "p95": "380.505000",
+          "p99": "1317.198000",
+          "total": "121061.985000",
+          "max": "18595.035000"
+        }
+      },
+      "request_ready_us": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "request_ready_us",
+          "count": "502",
+          "p50": "128942.264000",
+          "p95": "270608.205000",
+          "p99": "289342.620000",
+          "total": "65929693.310000",
+          "max": "297213.484000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "gated_teleport",
+          "radius": "4",
+          "metric": "request_ready_us",
+          "count": "502",
+          "p50": "128942.264000",
+          "p95": "270608.205000",
+          "p99": "289342.620000",
+          "total": "65929693.310000",
+          "max": "297213.484000"
+        }
+      },
+      "process_high_water_rss_kib": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "cavern",
+          "radius": "4",
+          "metric": "process_high_water_rss_kib",
+          "count": "2",
+          "p50": "53092.000000",
+          "p95": "53092.000000",
+          "p99": "53092.000000",
+          "total": "106584.000000",
+          "max": "53492.000000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "cavern",
+          "radius": "4",
+          "metric": "process_high_water_rss_kib",
+          "count": "2",
+          "p50": "53092.000000",
+          "p95": "53092.000000",
+          "p99": "53092.000000",
+          "total": "106584.000000",
+          "max": "53492.000000"
+        }
+      },
+      "worker_cache_columns": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "coast",
+          "radius": "4",
+          "metric": "worker_cache_columns",
+          "count": "198",
+          "p50": "77.000000",
+          "p95": "119.000000",
+          "p99": "121.000000",
+          "total": "14623.000000",
+          "max": "121.000000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "coast",
+          "radius": "4",
+          "metric": "worker_cache_columns",
+          "count": "198",
+          "p50": "77.000000",
+          "p95": "119.000000",
+          "p99": "121.000000",
+          "total": "14623.000000",
+          "max": "121.000000"
+        }
+      },
+      "resident_descriptors_update": {
+        "largest_case_p99": {
+          "build": "slice35",
+          "scene": "cavern",
+          "radius": "4",
+          "metric": "resident_descriptors_update",
+          "count": "381",
+          "p50": "880.000000",
+          "p95": "1296.000000",
+          "p99": "1296.000000",
+          "total": "300160.000000",
+          "max": "1296.000000"
+        },
+        "largest_observation": {
+          "build": "slice35",
+          "scene": "cavern",
+          "radius": "4",
+          "metric": "resident_descriptors_update",
+          "count": "381",
+          "p50": "880.000000",
+          "p95": "1296.000000",
+          "p99": "1296.000000",
+          "total": "300160.000000",
+          "max": "1296.000000"
+        }
+      }
+    }
+  }
+}

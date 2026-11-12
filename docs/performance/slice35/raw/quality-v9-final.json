@@ -1,0 +1,198 @@
+[
+  {
+    "seed": 0,
+    "n": 18432,
+    "step": 64,
+    "elevations": {
+      "min": -28,
+      "p50": 4,
+      "p95": 15,
+      "p99": 20,
+      "max": 23
+    },
+    "slope_counts": {
+      "0": 14460,
+      "1": 3821,
+      "2": 115,
+      "3": 29,
+      "4": 6,
+      "5": 1
+    },
+    "mountain_pct": 0.0,
+    "mountain_components": [],
+    "gentle_pct": 36.56684027777778,
+    "gentle_components": [
+      776,
+      628,
+      312,
+      295,
+      278
+    ],
+    "flat32_count": null,
+    "flat32_pct": null,
+    "peak": {
+      "seed": 0,
+      "x": 3328,
+      "z": -1920,
+      "height": 23,
+      "slope": 0,
+      "east16": 23,
+      "north16": 21
+    },
+    "deepest_512_span_valley": [
+      37,
+      2432,
+      -3840,
+      -28,
+      0,
+      256
+    ]
+  },
+  {
+    "seed": 42,
+    "n": 18432,
+    "step": 64,
+    "elevations": {
+      "min": -28,
+      "p50": 4,
+      "p95": 17,
+      "p99": 20,
+      "max": 23
+    },
+    "slope_counts": {
+      "0": 14409,
+      "1": 3869,
+      "2": 110,
+      "3": 35,
+      "4": 8,
+      "5": 1
+    },
+    "mountain_pct": 0.0,
+    "mountain_components": [],
+    "gentle_pct": 39.21440972222222,
+    "gentle_components": [
+      715,
+      652,
+      644,
+      341,
+      321
+    ],
+    "flat32_count": null,
+    "flat32_pct": null,
+    "peak": {
+      "seed": 42,
+      "x": 1600,
+      "z": -3712,
+      "height": 23,
+      "slope": 1,
+      "east16": 21,
+      "north16": 21
+    },
+    "deepest_512_span_valley": [
+      42,
+      1472,
+      2624,
+      -28,
+      256,
+      0
+    ]
+  },
+  {
+    "seed": 2026,
+    "n": 18432,
+    "step": 64,
+    "elevations": {
+      "min": -28,
+      "p50": 4,
+      "p95": 15,
+      "p99": 19,
+      "max": 23
+    },
+    "slope_counts": {
+      "0": 14421,
+      "1": 3861,
+      "2": 109,
+      "3": 34,
+      "4": 6,
+      "5": 1
+    },
+    "mountain_pct": 0.0,
+    "mountain_components": [],
+    "gentle_pct": 35.970052083333336,
+    "gentle_components": [
+      1853,
+      610,
+      390,
+      339,
+      191
+    ],
+    "flat32_count": null,
+    "flat32_pct": null,
+    "peak": {
+      "seed": 2026,
+      "x": -2560,
+      "z": -3392,
+      "height": 23,
+      "slope": 1,
+      "east16": 19,
+      "north16": 21
+    },
+    "deepest_512_span_valley": [
+      37,
+      -2880,
+      -1472,
+      -28,
+      0,
+      256
+    ]
+  },
+  {
+    "seed": 18446744073709551615,
+    "n": 18432,
+    "step": 64,
+    "elevations": {
+      "min": -28,
+      "p50": 4,
+      "p95": 16,
+      "p99": 20,
+      "max": 23
+    },
+    "slope_counts": {
+      "0": 14574,
+      "1": 3715,
+      "2": 101,
+      "3": 35,
+      "4": 6,
+      "5": 1
+    },
+    "mountain_pct": 0.0,
+    "mountain_components": [],
+    "gentle_pct": 39.55620659722222,
+    "gentle_components": [
+      610,
+      550,
+      498,
+      420,
+      395
+    ],
+    "flat32_count": null,
+    "flat32_pct": null,
+    "peak": {
+      "seed": 18446744073709551615,
+      "x": -512,
+      "z": -1280,
+      "height": 23,
+      "slope": 0,
+      "east16": 22,
+      "north16": 22
+    },
+    "deepest_512_span_valley": [
+      31,
+      4032,
+      768,
+      -17,
+      0,
+      256
+    ]
+  }
+]

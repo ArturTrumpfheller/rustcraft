@@ -373,7 +373,7 @@ impl World {
             let candidate = if self.ready(neighbor) {
                 self.block(neighbor)
             } else if self.regional.is_some() {
-                // Historical generators contain no attachments. V9 may own a
+                // Historical generators contain no attachments. V9/V10 may own a
                 // generated floor plant in the pending upper slab.
                 self.regions
                     .get(&RegionPos::of(neighbor))
@@ -382,10 +382,10 @@ impl World {
                     .get(&neighbor)
                     .copied()
                     .unwrap_or_else(|| {
-                        // V9 can own a generated plant in the pending upper slab.
+                        // V9/V10 can own a generated plant in the pending upper slab.
                         // Resolve only this bounded edit-time dependency, never load a chunk.
                         self.regional
-                            .filter(|id| id.generator == 9 && delta == [0, 1, 0])
+                            .filter(|id| id.generator >= 9 && delta == [0, 1, 0])
                             .map_or(Block::Air, |id| {
                                 crate::worldgen::Generator::new(crate::worldgen::GenerationConfig {
                                     seed: id.seed,

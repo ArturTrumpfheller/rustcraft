@@ -1,3 +1,30 @@
+# Slice 35: versioned multi-scale terrain
+
+New world creation pins generator10 through `CURRENT_LOCAL_GENERATOR`; strict
+manifest, region and height validation explicitly accept it. Historical generator
+selection and every v1–v9 golden remain. No persisted ID, save envelope, world
+extent or renderer contract changes.
+
+`worldgen/terrain_v3.rs` owns Q12 geographical fields over Q8 warped coordinates.
+The existing bounded sampler builds the material-height grid, runs versioned
+hydrology against these heights, then derives materials from the final bed and
+cardinal slopes. This same evaluator serves `Generator::height`, root admission,
+point sampling and full-height chunk generation. Biome classification never
+selects a height formula. Water candidates are screened as complete features,
+preventing chunk-local admission decisions. Existing deep cave geometry remains;
+high terrain adds solid overburden without extending old entrance tubes.
+
+V10 reuses v9 species and supported-plant plans with actual new ground heights.
+The generated-attachment edit path recognizes both versions, so an explicit
+saved Air edit cannot resurrect a procedural plant after eviction. Uniform
+Air/Stone slabs remain compact and no extra worker/cache/radius budget is added.
+V10-only final-slope planning adds324 i32 values per water plan; historical
+versions allocate no slope vector payload. All temporary/planning state is local
+or held in the existing bounded generator pool cache.
+
+See [WORLDGEN](WORLDGEN.md) and [Slice35 evidence](performance/slice35/README.md).
+Earlier slice sections below retain their historical scope/defaults.
+
 # Slice 34: measured radius4 residency
 
 Maximum horizontal radius4 retains81×16 ready descriptors; default2 is unchanged.
@@ -714,3 +741,9 @@ pixel payload each, excluding driver overhead). Terrain greedy UVs, inventory,
 viewmodel and dropped torches use that same layout. No extra material, render
 pass, simulation behavior, native dependency or persistent cache is added.
 See [WORLDGEN](WORLDGEN.md) and [validation](performance/slice25/README.md).
+
+V10 feature admission caches at most128 coordinate-keyed booleans in a FIFO beside
+its existing bounded pool cache. Pure evaluation occurs outside the mutex;
+parallel duplicates are safe and cache eviction/order cannot affect output.
+Historical versions never populate this cache. Cache-capacity and uncached-parity
+regressions cover all four seeds through repeated distant-region eviction.

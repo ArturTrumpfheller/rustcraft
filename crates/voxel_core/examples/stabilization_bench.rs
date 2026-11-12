@@ -132,7 +132,7 @@ fn main() {
         .expect("warmup count");
     assert!((1..=10000).contains(&samples) && warmups <= 1000);
     println!(
-        "scene,seed,chunk_x,chunk_z,sample,raw_us,worker_us,worker_cpu_us,tree_plan_us,plant_plan_us,light_us,opaque_us,water_us,plant_mesh_us,core_install_us,mesh_bytes,vertices,indices,surfaces,voxel_bytes,cache_bytes,water_cache_bytes,peak_heap,block_crc,span_us,source_us,frontier_us,sky_flood_us,block_flood_us,sky_propagated,block_propagated,light_cells,fluid_install_us,allocation_calls,requested_bytes,geometry_crc,light_crc,water_only_us,light_cache_bytes"
+        "scene,seed,chunk_x,chunk_z,sample,raw_us,worker_us,worker_cpu_us,tree_plan_us,plant_plan_us,light_us,opaque_us,water_us,plant_mesh_us,core_install_us,mesh_bytes,vertices,indices,surfaces,voxel_bytes,cache_bytes,water_cache_bytes,peak_heap,block_crc,span_us,source_us,frontier_us,sky_flood_us,block_flood_us,sky_propagated,block_propagated,light_cells,fluid_install_us,allocation_calls,requested_bytes,geometry_crc,light_crc,water_only_us,light_cache_bytes,raw_cpu_us,chunk_max_us,column_plan_us,chunk_total_us,admission_cache_entries,compact_chunks,air_chunks,stone_chunks"
     );
     let mut scenes = vec![
         ("open-plains", 0, [-160, -256]),
@@ -156,8 +156,27 @@ fn main() {
             ("exposed-cliff", 0, [-236, -256]),
         ]);
     }
+    let version: u32 = std::env::var("RUSTCRAFT_BENCH_GENERATOR")
+        .map_or(Ok(9), |v| v.parse())
+        .unwrap();
+    if std::env::var_os("RUSTCRAFT_BENCH_TERRAIN_V3").is_some() {
+        scenes = vec![
+            ("plain", 42, [-9, 47]),
+            ("forest", 0, [-136, -256]),
+            ("peak", 0, [-249, -197]),
+            ("valley", 42, [-180, 45]),
+            ("transition", 42, [-180, 53]),
+            ("coast", 2026, [-160, -256]),
+            ("distant", 2026, [-1464, 1272]),
+            ("max-seed", u64::MAX, [1827, -1775]),
+            ("cavern", 42, [3, -4]),
+        ];
+    }
+    if std::env::var_os("RUSTCRAFT_BENCH_ADVERSE_TERRAIN").is_some() {
+        scenes = vec![("steep-transition", 42, [-62, -218])];
+    }
     for (name, seed, c) in scenes {
-        let g = Generator::new(GenerationConfig { seed, version: 9 }).unwrap();
+        let g = Generator::new(GenerationConfig { seed, version }).unwrap();
         let mut world = prepare(&g, c);
         if name == "edited-water" || name == "torch-cave" {
             let p = (g.world_height().min + 1..0)
@@ -225,11 +244,21 @@ fn main() {
         let mut cache = TerrainCache::default();
         for i in 0..warmups + samples {
             let raw_start = Instant::now();
+            let raw_cpu_start = thread_cpu_us();
+            let mut chunk_max = 0f64;
+            let plan_start = Instant::now();
             let s = g.sampler(c);
+            let plan_us = plan_start.elapsed().as_secs_f64() * 1e6;
+            let mut chunk_total = 0f64;
             for y in g.world_height().chunks() {
+                let chunk_start = Instant::now();
                 black_box(s.chunk(ChunkPos([c[0], y, c[1]])));
+                let chunk_us = chunk_start.elapsed().as_secs_f64() * 1e6;
+                chunk_max = chunk_max.max(chunk_us);
+                chunk_total += chunk_us;
             }
             let raw = raw_start.elapsed().as_secs_f64() * 1e6;
+            let raw_cpu = thread_cpu_us() - raw_cpu_start;
             let planning = [0u128; 16]; // PROFILE_TAKE
             let base = reset();
             let start = Instant::now();
@@ -250,6 +279,21 @@ fn main() {
             let stage = [0u128; 16]; // STAGE_TAKE
             let bytes = mesh_bytes(&r);
             let (mut vertices, mut indices, mut surfaces) = (0, 0, 0);
+            let compact = r
+                .chunks
+                .iter()
+                .filter(|(_, ch, _)| ch.uniform().is_some())
+                .count();
+            let air = r
+                .chunks
+                .iter()
+                .filter(|(_, ch, _)| ch.uniform() == Some(voxel_core::Block::Air))
+                .count();
+            let stone = r
+                .chunks
+                .iter()
+                .filter(|(_, ch, _)| ch.uniform() == Some(voxel_core::Block::Stone))
+                .count();
             let mut crc = crc32fast::Hasher::new();
             let mut geometry = crc32fast::Hasher::new();
             let mut lights = crc32fast::Hasher::new();
@@ -332,7 +376,7 @@ fn main() {
             let installed = [0u128; 16]; // INSTALL_TAKE
             if i >= warmups {
                 println!(
-                    "{name},{seed},{},{},{},{raw:.3},{worker:.3},{cpu:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{install_us:.3},{bytes},{vertices},{indices},{surfaces},{},{},{},{heap},{},{:.3},{:.3},{:.3},{:.3},{:.3},{},{},{},{:.3},{calls},{requested},{},{},{water_only:.3},{light_cache_bytes}",
+                    "{name},{seed},{},{},{},{raw:.3},{worker:.3},{cpu:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{install_us:.3},{bytes},{vertices},{indices},{surfaces},{},{},{},{heap},{},{:.3},{:.3},{:.3},{:.3},{:.3},{},{},{},{:.3},{calls},{requested},{},{},{water_only:.3},{light_cache_bytes},{raw_cpu:.3},{chunk_max:.3},{plan_us:.3},{chunk_total:.3},{},{compact},{air},{stone}",
                     c[0],
                     c[1],
                     i - warmups,
@@ -356,7 +400,8 @@ fn main() {
                     stage[13],
                     installed[14] as f64 / 1000.,
                     geometry.finalize(),
-                    lights.finalize()
+                    lights.finalize(),
+                    g.terrain_admission_cache_entries()
                 );
             }
             black_box(install);

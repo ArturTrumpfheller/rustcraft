@@ -34,6 +34,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
       - name: Check original texture artifacts
         run: python tools/generate_textures.py --check
+      - name: Independent v10 height fixtures
+        run: python tools/terrain_v3_reference.py --check
       - name: Cargo format
         run: cargo fmt --all -- --check
       - name: Cargo Clippy
@@ -60,6 +62,8 @@ jobs:
         run: cargo test --release --locked -p voxel_core mesh::ao_tests -- --test-threads=1
       - name: Optimized voxel processing regressions
         run: cargo test --release --locked -p voxel_core --lib
+      - name: Optimized terrain and persistence integration
+        run: cargo test --release --locked -p voxel_core --test terrain_v3 --test worldgen_integration --test worldgen_lifecycle
       - name: Optimized streaming and lifecycle regressions
         run: 'cargo test --release --locked -p rustcraft --bin rustcraft streaming:: -- --test-threads=1'
       - name: Optimized session regressions

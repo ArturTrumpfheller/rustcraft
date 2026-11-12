@@ -240,6 +240,12 @@ fn setup(
         params.fog.x = 96.;
         params.fog.y = 160.;
     }
+    if std::env::args().any(|a| a == "--wide-survey-fog") {
+        // Development capture only: reveal macro geography within the gallery
+        // footprint. The streaming game keeps its supported radius/fog contract.
+        params.fog.x = 160.;
+        params.fog.y = 320.;
+    }
     let material = materials.add(TerrainSurface {
         base: StandardMaterial {
             unlit: true,

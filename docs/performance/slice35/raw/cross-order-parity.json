@@ -1,0 +1,8 @@
+{
+  "all_final_block_resource_signatures_match_between_orders": true,
+  "keys_per_build": 168,
+  "builds": [
+    "slice34",
+    "slice35"
+  ]
+}

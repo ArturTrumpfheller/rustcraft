@@ -36,7 +36,7 @@ fn load(store: &SaveStore, world: &mut World, c: [i32; 2]) {
 }
 #[test]
 fn generated_removals_and_cross_region_builds_survive_save_evict_regenerate_restart() {
-    for version in [3, 6, 8, 9] {
+    for version in [3, 6, 8, 9, 10] {
         let dir = Directory::new();
         let id = RegionIdentity {
             seed: 0,
@@ -65,7 +65,7 @@ fn generated_removals_and_cross_region_builds_survive_save_evict_regenerate_rest
         store.save_player_session(&world, &inv, true).unwrap();
         load(&store, &mut world, right);
         let mut removals = vec![stone];
-        if version == 9 {
+        if version >= 9 {
             let mut tree = None;
             let mut plant = None;
             for (cp, ch) in world.chunks() {

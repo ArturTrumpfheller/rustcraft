@@ -1,3 +1,18 @@
+# Slice 35 — Terrain Generation v3
+
+- [x] Explicit default generator10; v1–v9 fixtures and save identities preserved
+- [x] Integer multi-scale continents/uplift/erosion-inspired relief/ridges/valleys
+- [x] Taller ranges, broad lowlands, hills and gradual elevation transitions
+- [x] Final-height/slope materials and supported existing vegetation
+- [x] Versioned basin/river compatibility; protected roofs, shores and spawn
+- [x] Independent height fixtures, full-height/halo/order/persistence regressions
+- [x] Macro geography survey for0/42/2026/u64::MAX with signed/distant samples
+- [x] Rendered comparison captures and matched Slice34 CPU/memory/streaming evidence
+- [x] Locked Clippy,554 workspace tests, optimized regressions, release and asset checks
+- [ ] Native Gentoo/Void X11/Wayland and Windows/Radeon GUI acceptance
+
+Dedicated biome geography, Cave Generation v3 and Hydrology v2 remain follow-ups.
+
 # Slice 34 — Render Distance Expansion
 
 - [x] Initial measured radius4 step; default2 and version1 settings retained

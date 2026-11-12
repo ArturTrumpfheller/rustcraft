@@ -263,3 +263,13 @@ production renderer; tower and underground room are authored development
 fixtures. No new textures, external art, crates, renderer features, toolchain
 or lockfile changes were introduced. Software Mesa/Xvfb remain development
 capture tools and are not distributed as game dependencies.
+
+## Slice 35 terrain
+
+The fixed-point terrain model, bounded compatibility adaptations, independent
+Python height evaluator, tests, survey/benchmark/capture tools and documentation
+are original RustCraft work under MIT OR Apache-2.0. No new dependencies, copied
+Minecraft source, art, biome IDs, block/item IDs or renderer features are added.
+The Slice35 PNGs are actual software-Vulkan Bevy gallery captures of original
+RustCraft assets. Explicit development panorama fog/radius settings are recorded;
+these are not AI-generated images or claims of native GPU performance.

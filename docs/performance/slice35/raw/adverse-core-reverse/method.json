@@ -1,0 +1,18 @@
+{
+  "samples": 128,
+  "warmups": 8,
+  "adverse": true,
+  "order": [
+    [
+      "slice35",
+      10
+    ],
+    [
+      "slice34",
+      9
+    ]
+  ],
+  "percentile": "floor((n-1)*p/100)",
+  "compatibility": "All matched v9 block/light/geometry signatures and resource counts equal",
+  "limitations": "Requested heap excludes allocator metadata, stacks, GPU; CPU column installation is not Bevy/GPU installation."
+}

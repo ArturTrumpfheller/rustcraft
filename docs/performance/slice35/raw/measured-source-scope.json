@@ -1,0 +1,12 @@
+{
+  "core": {
+    "all_rust_source_hashes_match_final": true,
+    "files": 67,
+    "baseline": "aab49019b5d4f2ceccef1b748c458df46375cc4b"
+  },
+  "stream": {
+    "all_rust_source_hashes_match_final": true,
+    "files": 110,
+    "baseline": "aab49019b5d4f2ceccef1b748c458df46375cc4b"
+  }
+}
