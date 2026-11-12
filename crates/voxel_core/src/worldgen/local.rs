@@ -7,7 +7,9 @@ pub(super) fn height(seed: u64, x: i32, z: i32) -> i32 {
         / 1024
 }
 fn surface(g: &Generator, x: i32, z: i32) -> i32 {
-    if g.config.version >= 8 {
+    if g.config.version == 10 {
+        super::hydrology::surface_for(g, x, z).bed
+    } else if g.config.version >= 8 {
         super::hydrology::surface(g.config.seed, x, z).bed
     } else if g.config.version >= 5 {
         super::biome::height(g.config.seed, x, z)
@@ -38,7 +40,11 @@ fn cave(g: &Generator, x: i32, y: i32, z: i32) -> bool {
 }
 pub(super) fn terrain(g: &Generator, p: BlockPos, h: i32) -> Block {
     if g.config.version >= 8 {
-        let water = super::hydrology::surface(g.config.seed, p.0[0], p.0[2]);
+        let water = if g.config.version == 10 {
+            super::hydrology::surface_for(g, p.0[0], p.0[2])
+        } else {
+            super::hydrology::surface(g.config.seed, p.0[0], p.0[2])
+        };
         if water.depth() > 0 {
             return Block::Stone;
         } // tree admission separately rejects wet roots
@@ -252,13 +258,28 @@ impl Plan {
     fn new(g: &Generator, c: [i32; 2]) -> Self {
         let min = [c[0] * 16 - 1, c[1] * 16 - 1];
         let max = [min[0] + 17, min[1] + 17];
-        let materials = if g.config.version >= 5 {
+        let mut materials = if g.config.version == 10 {
+            super::terrain_v3::columns(g.config.seed, min)
+        } else if g.config.version >= 5 {
             super::biome::columns(g.config.seed, min)
         } else {
             Vec::new()
         };
         let water =
             (g.config.version >= 8).then(|| super::hydrology::Plan::new(g, min, max, &materials));
+        if g.config.version == 10 {
+            let w = water.as_ref().unwrap();
+            for (i, material) in materials.iter_mut().enumerate() {
+                *material = super::terrain_v3::resurface(
+                    g.config.seed,
+                    min[0] + (i % 18) as i32,
+                    min[1] + (i / 18) as i32,
+                    w.columns[i].bed,
+                    w.slopes[i],
+                    material.climate,
+                );
+            }
+        }
         let mut heights = Vec::with_capacity(18 * 18);
         for z in min[1]..=max[1] {
             for x in min[0]..=max[0] {
@@ -275,7 +296,7 @@ impl Plan {
             min,
             heights,
             materials,
-            trees: if g.config.version == 9 {
+            trees: if g.config.version >= 9 {
                 Vec::new()
             } else {
                 trees(g, min, max)
@@ -285,7 +306,7 @@ impl Plan {
             caves: (g.config.version >= 7)
                 .then(|| super::caves::Plan::new(g.config.seed, min, max)),
         };
-        if g.config.version == 9 {
+        if g.config.version >= 9 {
             let mut vegetation = super::vegetation::Plan::trees(g, min, max);
             vegetation.plants(g.config.seed, min, &plan.heights, &plan.materials, |p| {
                 plan.block(g, p)
@@ -321,7 +342,7 @@ impl Plan {
     }
     fn water_chunk(&self, g: &Generator, p: ChunkPos) -> Chunk {
         let water = self.water.as_ref().unwrap();
-        if g.config.version == 9
+        if g.config.version >= 9
             && p.0[1] * 16
                 > (*self.heights.iter().max().unwrap())
                     .max(super::hydrology::SEA_LEVEL)

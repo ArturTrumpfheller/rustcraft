@@ -256,6 +256,8 @@ def main():
         help="Build optional instrumented GUI executables instead of running headless tests.",
     )
     p.add_argument("--reuse", action="store_true")
+    p.add_argument("--summarize-only", action="store_true", help="Aggregate existing verified raw runs without running or rebuilding them")
+    p.add_argument("--terrain-v3", action="store_true", help="Matched Slice34 v9/current v10 terrain scenes; use with --distance-expansion")
     p.add_argument("--rendering-install", action="store_true",
                    help="Also measure retained connected batches with real Bevy CPU visibility.")
     p.add_argument("--distance-expansion", action="store_true",
@@ -267,6 +269,7 @@ def main():
         help="Summarize native S32_TRACE logs without building or running tests.",
     )
     a = p.parse_args()
+    if a.summarize_only: a.reuse = True
     assert 1 <= a.repeats <= 100 and 1 <= a.frames <= 10000
     out = a.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -313,6 +316,15 @@ def main():
                 for f in sorted((root / d).rglob("*.rs"))
             }
             ids[name] = instrument(root, "fn record_cancel(" in (root / "client/src/streaming.rs").read_text())
+            if a.terrain_v3:
+                tests = root / "client/src/streaming/tests.rs"
+                s = tests.read_text()
+                s = s.replace('generator:9,', 'generator:std::env::var("S35_GENERATOR").unwrap().parse().unwrap(),')
+                s = s.replace('large_app_with_generator(path,9)', 'large_app_with_generator(path,std::env::var("S35_GENERATOR").unwrap().parse().unwrap())')
+                s = s.replace('"origin"]);', '"origin", "mountain", "valley"]);')
+                s = s.replace('"coast"|"cavern"|"origin"', '"coast"|"cavern"|"origin"|"valley"')
+                s = s.replace('"forest" => [-136, -256],', '"mountain" => [-249,-197], "valley" => [-180,45], "forest" => [-136,-256],')
+                tests.write_text(s)
             if a.rendering_install:
                 tests = root / "client/src/scene/tests.rs"
                 tests.write_text(tests.read_text() + "\n" + (ROOT / "tools/rendering_bench/install.rs").read_text())
@@ -323,6 +335,7 @@ def main():
             json.dumps(
                 {"baseline": baseline, "files": sources, "runtime_ids": ids,
                  "probes": {"distance_expansion": a.distance_expansion, "rendering_install": a.rendering_install},
+                 "terrain_v3": a.terrain_v3,
                  "harness_sha256": {str(f.relative_to(ROOT)): hashlib.sha256(f.read_bytes()).hexdigest()
                     for f in [Path(__file__).resolve(), ROOT / "tools/rendering_bench/install.rs", *sorted((ROOT / "tools/streaming_bench").glob("*.rs"))]}}, indent=2
             )
@@ -444,12 +457,13 @@ def main():
     assert manifest["baseline"] == baseline, "Reused baseline differs from requested revision"
     if "probes" in manifest:
         assert manifest["probes"] == {"distance_expansion": a.distance_expansion, "rendering_install": a.rendering_install}, "Reused probes differ"
+    assert manifest.get("terrain_v3", False) == a.terrain_v3, "Reused terrain mode differs"
     ids = manifest["runtime_ids"]
     assert set(ids) == set(names), "Reused build labels differ"
     executables = json.loads((out / "executables-sha256.json").read_text())
     for name in names:
         assert hashlib.sha256((out / f"{name}-bench").read_bytes()).hexdigest() == executables[name], "Reused executable changed"
-    for name in reversed(names) if a.reverse else names:
+    for name in ([] if a.summarize_only else (list(reversed(names)) if a.reverse else names)):
         with (out / f"{name}.txt").open("w") as log:
             subprocess.run(
                 [
@@ -470,6 +484,7 @@ def main():
                     "S32_EXPECT_CORE": ids[name][0],
                     "S32_EXPECT_CLIENT": ids[name][1],
                     "S34_DISTANCE": str(int(a.distance_expansion)),
+                    "S35_GENERATOR": "10" if a.terrain_v3 and name == names[1] else "9",
                 },
             )
             subprocess.run(
@@ -490,6 +505,7 @@ def main():
                     "S32_EXPECT_CORE": ids[name][0],
                     "S32_EXPECT_CLIENT": ids[name][1],
                     "S34_DISTANCE": str(int(a.distance_expansion)),
+                    "S35_GENERATOR": "10" if a.terrain_v3 and name == names[1] else "9",
                 },
             )
             if a.rendering_install:
@@ -514,7 +530,18 @@ def main():
                 ].split(",")
                 samples.append([name, scene, radius, repeat, metric, index, value])
     # The Rust harness may prefix the first state with its test-name banner.
-    if a.distance_expansion:
+    if a.terrain_v3:
+        # Slice34 already supports radius4; terrain versions intentionally have
+        # different block/resource signatures. Compare identical workload keys.
+        keyed = {name: {tuple(s.split(",")[1:4]): s for s in states[name]} for name in names}
+        expected={(scene,str(radius),str(repeat)) for scene in [
+            "stationary","walking","sprinting","diagonal","reversal","teleport",
+            "gated_teleport","return","forest","coast","cavern","editing",
+            "dirty_pressure","water","radius","dense-construction","edited-water",
+            "origin","mountain","valley","session"]
+            for radius in range(1,5) for repeat in range(a.repeats)}
+        assert all(set(keyed[name])==expected for name in names), "Incomplete terrain workload coverage"
+    elif a.distance_expansion:
         # The exact baseline cannot run radius4. Compare all common keys exactly,
         # retain expansion-only states separately, and check coverage explicitly.
         keyed = {name: {tuple(s.split(",")[1:4]): s for s in states[name]} for name in names}
@@ -568,12 +595,12 @@ def main():
             for (name, scene, radius, metric), values in sorted(grouped.items()):
                 if name != names[1]:
                     continue
-                reference_radius = "3" if radius == "4" else radius
-                reference_name = names[1] if radius == "4" else names[0]
+                reference_radius = "3" if radius == "4" and not a.terrain_v3 else radius
+                reference_name = names[1] if radius == "4" and not a.terrain_v3 else names[0]
                 base_values = grouped.get((reference_name, scene, reference_radius, metric))
                 if base_values:
                     stats = lambda v: [v[(len(v)-1)*p//100] for p in [50,95,99]] + [max(v)]
-                    comparison = "transition" if scene == "radius" else ("expansion" if radius == "4" else "matched")
+                    comparison = "transition" if scene == "radius" else ("expansion" if radius == "4" and not a.terrain_v3 else "matched")
                     w.writerow([comparison, scene, radius, reference_radius, metric,
                                 len(base_values), len(values), *[n for pair in zip(stats(base_values),stats(values)) for n in pair]])
     (out / "method.json").write_text(
@@ -586,7 +613,8 @@ def main():
                 "frame_hz": 240,
                 "rendering_install": a.rendering_install,
                 "distance_expansion": a.distance_expansion,
-                "transition_scope": "In distance mode, radius stress visits each build's own maximum (baseline3, candidate4); common final signatures match but these rows are not matched-workload regression evidence.",
+                "transition_scope": ("Terrain mode compares v9/v10 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds." if a.terrain_v3 else "In distance mode, radius stress visits each build's own maximum (baseline3, candidate4); common final signatures match but these rows are not matched-workload regression evidence."),
+                "aggregation_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                 "machine": platform.platform(),
                 "note": "Headless scripted position/velocity, fixed 240Hz deadlines, no rendered frames/GPU. RSS is process-wide; requested heap peak is additional process heap during worker window, excludes stacks/allocator metadata/GPU and may include concurrent main allocations.",
             },

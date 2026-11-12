@@ -1,5 +1,13 @@
 # RustCraft
 
+## Terrain Generation v3 (Slice 35)
+
+New worlds use generator10: large connected highlands and rounded ridges, broad
+valleys, rolling foothills and flat lowlands, using the existing Y[-64,192) bounds.
+Existing v1–v9 worlds retain their original generation and authoritative edits.
+The five biomes, original assets, water gameplay and supported radius1–4 remain.
+[Terrain model, captures, measurements and native acceptance](docs/performance/slice35/README.md).
+
 ## Render Distance Expansion (Slice 34)
 
 The supported horizontal render radius is now1–4 (default2). Radius4 retains up
@@ -90,7 +98,7 @@ migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest upla
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 34**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 35**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 

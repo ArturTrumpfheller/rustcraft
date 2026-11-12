@@ -30,6 +30,11 @@ def replace_once(path, old, new):
 
 def instrument(root):
     core = root / 'crates/voxel_core/src'
+    # Current shared harness diagnoses v10's bounded cache; released baselines
+    # have no such cache. Keep their production algorithms untouched.
+    if not any('fn terrain_admission_cache_entries(' in f.read_text() for f in core.rglob('*.rs')):
+        f = core / 'worldgen.rs'
+        f.write_text(f.read_text() + '\nimpl Generator { pub fn terrain_admission_cache_entries(&self)->usize { 0 } }\n')
     profile = '''
 thread_local! {static SLICE30_PROFILE: std::cell::Cell<[u128;16]> = const {std::cell::Cell::new([0;16])};}
 pub(crate) fn slice30_add(i:usize,ns:u128){ SLICE30_PROFILE.with(|p|{let mut a=p.get();a[i]+=ns;p.set(a);}); }

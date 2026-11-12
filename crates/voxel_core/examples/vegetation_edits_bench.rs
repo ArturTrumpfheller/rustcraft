@@ -14,6 +14,13 @@ fn p(v: &mut [f64], percent: usize) -> f64 {
     v[(v.len() - 1) * percent / 100]
 }
 fn main() {
+    let raw = std::env::var_os("RUSTCRAFT_BENCH_RAW_LIFECYCLE").is_some();
+    let version = std::env::var("RUSTCRAFT_BENCH_GENERATOR")
+        .map_or(Ok(9), |v| v.parse())
+        .unwrap();
+    if raw {
+        println!("trial,generator,plants_removed,break_us,save_us,reload_us,regeneration_us");
+    }
     let mut breaks = Vec::new();
     let mut saves = Vec::new();
     let mut loads = Vec::new();
@@ -26,12 +33,12 @@ fn main() {
         std::fs::create_dir(&dir).unwrap();
         let id = voxel_core::regions::RegionIdentity {
             seed: 0,
-            generator: 9,
+            generator: version,
             nonce: [29; 16],
         };
         let (store, mut world, _) = SaveStore::open_with(&dir, || Ok(World::regional(id))).unwrap();
         let _ = store.load_player(&mut world).unwrap();
-        let c = [-152, -256];
+        let c = if raw { [-136, -256] } else { [-152, -256] };
         store.prepare_regional_column(&mut world, c).unwrap();
         streaming::prepare_column(&mut world, c).unwrap();
         let mut vegetation = Vec::new();
@@ -43,8 +50,13 @@ fn main() {
                 }
             }
         }
+        if raw {
+            vegetation.sort();
+            vegetation.truncate(8);
+            assert_eq!(vegetation.len(), 8);
+        }
         let mut inv = Inventory::empty();
-        let player = Player::new([-2400., 40., -4050.]);
+        let player = Player::new([f64::from(c[0] * 16 + 32), 40., f64::from(c[1] * 16 + 46)]);
         let cfg = PhysicsConfig::default();
         let mut removed = BTreeSet::new();
         let start = Instant::now();
@@ -69,7 +81,7 @@ fn main() {
         assert!(!removed.is_empty());
         inv.insert(Item::BirchWood, 3);
         inv.insert(Item::SpruceLeaves, 2);
-        let placed = BlockPos([-2431, 28, -4095]);
+        let placed = BlockPos([c[0] * 16 + 1, 28, c[1] * 16 + 1]);
         world
             .set_block(placed.offset([0, -1, 0]).unwrap(), Block::Dirt)
             .unwrap();
@@ -93,11 +105,24 @@ fn main() {
         let start = Instant::now();
         streaming::prepare_column(&mut world, c).unwrap();
         regenerations.push(start.elapsed().as_secs_f64() * 1e6);
-        for bp in removed {
-            assert_eq!(world.block(bp), Block::Air);
+        for bp in &removed {
+            assert_eq!(world.block(*bp), Block::Air);
+        }
+        if raw {
+            println!(
+                "{trial},{version},{},{:.3},{:.3},{:.3},{:.3}",
+                removed.len(),
+                breaks.last().unwrap(),
+                saves.last().unwrap(),
+                loads.last().unwrap(),
+                regenerations.last().unwrap()
+            );
         }
         drop(store);
         std::fs::remove_dir_all(dir).unwrap();
+    }
+    if raw {
+        return;
     }
     println!("operation,samples,p50_us,p95_us,p99_us");
     for (name, mut values) in [

@@ -103,15 +103,23 @@ struct Roots {
 impl Roots {
     fn new(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Self {
         Self {
-            geography: hydrology::Geography::new(g.config.seed, min, max),
+            geography: hydrology::Geography::for_generator(g, min, max),
             caves: caves::Plan::new(g.config.seed, min, max),
             water: BTreeMap::new(),
         }
     }
     fn surface(&mut self, g: &Generator, x: i32, z: i32) -> hydrology::Surface {
         *self.water.entry([x, z]).or_insert_with(|| {
-            self.geography
-                .column(g.config.seed, x, z, biome::height(g.config.seed, x, z))
+            self.geography.column(
+                g.config.seed,
+                x,
+                z,
+                if g.config.version == 10 {
+                    super::terrain_v3::height(g.config.seed, x, z)
+                } else {
+                    biome::height(g.config.seed, x, z)
+                },
+            )
         })
     }
     fn ground(&mut self, g: &Generator, x: i32, z: i32) -> (i32, Block) {
@@ -128,7 +136,16 @@ impl Roots {
                 return (h, Block::Air);
             }
         }
-        let c = biome::column(g.config.seed, x, z);
+        let c = if g.config.version == 10 {
+            let slope = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+                .into_iter()
+                .map(|[dx, dz]| (self.surface(g, x + dx, z + dz).bed - h).abs())
+                .max()
+                .unwrap();
+            super::terrain_v3::material(g.config.seed, x, z, h, slope)
+        } else {
+            biome::column(g.config.seed, x, z)
+        };
         let top = if h <= hydrology::SEA_LEVEL + 2
             && water.coastal
             && !matches!(c.top, Block::SnowyGround | Block::Stone)

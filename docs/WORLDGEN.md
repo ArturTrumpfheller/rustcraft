@@ -1,3 +1,63 @@
+# Terrain Generation v3 — generator 10 / Slice 35
+
+New regional worlds explicitly select **generator 10**. Loading any existing
+manifest retains its recorded generator, including every frozen v1–v9 branch.
+There is no migration, regeneration, registry change or save-envelope change.
+Manifest5, region1, player/inventory/session journals and recovery protocols carry
+v10 through the same strict identity validation. Unknown generator11+ is rejected.
+Horizontal bounds remain X/Z[-32768,32768), vertical bounds Y[-64,192).
+Saved edits, including explicit Air over terrain or vegetation, remain authority.
+
+`worldgen::terrain_v3` evaluates coordinate-hashed value fields with Q12 values
+and Q8 sub-block warped coordinates. Bounded i64 products implement fixed-point
+blends; Euclidean lattice division handles signed coordinates. The existing hash
+is reused, without mutable RNG, float classification, global plans or generation
+order dependence. No proprietary algorithm/source or asset is included.
+
+- A 1536-block continental field blends ocean shelves with inland elevation.
+- Two 896-block warps displace the domain by at most112 blocks on each axis.
+- Independent 1024-block regional uplift and 768-block erosion-inspired fields
+  determine how much mountainous relief is exposed. These are shape fields,
+  not an erosion simulation.
+- A skewed256-block ridge field has rounded crests;112-block folds and512-block
+  mass variation distinguish irregular ridges, broad massifs and prominent peaks.
+- A separate640-block field cuts broad valleys through highland regions.
+- 144-block hills fade into broad384-block lowlands. Detail at32 blocks remains
+  below a block in amplitude; plains do not receive full mountain roughness.
+
+Convex coast blending and smoothly varying relief weights avoid biome-threshold
+height jumps and clipped summits. The mathematical upper envelope is below Y179,
+leaving at least13 cells before the ceiling; no hard summit clamp creates plateaus.
+The five existing climate/biome identities are unchanged. Final bed height and
+one-block slopes choose snow, exposed rock, soil and existing sand. Steep/high
+snowy ledges have Stone underneath. Existing species/candidate/clearance rules
+sample the actual new surface and reject wet roots, cave mouths and buried crowns.
+
+Hydrology retains the existing sea datum Y2, still-water basins, finite curved
+river candidates, closed cave pools, source IDs and solver. V10 integrates the
+coastal shelf in its terrain field, avoiding a second unrelated ocean subtraction.
+Candidate-wide padded samples reject elevated basins and complete river routes;
+all24 curve legs are screened before endpoint basins are admitted. This avoids
+per-column river clipping. These finite checks are a compatibility heuristic,
+not a drainage or continuous-maximum proof. Four-block sealed bed/bank caps and
+existing pool closure validation remain. No elevated lakes or watershed network
+are introduced. V7 underground geometry/roof rules remain: high mountains add
+solid overburden, and some historical entrance routes become buried rather than
+being stretched into steep shafts. Dedicated cave/hydrology slices should address
+altitude-aware entrances, watersheds and varied water levels.
+
+Runtime plans keep the bounded20² temporary/18² retained column grids, existing
+bounded pool cache and pristine streaming cache. Air above the actual surface and
+vegetation maximum remains compact; deep Stone slabs only materialize where cave
+geometry intersects. The fixed v9 sky shortcut stays restricted to v9. One bounded
+worker, cache ownership, cancellation, connected publication and radius1–4 remain.
+
+[Reproducible quality process, actual rendered captures, matched Slice34 CPU and
+streaming evidence, limitations and native acceptance](performance/slice35/README.md).
+The following sections describe historical releases and their then-current defaults.
+
+---
+
 # Slice 30: frozen output and repeatable integration audit
 
 **No generator v10 and no change to v9 output. Generators v1–v9 remain frozen.**
@@ -537,3 +597,9 @@ A (0,0) spawn column is prepared before the App, then follows ordinary radius ev
 Legacy worlds retain bounded full startup loading. Streamed worlds prepare only one small spawn column before App/window creation; new-column generation and cached dirty mesh batches run off-thread. The main thread polls without waiting, installs at most one result per frame, discards obsolete work and frees evicted assets. It never performs full-world generation or disk I/O in the frame loop. Default radius 2 retains at most 75 vertical chunks (307,200 block payload bytes); the configured ceiling is 147 chunks / 602,112 bytes, without an extra spawn pin. The new-column thin worker halo holds at most 15 chunk vectors / 61,440 block payload bytes plus mesh buffers. Editing remeshes cached target and face-neighbor data, generating only missing face cells. A large connected mesh batch can materialize up to the finite 192-chunk volume; normal clicks copy only a small neighborhood. Connected dirty targets publish together, preventing mixed old/new faces at edited seams. These counts exclude edit-map allocations, renderer/driver buffers and Bevy overhead. Meshing, renderer buffers and save encoding have separate transient allocations. v3 save snapshots share the immutable overlay without copying the resident cache; no generation or disk I/O runs in the render loop.
 
 Measured debug/cloud timings and functional coverage are recorded in [VALIDATION.md](VALIDATION.md); they are not desktop GPU benchmarks. Larger worlds will need region/halo planning (especially trees), worker scheduling for generation/meshing, memory budgets and streaming. Keep global coordinate sampling deterministic when introducing those systems. Do not extend this finite cache or synchronous mesh startup into unbounded work.
+
+V10 feature admission caches at most128 coordinate-keyed booleans in a FIFO beside
+its existing bounded pool cache. Pure evaluation occurs outside the mutex;
+parallel duplicates are safe and cache eviction/order cannot affect output.
+Historical versions never populate this cache. Cache-capacity and uncached-parity
+regressions cover all four seeds through repeated distant-region eviction.

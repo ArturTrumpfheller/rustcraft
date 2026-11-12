@@ -19,6 +19,8 @@ pub(super) struct PoolCache(Mutex<CachedPools>);
 struct CachedPools {
     entries: BTreeMap<[i32; 2], Pool>,
     order: VecDeque<[i32; 2]>,
+    admissions: BTreeMap<[i32; 3], bool>,
+    admission_order: VecDeque<[i32; 3]>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -57,13 +59,30 @@ struct Segment {
 pub(super) struct Geography {
     basins: Vec<Basin>,
     rivers: Vec<Segment>,
+    v10: bool,
 }
 fn overlaps(min: [i32; 2], max: [i32; 2], a: [i32; 2], b: [i32; 2], r: i32) -> bool {
     (0..2).all(|i| a[i].min(b[i]) - r <= max[i] && a[i].max(b[i]) + r >= min[i])
 }
 impl Geography {
     pub(super) fn new(seed: u64, min: [i32; 2], max: [i32; 2]) -> Self {
+        Self::versioned(seed, min, max, false)
+    }
+    pub(super) fn versioned(seed: u64, min: [i32; 2], max: [i32; 2], v10: bool) -> Self {
+        Self::build(seed, min, max, v10, None)
+    }
+    pub(super) fn for_generator(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Self {
+        Self::build(g.config.seed, min, max, g.config.version == 10, Some(g))
+    }
+    fn build(
+        seed: u64,
+        min: [i32; 2],
+        max: [i32; 2],
+        v10: bool,
+        cache: Option<&Generator>,
+    ) -> Self {
         let mut result = Self {
+            v10,
             basins: Vec::new(),
             rivers: Vec::new(),
         };
@@ -100,7 +119,17 @@ impl Geography {
                     radii: [radius, radius * (70 + ((h >> 48) % 60) as i32) / 100],
                     depth: 2 + radius / 5,
                 };
-                result.add_basin(basin, min, max);
+                if !v10
+                    || admitted(cache, [0, cx, cz], || {
+                        low_footprint(
+                            seed,
+                            center,
+                            (basin.radii[0].max(basin.radii[1]) * 5 + 1) / 2 + 4,
+                        )
+                    })
+                {
+                    result.add_basin(basin, min, max);
+                }
             }
         }
         // Finite gently curved channels terminate in real endpoint basins. The
@@ -128,6 +157,23 @@ impl Geography {
                     transform(244, 64 + ((h >> 40) % 256) as i32),
                     b,
                 ];
+                let at = |t: i32| {
+                    std::array::from_fn(|k| {
+                        ((24 - t).pow(3) * controls[0][k]
+                            + 3 * (24 - t).pow(2) * t * controls[1][k]
+                            + 3 * (24 - t) * t * t * controls[2][k]
+                            + t.pow(3) * controls[3][k])
+                            / 24_i32.pow(3)
+                    })
+                };
+                if v10
+                    && !admitted(cache, [1, cx, cz], || {
+                        controls.iter().all(|&p| low_footprint(seed, p, 40))
+                            && (0..=24).all(|t| low_footprint(seed, at(t), 24))
+                    })
+                {
+                    continue;
+                }
                 // Reject steep routes as a whole; no channel clipping into disconnected patches.
                 if controls
                     .iter()
@@ -154,20 +200,11 @@ impl Geography {
                     min,
                     max,
                 );
-                let at = |t: i32| {
-                    std::array::from_fn(|k| {
-                        ((24 - t).pow(3) * controls[0][k]
-                            + 3 * (24 - t).pow(2) * t * controls[1][k]
-                            + 3 * (24 - t) * t * t * controls[2][k]
-                            + t.pow(3) * controls[3][k])
-                            / 24_i32.pow(3)
-                    })
-                };
                 let mut prev = a;
                 for t in 1..=24 {
                     let next = at(t);
                     let width = 3 + (noise(seed, next[0], next[1], 64, 0x8101) + 1024) * 3 / 2048;
-                    if overlaps(min, max, prev, next, width + 8) {
+                    if overlaps(min, max, prev, next, width + if v10 { 15 } else { 8 }) {
                         result.rivers.push(Segment {
                             a: prev,
                             b: next,
@@ -187,33 +224,66 @@ impl Geography {
             max,
             b.center,
             b.center,
-            (b.radii[0].max(b.radii[1]) * 8 + 4) / 5 + 4,
+            if self.v10 {
+                (b.radii[0].max(b.radii[1]) * 5 + 1) / 2 + 4
+            } else {
+                (b.radii[0].max(b.radii[1]) * 8 + 4) / 5 + 4
+            },
         ) {
             self.basins.push(b);
         }
     }
     pub(super) fn column(&self, seed: u64, x: i32, z: i32, base: i32) -> Surface {
-        let wx = x + noise(seed, x, z, 256, 0x8201) * 44 / 1024;
-        let wz = z + noise(seed, x, z, 256, 0x8202) * 44 / 1024;
-        let continental = noise(seed, wx, wz, 768, 0x8203) + noise(seed, x, z, 96, 0x8204) / 6;
+        let continental = if self.v10 {
+            0
+        } else {
+            let wx = x + noise(seed, x, z, 256, 0x8201) * 44 / 1024;
+            let wz = z + noise(seed, x, z, 256, 0x8202) * 44 / 1024;
+            noise(seed, wx, wz, 768, 0x8203) + noise(seed, x, z, 96, 0x8204) / 6
+        };
         let lowering = (-continental - 80).max(0);
-        let mut bed = (base.max(SEA_LEVEL + 1) - lowering * lowering / 6000).max(-28);
-        let coastal = continental < -80 && bed <= SEA_LEVEL + 2;
+        let mut bed = if self.v10 {
+            base
+        } else {
+            (base.max(SEA_LEVEL + 1) - lowering * lowering / 6000).max(-28)
+        };
+        let coastal = if self.v10 {
+            base <= SEA_LEVEL + 3
+        } else {
+            continental < -80 && bed <= SEA_LEVEL + 2
+        };
         let mut body = if bed < SEA_LEVEL {
             WaterBody::Ocean
         } else {
             WaterBody::Dry
         };
         for b in &self.basins {
-            let dx = x - b.center[0] + noise(seed, x, z, 24, 0x8301) * 3 / 1024;
-            let dz = z - b.center[1] + noise(seed, x, z, 28, 0x8302) * 3 / 1024;
-            let d = dx * dx * 1024 / (b.radii[0] * b.radii[0])
-                + dz * dz * 1024 / (b.radii[1] * b.radii[1]);
-            if d < 2560 {
+            let d = if self.v10 {
+                // Keep shoreline warp below block precision. Integer offsets
+                // doubled some one-cell steps in the old narrow wet basin rims.
+                let dx = i64::from(
+                    (x - b.center[0]) * 256 + noise(seed, x, z, 24, 0x8301) * 2 * 256 / 1024,
+                );
+                let dz = i64::from(
+                    (z - b.center[1]) * 256 + noise(seed, x, z, 28, 0x8302) * 2 * 256 / 1024,
+                );
+                ((dx * dx * 1024 / i64::from(b.radii[0] * b.radii[0])
+                    + dz * dz * 1024 / i64::from(b.radii[1] * b.radii[1]))
+                    / 65536) as i32
+            } else {
+                let dx = x - b.center[0] + noise(seed, x, z, 24, 0x8301) * 3 / 1024;
+                let dz = z - b.center[1] + noise(seed, x, z, 28, 0x8302) * 3 / 1024;
+                dx * dx * 1024 / (b.radii[0] * b.radii[0])
+                    + dz * dz * 1024 / (b.radii[1] * b.radii[1])
+            };
+            let rim = if self.v10 { 6144 } else { 2560 };
+            if d < rim {
                 let target = if d <= 1024 {
                     SEA_LEVEL - b.depth + (b.depth + 3) * d / 1024
                 } else {
-                    SEA_LEVEL + 3 + (base.max(SEA_LEVEL + 1) - SEA_LEVEL - 3) * (d - 1024) / 1536
+                    SEA_LEVEL
+                        + 3
+                        + (base.max(SEA_LEVEL + 1) - SEA_LEVEL - 3) * (d - 1024) / (rim - 1024)
                 };
                 if target < bed {
                     bed = target;
@@ -228,20 +298,32 @@ impl Geography {
             }
         }
         for s in &self.rivers {
+            if self.v10 {
+                if let Some(target) = river_bed_v10(s, x, z, base)
+                    && target < bed
+                {
+                    bed = target;
+                    if bed < SEA_LEVEL && body != WaterBody::Ocean {
+                        body = WaterBody::River;
+                    }
+                }
+                continue;
+            }
             let v = [s.b[0] - s.a[0], s.b[1] - s.a[1]];
             let d = [x - s.a[0], z - s.a[1]];
             let len = v[0] * v[0] + v[1] * v[1];
             let t = ((d[0] * v[0] + d[1] * v[1]) * 1024 / len.max(1)).clamp(0, 1024);
             let q = [d[0] - v[0] * t / 1024, d[1] - v[1] * t / 1024];
             let distance = q[0] * q[0] + q[1] * q[1];
-            if distance < (s.width + 7).pow(2) {
+            let bank = if self.v10 { 14 } else { 7 };
+            if distance < (s.width + bank).pow(2) {
                 let target = if distance <= s.width * s.width {
                     SEA_LEVEL - s.depth + (s.depth + 3) * distance / (s.width * s.width)
                 } else {
                     SEA_LEVEL
                         + 3
                         + (base.max(SEA_LEVEL + 1) - SEA_LEVEL - 3) * (distance - s.width * s.width)
-                            / ((s.width + 7).pow(2) - s.width * s.width)
+                            / ((s.width + bank).pow(2) - s.width * s.width)
                 };
                 if target < bed {
                     bed = target;
@@ -268,12 +350,88 @@ impl Geography {
         }
     }
 }
+// The old whole-block projected segment point could move two grid steps when
+// the queried cell moved one. Q16 projection / Q8 distance keeps v10 wet banks
+// continuous, while the released river evaluator above stays frozen.
+fn river_bed_v10(s: &Segment, x: i32, z: i32, base: i32) -> Option<i32> {
+    let v = [i64::from(s.b[0] - s.a[0]), i64::from(s.b[1] - s.a[1])];
+    let d = [i64::from(x - s.a[0]), i64::from(z - s.a[1])];
+    let len = (v[0] * v[0] + v[1] * v[1]).max(1);
+    let t = ((d[0] * v[0] + d[1] * v[1]) * 65536 / len).clamp(0, 65536);
+    let q = [d[0] * 256 - v[0] * t / 256, d[1] * 256 - v[1] * t / 256];
+    let distance = q[0] * q[0] + q[1] * q[1];
+    let inner = i64::from(s.width * s.width) * 65536;
+    let outer = i64::from((s.width + 14).pow(2)) * 65536;
+    if distance >= outer {
+        return None;
+    }
+    Some(if distance <= inner {
+        SEA_LEVEL - s.depth + (i64::from(s.depth + 3) * distance / inner) as i32
+    } else {
+        SEA_LEVEL
+            + 3
+            + (i64::from(base.max(SEA_LEVEL + 1) - SEA_LEVEL - 3) * (distance - inner)
+                / (outer - inner)) as i32
+    })
+}
+// Candidate-wide admission, independent of the queried chunk or halo. Terrain's
+// padded nine-point footprints screen broad relief; this is a bounded sampling
+// heuristic, not a proof of the continuous maximum between samples.
+// actual banks and bed still use the final continuous surface evaluator.
+fn low_footprint(seed: u64, p: [i32; 2], radius: i32) -> bool {
+    [-radius, 0, radius].into_iter().all(|dx| {
+        [-radius, 0, radius]
+            .into_iter()
+            .all(|dz| super::terrain_v3::height(seed, p[0] + dx, p[1] + dz) <= 20)
+    })
+}
+// Outcomes depend only on seed/feature coordinates. FIFO order affects reuse,
+// never generation. The same mutex protects the existing bounded pool cache;
+// expensive pure evaluation happens outside the lock (parallel duplicates are safe).
+const MAX_ADMISSIONS: usize = 128;
+fn admitted(g: Option<&Generator>, key: [i32; 3], evaluate: impl FnOnce() -> bool) -> bool {
+    let Some(g) = g else {
+        return evaluate();
+    };
+    if let Some(&v) = g.water_cache.0.lock().unwrap().admissions.get(&key) {
+        return v;
+    }
+    let value = evaluate();
+    let mut cache = g.water_cache.0.lock().unwrap();
+    if let Some(&v) = cache.admissions.get(&key) {
+        return v;
+    }
+    if cache.admissions.len() >= MAX_ADMISSIONS {
+        let old = cache.admission_order.pop_front().unwrap();
+        cache.admissions.remove(&old);
+    }
+    cache.admission_order.push_back(key);
+    cache.admissions.insert(key, value);
+    value
+}
+pub(super) fn surface_for(g: &Generator, x: i32, z: i32) -> Surface {
+    Geography::for_generator(g, [x, z], [x, z]).column(
+        g.config.seed,
+        x,
+        z,
+        super::terrain_v3::height(g.config.seed, x, z),
+    )
+}
+pub fn surface_v10(seed: u64, x: i32, z: i32) -> Surface {
+    Geography::versioned(seed, [x, z], [x, z], true).column(
+        seed,
+        x,
+        z,
+        super::terrain_v3::height(seed, x, z),
+    )
+}
 pub fn surface(seed: u64, x: i32, z: i32) -> Surface {
     Geography::new(seed, [x, z], [x, z]).column(seed, x, z, biome::height(seed, x, z))
 }
 
 pub(super) struct Plan {
     pub columns: Vec<Surface>,
+    pub slopes: Vec<i32>,
     min: [i32; 2],
     pools: Vec<Pool>,
     sealed: Vec<bool>,
@@ -287,12 +445,14 @@ impl Plan {
     ) -> Self {
         // One additional ring proves whether each 18x18 sample touches water.
         // Dry cave entrances outside that immediate bank retain v7 behavior.
-        let geography = Geography::new(g.config.seed, min.map(|v| v - 1), max.map(|v| v + 1));
+        let geography = Geography::for_generator(g, min.map(|v| v - 1), max.map(|v| v + 1));
         let mut grid = Vec::with_capacity(400);
         for z in -1..=18 {
             for x in -1..=18 {
                 let base = if (0..18).contains(&x) && (0..18).contains(&z) {
                     materials[(z * 18 + x) as usize].height
+                } else if g.config.version == 10 {
+                    super::terrain_v3::height(g.config.seed, min[0] + x, min[1] + z)
                 } else {
                     biome::height(g.config.seed, min[0] + x, min[1] + z)
                 };
@@ -301,10 +461,20 @@ impl Plan {
         }
         let mut columns = Vec::with_capacity(324);
         let mut sealed = Vec::with_capacity(324);
+        let mut slopes = Vec::with_capacity(if g.config.version == 10 { 324 } else { 0 });
         for z in 1..19 {
             for x in 1..19 {
                 let i = z * 20 + x;
                 columns.push(grid[i]);
+                if g.config.version == 10 {
+                    slopes.push(
+                        [i - 1, i + 1, i - 20, i + 20]
+                            .into_iter()
+                            .map(|n| (grid[n].bed - grid[i].bed).abs())
+                            .max()
+                            .unwrap(),
+                    );
+                }
                 sealed.push(
                     [i, i - 1, i + 1, i - 20, i + 20]
                         .iter()
@@ -323,6 +493,7 @@ impl Plan {
         }
         Self {
             columns,
+            slopes,
             min,
             pools,
             sealed,
@@ -388,6 +559,10 @@ impl Generator {
         cache.order.push_back(cell);
         cache.entries.insert(cell, Arc::clone(&pool));
         pool
+    }
+    /// At most128 bool decisions; no terrain/voxel map is retained.
+    pub fn terrain_admission_cache_entries(&self) -> usize {
+        self.water_cache.0.lock().unwrap().admissions.len()
     }
     pub fn water_planning_bytes(&self) -> usize {
         self.water_cache

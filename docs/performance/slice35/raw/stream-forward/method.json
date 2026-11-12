@@ -1,0 +1,16 @@
+{
+  "baseline": "aab49019b5d4f2ceccef1b748c458df46375cc4b",
+  "order": [
+    "slice34",
+    "slice35"
+  ],
+  "repeats": 2,
+  "frames": 60,
+  "frame_hz": 240,
+  "rendering_install": true,
+  "distance_expansion": true,
+  "transition_scope": "Terrain mode compares v9/v10 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds.",
+  "aggregation_sha256": "b6888fc9d11d3725b77aa2ad938fe27febaeeafb2dca2438a07243a1f9d8bd8c",
+  "machine": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "note": "Headless scripted position/velocity, fixed 240Hz deadlines, no rendered frames/GPU. RSS is process-wide; requested heap peak is additional process heap during worker window, excludes stacks/allocator metadata/GPU and may include concurrent main allocations."
+}

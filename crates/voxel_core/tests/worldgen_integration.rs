@@ -36,7 +36,7 @@ fn bounded_multi_seed_v9_integration_audit() {
 
 #[test]
 fn all_released_generators_keep_parallel_signed_seams_and_eviction_parity() {
-    for version in 1..=9 {
+    for version in 1..=10 {
         for seed in audit::SEEDS {
             audit::parallel_parity(seed, version, [-1, 0]);
         }
