@@ -9,7 +9,7 @@ fn main() {
         "usage: worldgen_audit [generator [seed chunk_x chunk_z]]"
     );
     let version = args.first().map_or(9, |v| v.parse().unwrap());
-    assert!((3..=10).contains(&version));
+    assert!((3..=11).contains(&version));
     let sites: Vec<_> = if args.len() == 4 {
         vec![(
             args[1].parse().unwrap(),

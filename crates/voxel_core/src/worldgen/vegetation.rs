@@ -114,7 +114,9 @@ impl Roots {
                 g.config.seed,
                 x,
                 z,
-                if g.config.version == 10 {
+                if g.config.version == 11 {
+                    super::terrain_v4::height(g.config.seed, x, z)
+                } else if g.config.version == 10 {
                     super::terrain_v3::height(g.config.seed, x, z)
                 } else {
                     biome::height(g.config.seed, x, z)
@@ -136,13 +138,17 @@ impl Roots {
                 return (h, Block::Air);
             }
         }
-        let c = if g.config.version == 10 {
+        let c = if g.config.version >= 10 {
             let slope = [[-1, 0], [1, 0], [0, -1], [0, 1]]
                 .into_iter()
                 .map(|[dx, dz]| (self.surface(g, x + dx, z + dz).bed - h).abs())
                 .max()
                 .unwrap();
-            super::terrain_v3::material(g.config.seed, x, z, h, slope)
+            if g.config.version == 11 {
+                super::terrain_v4::material(g.config.seed, x, z, h, slope)
+            } else {
+                super::terrain_v3::material(g.config.seed, x, z, h, slope)
+            }
         } else {
             biome::column(g.config.seed, x, z)
         };

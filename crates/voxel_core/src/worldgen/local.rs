@@ -7,7 +7,7 @@ pub(super) fn height(seed: u64, x: i32, z: i32) -> i32 {
         / 1024
 }
 fn surface(g: &Generator, x: i32, z: i32) -> i32 {
-    if g.config.version == 10 {
+    if g.config.version >= 10 {
         super::hydrology::surface_for(g, x, z).bed
     } else if g.config.version >= 8 {
         super::hydrology::surface(g.config.seed, x, z).bed
@@ -40,7 +40,7 @@ fn cave(g: &Generator, x: i32, y: i32, z: i32) -> bool {
 }
 pub(super) fn terrain(g: &Generator, p: BlockPos, h: i32) -> Block {
     if g.config.version >= 8 {
-        let water = if g.config.version == 10 {
+        let water = if g.config.version >= 10 {
             super::hydrology::surface_for(g, p.0[0], p.0[2])
         } else {
             super::hydrology::surface(g.config.seed, p.0[0], p.0[2])
@@ -248,6 +248,7 @@ pub(super) fn point(g: &Generator, p: BlockPos) -> Block {
 pub(super) struct Plan {
     min: [i32; 2],
     heights: Vec<i32>,
+    profiles: Vec<super::terrain_v4::Profile>,
     materials: Vec<super::biome::Column>,
     trees: Vec<Tree>,
     caves: Option<super::caves::Plan>,
@@ -258,7 +259,14 @@ impl Plan {
     fn new(g: &Generator, c: [i32; 2]) -> Self {
         let min = [c[0] * 16 - 1, c[1] * 16 - 1];
         let max = [min[0] + 17, min[1] + 17];
-        let mut materials = if g.config.version == 10 {
+        let (profiles, v11_materials) = if g.config.version == 11 {
+            super::terrain_v4::columns(g.config.seed, min)
+        } else {
+            (Vec::new(), Vec::new())
+        };
+        let mut materials = if g.config.version == 11 {
+            v11_materials
+        } else if g.config.version == 10 {
             super::terrain_v3::columns(g.config.seed, min)
         } else if g.config.version >= 5 {
             super::biome::columns(g.config.seed, min)
@@ -267,10 +275,15 @@ impl Plan {
         };
         let water =
             (g.config.version >= 8).then(|| super::hydrology::Plan::new(g, min, max, &materials));
-        if g.config.version == 10 {
+        if g.config.version >= 10 {
             let w = water.as_ref().unwrap();
             for (i, material) in materials.iter_mut().enumerate() {
-                *material = super::terrain_v3::resurface(
+                let resurface = if g.config.version == 11 {
+                    super::terrain_v4::resurface
+                } else {
+                    super::terrain_v3::resurface
+                };
+                *material = resurface(
                     g.config.seed,
                     min[0] + (i % 18) as i32,
                     min[1] + (i / 18) as i32,
@@ -295,6 +308,7 @@ impl Plan {
         let mut plan = Self {
             min,
             heights,
+            profiles,
             materials,
             trees: if g.config.version >= 9 {
                 Vec::new()
@@ -358,7 +372,18 @@ impl Plan {
         {
             return Chunk::filled(Block::WaterSource);
         }
-        let mut c = if p.0[1] * 16 + 15 < *self.heights.iter().min().unwrap() - 4 {
+        let stone_limit = if g.config.version == 11 {
+            self.profiles
+                .iter()
+                .zip(&self.heights)
+                .map(|(p, h)| p.floor.min(*h))
+                .min()
+                .unwrap()
+                - 4
+        } else {
+            *self.heights.iter().min().unwrap() - 4
+        };
+        let mut c = if p.0[1] * 16 + 15 < stone_limit {
             Chunk::filled(Block::Stone)
         } else {
             Chunk::default()
@@ -378,6 +403,18 @@ impl Plan {
                             Block::WaterSource
                         } else {
                             sample(g, pos, h, &self.trees, Some(material))
+                        };
+                        let b = if g.config.version == 11
+                            && pos.0[1] <= h
+                            && column.depth() == 0
+                            && !(water.sealed(px, pz)
+                                && pos.0[1] >= h.min(super::hydrology::SEA_LEVEL) - 4)
+                            && !self.profiles[((pz - self.min[1]) * 18 + px - self.min[0]) as usize]
+                                .solid(pos.0[1])
+                        {
+                            Block::Air
+                        } else {
+                            b
                         };
                         c.set(l, b);
                     }
@@ -435,7 +472,16 @@ impl Plan {
                 };
             }
             let material = self.water_material(px, pz, h, column);
-            let baseline = sample(g, p, h, &self.trees, Some(material));
+            let baseline = if g.config.version == 11
+                && y <= h
+                && column.depth() == 0
+                && !sealed
+                && !self.profiles[(z * 18 + x) as usize].solid(y)
+            {
+                Block::Air
+            } else {
+                sample(g, p, h, &self.trees, Some(material))
+            };
             return if baseline == Block::Air && y > h {
                 self.vegetation
                     .as_ref()

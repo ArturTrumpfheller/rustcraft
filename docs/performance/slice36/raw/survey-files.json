@@ -1,0 +1,22 @@
+{
+  "quality10.csv": {
+    "sha256": "bfb7858689ccbd139762f9e4daa96688e97fb02596a94e30d0503769795d6828",
+    "bytes": 34676867,
+    "lines": 1179649
+  },
+  "quality11.csv": {
+    "sha256": "7fc9dde6b64661f33a501f40946ab1a96f62269242243f4134489caff39477ad",
+    "bytes": 35205761,
+    "lines": 1179649
+  },
+  "quality10-final.csv": {
+    "sha256": "96174b90e0a33934a2ebc28dc87efabd419741b603674ffafdc0832fc6218429",
+    "bytes": 2164681,
+    "lines": 73729
+  },
+  "quality11-final.csv": {
+    "sha256": "5bd52ae75ef8e98b29d53f32f617bd8b33a541e2385ceb5aad124bd8eefc2bf2",
+    "bytes": 2199809,
+    "lines": 73729
+  }
+}

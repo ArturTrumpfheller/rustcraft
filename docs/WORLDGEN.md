@@ -1,3 +1,27 @@
+# Generator 11 — terrain v4 (Slice 36)
+
+New regional worlds pin generator11. Historical generators1–10 and their saves
+remain unchanged; there is no migration. Bounds remain X/Z[-32768,32768),
+Y[-64,192), with natural source-cell sea level2 and five existing biome IDs.
+
+`worldgen/terrain_v4.rs` combines seeded multi-octave gradient continentalness,
+erosion and signed weirdness through continuous Hermite terrain curves. It
+replaces folded value-noise ridge/valley masks with narrower linked ranges,
+variable foothills and quiet plains. A bounded12-block 3D density displacement
+on an absolute4³ interpolation lattice creates surface recesses and overhangs.
+At most26 occupancy bits per horizontal cell are evaluated; shared column noise
+memoization and guaranteed-solid-floor slab proofs retain bounded memory/work.
+Point/column/chunk/top-height queries share this geometry. Existing cave/water/
+vegetation composition uses the new top and slope, including watertight bank caps.
+Altitude/climate/material rules and full root/crown admission use final geography.
+The rendering, worker, save and registry contracts do not change.
+
+[Mathematics, public Minecraft references, limitations, actual comparison renders,
+geographical measurements and native acceptance](performance/slice36/README.md).
+Earlier generator sections below retain their frozen historical definitions.
+
+---
+
 # Terrain Generation v3 — generator 10 / Slice 35
 
 New regional worlds explicitly select **generator 10**. Loading any existing

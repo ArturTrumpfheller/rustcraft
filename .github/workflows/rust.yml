@@ -36,13 +36,15 @@ jobs:
         run: python tools/generate_textures.py --check
       - name: Independent v10 height fixtures
         run: python tools/terrain_v3_reference.py --check
+      - name: Independent v11 density fixtures
+        run: python tools/terrain_v4_reference.py --check
       - name: Cargo format
         run: cargo fmt --all -- --check
       - name: Cargo Clippy
         run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - name: Cargo test
         shell: bash
-        run: cargo test --locked --workspace 2>&1 | tee "$RUNNER_TEMP/rustcraft-tests.log"
+        run: cargo test --locked --workspace -- --test-threads=1 2>&1 | tee "$RUNNER_TEMP/rustcraft-tests.log"
       - name: Test failure diagnostics
         if: failure()
         shell: python
@@ -63,7 +65,7 @@ jobs:
       - name: Optimized voxel processing regressions
         run: cargo test --release --locked -p voxel_core --lib
       - name: Optimized terrain and persistence integration
-        run: cargo test --release --locked -p voxel_core --test terrain_v3 --test worldgen_integration --test worldgen_lifecycle
+        run: cargo test --release --locked -p voxel_core --test terrain_v3 --test terrain_v4 --test worldgen_integration --test worldgen_lifecycle
       - name: Optimized streaming and lifecycle regressions
         run: 'cargo test --release --locked -p rustcraft --bin rustcraft streaming:: -- --test-threads=1'
       - name: Optimized session regressions

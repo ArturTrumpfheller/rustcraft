@@ -1,0 +1,45 @@
+{
+  "range": {
+    "generator": 11,
+    "seed": 0,
+    "start_chunk": [
+      -250,
+      -197
+    ],
+    "feet": [
+      -3991.5,
+      133,
+      -3143.5
+    ],
+    "yaw_degrees": 0,
+    "pitch_degrees": -25.2,
+    "radius": 4,
+    "resolution": [
+      1280,
+      720
+    ],
+    "mode": "Unmodified production client; isolated catalog; real streaming, gameplay fog and HUD. Reload after one earlier mined Stone cell at a different column. F3 DEV SLICE 34 is the existing label; its generator line is 11.",
+    "renderer": "Mesa 25.0.7 llvmpipe LLVM19 Vulkan on Xvfb; concurrent capture loads, no native FPS claim",
+    "binary_sha256": "425abc31cf566fce35e5d11a2fc7b44cd9d5b801a9ef0e94166a8bf908d861d4",
+    "files": {
+      "gameplay-range-v11.png": "22843c8b3a7414202f3651dd14996dc5ab17f0bef18059fbedebeb2755334066",
+      "gameplay-range-f3-v11.png": "cdcf3287acbc0572ff09e72ab27b98131b4483aa5be87e52fa0c19502a4900b0"
+    }
+  },
+  "plains": {
+    "seed": 2026,
+    "generator": 11,
+    "radius": 2,
+    "start_chunk": [
+      -160,
+      -256
+    ],
+    "yaw_degrees": 0,
+    "pitch_degrees": -6.9,
+    "files": {
+      "gameplay-plains-v11.png": "de222e5940d1766736d633e219dff258584a3ea8665a3ee3e35e924e1df7ba9f",
+      "gameplay-plains-f3-v11.png": "8399312e7ecd2ea5753b0963560041337698b82232e952ffaca9358cba479438"
+    },
+    "mode": "Fresh catalog through production WorldCatalog; unedited normal client gameplay; see F3 image for exact feet/time/counts."
+  }
+}

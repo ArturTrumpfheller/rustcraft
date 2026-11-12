@@ -36,7 +36,7 @@ fn load(store: &SaveStore, world: &mut World, c: [i32; 2]) {
 }
 #[test]
 fn generated_removals_and_cross_region_builds_survive_save_evict_regenerate_restart() {
-    for version in [3, 6, 8, 9, 10] {
+    for version in [3, 6, 8, 9, 10, 11] {
         let dir = Directory::new();
         let id = RegionIdentity {
             seed: 0,
