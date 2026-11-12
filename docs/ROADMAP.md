@@ -11,10 +11,11 @@
 - [x] Multi-seed surveys, relief maps, height profiles and actual Bevy comparisons
 - [x] Locked format/Clippy,563 debug tests, optimized core/streaming/session checks, release and assets
 - [x] Matched CPU/memory/streaming evidence against exact Slice35, both execution orders
-- [ ] Linux/Windows CI on the final PR head
 - [ ] Native Gentoo/Void X11/Wayland / Windows / Radeon and owner visual acceptance
 
 [Design, actual captures, measurements and native procedure](performance/slice36/README.md).
+[Linux/Windows validation on the PR head](https://github.com/ArturTrumpfheller/rustcraft/pull/54/checks)
+is recorded separately from native GUI/Radeon acceptance.
 Biome geography, Cave Generation v3 and watershed Hydrology v2 remain later slices.
 No automatic generator migration or PR merge.
 
