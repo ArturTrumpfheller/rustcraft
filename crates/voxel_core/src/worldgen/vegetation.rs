@@ -95,20 +95,29 @@ pub(super) struct Plan {
 }
 /// Shared dry-ground admission includes the final basin bed, shore material and
 /// real cave opening. Sampling is cached per candidate footprint during planning.
-struct Roots {
+struct Roots<'a> {
+    known: Option<([i32; 2], &'a [hydrology::Surface])>,
     geography: hydrology::Geography,
     caves: caves::Plan,
     water: BTreeMap<[i32; 2], hydrology::Surface>,
 }
-impl Roots {
+impl Roots<'_> {
     fn new(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Self {
         Self {
+            known: None,
             geography: hydrology::Geography::for_generator(g, min, max),
             caves: caves::Plan::new(g.config.seed, min, max),
             water: BTreeMap::new(),
         }
     }
     fn surface(&mut self, g: &Generator, x: i32, z: i32) -> hydrology::Surface {
+        if let Some((min, columns)) = self.known {
+            let dx = x - min[0];
+            let dz = z - min[1];
+            if (0..18).contains(&dx) && (0..18).contains(&dz) {
+                return columns[(dz * 18 + dx) as usize];
+            }
+        }
         *self.water.entry([x, z]).or_insert_with(|| {
             self.geography.column(
                 g.config.seed,
@@ -181,9 +190,26 @@ fn density(seed: u64, x: i32, z: i32, c: Climate) -> u64 {
 }
 impl Plan {
     pub(super) fn trees(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Self {
+        Self::trees_with_surface(g, min, max, None)
+    }
+    pub(super) fn trees_on_surface(
+        g: &Generator,
+        min: [i32; 2],
+        max: [i32; 2],
+        columns: &[hydrology::Surface],
+    ) -> Self {
+        debug_assert_eq!(columns.len(), 324);
+        Self::trees_with_surface(g, min, max, Some(columns))
+    }
+    fn trees_with_surface(
+        g: &Generator,
+        min: [i32; 2],
+        max: [i32; 2],
+        known: Option<&[hydrology::Surface]>,
+    ) -> Self {
         let mut result = Self::default();
         let mut ground_cache = BTreeMap::new();
-        let mut roots: Option<Roots> = None;
+        let mut roots: Option<Roots<'_>> = None;
         for gz in (min[1] - 9).div_euclid(8)..=(max[1] + 2).div_euclid(8) {
             for gx in (min[0] - 9).div_euclid(8)..=(max[0] + 2).div_euclid(8) {
                 let h = hash(g.config.seed, gx, gz, 0x9001);
@@ -219,8 +245,11 @@ impl Plan {
                     Species::Birch => 5 + (h >> 42) % 3,
                     Species::Spruce => 7 + (h >> 42) % 4,
                 } as i32;
-                let roots = roots
-                    .get_or_insert_with(|| Roots::new(g, min.map(|v| v - 5), max.map(|v| v + 5)));
+                let roots = roots.get_or_insert_with(|| {
+                    let mut roots = Roots::new(g, min.map(|v| v - 5), max.map(|v| v + 5));
+                    roots.known = known.map(|columns| (min, columns));
+                    roots
+                });
                 let (ground, top) = *ground_cache
                     .entry([x, z])
                     .or_insert_with(|| roots.ground(g, x, z));

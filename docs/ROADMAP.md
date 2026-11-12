@@ -6,11 +6,12 @@
 - [x] Vary structural grain, ranges, valleys, foothills and quiet building plains
 - [x] Sparse bounded 3D surface density, floor-based compact slabs and shared lattice
 - [x] Existing water/cave/material/vegetation integration and watertight density caps
-- [x] Independent64 field/density fixtures,36 column CRCs and full-band parity checks
+- [x] Independent68 field/density fixtures,36 column CRCs and full-band parity checks
 - [x] Signed/distant/order/seam/spawn/save/journal/eviction/session regressions
 - [x] Multi-seed surveys, relief maps, height profiles and actual Bevy comparisons
-- [x] Locked format/Clippy,562 debug tests, optimized core/streaming/session checks, release and assets
-- [ ] Complete matched CPU/memory/streaming evidence and Linux/Windows CI
+- [x] Locked format/Clippy,563 debug tests, optimized core/streaming/session checks, release and assets
+- [x] Matched CPU/memory/streaming evidence against exact Slice35, both execution orders
+- [ ] Linux/Windows CI on the final PR head
 - [ ] Native Gentoo/Void X11/Wayland / Windows / Radeon and owner visual acceptance
 
 [Design, actual captures, measurements and native procedure](performance/slice36/README.md).

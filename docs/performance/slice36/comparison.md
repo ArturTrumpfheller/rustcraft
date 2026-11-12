@@ -25,7 +25,7 @@ Reference images remain on their sources and are not imported as project assets.
 
 | Generator10 | Generator11 |
 | --- | --- |
-| ![Development panorama v10 rounded contour walls](../../../images/slice36/range-panorama-v10.png) | ![Development panorama v11 irregular peaks and saddles](../../../images/slice36/range-panorama-v11.png) |
+| ![Development panorama v10 rounded contour walls](../../images/slice36/range-panorama-v10.png) | ![Development panorama v11 irregular peaks and saddles](../../images/slice36/range-panorama-v11.png) |
 
 At this site v10's nearly uniform rounded shoulders and concentric terrace pattern
 become a succession of separate summits, asymmetric flanks and saddles in v11.
@@ -46,22 +46,22 @@ foothills. Normal fog intentionally limits how much distant geography is visible
 
 | Site / seed / X,Z | Generator10 | Generator11 |
 | --- | --- | --- |
-| v10-plains-site · 42 · -144,752 | ![v10 v10-plains-site](../../../images/slice36/v10-plains-site-v10.png) | ![v11 v10-plains-site](../../../images/slice36/v10-plains-site-v11.png) |
-| plains · 2026 · -2560,-4096 | ![v10 plains](../../../images/slice36/plains-v10.png) | ![v11 plains](../../../images/slice36/plains-v11.png) |
-| rolling-hills · 42 · -2880,720 | ![v10 rolling-hills](../../../images/slice36/rolling-hills-v10.png) | ![v11 rolling-hills](../../../images/slice36/rolling-hills-v11.png) |
-| forest · 18446744073709551615 · -3984,-3152 | ![v10 forest](../../../images/slice36/forest-v10.png) | ![v11 forest](../../../images/slice36/forest-v11.png) |
-| foothills · 42 · -992,-3488 | ![v10 foothills](../../../images/slice36/foothills-v10.png) | ![v11 foothills](../../../images/slice36/foothills-v11.png) |
-| rocky-peaks · 0 · -3984,-3152 | ![v10 rocky-peaks](../../../images/slice36/rocky-peaks-v10.png) | ![v11 rocky-peaks](../../../images/slice36/rocky-peaks-v11.png) |
-| valley · 0 · -512,-3200 | ![v10 valley](../../../images/slice36/valley-v10.png) | ![v11 valley](../../../images/slice36/valley-v11.png) |
-| coast-lowlands · 0 · -2176,-4096 | ![v10 coast-lowlands](../../../images/slice36/coast-lowlands-v10.png) | ![v11 coast-lowlands](../../../images/slice36/coast-lowlands-v11.png) |
+| v10-plains-site · 42 · -144,752 | ![v10 v10-plains-site](../../images/slice36/v10-plains-site-v10.png) | ![v11 v10-plains-site](../../images/slice36/v10-plains-site-v11.png) |
+| plains · 2026 · -2560,-4096 | ![v10 plains](../../images/slice36/plains-v10.png) | ![v11 plains](../../images/slice36/plains-v11.png) |
+| rolling-hills · 42 · -2880,720 | ![v10 rolling-hills](../../images/slice36/rolling-hills-v10.png) | ![v11 rolling-hills](../../images/slice36/rolling-hills-v11.png) |
+| forest · 18446744073709551615 · -3984,-3152 | ![v10 forest](../../images/slice36/forest-v10.png) | ![v11 forest](../../images/slice36/forest-v11.png) |
+| foothills · 42 · -992,-3488 | ![v10 foothills](../../images/slice36/foothills-v10.png) | ![v11 foothills](../../images/slice36/foothills-v11.png) |
+| rocky-peaks · 0 · -3984,-3152 | ![v10 rocky-peaks](../../images/slice36/rocky-peaks-v10.png) | ![v11 rocky-peaks](../../images/slice36/rocky-peaks-v11.png) |
+| valley · 0 · -512,-3200 | ![v10 valley](../../images/slice36/valley-v10.png) | ![v11 valley](../../images/slice36/valley-v11.png) |
+| coast-lowlands · 0 · -2176,-4096 | ![v10 coast-lowlands](../../images/slice36/coast-lowlands-v10.png) | ![v11 coast-lowlands](../../images/slice36/coast-lowlands-v11.png) |
 
 ## Additional development panoramas
 
 | View | Generator10 | Generator11 |
 | --- | --- | --- |
-| Development-only peaks-panorama · seed 0 · -3360,-2576 | ![Development v10 peaks-panorama](../../../images/slice36/peaks-panorama-v10.png) | ![Development v11 peaks-panorama](../../../images/slice36/peaks-panorama-v11.png) |
-| Development-only valley-panorama · seed 0 · -512,-3200 | ![Development v10 valley-panorama](../../../images/slice36/valley-panorama-v10.png) | ![Development v11 valley-panorama](../../../images/slice36/valley-panorama-v11.png) |
-| Development-only transition-panorama · seed 42 · -992,-3488 | ![Development v10 transition-panorama](../../../images/slice36/transition-panorama-v10.png) | ![Development v11 transition-panorama](../../../images/slice36/transition-panorama-v11.png) |
+| Development-only peaks-panorama · seed 0 · -3360,-2576 | ![Development v10 peaks-panorama](../../images/slice36/peaks-panorama-v10.png) | ![Development v11 peaks-panorama](../../images/slice36/peaks-panorama-v11.png) |
+| Development-only valley-panorama · seed 0 · -512,-3200 | ![Development v10 valley-panorama](../../images/slice36/valley-panorama-v10.png) | ![Development v11 valley-panorama](../../images/slice36/valley-panorama-v11.png) |
+| Development-only transition-panorama · seed 42 · -992,-3488 | ![Development v10 transition-panorama](../../images/slice36/transition-panorama-v10.png) | ![Development v11 transition-panorama](../../images/slice36/transition-panorama-v11.png) |
 
 ## Actual production-client gameplay
 
@@ -77,8 +77,8 @@ are not measurements of native Radeon or 240Hz performance.
 
 | Radius2 ordinary plain | Radius4 high mountain flank with normal fog |
 | --- | --- |
-| ![Real client plain radius2](../../../images/slice36/gameplay-plains-v11.png) | ![Real client range radius4](../../../images/slice36/gameplay-range-v11.png) |
-| ![Plain F3 generator11 and400 descriptors](../../../images/slice36/gameplay-plains-f3-v11.png) | ![Range F3 generator11 and1296 descriptors](../../../images/slice36/gameplay-range-f3-v11.png) |
+| ![Real client plain radius2](../../images/slice36/gameplay-plains-v11.png) | ![Real client range radius4](../../images/slice36/gameplay-range-v11.png) |
+| ![Plain F3 generator11 and400 descriptors](../../images/slice36/gameplay-plains-f3-v11.png) | ![Range F3 generator11 and1296 descriptors](../../images/slice36/gameplay-range-f3-v11.png) |
 
 The mountain flank demonstrates why the development panoramas are needed: the
 supported gameplay fog hides distant summits. [Gameplay capture metadata](raw/gameplay-captures.json).

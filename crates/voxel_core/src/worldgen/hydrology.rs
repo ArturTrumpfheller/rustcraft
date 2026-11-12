@@ -456,13 +456,25 @@ impl Plan {
         max: [i32; 2],
         materials: &[biome::Column],
     ) -> Self {
+        Self::new_with_rim(g, min, max, materials, None)
+    }
+    pub(super) fn new_with_rim(
+        g: &Generator,
+        min: [i32; 2],
+        max: [i32; 2],
+        materials: &[biome::Column],
+        rim: Option<&[i32]>,
+    ) -> Self {
+        debug_assert!(rim.is_none_or(|v| v.len() == 400));
         // One additional ring proves whether each 18x18 sample touches water.
         // Dry cave entrances outside that immediate bank retain v7 behavior.
         let geography = Geography::for_generator(g, min.map(|v| v - 1), max.map(|v| v + 1));
         let mut grid = Vec::with_capacity(400);
         for z in -1..=18 {
             for x in -1..=18 {
-                let base = if (0..18).contains(&x) && (0..18).contains(&z) {
+                let base = if let Some(rim) = rim {
+                    rim[((z + 1) * 20 + x + 1) as usize]
+                } else if (0..18).contains(&x) && (0..18).contains(&z) {
                     materials[(z * 18 + x) as usize].height
                 } else if g.config.version == 11 {
                     super::terrain_v4::height(g.config.seed, min[0] + x, min[1] + z)

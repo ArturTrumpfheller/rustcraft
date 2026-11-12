@@ -77,7 +77,10 @@ All generation decisions are integer Q12; signed cell division is Euclidean.
    position, never the full256-block height. A bounded dense memo shares lattice
    vertices across the20² planning grid; it replaces an initial allocating map.
    The final18² profiles use5184 bytes (16 bytes each); temporary density memo is
-   under12KiB at the theoretical altitude span. No persistent density cache grows.
+   under12KiB at the theoretical altitude span. The400 raw rim heights (1600 bytes)
+   feed water planning directly, and vegetation borrows the final18² surface grid.
+   This avoids recomputing hundreds of 3D profiles for water halos and root tests.
+   No persistent density cache grows.
 6. Smooth asymptotic summit compression aboveY130 avoids a hard clipping plane.
    Offset stays below162; adding the12-block density bound leaves at least18
    blocks below the exclusive192 ceiling. The lower bound preserves foundation
@@ -102,6 +105,9 @@ not only `height-4`, so they cannot accidentally fill surface recesses.
 Existing v8 ponds/rivers and closed cave pools remain, with v10's candidate-wide
 admission/bank precision. V11 screens complete lowland candidates against its
 conservative offset+amplitude envelope. Sea level is still source-cellY2.
+Any hydrology projection away from the original density top establishes a solid
+new bed, including dry banks. A fixed independently checked recess at
+seed0:(-1440,56,-4000) tests this contract; a projected height must never name Air.
 Wet beds remain solid before cave composition; the existing four-block wet-bank
 cap also overrides density recesses, avoiding new shoreline leaks. This is
 compatibility integration, not watershed hydrology. Small inherited pond outlines
@@ -300,8 +306,8 @@ The profile plot uses optional development-only Matplotlib:
 
 Rust1.99.1 / Bevy0.20.0 / edition2024; lockfile, dependencies and original texture
 artifacts are unchanged. Required formatting, locked workspace/all-target Clippy,
-asset verification and normal release builds pass. **562 workspace tests pass**
-(220 client,328 core unit,14 integration; seven existing optional tests ignored).
+asset verification and normal release builds pass. **563 workspace tests pass**
+(220 client,329 core unit,14 integration; seven existing optional tests ignored).
 The optimized core suite also passes; optimized client streaming46 and session12
 tests pass separately. The complete debug run and the CI workspace job use `--test-threads=1` to avoid
 wall-clock lifecycle deadlines competing with each other in the two-vCPU cloud
@@ -310,7 +316,12 @@ compilers and software renderers were also active; its isolated rerun and the
 complete serial run pass. No production timeout, worker limit or test deadline
 was enlarged to hide this result.
 
-The64 independent Python fixtures pin continentalness, erosion, weirdness, offset,
+A hint-only inline experiment did not improve the measured planning cost and
+was discarded. Profiling instead identified duplicate rim/root height evaluation;
+sharing the already evaluated raw/final grids removes that work. All36 column
+CRCs and the independent field/density fixtures remain exact after this change.
+
+The68 independent Python fixtures pin continentalness, erosion, weirdness, offset,
 amplitude, surface top, guaranteed floor and every density occupancy bit. The36
 full-column CRCs freeze final Rust v11 block output (they are not independently
 derived Python block fixtures). V1–v10 historical goldens remain intact. Full
@@ -320,3 +331,167 @@ plants/trees, water quietness, caves, signed/distant/world edges, reverse order,
 halos and parallel generation. Existing journal interruption, explicit Air,
 builds/inventory, cancellation/eviction, session A→B→A and shutdown checks include
 v11 as appropriate.
+
+## Measured column cost and memory
+
+Environment: AMD EPYC9V74 virtual machine, **two-vCPU quota**, 8GiB
+RAM limit, Linux; headless release CPU tests. The actual environment is retained
+in [environment metadata](raw/environment.json). No build/test/renderer ran during
+the timed final runs. Both execution orders use the same verified binaries;128
+measured samples plus8 warmups per column, two trials per streaming workload.
+
+Source35 is exact f527b75c21e8c40db4320a40b7630975fe1accb1, version10; source36
+is the current version11 export. The current export additionally runs10 and its
+block/light/full-mesh signatures and resource counts match the exact baseline in
+both orders. The source/executable hashes are retained with each dataset. The
+core export predates only a test-assertion wording edit (`fixed independent` →
+`independently checked`); its runtime source is otherwise identical. Scene
+names are fixed workload labels inherited from the v10 comparison, not proof
+that both generators have the same terrain class at those coordinates.
+
+Forward-order column CPU microseconds. Raw is a newly planned full-height column
+with the existing candidate/pool memo warm; warm worker reuses its pristine column
+cache and measures lighting/meshing/publication preparation. Cold streaming is
+measured separately. Median values are shown here; all P95/P99/max are retained.
+
+| Workload | v10 rawCPU P50 | v11 rawCPU P50 /P95 /P99 /max | v10→v11 warm-workerCPU P50 | v11 terrain/density-stage P50 |
+| --- | ---: | --- | --- | ---: |
+| plain | 467.6 | 987.4 / 1584.1 / 2403.7 / 3690.2 | 858.4 → 1217.0 | 656.4 |
+| forest | 558.6 | 1760.6 / 2398.6 / 3115.5 / 4008.0 | 755.9 → 782.9 | 623.9 |
+| peak | 322.3 | 1247.8 / 1590.9 / 1875.6 / 4349.4 | 705.2 → 1032.0 | 756.3 |
+| valley | 248.1 | 582.6 / 809.2 / 1268.4 / 1355.0 | 317.4 → 465.5 | 396.9 |
+| transition | 230.2 | 350.7 / 466.0 / 523.9 / 893.0 | 378.3 → 347.9 | 250.2 |
+| coast | 273.9 | 365.1 / 515.1 / 898.8 / 1867.8 | 554.6 → 273.5 | 265.2 |
+| distant | 342.2 | 464.1 / 569.3 / 627.0 / 702.4 | 772.8 → 674.4 | 281.2 |
+| max-seed | 399.5 | 455.6 / 701.8 / 1593.0 / 4724.9 | 1182.5 → 809.5 | 266.6 |
+| cavern | 423.4 | 567.0 / 864.3 / 1062.4 / 8761.9 | 707.9 → 730.8 | 304.6 |
+
+The new geometry is not free: raw planning is slower than v10, especially in
+forests and rugged areas. Sharing the raw water rim and final root-surface grid
+reduced initial v11 raw medians by34–41% at the plain/forest/peak sites; the
+[before/after planning observations](raw/planning-optimization.csv) keep the
+rejected duplicated-evaluation cost visible. Noise itself, not the full256-block
+volume, is evaluated only in the compact surface band.
+
+| Workload | v10→v11 column mesh bytes | v10→v11 raw peak live requested heap bytes | v10→v11 raw allocation calls |
+| --- | --- | --- | --- |
+| plain | 111352 → 147312 | 25412 → 22932 | 69 → 26 |
+| forest | 113336 → 133424 | 28164 → 25716 | 95 → 51 |
+| peak | 12648 → 167648 | 16212 → 21268 | 20 → 19 |
+| valley | 27776 → 102920 | 16148 → 21332 | 9 → 15 |
+| coast | 71416 → 29760 | 16116 → 21300 | 10 → 13 |
+| max-seed | 122760 → 145072 | 24436 → 29060 | 33 → 27 |
+
+The photographed range's narrow rock faces can produce far more mesh than a
+flat v10 summit: the peak column grows from12648 to167648 bytes (about13.3×),
+while its warm-worker median grows from0.705 to1.032ms in this run. This is a real
+geometry/resource tradeoff, not a renderer speedup. Other sites shrink, such as
+the coast column. Raw heap excludes allocator metadata, stacks, GPU memory and
+other process resources; allocation calls are separate from retained capacity.
+Streaming RSS and global worker-window allocation peaks are reported separately.
+
+[Core forward percentiles](raw/core-forward/percentiles.csv.gz),
+[reverse percentiles](raw/core-reverse/percentiles.csv.gz), and the per-observation
+compressed CSVs in those directories retain every raw value, stage, allocation,
+cache, compact Air/Stone slab count, signature and paired save/reload measurement.
+Percentiles use floor((n-1)*p/100), without deleting outliers.
+
+
+## Measured streaming, publication and resident resources
+
+Forward order, milliseconds; fixed scripted240Hz deadlines,60 movement frames,
+two trials per workload. Request-ready includes the one-worker queue and ends
+when blocks/light are installed, before ECS mesh publication. It is not a frame
+time. Workload labels retain their original coordinates; the new geography can
+have a different slope/biome class there. Radius1 remains in raw data as a control.
+
+| Workload | Radius | v10 workerCPU P50 | v11 workerCPU P50/P95/P99/max | v10 request-ready P50 | v11 request-ready P50/P95/P99/max |
+| --- | ---: | ---: | --- | ---: | --- |
+| stationary | 2 | 1.37 | 1.52 / 3.60 / 5.34 / 5.36 | 22.43 | 32.67 / 77.70 / 83.26 / 83.28 |
+| stationary | 3 | 1.25 | 1.76 / 4.56 / 4.78 / 9.64 | 47.94 | 75.35 / 209.25 / 223.65 / 231.10 |
+| stationary | 4 | 1.27 | 1.51 / 3.34 / 5.00 / 8.14 | 85.45 | 129.36 / 264.73 / 279.81 / 286.31 |
+| sprinting | 2 | 1.12 | 1.53 / 3.45 / 4.87 / 5.27 | 20.84 | 27.40 / 71.53 / 83.18 / 85.47 |
+| sprinting | 3 | 1.13 | 1.34 / 3.04 / 4.45 / 4.91 | 40.51 | 58.02 / 135.91 / 143.38 / 150.38 |
+| sprinting | 4 | 1.09 | 1.59 / 3.57 / 5.46 / 8.65 | 67.96 | 126.18 / 277.78 / 293.79 / 302.09 |
+| mountain | 2 | 1.28 | 2.72 / 5.35 / 12.76 / 13.34 | 24.35 | 44.02 / 98.72 / 104.79 / 105.04 |
+| mountain | 3 | 1.21 | 3.16 / 5.94 / 12.38 / 21.97 | 48.26 | 108.18 / 227.13 / 247.60 / 256.46 |
+| mountain | 4 | 1.37 | 2.90 / 7.60 / 13.57 / 27.30 | 92.22 | 176.99 / 358.27 / 378.85 / 391.55 |
+| valley | 2 | 1.06 | 1.41 / 3.68 / 5.98 / 6.54 | 20.94 | 30.31 / 63.26 / 70.24 / 72.56 |
+| valley | 3 | 0.97 | 1.52 / 4.72 / 5.92 / 9.12 | 42.96 | 61.85 / 120.43 / 125.16 / 127.76 |
+| valley | 4 | 1.02 | 1.51 / 4.21 / 7.42 / 9.90 | 71.52 | 99.67 / 194.47 / 208.13 / 212.16 |
+
+At radius4 the mountain worker median grows from1.37 to2.90ms (wall1.37→2.92ms);
+request-ready median92→177ms, P99325→379ms. V10 also has a60.9ms worker maximum
+in this run; it is retained rather than removed. The v11 mountain maximum is
+27.3ms. Sprinting worker median1.09→1.59ms and request-ready68→126ms illustrate
+that the cost also affects traversal. These are material CPU/queue regressions,
+not a claim of unchanged performance. Shared planning reduced avoidable work;
+remaining geography and mesh costs need native owner assessment before merging.
+The one-worker, cancellation, fairness, cache and radius bounds are unchanged.
+
+Radius4 stage CPU-wall medians in milliseconds (timers inside the worker):
+
+| Workload | Generation v10→v11 | Lighting v10→v11 | Opaque mesh v10→v11 | Worker wall v10→v11 |
+| --- | --- | --- | --- | --- |
+| stationary | 0.360 → 0.452 | 0.330 → 0.358 | 0.260 → 0.421 | 1.270 → 1.511 |
+| sprinting | 0.376 → 0.510 | 0.325 → 0.377 | 0.237 → 0.434 | 1.095 → 1.611 |
+| forest | 0.428 → 1.027 | 0.330 → 0.487 | 0.245 → 0.357 | 1.193 → 2.125 |
+| mountain | 0.374 → 1.198 | 0.423 → 0.750 | 0.235 → 0.447 | 1.373 → 2.918 |
+| valley | 0.330 → 0.803 | 0.262 → 0.307 | 0.181 → 0.200 | 1.020 → 1.511 |
+| coast | 0.380 → 0.671 | 0.298 → 0.439 | 0.251 → 0.309 | 1.134 → 1.657 |
+
+Water/cutout timings are separate in the raw data. Stage medians do not sum to
+total medians because they can belong to different jobs and source/halo work.
+
+| Radius4 workload | v10 main-install P50/P99/max (ms) | v11 main-install P50/P99/max (ms) | Stream-update P99 v10→v11 (ms) |
+| --- | --- | --- | --- |
+| stationary | 0.039 / 0.218 / 0.279 | 0.713 / 2.403 / 2.977 | 0.314 → 1.550 |
+| sprinting | 0.039 / 0.148 / 0.179 | 0.785 / 1.815 / 1.940 | 0.342 → 1.951 |
+| forest | 0.044 / 0.462 / 0.538 | 0.044 / 0.115 / 0.219 | 0.573 → 0.325 |
+| mountain | 0.038 / 0.745 / 1.279 | 0.046 / 0.109 / 0.275 | 1.242 → 0.339 |
+| valley | 0.037 / 0.106 / 0.132 | 0.038 / 0.144 / 0.221 | 0.314 → 0.358 |
+
+Main install includes chunk/light integration and CPU mesh-asset updates; whole
+stream updates also include queue/eviction/dispatch work. The origin/plains
+workloads show higher install cost, with P99 up to2.40ms at the stationary site;
+this result is not hidden by the cheaper mountain-site publication. Timers include
+the identical disposable instrumentation and allocator meter in both builds.
+The separate identical retained-install fixture at radius4 publishes81 chunks
+with243 opaque/water/cutout assets: CPU publication median1.437→1.458ms,
+P992.452→2.831ms, max7.364→4.433ms; visibility-update median1.137→1.151ms.
+This fixture isolates existing renderer behavior and does not substitute for
+publishing the actual changed mountain meshes or measure GPU submission.
+
+All ordinary radius4 final views have81 columns /1296 compact chunk descriptors.
+Resident resource medians below use decimal MB; the CPU resident mesh payload is
+not VRAM. Cache columns stay bounded by the existing view/halo policy.
+
+| Radius4 workload | Mesh payload MB v10→v11 | Pristine cache MB v10→v11 | Light cache MB v10→v11 | RSS KiB v10→v11 | Worker-window requested-heap maximum MB v10→v11 |
+| --- | --- | --- | --- | --- | --- |
+| stationary | 8.778 → 10.035 | 1.368 → 1.389 | 2.432 → 2.362 | 46196 → 47916 | 0.898 → 0.925 |
+| sprinting | 8.713 → 10.578 | 1.384 → 1.417 | 2.438 → 2.362 | 46696 → 47324 | 0.898 → 0.924 |
+| forest | 10.099 → 17.761 | 1.368 → 1.909 | 2.426 → 3.126 | 49392 → 61928 | 1.052 → 1.261 |
+| mountain | 9.077 → 21.328 | 1.303 → 2.314 | 2.473 → 3.750 | 47708 → 66356 | 1.258 → 1.554 |
+| valley | 5.885 → 6.866 | 1.073 → 1.257 | 2.053 → 2.187 | 47708 → 61768 | 1.003 → 1.071 |
+| coast | 9.119 → 13.812 | 1.241 → 1.659 | 2.234 → 2.811 | 49392 → 58508 | 1.008 → 1.222 |
+
+RSS/high-water marks are process-wide, cumulative and order-dependent, including
+the test harness and previous scenes; they are not isolated per-terrain allocation
+claims. Worker-window heap is global incremental requested heap and can include
+concurrent main-thread allocations. Stacks, allocator metadata and GPU allocations
+are excluded. Independent allocation-call/live-heap column results are above.
+
+Reverse-order results are retained separately, not pooled to erase tails. Its
+radius4 workerCPU medians (v10→v11 ms) are: stationary 1.13→1.40, sprinting 1.07→1.40, mountain 1.27→3.51, valley 1.03→1.96. All168 final state
+signatures per build are identical across execution orders, including resources,
+editing, travel, radius changes and sessions. Geometry differs between10 and11
+by design. Failed-worker counts remain zero; gated cancellation and shutdown
+complete. No raw tail samples were deleted.
+
+[Forward streaming percentiles](raw/stream-forward/percentiles.csv.gz),
+[reverse streaming percentiles](raw/stream-reverse/percentiles.csv.gz), raw
+`samples.csv.gz`, exact source/binary SHA256 manifests, method and final-state
+signatures are retained in those directories. The method corrects an inherited
+v9/v10 descriptive label; actual executed generator arguments were10/11 and the
+as-executed harness hash is preserved. Native1080p/Radeon frame and GPU acceptance
+remains a separate manual check; no native FPS improvement is claimed.

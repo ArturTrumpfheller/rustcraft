@@ -259,10 +259,10 @@ impl Plan {
     fn new(g: &Generator, c: [i32; 2]) -> Self {
         let min = [c[0] * 16 - 1, c[1] * 16 - 1];
         let max = [min[0] + 17, min[1] + 17];
-        let (profiles, v11_materials) = if g.config.version == 11 {
+        let (profiles, v11_materials, raw_rim) = if g.config.version == 11 {
             super::terrain_v4::columns(g.config.seed, min)
         } else {
-            (Vec::new(), Vec::new())
+            (Vec::new(), Vec::new(), Vec::new())
         };
         let mut materials = if g.config.version == 11 {
             v11_materials
@@ -273,8 +273,13 @@ impl Plan {
         } else {
             Vec::new()
         };
-        let water =
-            (g.config.version >= 8).then(|| super::hydrology::Plan::new(g, min, max, &materials));
+        let water = (g.config.version >= 8).then(|| {
+            if g.config.version == 11 {
+                super::hydrology::Plan::new_with_rim(g, min, max, &materials, Some(&raw_rim))
+            } else {
+                super::hydrology::Plan::new(g, min, max, &materials)
+            }
+        });
         if g.config.version >= 10 {
             let w = water.as_ref().unwrap();
             for (i, material) in materials.iter_mut().enumerate() {
@@ -321,7 +326,12 @@ impl Plan {
                 .then(|| super::caves::Plan::new(g.config.seed, min, max)),
         };
         if g.config.version >= 9 {
-            let mut vegetation = super::vegetation::Plan::trees(g, min, max);
+            let mut vegetation = if g.config.version == 11 {
+                let columns = &plan.water.as_ref().unwrap().columns;
+                super::vegetation::Plan::trees_on_surface(g, min, max, columns)
+            } else {
+                super::vegetation::Plan::trees(g, min, max)
+            };
             vegetation.plants(g.config.seed, min, &plan.heights, &plan.materials, |p| {
                 plan.block(g, p)
             });
@@ -407,6 +417,9 @@ impl Plan {
                         let b = if g.config.version == 11
                             && pos.0[1] <= h
                             && column.depth() == 0
+                            && h == self.profiles
+                                [((pz - self.min[1]) * 18 + px - self.min[0]) as usize]
+                                .top
                             && !(water.sealed(px, pz)
                                 && pos.0[1] >= h.min(super::hydrology::SEA_LEVEL) - 4)
                             && !self.profiles[((pz - self.min[1]) * 18 + px - self.min[0]) as usize]
@@ -475,6 +488,7 @@ impl Plan {
             let baseline = if g.config.version == 11
                 && y <= h
                 && column.depth() == 0
+                && h == self.profiles[(z * 18 + x) as usize].top
                 && !sealed
                 && !self.profiles[(z * 18 + x) as usize].solid(y)
             {
@@ -609,5 +623,40 @@ impl<'a> Sampler<'a> {
         }
         c.compact();
         Some(c)
+    }
+}
+
+#[cfg(test)]
+mod v11_projection_tests {
+    use super::*;
+    #[test]
+    fn projecting_a_dry_bank_into_a_density_recess_establishes_a_real_solid_surface() {
+        let g = Generator::new(GenerationConfig {
+            seed: 0,
+            version: 11,
+        })
+        .unwrap();
+        let mut plan = Plan::new(&g, [-90, -250]);
+        let p = BlockPos([-1440, 56, -4000]);
+        let i = ((p.0[2] - plan.min[1]) * 18 + p.0[0] - plan.min[0]) as usize;
+        assert_eq!(plan.profiles[i].top, 60);
+        assert!(
+            !plan.profiles[i].solid(p.0[1]),
+            "independently checked density recess"
+        );
+        // Exercise the surface-projection contract independently of stochastic
+        // basin admission. This dry Y56 bank is outside the wet-cap shortcut.
+        assert!(!plan.water.as_ref().unwrap().sealed(p.0[0], p.0[2]));
+        plan.heights[i] = p.0[1];
+        plan.water.as_mut().unwrap().columns[i].bed = p.0[1];
+        assert!(
+            plan.block(&g, p).is_solid(),
+            "height queries must name real ground"
+        );
+        let (cp, lp) = p.split();
+        assert!(
+            plan.water_chunk(&g, cp).get(lp).is_solid(),
+            "raster path must agree"
+        );
     }
 }

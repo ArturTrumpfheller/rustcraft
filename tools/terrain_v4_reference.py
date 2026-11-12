@@ -81,7 +81,7 @@ def profile(seed,x,z,offset,amplitude):
  return floor+bits.bit_length()-1,floor,bits
 def fixtures():
  out=io.StringIO();w=csv.writer(out,lineterminator='\n');w.writerow(['seed','x','z','continentalness','erosion','weirdness','offset','amplitude','top','floor','bits'])
- sites=[(0,10),(-1,-1),(15,16),(-17,-16),(63,64),(-65,-64),(1023,-1024),(-24000,20000),(28000,-30000),(-32768,32767),(32767,-32768),(-512,-3200),(2176,3776),(-640,-832),(-22144,21600),(115,421)]
+ sites=[(0,10),(-1,-1),(15,16),(-17,-16),(63,64),(-65,-64),(1023,-1024),(-24000,20000),(28000,-30000),(-32768,32767),(32767,-32768),(-512,-3200),(2176,3776),(-640,-832),(-22144,21600),(115,421),(-1440,-4000)]
  for seed in [0,42,2026,MASK]:
   for x,z in sites:
    p=parameters(seed,x,z);w.writerow([seed,x,z,*p,*profile(seed,x,z,p[3],p[4])])
@@ -90,5 +90,5 @@ def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--check',action='store_true');args=p.parse_args();path=ROOT/'crates/voxel_core/tests/fixtures/terrain-v11.csv';result=fixtures()
  if args.check:assert path.read_text()==result,'v11 reference fixtures differ'
  else:path.write_text(result)
- print('64 independent v11 field/density fixtures verified' if args.check else path)
+ print('68 independent v11 field/density fixtures verified' if args.check else path)
 if __name__=='__main__':main()

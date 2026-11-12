@@ -355,7 +355,7 @@ pub(super) fn resurface(
         },
     }
 }
-pub(super) fn columns(seed: u64, min: [i32; 2]) -> (Vec<Profile>, Vec<biome::Column>) {
+pub(super) fn columns(seed: u64, min: [i32; 2]) -> (Vec<Profile>, Vec<biome::Column>, Vec<i32>) {
     let grid = profiles(seed, min.map(|v| v - 1), 20);
     let mut profiles = Vec::with_capacity(324);
     let mut materials = Vec::with_capacity(324);
@@ -378,7 +378,11 @@ pub(super) fn columns(seed: u64, min: [i32; 2]) -> (Vec<Profile>, Vec<biome::Col
             ));
         }
     }
-    (profiles, materials)
+    (
+        profiles,
+        materials,
+        grid.into_iter().map(|p| p.top).collect(),
+    )
 }
 
 #[cfg(test)]

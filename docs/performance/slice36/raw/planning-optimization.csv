@@ -1,0 +1,17 @@
+scene,metric,before_p50_us,after_p50_us
+plain,raw_us,1653.98,987.407
+plain,column_plan_us,1488.562,797.761
+plain,tree_plan_us,300.081,80.351
+plain,density_plan_us,597.439,656.438
+forest,raw_us,2975.068,1760.521
+forest,column_plan_us,2829.32,1602.252
+forest,tree_plan_us,1625.087,896.77
+forest,density_plan_us,583.108,623.899
+peak,raw_us,1881.102,1248.369
+peak,column_plan_us,1711.607,1089.541
+peak,tree_plan_us,242.175,253.842
+peak,density_plan_us,693.574,756.269
+valley,raw_us,779.203,582.597
+valley,column_plan_us,626.994,438.029
+valley,tree_plan_us,1.692,1.633
+valley,density_plan_us,387.793,396.858
