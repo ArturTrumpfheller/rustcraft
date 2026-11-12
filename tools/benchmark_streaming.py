@@ -257,6 +257,7 @@ def main():
     )
     p.add_argument("--reuse", action="store_true")
     p.add_argument("--summarize-only", action="store_true", help="Aggregate existing verified raw runs without running or rebuilding them")
+    p.add_argument("--terrain-v4", action="store_true", help="Matched exact Slice35 v10/current v11; enables terrain scenes")
     p.add_argument("--terrain-v3", action="store_true", help="Matched Slice34 v9/current v10 terrain scenes; use with --distance-expansion")
     p.add_argument("--rendering-install", action="store_true",
                    help="Also measure retained connected batches with real Bevy CPU visibility.")
@@ -269,6 +270,7 @@ def main():
         help="Summarize native S32_TRACE logs without building or running tests.",
     )
     a = p.parse_args()
+    if a.terrain_v4: a.terrain_v3 = True
     if a.summarize_only: a.reuse = True
     assert 1 <= a.repeats <= 100 and 1 <= a.frames <= 10000
     out = a.output.resolve()
@@ -336,6 +338,7 @@ def main():
                 {"baseline": baseline, "files": sources, "runtime_ids": ids,
                  "probes": {"distance_expansion": a.distance_expansion, "rendering_install": a.rendering_install},
                  "terrain_v3": a.terrain_v3,
+                 "terrain_v4": a.terrain_v4,
                  "harness_sha256": {str(f.relative_to(ROOT)): hashlib.sha256(f.read_bytes()).hexdigest()
                     for f in [Path(__file__).resolve(), ROOT / "tools/rendering_bench/install.rs", *sorted((ROOT / "tools/streaming_bench").glob("*.rs"))]}}, indent=2
             )
@@ -458,6 +461,7 @@ def main():
     if "probes" in manifest:
         assert manifest["probes"] == {"distance_expansion": a.distance_expansion, "rendering_install": a.rendering_install}, "Reused probes differ"
     assert manifest.get("terrain_v3", False) == a.terrain_v3, "Reused terrain mode differs"
+    assert manifest.get("terrain_v4", False) == a.terrain_v4, "Reused terrain v4 mode differs"
     ids = manifest["runtime_ids"]
     assert set(ids) == set(names), "Reused build labels differ"
     executables = json.loads((out / "executables-sha256.json").read_text())
@@ -484,7 +488,7 @@ def main():
                     "S32_EXPECT_CORE": ids[name][0],
                     "S32_EXPECT_CLIENT": ids[name][1],
                     "S34_DISTANCE": str(int(a.distance_expansion)),
-                    "S35_GENERATOR": "10" if a.terrain_v3 and name == names[1] else "9",
+                    "S35_GENERATOR": ("11" if name == names[1] else "10") if a.terrain_v4 else ("10" if a.terrain_v3 and name == names[1] else "9"),
                 },
             )
             subprocess.run(
@@ -505,7 +509,7 @@ def main():
                     "S32_EXPECT_CORE": ids[name][0],
                     "S32_EXPECT_CLIENT": ids[name][1],
                     "S34_DISTANCE": str(int(a.distance_expansion)),
-                    "S35_GENERATOR": "10" if a.terrain_v3 and name == names[1] else "9",
+                    "S35_GENERATOR": ("11" if name == names[1] else "10") if a.terrain_v4 else ("10" if a.terrain_v3 and name == names[1] else "9"),
                 },
             )
             if a.rendering_install:
@@ -613,7 +617,7 @@ def main():
                 "frame_hz": 240,
                 "rendering_install": a.rendering_install,
                 "distance_expansion": a.distance_expansion,
-                "transition_scope": ("Terrain mode compares v9/v10 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds." if a.terrain_v3 else "In distance mode, radius stress visits each build's own maximum (baseline3, candidate4); common final signatures match but these rows are not matched-workload regression evidence."),
+                "transition_scope": ("Terrain mode compares v10/v11 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds." if a.terrain_v4 else "Terrain mode compares v9/v10 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds." if a.terrain_v3 else "In distance mode, radius stress visits each build's own maximum (baseline3, candidate4); common final signatures match but these rows are not matched-workload regression evidence."),
                 "aggregation_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                 "machine": platform.platform(),
                 "note": "Headless scripted position/velocity, fixed 240Hz deadlines, no rendered frames/GPU. RSS is process-wide; requested heap peak is additional process heap during worker window, excludes stacks/allocator metadata/GPU and may include concurrent main allocations.",

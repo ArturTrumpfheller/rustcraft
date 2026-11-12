@@ -72,7 +72,7 @@ impl Geography {
         Self::build(seed, min, max, v10, None)
     }
     pub(super) fn for_generator(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Self {
-        Self::build(g.config.seed, min, max, g.config.version == 10, Some(g))
+        Self::build(g.config.seed, min, max, g.config.version >= 10, Some(g))
     }
     fn build(
         seed: u64,
@@ -122,6 +122,7 @@ impl Geography {
                 if !v10
                     || admitted(cache, [0, cx, cz], || {
                         low_footprint(
+                            cache.map_or(10, |g| g.config.version),
                             seed,
                             center,
                             (basin.radii[0].max(basin.radii[1]) * 5 + 1) / 2 + 4,
@@ -168,8 +169,11 @@ impl Geography {
                 };
                 if v10
                     && !admitted(cache, [1, cx, cz], || {
-                        controls.iter().all(|&p| low_footprint(seed, p, 40))
-                            && (0..=24).all(|t| low_footprint(seed, at(t), 24))
+                        controls.iter().all(|&p| {
+                            low_footprint(cache.map_or(10, |g| g.config.version), seed, p, 40)
+                        }) && (0..=24).all(|t| {
+                            low_footprint(cache.map_or(10, |g| g.config.version), seed, at(t), 24)
+                        })
                     })
                 {
                     continue;
@@ -378,11 +382,16 @@ fn river_bed_v10(s: &Segment, x: i32, z: i32, base: i32) -> Option<i32> {
 // padded nine-point footprints screen broad relief; this is a bounded sampling
 // heuristic, not a proof of the continuous maximum between samples.
 // actual banks and bed still use the final continuous surface evaluator.
-fn low_footprint(seed: u64, p: [i32; 2], radius: i32) -> bool {
+fn low_footprint(version: u32, seed: u64, p: [i32; 2], radius: i32) -> bool {
     [-radius, 0, radius].into_iter().all(|dx| {
-        [-radius, 0, radius]
-            .into_iter()
-            .all(|dz| super::terrain_v3::height(seed, p[0] + dx, p[1] + dz) <= 20)
+        [-radius, 0, radius].into_iter().all(|dz| {
+            if version == 11 {
+                let p = super::terrain_v4::parameters(seed, p[0] + dx, p[1] + dz);
+                (p.offset + p.amplitude) / 4096 <= 20
+            } else {
+                super::terrain_v3::height(seed, p[0] + dx, p[1] + dz) <= 20
+            }
+        })
     })
 }
 // Outcomes depend only on seed/feature coordinates. FIFO order affects reuse,
@@ -414,7 +423,11 @@ pub(super) fn surface_for(g: &Generator, x: i32, z: i32) -> Surface {
         g.config.seed,
         x,
         z,
-        super::terrain_v3::height(g.config.seed, x, z),
+        if g.config.version == 11 {
+            super::terrain_v4::height(g.config.seed, x, z)
+        } else {
+            super::terrain_v3::height(g.config.seed, x, z)
+        },
     )
 }
 pub fn surface_v10(seed: u64, x: i32, z: i32) -> Surface {
@@ -443,14 +456,28 @@ impl Plan {
         max: [i32; 2],
         materials: &[biome::Column],
     ) -> Self {
+        Self::new_with_rim(g, min, max, materials, None)
+    }
+    pub(super) fn new_with_rim(
+        g: &Generator,
+        min: [i32; 2],
+        max: [i32; 2],
+        materials: &[biome::Column],
+        rim: Option<&[i32]>,
+    ) -> Self {
+        debug_assert!(rim.is_none_or(|v| v.len() == 400));
         // One additional ring proves whether each 18x18 sample touches water.
         // Dry cave entrances outside that immediate bank retain v7 behavior.
         let geography = Geography::for_generator(g, min.map(|v| v - 1), max.map(|v| v + 1));
         let mut grid = Vec::with_capacity(400);
         for z in -1..=18 {
             for x in -1..=18 {
-                let base = if (0..18).contains(&x) && (0..18).contains(&z) {
+                let base = if let Some(rim) = rim {
+                    rim[((z + 1) * 20 + x + 1) as usize]
+                } else if (0..18).contains(&x) && (0..18).contains(&z) {
                     materials[(z * 18 + x) as usize].height
+                } else if g.config.version == 11 {
+                    super::terrain_v4::height(g.config.seed, min[0] + x, min[1] + z)
                 } else if g.config.version == 10 {
                     super::terrain_v3::height(g.config.seed, min[0] + x, min[1] + z)
                 } else {
@@ -461,12 +488,12 @@ impl Plan {
         }
         let mut columns = Vec::with_capacity(324);
         let mut sealed = Vec::with_capacity(324);
-        let mut slopes = Vec::with_capacity(if g.config.version == 10 { 324 } else { 0 });
+        let mut slopes = Vec::with_capacity(if g.config.version >= 10 { 324 } else { 0 });
         for z in 1..19 {
             for x in 1..19 {
                 let i = z * 20 + x;
                 columns.push(grid[i]);
-                if g.config.version == 10 {
+                if g.config.version >= 10 {
                     slopes.push(
                         [i - 1, i + 1, i - 20, i + 20]
                             .into_iter()

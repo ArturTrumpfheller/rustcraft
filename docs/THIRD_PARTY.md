@@ -1,3 +1,16 @@
+# Slice36 provenance
+
+Terrain-v11 gradients, spline/density implementation, reference evaluator,
+regressions and diagnostic/capture tools are original project work under
+MIT OR Apache-2.0. Public Minecraft technical descriptions inform architectural
+concepts only; no Minecraft code, permutation tables, datapack coefficients,
+assets or screenshots are redistributed. External visual references are linked
+in docs/performance/slice36/README.md with their limitations. All committed
+RustCraft captures show original project assets through the production renderer.
+No game dependency, engine feature, lockfile, toolchain, shader or texture changes.
+Optional Matplotlib/Pillow/Xvfb/Mesa are development tools, not bundled runtime
+requirements or included third-party assets.
+
 # Slice34 provenance
 
 Radius bounds, diagnostics, tests, disposable benchmark tooling and documentation

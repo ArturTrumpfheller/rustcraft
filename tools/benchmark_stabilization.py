@@ -45,6 +45,10 @@ pub fn slice30_take()->[u128;16]{SLICE30_PROFILE.with(|p|p.replace([0;16]))}
     replace_once(core / 'worldgen/local.rs',
                  'super::vegetation::Plan::trees(g, min, max)',
                  '{ let start=std::time::Instant::now(); let v=super::vegetation::Plan::trees(g,min,max); super::slice30_add(0,start.elapsed().as_nanos()); v }')
+    if 'Plan::trees_on_surface' in (core / 'worldgen/local.rs').read_text():
+        replace_once(core / 'worldgen/local.rs',
+                     'super::vegetation::Plan::trees_on_surface(g, min, max, columns)',
+                     '{ let start=std::time::Instant::now(); let v=super::vegetation::Plan::trees_on_surface(g,min,max,columns); super::slice30_add(0,start.elapsed().as_nanos()); v }')
     replace_once(core / 'worldgen/local.rs', '            vegetation.plants(',
                  '            let plant_start=std::time::Instant::now();\n            vegetation.plants(')
     replace_once(core / 'worldgen/local.rs', '            plan.vegetation = Some(vegetation);',

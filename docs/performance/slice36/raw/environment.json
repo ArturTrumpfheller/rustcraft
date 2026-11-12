@@ -1,0 +1,14 @@
+{
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+  "cpu_max": "200000 100000",
+  "memory_max": "8589934592",
+  "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "target_hardware_not_available": "Core i3-13100 / RX9060 XT / 1080p240Hz; no native FPS/GPU claims",
+  "comparison": "Exact Slice35 f527b75c21e8c40db4320a40b7630975fe1accb1; production source exports, no concurrent builds/tests/renderers during timed runs",
+  "tools_sha256": {
+    "tools/benchmark_terrain_v4.py": "341dacfa3f403c9f1393684103f4384e4968e77871e40f2a182b72d43b6f6147",
+    "tools/benchmark_stabilization.py": "c666bff55dbcb19c7a3e2525f8e935a056e8341fb4d2368353223b77524b8d0c",
+    "tools/benchmark_streaming.py": "c5e47ac4078449fe4567798d2294edcab6e35fbb9f1a8101adc43fc9c359de42"
+  }
+}

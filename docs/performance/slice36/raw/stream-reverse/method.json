@@ -1,0 +1,17 @@
+{
+  "baseline": "f527b75c21e8c40db4320a40b7630975fe1accb1",
+  "order": [
+    "slice35",
+    "slice36"
+  ],
+  "repeats": 2,
+  "frames": 60,
+  "frame_hz": 240,
+  "rendering_install": true,
+  "distance_expansion": true,
+  "transition_scope": "Terrain mode compares v10/v11 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds.",
+  "aggregation_sha256": "c5e47ac4078449fe4567798d2294edcab6e35fbb9f1a8101adc43fc9c359de42",
+  "machine": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "note": "Headless scripted position/velocity, fixed 240Hz deadlines, no rendered frames/GPU. RSS is process-wide; requested heap peak is additional process heap during worker window, excludes stacks/allocator metadata/GPU and may include concurrent main allocations.",
+  "metadata_correction": "The executed harness emitted an inherited v9/v10 label; S35_GENERATOR was actually10 for slice35 and11 for slice36 (source manifest terrain_v4=true). Only that descriptive label is corrected here."
+}

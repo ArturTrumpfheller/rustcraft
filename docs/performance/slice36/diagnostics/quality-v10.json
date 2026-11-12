@@ -1,0 +1,587 @@
+[
+  {
+    "seed": 0,
+    "samples": 294912,
+    "elevation_quantiles": {
+      "0": -23,
+      "50": 10,
+      "95": 85,
+      "99": 124,
+      "100": 155
+    },
+    "one_block_slope_quantiles": {
+      "0": 0,
+      "50": 0,
+      "95": 1,
+      "99": 1,
+      "100": 3
+    },
+    "slope_counts": {
+      "1": 57332,
+      "0": 236935,
+      "2": 643,
+      "3": 2
+    },
+    "height_difference_quantiles": {
+      "16": {
+        "0": 0,
+        "50": 0,
+        "95": 6,
+        "99": 12,
+        "100": 29
+      },
+      "64": {
+        "0": 0,
+        "50": 1,
+        "95": 22,
+        "99": 43,
+        "100": 92
+      },
+      "256": {
+        "0": 0,
+        "50": 4,
+        "95": 59,
+        "99": 92,
+        "100": 128
+      },
+      "1024": {
+        "0": 0,
+        "50": 13,
+        "95": 89,
+        "99": 117,
+        "100": 146
+      }
+    },
+    "x_height_autocorrelation": {
+      "16": 0.9958541617386746,
+      "64": 0.9434484572452971,
+      "256": 0.6666478471383613,
+      "1024": 0.1616078464495333
+    },
+    "land_flat32_fraction": 0.46741019131025535,
+    "land_span32_le2_fraction": 0.5519472884286255,
+    "land_span32_le4_fraction": 0.659965944771303,
+    "mountain_area_fraction": 0.07224188910590278,
+    "mountain_components": [
+      {
+        "cells": 2808,
+        "width": 544,
+        "depth": 1808
+      },
+      {
+        "cells": 2712,
+        "width": 816,
+        "depth": 1488
+      },
+      {
+        "cells": 2681,
+        "width": 1088,
+        "depth": 1760
+      },
+      {
+        "cells": 1980,
+        "width": 544,
+        "depth": 1408
+      },
+      {
+        "cells": 1905,
+        "width": 576,
+        "depth": 1552
+      },
+      {
+        "cells": 1489,
+        "width": 656,
+        "depth": 864
+      },
+      {
+        "cells": 1345,
+        "width": 480,
+        "depth": 880
+      },
+      {
+        "cells": 660,
+        "width": 608,
+        "depth": 480
+      },
+      {
+        "cells": 620,
+        "width": 448,
+        "depth": 560
+      },
+      {
+        "cells": 606,
+        "width": 368,
+        "depth": 656
+      },
+      {
+        "cells": 518,
+        "width": 560,
+        "depth": 416
+      },
+      {
+        "cells": 478,
+        "width": 512,
+        "depth": 320
+      }
+    ],
+    "isolated_mountain_components_le_4_samples": 4,
+    "ridge_skeleton_length": 27753.473000972663,
+    "ridge_skeleton_branch_pixels": 318,
+    "ridge_edge_orientation_counts_E_SE_S_SW": [
+      344,
+      244,
+      675,
+      262
+    ],
+    "strict_sampled_peaks": 52,
+    "radial_peak_candidates_22pct": 0,
+    "broad_64_extrema": 399,
+    "broad_radial_64_128_256_candidates_35pct": 3,
+    "deepest_512_span_valley": [
+      101,
+      -912,
+      -2496,
+      28,
+      256,
+      0
+    ]
+  },
+  {
+    "seed": 42,
+    "samples": 294912,
+    "elevation_quantiles": {
+      "0": -22,
+      "50": 10,
+      "95": 97,
+      "99": 129,
+      "100": 151
+    },
+    "one_block_slope_quantiles": {
+      "0": 0,
+      "50": 0,
+      "95": 1,
+      "99": 1,
+      "100": 2
+    },
+    "slope_counts": {
+      "0": 231862,
+      "1": 62551,
+      "2": 499
+    },
+    "height_difference_quantiles": {
+      "16": {
+        "0": 0,
+        "50": 0,
+        "95": 6,
+        "99": 11,
+        "100": 28
+      },
+      "64": {
+        "0": 0,
+        "50": 1,
+        "95": 23,
+        "99": 42,
+        "100": 94
+      },
+      "256": {
+        "0": 0,
+        "50": 4,
+        "95": 61,
+        "99": 93,
+        "100": 135
+      },
+      "1024": {
+        "0": 0,
+        "50": 14,
+        "95": 100,
+        "99": 128,
+        "100": 170
+      }
+    },
+    "x_height_autocorrelation": {
+      "16": 0.9966941422124567,
+      "64": 0.9544659884639125,
+      "256": 0.7150336455891771,
+      "1024": 0.1612049631762332
+    },
+    "land_flat32_fraction": 0.4381694299135986,
+    "land_span32_le2_fraction": 0.5173006234825501,
+    "land_span32_le4_fraction": 0.613585499396411,
+    "mountain_area_fraction": 0.0945773654513889,
+    "mountain_components": [
+      {
+        "cells": 4418,
+        "width": 1712,
+        "depth": 1504
+      },
+      {
+        "cells": 3083,
+        "width": 1136,
+        "depth": 1424
+      },
+      {
+        "cells": 2880,
+        "width": 928,
+        "depth": 1696
+      },
+      {
+        "cells": 2345,
+        "width": 944,
+        "depth": 1040
+      },
+      {
+        "cells": 2059,
+        "width": 1152,
+        "depth": 832
+      },
+      {
+        "cells": 1779,
+        "width": 1104,
+        "depth": 608
+      },
+      {
+        "cells": 1340,
+        "width": 944,
+        "depth": 864
+      },
+      {
+        "cells": 1333,
+        "width": 592,
+        "depth": 752
+      },
+      {
+        "cells": 1262,
+        "width": 976,
+        "depth": 976
+      },
+      {
+        "cells": 1214,
+        "width": 576,
+        "depth": 656
+      },
+      {
+        "cells": 932,
+        "width": 1152,
+        "depth": 576
+      },
+      {
+        "cells": 837,
+        "width": 496,
+        "depth": 800
+      }
+    ],
+    "isolated_mountain_components_le_4_samples": 4,
+    "ridge_skeleton_length": 42570.48193833443,
+    "ridge_skeleton_branch_pixels": 523,
+    "ridge_edge_orientation_counts_E_SE_S_SW": [
+      733,
+      381,
+      768,
+      439
+    ],
+    "strict_sampled_peaks": 45,
+    "radial_peak_candidates_22pct": 0,
+    "broad_64_extrema": 352,
+    "broad_radial_64_128_256_candidates_35pct": 1,
+    "deepest_512_span_valley": [
+      109,
+      -2880,
+      720,
+      24,
+      256,
+      0
+    ]
+  },
+  {
+    "seed": 2026,
+    "samples": 294912,
+    "elevation_quantiles": {
+      "0": -23,
+      "50": 8,
+      "95": 67,
+      "99": 110,
+      "100": 151
+    },
+    "one_block_slope_quantiles": {
+      "0": 0,
+      "50": 0,
+      "95": 1,
+      "99": 1,
+      "100": 2
+    },
+    "slope_counts": {
+      "0": 246622,
+      "1": 48167,
+      "2": 123
+    },
+    "height_difference_quantiles": {
+      "16": {
+        "0": 0,
+        "50": 0,
+        "95": 4,
+        "99": 9,
+        "100": 25
+      },
+      "64": {
+        "0": 0,
+        "50": 1,
+        "95": 17,
+        "99": 34,
+        "100": 89
+      },
+      "256": {
+        "0": 0,
+        "50": 3,
+        "95": 44,
+        "99": 79,
+        "100": 133
+      },
+      "1024": {
+        "0": 0,
+        "50": 12,
+        "95": 74,
+        "99": 112,
+        "100": 148
+      }
+    },
+    "x_height_autocorrelation": {
+      "16": 0.9972069789027107,
+      "64": 0.9619000511943769,
+      "256": 0.7688582002230825,
+      "1024": 0.31290273987568945
+    },
+    "land_flat32_fraction": 0.4594384277694892,
+    "land_span32_le2_fraction": 0.5514989212918737,
+    "land_span32_le4_fraction": 0.6645056726094003,
+    "mountain_area_fraction": 0.04643419053819445,
+    "mountain_components": [
+      {
+        "cells": 3318,
+        "width": 1584,
+        "depth": 1168
+      },
+      {
+        "cells": 1422,
+        "width": 816,
+        "depth": 784
+      },
+      {
+        "cells": 1212,
+        "width": 528,
+        "depth": 1040
+      },
+      {
+        "cells": 999,
+        "width": 992,
+        "depth": 464
+      },
+      {
+        "cells": 919,
+        "width": 704,
+        "depth": 608
+      },
+      {
+        "cells": 888,
+        "width": 784,
+        "depth": 416
+      },
+      {
+        "cells": 642,
+        "width": 592,
+        "depth": 544
+      },
+      {
+        "cells": 600,
+        "width": 656,
+        "depth": 608
+      },
+      {
+        "cells": 491,
+        "width": 368,
+        "depth": 704
+      },
+      {
+        "cells": 460,
+        "width": 560,
+        "depth": 336
+      },
+      {
+        "cells": 337,
+        "width": 496,
+        "depth": 288
+      },
+      {
+        "cells": 258,
+        "width": 416,
+        "depth": 256
+      }
+    ],
+    "isolated_mountain_components_le_4_samples": 2,
+    "ridge_skeleton_length": 23098.69089610463,
+    "ridge_skeleton_branch_pixels": 336,
+    "ridge_edge_orientation_counts_E_SE_S_SW": [
+      410,
+      146,
+      410,
+      295
+    ],
+    "strict_sampled_peaks": 30,
+    "radial_peak_candidates_22pct": 0,
+    "broad_64_extrema": 381,
+    "broad_radial_64_128_256_candidates_35pct": 0,
+    "deepest_512_span_valley": [
+      80,
+      -23424,
+      20352,
+      23,
+      0,
+      256
+    ]
+  },
+  {
+    "seed": 18446744073709551615,
+    "samples": 294912,
+    "elevation_quantiles": {
+      "0": -22,
+      "50": 7,
+      "95": 76,
+      "99": 123,
+      "100": 154
+    },
+    "one_block_slope_quantiles": {
+      "0": 0,
+      "50": 0,
+      "95": 1,
+      "99": 1,
+      "100": 2
+    },
+    "slope_counts": {
+      "0": 242688,
+      "1": 51972,
+      "2": 252
+    },
+    "height_difference_quantiles": {
+      "16": {
+        "0": 0,
+        "50": 0,
+        "95": 5,
+        "99": 10,
+        "100": 29
+      },
+      "64": {
+        "0": 0,
+        "50": 1,
+        "95": 19,
+        "99": 38,
+        "100": 93
+      },
+      "256": {
+        "0": 0,
+        "50": 3,
+        "95": 53,
+        "99": 91,
+        "100": 144
+      },
+      "1024": {
+        "0": 0,
+        "50": 14,
+        "95": 94,
+        "99": 133,
+        "100": 176
+      }
+    },
+    "x_height_autocorrelation": {
+      "16": 0.9971510922278687,
+      "64": 0.9610110502136258,
+      "256": 0.7341219003826455,
+      "1024": 0.14983514310324306
+    },
+    "land_flat32_fraction": 0.40721747388414054,
+    "land_span32_le2_fraction": 0.49095977698128235,
+    "land_span32_le4_fraction": 0.605740893912937,
+    "mountain_area_fraction": 0.05900404188368055,
+    "mountain_components": [
+      {
+        "cells": 2534,
+        "width": 1184,
+        "depth": 1232
+      },
+      {
+        "cells": 2466,
+        "width": 1072,
+        "depth": 976
+      },
+      {
+        "cells": 2334,
+        "width": 1120,
+        "depth": 976
+      },
+      {
+        "cells": 1691,
+        "width": 464,
+        "depth": 1312
+      },
+      {
+        "cells": 1466,
+        "width": 720,
+        "depth": 1040
+      },
+      {
+        "cells": 1002,
+        "width": 1104,
+        "depth": 544
+      },
+      {
+        "cells": 858,
+        "width": 880,
+        "depth": 656
+      },
+      {
+        "cells": 696,
+        "width": 448,
+        "depth": 608
+      },
+      {
+        "cells": 540,
+        "width": 464,
+        "depth": 560
+      },
+      {
+        "cells": 431,
+        "width": 304,
+        "depth": 480
+      },
+      {
+        "cells": 387,
+        "width": 224,
+        "depth": 704
+      },
+      {
+        "cells": 331,
+        "width": 320,
+        "depth": 384
+      }
+    ],
+    "isolated_mountain_components_le_4_samples": 1,
+    "ridge_skeleton_length": 31029.03894381227,
+    "ridge_skeleton_branch_pixels": 432,
+    "ridge_edge_orientation_counts_E_SE_S_SW": [
+      530,
+      244,
+      582,
+      341
+    ],
+    "strict_sampled_peaks": 28,
+    "radial_peak_candidates_22pct": 0,
+    "broad_64_extrema": 312,
+    "broad_radial_64_128_256_candidates_35pct": 0,
+    "deepest_512_span_valley": [
+      77,
+      3808,
+      -3024,
+      19,
+      0,
+      256
+    ]
+  }
+]

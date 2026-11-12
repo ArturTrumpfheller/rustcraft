@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Macro geography grid, actual one-block slopes and representative sites.
 //! CSV is diagnostic data, never presented as a client capture.
-use voxel_core::worldgen::{GenerationConfig, Generator, terrain_v3};
+use voxel_core::worldgen::{GenerationConfig, Generator, terrain_v3, terrain_v4};
 fn main() {
     let args: Vec<_> = std::env::args().collect();
     let step: usize = args
@@ -12,7 +12,7 @@ fn main() {
         .iter()
         .find_map(|v| v.strip_prefix("--generator="))
         .map_or(10, |v| v.parse().unwrap());
-    assert!(matches!(step, 16 | 32 | 64) && matches!(version, 9 | 10));
+    assert!(matches!(step, 16 | 32 | 64) && matches!(version, 9..=11));
     let final_surface = args.iter().any(|v| v == "--final");
     println!("seed,x,z,height,slope,east16,north16");
     for seed in [0, 42, 2026, u64::MAX] {
@@ -20,6 +20,8 @@ fn main() {
         let height = |seed, x, z| {
             if final_surface {
                 g.height(x, z).unwrap()
+            } else if version == 11 {
+                terrain_v4::height(seed, x, z)
             } else {
                 terrain_v3::height(seed, x, z)
             }

@@ -1,3 +1,28 @@
+# Slice 36: sparse surface density and frozen historical worlds
+
+New world creation selects generator11; strict manifest/region/height validation
+accepts it explicitly. Historical generator dispatch remains frozen. No world
+bounds, save layout, IDs, renderer, scheduler or worker budget changes.
+
+`worldgen/terrain_v4.rs` owns original Q12 gradient fields, shape-preserving
+Hermite terrain splines and an absolute4³ lattice for bounded surface density.
+The20² planning grid memoizes noise vertices in a bounded dense array, then
+retains18² compact profiles (highest solid Y, guaranteed-solid floor, occupancy
+bits). Density is evaluated only inside a maximum26-cell surface band. Deep
+Stone shortcuts use the density floor; upper Air shortcuts use the final top.
+
+Final height queries, independent point and chunk raster paths, versioned water
+planning and existing vegetation admission share the same profile top. Hydrology
+screens full candidates using the v11 terrain envelope. Wet beds and sealed
+bank caps suppress density/cave breaches. Existing cave primitives, pool cache,
+lighting/meshing, source halos, cancellation/eviction, saved overlays and single
+worker ownership stay intact. The v11 profile is ephemeral planning data, never
+persisted or retained as a world-sized volume. Existing biomes retain their IDs
+and climate geography; full biome alignment remains a later slice.
+
+[Model and evidence](performance/slice36/README.md). Earlier sections describe
+historical versions and are not new-world defaults.
+
 # Slice 35: versioned multi-scale terrain
 
 New world creation pins generator10 through `CURRENT_LOCAL_GENERATOR`; strict

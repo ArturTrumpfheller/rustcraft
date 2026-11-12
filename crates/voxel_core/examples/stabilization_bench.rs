@@ -132,7 +132,7 @@ fn main() {
         .expect("warmup count");
     assert!((1..=10000).contains(&samples) && warmups <= 1000);
     println!(
-        "scene,seed,chunk_x,chunk_z,sample,raw_us,worker_us,worker_cpu_us,tree_plan_us,plant_plan_us,light_us,opaque_us,water_us,plant_mesh_us,core_install_us,mesh_bytes,vertices,indices,surfaces,voxel_bytes,cache_bytes,water_cache_bytes,peak_heap,block_crc,span_us,source_us,frontier_us,sky_flood_us,block_flood_us,sky_propagated,block_propagated,light_cells,fluid_install_us,allocation_calls,requested_bytes,geometry_crc,light_crc,water_only_us,light_cache_bytes,raw_cpu_us,chunk_max_us,column_plan_us,chunk_total_us,admission_cache_entries,compact_chunks,air_chunks,stone_chunks"
+        "scene,seed,chunk_x,chunk_z,sample,raw_us,worker_us,worker_cpu_us,tree_plan_us,plant_plan_us,light_us,opaque_us,water_us,plant_mesh_us,core_install_us,mesh_bytes,vertices,indices,surfaces,voxel_bytes,cache_bytes,water_cache_bytes,peak_heap,block_crc,span_us,source_us,frontier_us,sky_flood_us,block_flood_us,sky_propagated,block_propagated,light_cells,fluid_install_us,allocation_calls,requested_bytes,geometry_crc,light_crc,water_only_us,light_cache_bytes,raw_cpu_us,chunk_max_us,column_plan_us,chunk_total_us,admission_cache_entries,compact_chunks,air_chunks,stone_chunks,density_plan_us,raw_peak_heap,raw_allocation_calls,raw_requested_bytes"
     );
     let mut scenes = vec![
         ("open-plains", 0, [-160, -256]),
@@ -243,6 +243,7 @@ fn main() {
         let edits = world.overlay_snapshot();
         let mut cache = TerrainCache::default();
         for i in 0..warmups + samples {
+            let raw_base = reset();
             let raw_start = Instant::now();
             let raw_cpu_start = thread_cpu_us();
             let mut chunk_max = 0f64;
@@ -259,6 +260,9 @@ fn main() {
             }
             let raw = raw_start.elapsed().as_secs_f64() * 1e6;
             let raw_cpu = thread_cpu_us() - raw_cpu_start;
+            let raw_heap = peak(raw_base);
+            let raw_calls = CALLS.load(Ordering::Relaxed);
+            let raw_requested = REQUESTED.load(Ordering::Relaxed);
             let planning = [0u128; 16]; // PROFILE_TAKE
             let base = reset();
             let start = Instant::now();
@@ -376,7 +380,7 @@ fn main() {
             let installed = [0u128; 16]; // INSTALL_TAKE
             if i >= warmups {
                 println!(
-                    "{name},{seed},{},{},{},{raw:.3},{worker:.3},{cpu:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{install_us:.3},{bytes},{vertices},{indices},{surfaces},{},{},{},{heap},{},{:.3},{:.3},{:.3},{:.3},{:.3},{},{},{},{:.3},{calls},{requested},{},{},{water_only:.3},{light_cache_bytes},{raw_cpu:.3},{chunk_max:.3},{plan_us:.3},{chunk_total:.3},{},{compact},{air},{stone}",
+                    "{name},{seed},{},{},{},{raw:.3},{worker:.3},{cpu:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{install_us:.3},{bytes},{vertices},{indices},{surfaces},{},{},{},{heap},{},{:.3},{:.3},{:.3},{:.3},{:.3},{},{},{},{:.3},{calls},{requested},{},{},{water_only:.3},{light_cache_bytes},{raw_cpu:.3},{chunk_max:.3},{plan_us:.3},{chunk_total:.3},{},{compact},{air},{stone},{:.3},{raw_heap},{raw_calls},{raw_requested}",
                     c[0],
                     c[1],
                     i - warmups,
@@ -401,7 +405,8 @@ fn main() {
                     installed[14] as f64 / 1000.,
                     geometry.finalize(),
                     lights.finalize(),
-                    g.terrain_admission_cache_entries()
+                    g.terrain_admission_cache_entries(),
+                    planning[15] as f64 / 1000.
                 );
             }
             black_box(install);

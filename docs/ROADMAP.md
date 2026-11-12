@@ -1,3 +1,24 @@
+# Slice 36 — Minecraft-style terrain v4
+
+- [x] Research public modern Overworld density/spline architecture and record limits
+- [x] Default generator11; preserve exact v1–v10 outputs, identities and saved edits
+- [x] Replace folded value-noise masks with signed gradient fields and terrain splines
+- [x] Vary structural grain, ranges, valleys, foothills and quiet building plains
+- [x] Sparse bounded 3D surface density, floor-based compact slabs and shared lattice
+- [x] Existing water/cave/material/vegetation integration and watertight density caps
+- [x] Independent68 field/density fixtures,36 column CRCs and full-band parity checks
+- [x] Signed/distant/order/seam/spawn/save/journal/eviction/session regressions
+- [x] Multi-seed surveys, relief maps, height profiles and actual Bevy comparisons
+- [x] Locked format/Clippy,563 debug tests, optimized core/streaming/session checks, release and assets
+- [x] Matched CPU/memory/streaming evidence against exact Slice35, both execution orders
+- [ ] Native Gentoo/Void X11/Wayland / Windows / Radeon and owner visual acceptance
+
+[Design, actual captures, measurements and native procedure](performance/slice36/README.md).
+[Linux/Windows validation on the PR head](https://github.com/ArturTrumpfheller/rustcraft/pull/54/checks)
+is recorded separately from native GUI/Radeon acceptance.
+Biome geography, Cave Generation v3 and watershed Hydrology v2 remain later slices.
+No automatic generator migration or PR merge.
+
 # Slice 35 — Terrain Generation v3
 
 - [x] Explicit default generator10; v1–v9 fixtures and save identities preserved

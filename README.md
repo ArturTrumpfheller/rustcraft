@@ -1,5 +1,13 @@
 # RustCraft
 
+## Minecraft-style terrain v4 (Slice 36)
+
+New worlds use generator11: signed gradient terrain splines, narrower connected
+ranges, varied valleys/foothills, quiet plains and a bounded 3D surface density band.
+Existing generators1–10 and saves keep their original output and edits. Bounds,
+original artwork, five biome IDs and supported render radii1–4 remain unchanged.
+[Actual renders, surveys, compatibility, costs and native acceptance](docs/performance/slice36/README.md).
+
 ## Terrain Generation v3 (Slice 35)
 
 New worlds use generator10: large connected highlands and rounded ridges, broad
@@ -98,7 +106,7 @@ migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest upla
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 35**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 36**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
