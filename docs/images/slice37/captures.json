@@ -1,0 +1,607 @@
+[
+  {
+    "file": "plains-v12.png",
+    "sha256": "27553981ccdb396549e8a9241f55bb8f27a16f84af36aa9354858ecafc2127b9",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "0",
+      "-3520",
+      "-4032",
+      "135",
+      "--generator=12",
+      "--radius=4",
+      "--capture-frames=30"
+    ],
+    "seed": 0,
+    "generator": 12,
+    "center": [
+      -3520,
+      -4032
+    ],
+    "radius": 4,
+    "development_panorama": false,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=0 center=(-3520, -4032) biome=Plains",
+      "CAVE_CAMERA seed=0 generator=12 world_eye=Vec3(-3519.5, 17.62, -4031.5) direction=Vec3(0.70710677, -0.08, 0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=0 x=-3520 z=-4032 surface_y=15 yaw=135 radius=4 overview=false feet=[-3519.5, 16.0, -4031.5]",
+      "2026-11-12T22:06:28.254747Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "forest-v12.png",
+    "sha256": "c0d38bfd98dd995bff193a7b840c4f8f354c82403d5ec1a9034b5d4cbace2c7c",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "0",
+      "2048",
+      "-4032",
+      "315",
+      "--generator=12",
+      "--radius=4",
+      "--capture-frames=30"
+    ],
+    "seed": 0,
+    "generator": 12,
+    "center": [
+      2048,
+      -4032
+    ],
+    "radius": 4,
+    "development_panorama": false,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=0 center=(2048, -4032) biome=Forest",
+      "CAVE_CAMERA seed=0 generator=12 world_eye=Vec3(2048.5, 22.62, -4031.5) direction=Vec3(-0.7071069, -0.08, -0.70710665) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=0 x=2048 z=-4032 surface_y=20 yaw=315 radius=4 overview=false feet=[2048.5, 21.0, -4031.5]",
+      "2026-11-12T22:06:43.581867Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "birch-forest-v11.png",
+    "sha256": "615caf5b9a986f9d90f3d46619b4c24e273442bd0850dfe4c48176501555495b",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "0",
+      "-1920",
+      "-4032",
+      "270",
+      "--generator=11",
+      "--radius=4",
+      "--capture-frames=30"
+    ],
+    "seed": 0,
+    "generator": 11,
+    "center": [
+      -1920,
+      -4032
+    ],
+    "radius": 4,
+    "development_panorama": false,
+    "camera_log": [
+      "BIOME_SCENE generator=11 seed=0 center=(-1920, -4032) biome=Forest",
+      "CAVE_CAMERA seed=0 generator=11 world_eye=Vec3(-1919.5, 21.62, -4031.5) direction=Vec3(-1.0, -0.08, -1.1924881e-8) torch_fixture=false",
+      "TERRAIN_SCENE generator=11 seed=0 x=-1920 z=-4032 surface_y=19 yaw=270 radius=4 overview=false feet=[-1919.5, 20.0, -4031.5]",
+      "2026-11-12T22:06:57.837410Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "birch-forest-v12.png",
+    "sha256": "ebf9aa2a88b8f51bac56ba22808b7debfb3b3b16e1d5c304e949f667bc10fc63",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "0",
+      "-1920",
+      "-4032",
+      "270",
+      "--generator=12",
+      "--radius=4",
+      "--capture-frames=30"
+    ],
+    "seed": 0,
+    "generator": 12,
+    "center": [
+      -1920,
+      -4032
+    ],
+    "radius": 4,
+    "development_panorama": false,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=0 center=(-1920, -4032) biome=Birch Forest",
+      "CAVE_CAMERA seed=0 generator=12 world_eye=Vec3(-1919.5, 21.62, -4031.5) direction=Vec3(-1.0, -0.08, -1.1924881e-8) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=0 x=-1920 z=-4032 surface_y=19 yaw=270 radius=4 overview=false feet=[-1919.5, 20.0, -4031.5]",
+      "2026-11-12T22:07:12.161194Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "taiga-v12.png",
+    "sha256": "b0454bb63373df35280eb6626a94aa527df5dd858793e7b04552aa09b72386a4",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "0",
+      "1600",
+      "-4032",
+      "135",
+      "--generator=12",
+      "--radius=4",
+      "--capture-frames=30"
+    ],
+    "seed": 0,
+    "generator": 12,
+    "center": [
+      1600,
+      -4032
+    ],
+    "radius": 4,
+    "development_panorama": false,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=0 center=(1600, -4032) biome=Taiga",
+      "CAVE_CAMERA seed=0 generator=12 world_eye=Vec3(1600.5, 13.62, -4031.5) direction=Vec3(0.70710677, -0.08, 0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=0 x=1600 z=-4032 surface_y=11 yaw=135 radius=4 overview=false feet=[1600.5, 12.0, -4031.5]",
+      "2026-11-12T22:07:26.839628Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "grove-v12.png",
+    "sha256": "4f7557fedabff644dfb16df97b143739e1e372c109da9cb012ace8b980f766c2",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "18446744073709551615",
+      "-1616",
+      "-4032",
+      "90",
+      "--generator=12",
+      "--radius=4",
+      "--capture-frames=30"
+    ],
+    "seed": 18446744073709551615,
+    "generator": 12,
+    "center": [
+      -1616,
+      -4032
+    ],
+    "radius": 4,
+    "development_panorama": false,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=18446744073709551615 center=(-1616, -4032) biome=Grove",
+      "CAVE_CAMERA seed=18446744073709551615 generator=12 world_eye=Vec3(-1615.5, 56.62, -4031.5) direction=Vec3(1.0, -0.08, 4.371139e-8) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=18446744073709551615 x=-1616 z=-4032 surface_y=54 yaw=90 radius=4 overview=false feet=[-1615.5, 55.0, -4031.5]",
+      "2026-11-12T22:07:57.841015Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "snowy-slopes-v12.png",
+    "sha256": "dd009d55ccb8bccd48ed419b0b5a9c0afa5bff01bd913fbdabd884636e705d24",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "0",
+      "-960",
+      "2496",
+      "45",
+      "--generator=12",
+      "--radius=4",
+      "--capture-frames=30"
+    ],
+    "seed": 0,
+    "generator": 12,
+    "center": [
+      -960,
+      2496
+    ],
+    "radius": 4,
+    "development_panorama": false,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=0 center=(-960, 2496) biome=Snowy Slopes",
+      "CAVE_CAMERA seed=0 generator=12 world_eye=Vec3(-959.5, 105.62, 2496.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=0 x=-960 z=2496 surface_y=103 yaw=45 radius=4 overview=false feet=[-959.5, 104.0, 2496.5]",
+      "2026-11-12T22:08:13.185567Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "desert-v12.png",
+    "sha256": "fba90bab3819ea6647be52dec4f3ca2d2d6176bf55aabe8496dd3d97e96961c5",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "0",
+      "-2688",
+      "-3200",
+      "135",
+      "--generator=12",
+      "--radius=4",
+      "--capture-frames=30"
+    ],
+    "seed": 0,
+    "generator": 12,
+    "center": [
+      -2688,
+      -3200
+    ],
+    "radius": 4,
+    "development_panorama": false,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=0 center=(-2688, -3200) biome=Desert",
+      "CAVE_CAMERA seed=0 generator=12 world_eye=Vec3(-2687.5, 18.62, -3199.5) direction=Vec3(0.70710677, -0.08, 0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=0 x=-2688 z=-3200 surface_y=16 yaw=135 radius=4 overview=false feet=[-2687.5, 17.0, -3199.5]",
+      "2026-11-12T22:08:41.445182Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "beach-v12.png",
+    "sha256": "6fe820f0053ab6de9c3661ab755e4b709062f0b07cf4c44bc75a1fa1d8ea1d5e",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "42",
+      "3328",
+      "-3264",
+      "45",
+      "--generator=12",
+      "--radius=4",
+      "--capture-frames=30"
+    ],
+    "seed": 42,
+    "generator": 12,
+    "center": [
+      3328,
+      -3264
+    ],
+    "radius": 4,
+    "development_panorama": false,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=42 center=(3328, -3264) biome=Beach",
+      "CAVE_CAMERA seed=42 generator=12 world_eye=Vec3(3328.5, 5.62, -3263.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=42 x=3328 z=-3264 surface_y=3 yaw=45 radius=4 overview=false feet=[3328.5, 4.0, -3263.5]",
+      "2026-11-12T22:08:56.242946Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "snowy-plains-v12.png",
+    "sha256": "90009a28a0b54859f692e56be20cf6b3d48df3727c140fb172d98b296eecb724",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "0",
+      "384",
+      "-2752",
+      "45",
+      "--generator=12",
+      "--radius=4",
+      "--capture-frames=30"
+    ],
+    "seed": 0,
+    "generator": 12,
+    "center": [
+      384,
+      -2752
+    ],
+    "radius": 4,
+    "development_panorama": false,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=0 center=(384, -2752) biome=Snowy Plains",
+      "CAVE_CAMERA seed=0 generator=12 world_eye=Vec3(384.5, 18.62, -2751.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=0 x=384 z=-2752 surface_y=16 yaw=45 radius=4 overview=false feet=[384.5, 17.0, -2751.5]",
+      "2026-11-12T22:09:11.368576Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "river-v12.png",
+    "sha256": "7dbe09c8c65cab530276fcf78bd4ed5da368cfc6b135c2a710d92181515f1dd9",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "18446744073709551615",
+      "-4032",
+      "2112",
+      "90",
+      "--generator=12",
+      "--radius=4",
+      "--capture-frames=30",
+      "--eye=-4032,14,2140",
+      "--direction=0,-0.25,-1"
+    ],
+    "seed": 18446744073709551615,
+    "generator": 12,
+    "center": [
+      -4032,
+      2112
+    ],
+    "radius": 4,
+    "development_panorama": false,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=18446744073709551615 center=(-4032, 2112) biome=River",
+      "CAVE_CAMERA seed=18446744073709551615 generator=12 world_eye=Vec3(-4032.0, 14.0, 2140.0) direction=Vec3(0.0, -0.25, -1.0) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=18446744073709551615 x=-4032 z=2112 surface_y=-3 yaw=90 radius=4 overview=false feet=[-4031.5, -2.0, 2112.5]",
+      "2026-11-12T22:09:26.559922Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "grove-panorama-v11.png",
+    "sha256": "fe7a7459f9168e53a344c516daacd2f30a5caf1eda96492580e870802936aa5f",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "2026",
+      "3520",
+      "1728",
+      "45",
+      "--generator=11",
+      "--radius=10",
+      "--capture-frames=30",
+      "--wide-survey-fog",
+      "--eye=3400,145,1840",
+      "--direction=1,-0.65,-1"
+    ],
+    "seed": 2026,
+    "generator": 11,
+    "center": [
+      3520,
+      1728
+    ],
+    "radius": 10,
+    "development_panorama": true,
+    "camera_log": [
+      "BIOME_SCENE generator=11 seed=2026 center=(3520, 1728) biome=Forest",
+      "CAVE_CAMERA seed=2026 generator=11 world_eye=Vec3(3400.0, 145.0, 1840.0) direction=Vec3(1.0, -0.65, -1.0) torch_fixture=false",
+      "TERRAIN_SCENE generator=11 seed=2026 x=3520 z=1728 surface_y=65 yaw=45 radius=10 overview=false feet=[3520.5, 66.0, 1728.5]",
+      "2026-11-12T22:10:06.020062Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "grove-panorama-v12.png",
+    "sha256": "faa744b9b80a90c1f4e2999cbbb581c88053381409a434f6e7f6af7192214ae5",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "2026",
+      "3520",
+      "1728",
+      "45",
+      "--generator=12",
+      "--radius=10",
+      "--capture-frames=30",
+      "--wide-survey-fog",
+      "--eye=3400,145,1840",
+      "--direction=1,-0.65,-1"
+    ],
+    "seed": 2026,
+    "generator": 12,
+    "center": [
+      3520,
+      1728
+    ],
+    "radius": 10,
+    "development_panorama": true,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=2026 center=(3520, 1728) biome=Grove",
+      "CAVE_CAMERA seed=2026 generator=12 world_eye=Vec3(3400.0, 145.0, 1840.0) direction=Vec3(1.0, -0.65, -1.0) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=2026 x=3520 z=1728 surface_y=65 yaw=45 radius=10 overview=false feet=[3520.5, 66.0, 1728.5]",
+      "2026-11-12T22:10:31.737800Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "warm-peaks-panorama-v11.png",
+    "sha256": "57765d99a2a9884e13d5fd417bce7b6eface9d28a5f96f0ec42b6b76cd959461",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "42",
+      "768",
+      "-896",
+      "45",
+      "--generator=11",
+      "--radius=10",
+      "--capture-frames=30",
+      "--wide-survey-fog",
+      "--eye=660,180,-780",
+      "--direction=1,-0.65,-1"
+    ],
+    "seed": 42,
+    "generator": 11,
+    "center": [
+      768,
+      -896
+    ],
+    "radius": 10,
+    "development_panorama": true,
+    "camera_log": [
+      "BIOME_SCENE generator=11 seed=42 center=(768, -896) biome=Rocky Highlands",
+      "CAVE_CAMERA seed=42 generator=11 world_eye=Vec3(660.0, 180.0, -780.0) direction=Vec3(1.0, -0.65, -1.0) torch_fixture=false",
+      "TERRAIN_SCENE generator=11 seed=42 x=768 z=-896 surface_y=89 yaw=45 radius=10 overview=false feet=[768.5, 90.0, -895.5]",
+      "2026-11-12T22:11:03.028952Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "warm-peaks-panorama-v12.png",
+    "sha256": "b0fd5d464e63c00df709e1abeec7df750c6ccaa677cdf61e358638c609283c35",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "42",
+      "768",
+      "-896",
+      "45",
+      "--generator=12",
+      "--radius=10",
+      "--capture-frames=30",
+      "--wide-survey-fog",
+      "--eye=660,180,-780",
+      "--direction=1,-0.65,-1"
+    ],
+    "seed": 42,
+    "generator": 12,
+    "center": [
+      768,
+      -896
+    ],
+    "radius": 10,
+    "development_panorama": true,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=42 center=(768, -896) biome=Stony Peaks",
+      "CAVE_CAMERA seed=42 generator=12 world_eye=Vec3(660.0, 180.0, -780.0) direction=Vec3(1.0, -0.65, -1.0) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=42 x=768 z=-896 surface_y=89 yaw=45 radius=10 overview=false feet=[768.5, 90.0, -895.5]",
+      "2026-11-12T22:11:30.267321Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "coast-panorama-v11.png",
+    "sha256": "85780b8e4943a8a547d1cb061cd014dda302630497a6663c8bdf71ce3ca9ab4f",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "42",
+      "3328",
+      "-3264",
+      "90",
+      "--generator=11",
+      "--radius=10",
+      "--capture-frames=30",
+      "--wide-survey-fog",
+      "--eye=3220,100,-3140",
+      "--direction=1,-0.55,-1"
+    ],
+    "seed": 42,
+    "generator": 11,
+    "center": [
+      3328,
+      -3264
+    ],
+    "radius": 10,
+    "development_panorama": true,
+    "camera_log": [
+      "BIOME_SCENE generator=11 seed=42 center=(3328, -3264) biome=Plains",
+      "CAVE_CAMERA seed=42 generator=11 world_eye=Vec3(3220.0, 100.0, -3140.0) direction=Vec3(1.0, -0.55, -1.0) torch_fixture=false",
+      "TERRAIN_SCENE generator=11 seed=42 x=3328 z=-3264 surface_y=3 yaw=90 radius=10 overview=false feet=[3328.5, 4.0, -3263.5]",
+      "2026-11-12T22:11:53.436335Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "coast-panorama-v12.png",
+    "sha256": "92308ffde3312cf0985e3ca0bff61ad7bb8a6033ebac50a9146fd119c0e334a7",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "42",
+      "3328",
+      "-3264",
+      "90",
+      "--generator=12",
+      "--radius=10",
+      "--capture-frames=30",
+      "--wide-survey-fog",
+      "--eye=3220,100,-3140",
+      "--direction=1,-0.55,-1"
+    ],
+    "seed": 42,
+    "generator": 12,
+    "center": [
+      3328,
+      -3264
+    ],
+    "radius": 10,
+    "development_panorama": true,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=42 center=(3328, -3264) biome=Beach",
+      "CAVE_CAMERA seed=42 generator=12 world_eye=Vec3(3220.0, 100.0, -3140.0) direction=Vec3(1.0, -0.55, -1.0) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=42 x=3328 z=-3264 surface_y=3 yaw=90 radius=10 overview=false feet=[3328.5, 4.0, -3263.5]",
+      "2026-11-12T22:12:14.832608Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "meadow-panorama-v12.png",
+    "sha256": "e584ac3c768319c6aa405f39350852b5a43791d2f310c55e9f4446a6a5959f1e",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "18446744073709551615",
+      "-1760",
+      "-3920",
+      "45",
+      "--generator=12",
+      "--radius=10",
+      "--capture-frames=30",
+      "--wide-survey-fog",
+      "--eye=-1870,150,-3804",
+      "--direction=1,-0.65,-1"
+    ],
+    "seed": 18446744073709551615,
+    "generator": 12,
+    "center": [
+      -1760,
+      -3920
+    ],
+    "radius": 10,
+    "development_panorama": true,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=18446744073709551615 center=(-1760, -3920) biome=Forest",
+      "CAVE_CAMERA seed=18446744073709551615 generator=12 world_eye=Vec3(-1870.0, 150.0, -3804.0) direction=Vec3(1.0, -0.65, -1.0) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=18446744073709551615 x=-1760 z=-3920 surface_y=24 yaw=45 radius=10 overview=false feet=[-1759.5, 25.0, -3919.5]",
+      "2026-11-12T22:17:10.929954Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "meadow-v12.png",
+    "sha256": "d1de456cd199a460620fad4789e5be4228a5d1477bada6650a5537fd08b1501e",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "18446744073709551615",
+      "-1840",
+      "-3808",
+      "45",
+      "--generator=12",
+      "--radius=4",
+      "--capture-frames=30",
+      "--direction=1,-0.25,1"
+    ],
+    "seed": 18446744073709551615,
+    "generator": 12,
+    "center": [
+      -1840,
+      -3808
+    ],
+    "radius": 4,
+    "development_panorama": false,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=18446744073709551615 center=(-1840, -3808) biome=Meadow",
+      "CAVE_CAMERA seed=18446744073709551615 generator=12 world_eye=Vec3(-1839.5, 54.62, -3807.5) direction=Vec3(1.0, -0.25, 1.0) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=18446744073709551615 x=-1840 z=-3808 surface_y=52 yaw=45 radius=4 overview=false feet=[-1839.5, 53.0, -3807.5]",
+      "2026-11-12T22:32:45.279808Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  },
+  {
+    "file": "stony-peaks-v12.png",
+    "sha256": "1fe8d47390fe88b7bee511ce690fc89aaa97aed8d3f3af273e58fb0a68190dc2",
+    "executable_sha256": "e27ad1671cfeb8794849a43778c73341eec0272bf6e22bb401e46438f4ba2e65",
+    "command": [
+      "/workspace/rustcraft/target/release/examples/terrain_gallery",
+      "42",
+      "688",
+      "-1328",
+      "45",
+      "--generator=12",
+      "--radius=4",
+      "--capture-frames=30",
+      "--direction=-1,-0.45,-1"
+    ],
+    "seed": 42,
+    "generator": 12,
+    "center": [
+      688,
+      -1328
+    ],
+    "radius": 4,
+    "development_panorama": false,
+    "camera_log": [
+      "BIOME_SCENE generator=12 seed=42 center=(688, -1328) biome=Stony Peaks",
+      "CAVE_CAMERA seed=42 generator=12 world_eye=Vec3(688.5, 150.62, -1327.5) direction=Vec3(-1.0, -0.45, -1.0) torch_fixture=false",
+      "TERRAIN_SCENE generator=12 seed=42 x=688 z=-1328 surface_y=148 yaw=45 radius=4 overview=false feet=[688.5, 149.0, -1327.5]",
+      "2026-11-12T22:33:00.464567Z  INFO bevy_render::renderer: AdapterInfo { name: \"llvmpipe (LLVM 19.1.7, 256 bits)\", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: \"\", driver: \"llvmpipe\", driver_info: \"Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }"
+    ]
+  }
+]

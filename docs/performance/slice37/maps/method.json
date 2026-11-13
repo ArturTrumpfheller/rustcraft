@@ -1,0 +1,7 @@
+{
+  "input": "/workspace/work/slice37/quality-coherent.csv",
+  "samples": 1179648,
+  "connectivity": "4-neighbor center samples; edge-touching components censored separately",
+  "area": "Center-sample region estimate, not exhaustive per-block biome polygon area",
+  "singletons": "Interior one-sample connected components; at step16 a one-chunk center-sample proxy, not a proof that every block in a chunk shares its biome"
+}

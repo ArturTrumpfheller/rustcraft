@@ -233,3 +233,34 @@ fn leaving_then_returning_cannot_revive_a_stopped_job_and_normal_completion_coun
     drain(&mut app);
     assert_geometry(&app, &BTreeSet::from([ChunkPos([0, 1, 0])]));
 }
+
+#[test]
+fn v12_cancelled_generation_cannot_revive_an_evicted_biome_column() {
+    let dir = RegionalDir::new();
+    let mut app = large_app_with_generator(&dir.0, 12);
+    let release = gated(&mut app, Work::Load([0, 0]));
+    app.world_mut().resource_mut::<PlayerState>().body.position = [-1919.5, 128., -4031.5];
+    app.update();
+    assert!(
+        app.world()
+            .resource::<StreamState>()
+            .job
+            .as_ref()
+            .unwrap()
+            .control
+            .is_cancelled()
+    );
+    release.send(()).unwrap();
+    drain(&mut app);
+    assert!(app.world().resource::<StreamState>().metrics.cancelled > 0);
+    assert!(
+        !app.world()
+            .resource::<VoxelWorld>()
+            .0
+            .ready(BlockPos([0, 0, 0]))
+    );
+    assert_textured_residency(&mut app);
+    let world = &app.world().resource::<VoxelWorld>().0;
+    assert_eq!(world.identity().unwrap().generator, 12);
+    assert!(app.world().resource::<StreamState>().cache.columns() <= 121);
+}

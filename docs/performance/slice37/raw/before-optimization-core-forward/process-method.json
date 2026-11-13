@@ -1,0 +1,5 @@
+{
+  "method": "Linux wait4 rusage, per verified executable invocation; all worker threads included",
+  "max_rss": "Kernel high-water RSS, includes libraries/allocator; excludes GPU storage and other processes",
+  "source_sha256": "22a8cd9f7fcc7df3f32199eeefd9df5b5de309e238bed310e7a227c6d7fc2a7a"
+}

@@ -172,6 +172,23 @@ fn main() {
             ("cavern", 42, [3, -4]),
         ];
     }
+    if std::env::var_os("RUSTCRAFT_BENCH_BIOME_V2").is_some() {
+        scenes = vec![
+            ("plains", 0, [-220, -252]),
+            ("forest", 0, [128, -252]),
+            ("birch", 0, [-120, -252]),
+            ("taiga", 0, [100, -252]),
+            ("meadow", 0, [208, -116]),
+            ("grove", 2026, [220, 108]),
+            ("grove-dense", u64::MAX, [-101, -252]),
+            ("snow", 0, [-60, 156]),
+            ("peaks", 42, [48, -56]),
+            ("desert", 0, [-168, -200]),
+            ("beach", 42, [208, -204]),
+            ("river", u64::MAX, [-252, 132]),
+            ("distant", 2026, [-1464, 1272]),
+        ];
+    }
     if std::env::var_os("RUSTCRAFT_BENCH_ADVERSE_TERRAIN").is_some() {
         scenes = vec![("steep-transition", 42, [-62, -218])];
     }
@@ -367,7 +384,7 @@ fn main() {
                 );
             }
             drop(water_result);
-            let mut install = World::regional(identity(seed, 9));
+            let mut install = World::regional(identity(seed, version));
             for (p, e) in edits.regions() {
                 install.install_region(p, e);
             }

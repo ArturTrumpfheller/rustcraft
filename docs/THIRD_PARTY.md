@@ -1,3 +1,16 @@
+# Slice37 provenance
+
+Biome-v12 climate/interval selection, ecological elevation interpolation,
+vegetation/material integration, independent Python fixtures, regressions,
+surveys, benchmarks and documentation are original project work under
+MIT OR Apache-2.0. All new committed landscape captures use genuine Bevy meshes,
+production shaders and existing original RustCraft art. Public Minecraft technical
+articles/screenshots inform qualitative architecture and ecosystem appearance;
+source images remain external links. No proprietary code, biome tables, noise
+coefficients, assets, additional game dependency, engine feature, lockfile or
+runtime renderer change is included. Python/NumPy/Matplotlib/Pillow/Xvfb/Mesa are
+optional development tools, not bundled game assets or runtime dependencies.
+
 # Slice36 provenance
 
 Terrain-v11 gradients, spline/density implementation, reference evaluator,

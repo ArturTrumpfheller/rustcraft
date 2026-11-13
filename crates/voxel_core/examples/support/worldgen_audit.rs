@@ -212,7 +212,7 @@ pub fn audit(seed: u64, version: u32, c: [i32; 2]) -> Report {
         for lp in [[0; 3], [15; 3], [0, 15, 15], [15, 0, 0]] {
             let lp = LocalPos::new(lp).unwrap();
             let p = cp.block_position(lp).unwrap();
-            if version != 11 {
+            if version < 11 {
                 let actual = g.block(p);
                 r.check(
                     actual == ch.get(lp),
@@ -228,7 +228,7 @@ pub fn audit(seed: u64, version: u32, c: [i32; 2]) -> Report {
     // Aim its bounded checks at actual solid/air transitions at all four corners
     // instead of repeatedly planning uniform sky/deep slabs at fixed chunk Y.
     // Every density-band raster cell is additionally checked in terrain_v4.rs.
-    if version == 11 {
+    if version >= 11 {
         for [dx, dz] in [[0, 0], [15, 15], [0, 15], [15, 0]] {
             let x = c[0] * 16 + dx;
             let z = c[1] * 16 + dz;

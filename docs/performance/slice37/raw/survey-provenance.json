@@ -1,0 +1,35 @@
+{
+  "samples": 1179648,
+  "step_blocks": 16,
+  "seeds": [
+    0,
+    42,
+    2026,
+    18446744073709551615
+  ],
+  "uncompressed_sha256": "32a1387cdbf5a83c256671ad738bd55782e38e10b42b5ae2e678ce417fdeb78d",
+  "archives": {
+    "quality-0.csv.gz": "42210701d787581492944e84b134127d0628fd31666ebb5816b782db82c7eae8",
+    "quality-18446744073709551615.csv.gz": "95c8b65cbcb4149c54493850ba4120030fac7f43de90d984110eaf02afb24d44",
+    "quality-2026.csv.gz": "d8a5cab4973db929ebb691614d51df1f7dcaa9d3c41291dad396c8b87ca56c19",
+    "quality-42.csv.gz": "33b34fa4343a20a471c1e743efebb523ee8355ac9e608e3f2db5ab48f0f15147"
+  },
+  "regions": {
+    "central": [
+      -4096,
+      -4096,
+      8192
+    ],
+    "distant-west": [
+      -24000,
+      20000,
+      2048
+    ],
+    "distant-east": [
+      28000,
+      -30000,
+      2048
+    ]
+  },
+  "purpose": "Read-only full surface survey; center-sample connectivity, not renderer captures"
+}

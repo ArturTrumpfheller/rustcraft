@@ -157,7 +157,7 @@ fn title_first_has_no_world_lock_workers_or_gameplay_camera() {
 
 #[test]
 fn radius_four_regional_world_switches_reclaim_resources_and_preserve_independent_edits() {
-    for version in [9, 10, 11] {
+    for version in [9, 10, 11, 12] {
         let mut app = app();
         let baseline = assets(&app);
         let dirs = [Directory::new(), Directory::new()];

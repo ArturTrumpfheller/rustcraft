@@ -1,3 +1,18 @@
+# Slice 37 — Biome Generation v2
+
+- [x] Original multi-noise surface ecology over exact v11 density/water/caves
+- [x] Generator12 default; frozen v1–v11 output/biomes and authoritative saved Air
+- [x] Fifteen stable biome identities, real marine/river/lake/shore classifications
+- [x] Shared geography, altitude zones, temperature/moisture and ecological transitions
+- [x] Existing species/plant assets with biome-specific supported ecosystems
+- [x] Completed visual review, multi-seed survey and matched performance evidence
+- [x] Required local regression/build/asset checks; Linux/Windows CI matrix extended (results on PR)
+- [ ] Native Gentoo/Void X11/Wayland and Windows/Radeon owner acceptance
+
+[Model, evidence and acceptance](performance/slice37/README.md).
+Slice38 caves v3, Slice39 hydrology v2 and Slice40 final worldgen stabilization
+remain separate work. No automatic generator migration or PR merge.
+
 # Slice 36 — Minecraft-style terrain v4
 
 - [x] Research public modern Overworld density/spline architecture and record limits

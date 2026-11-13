@@ -4,12 +4,23 @@ use crate::Block;
 const Q: i32 = 1024;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[repr(u8)]
 pub enum Biome {
     Plains,
     Forest,
     Desert,
     SnowyPlains,
     RockyHighlands,
+    Meadow,
+    BirchForest,
+    Taiga,
+    Grove,
+    SnowySlopes,
+    StonyPeaks,
+    Beach,
+    Ocean,
+    River,
+    Lake,
 }
 impl Biome {
     pub fn name(self) -> &'static str {
@@ -19,6 +30,16 @@ impl Biome {
             Self::Desert => "Desert",
             Self::SnowyPlains => "Snowy Plains",
             Self::RockyHighlands => "Rocky Highlands",
+            Self::Meadow => "Meadow",
+            Self::BirchForest => "Birch Forest",
+            Self::Taiga => "Taiga",
+            Self::Grove => "Grove",
+            Self::SnowySlopes => "Snowy Slopes",
+            Self::StonyPeaks => "Stony Peaks",
+            Self::Beach => "Beach",
+            Self::Ocean => "Ocean",
+            Self::River => "River",
+            Self::Lake => "Lake",
         }
     }
 }

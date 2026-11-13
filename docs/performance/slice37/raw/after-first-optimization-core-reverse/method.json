@@ -1,0 +1,10 @@
+{
+  "samples": 128,
+  "warmups": 8,
+  "order": [
+    "slice37",
+    "slice36"
+  ],
+  "percentile": "floor((n-1)*p/100)",
+  "limitations": "Clock instrumentation overhead included; requested heap excludes allocator metadata/stacks/GPU. Climate_us includes complete old climate queries (also inherited water admission in v12) plus v12 new climate fields; shared terrain fields are excluded. Classification includes v12 material/coast checks. The same geometry with different ecosystems has intentionally different mesh/light payloads."
+}

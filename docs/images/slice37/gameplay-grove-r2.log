@@ -1,0 +1,18 @@
+2026-11-12T22:25:14.100485Z  WARN winit::platform_impl::linux::x11::xdisplay: error setting XSETTINGS; Xft options won't reload automatically
+2026-11-12T22:25:14.159004Z  INFO bevy_render::renderer: AdapterInfo { name: "llvmpipe (LLVM 19.1.7, 256 bits)", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: "", driver: "llvmpipe", driver_info: "Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-12T22:25:14.159030Z  WARN bevy_render::renderer: The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+2026-11-12T22:25:14.194163Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-12T22:25:14.194191Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-11-12T22:25:14.195092Z  INFO bevy_winit::system: Creating new window RustCraft (68v0)
+2026-11-12T22:25:14.195312Z  WARN winit::platform_impl::linux::x11::util::randr: XRandR reported that the display's 0mm in size, which is certifiably insane
+2026-11-12T22:25:14.195373Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1
+2026-11-12T22:25:14.270640Z  WARN bevy_render::mesh::allocator: Mesh AssetId<bevy_mesh::mesh::Mesh>{ index: 5, generation: 0} contains no vertices.
+2026-11-12T22:25:30.355874Z  INFO rustcraft::session: Opening /workspace/work/slice37/gameplay-keyboard/grove
+2026-11-12T22:25:30.360752Z  INFO rustcraft::scene: RustCraft slice 10: 16 prepared chunks, 0 initial meshes in 70.373µs
+2026-11-12T22:25:34.055208Z  INFO rustcraft::streaming: Terrain jobs: p50 5.628435ms p95 39.027669ms p99 41.266682ms; ready descriptors 400, nonempty chunks 209, voxel bytes 389120, cache voxel bytes 761856
+2026-11-12T22:25:34.055243Z  INFO rustcraft::streaming: Light work: 7937116 cells, 16472 propagated, 48 source columns generated, 48 halo columns cached, 190 applied chunk samples
+2026-11-12T22:25:34.055246Z  INFO rustcraft::streaming: Stream metrics: regions 4 edits 0 dirty regions 0, load queue-to-install max 3.588823271s, frames p50 133.237691ms p95 198.039045ms p99 291.833939ms, mean fps 7.0
+2026-11-12T22:25:34.055250Z  INFO rustcraft::streaming: Stream service: installed 25 stale 0 cancelled 0 (0 before mesh) failed 0; first queue wait max 3.411308302s, request-ready max 3.588792991s, request-CPU-visible max 3.588823271s, dirty-CPU-visible max 310.794996ms; worker wall total 313.450485ms, compute 313.36107ms, region reads 69.561µs, preparation 2.459747ms, eviction 2.234µs; cache hits 104 misses 48
+2026-11-12T22:25:34.055256Z  INFO rustcraft::streaming: Stream idle: 400 resident chunks, 159 meshes, 389120 block bytes, 5817832 terrain buffer bytes, peak 400, queue peak 40, jobs load 24 mesh chunks 8 discarded 0, worker total 312.897884ms max 71.826881ms, install max 219.177µs, stream update max 554.116µs, dirty latency max 310.794996ms, recent frame p95 198.039045ms (26 samples)
+2026-11-12T22:25:44.374101Z  INFO rustcraft::persistence: Saving world to /workspace/work/slice37/gameplay-keyboard/grove/worlds/000000000000ae1818e76c8c08f220a5/world.rcw
+2026-11-12T22:25:44.553575Z  INFO rustcraft::persistence: World saved successfully: /workspace/work/slice37/gameplay-keyboard/grove/worlds/000000000000ae1818e76c8c08f220a5/world.rcw (revision 0)

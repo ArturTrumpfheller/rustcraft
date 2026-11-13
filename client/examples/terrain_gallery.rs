@@ -122,6 +122,14 @@ fn setup(
         version: scene.version,
     })
     .unwrap();
+    println!(
+        "BIOME_SCENE generator={} seed={} center=({}, {}) biome={}",
+        scene.version,
+        scene.seed,
+        scene.x,
+        scene.z,
+        g.biome(scene.x, scene.z).map_or("legacy", |b| b.name())
+    );
     let mut world = voxel_core::World::regional(voxel_core::regions::RegionIdentity {
         seed: scene.seed,
         generator: scene.version,
@@ -433,10 +441,12 @@ fn setup(
 fn capture(
     mut commands: Commands,
     mut frames: Local<u32>,
+    mut rendering_since: Local<Option<std::time::Instant>>,
     time: Res<Time<Real>>,
     mut captured: Local<bool>,
     mut intervals: Local<Vec<f64>>,
 ) {
+    let rendering_since = rendering_since.get_or_insert_with(std::time::Instant::now);
     *frames += 1;
     if *frames > 30 {
         intervals.push(time.delta_secs_f64() * 1000.);
@@ -447,6 +457,7 @@ fn capture(
                 .find_map(|a| a.strip_prefix("--capture-frames=").map(str::to_owned))
                 .map_or(120, |s| s.parse().unwrap())
         && time.elapsed_secs() > 10.
+        && rendering_since.elapsed() >= std::time::Duration::from_secs(5)
         && let Some(path) =
             std::env::args().find_map(|a| a.strip_prefix("--capture=").map(str::to_owned))
     {

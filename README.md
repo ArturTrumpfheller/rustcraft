@@ -1,4 +1,15 @@
+# Biome Generation v2 (Slice 37)
+
+New worlds select generator12: geographically shared climate, recognizable mixed
+and Birch forests, Taiga, mountain Meadows/Groves, snow and exposed peaks, and
+biomes matching actual seas, rivers, lakes and suitable beaches. V11 solid/air
+terrain, caves and water beds remain; historical generators1–11 and saved edits
+keep their exact output. Existing original assets, formats, bounds and radii1–4
+remain. [Design, actual renders, surveys, costs and acceptance](docs/performance/slice37/README.md).
+
 # RustCraft
+
+The sections below summarize historical slices; their new-world defaults refer to those versions.
 
 ## Minecraft-style terrain v4 (Slice 36)
 
@@ -106,7 +117,7 @@ migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest upla
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 36**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 37**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 
