@@ -258,6 +258,7 @@ def main():
     p.add_argument("--reuse", action="store_true")
     p.add_argument("--summarize-only", action="store_true", help="Aggregate existing verified raw runs without running or rebuilding them")
     p.add_argument("--caves-v3", action="store_true", help="Exact Slice38 v13/current v14 cave sites at radii2-4")
+    p.add_argument("--baseline-generator", type=int, choices=[13,14], default=13, help="Cave comparison only: 14 selects original unmerged v14 baseline")
     p.add_argument("--terrain-balance", action="store_true", help="Exact Slice37 v12/current v13 at matched ecosystem sites/radii2-4")
     p.add_argument("--biome-v2", action="store_true", help="Exact Slice36 v11/current v12 ecosystems at radii2-4")
     p.add_argument("--terrain-v4", action="store_true", help="Matched exact Slice35 v10/current v11; enables terrain scenes")
@@ -492,6 +493,7 @@ def main():
     assert manifest.get("terrain_v3", False) == a.terrain_v3, "Reused terrain mode differs"
     assert manifest.get("terrain_v4", False) == a.terrain_v4, "Reused terrain v4 mode differs"
     assert manifest.get("caves_v3", False) == a.caves_v3, "Reused caves mode differs"
+    assert manifest.get("baseline_generator", 13) == a.baseline_generator, "Reused baseline generator differs"
     assert manifest.get("terrain_balance", False) == a.terrain_balance, "Reused terrain-balance mode differs"
     assert manifest.get("biome_v2", False) == a.biome_v2, "Reused biome mode differs"
     ids = manifest["runtime_ids"]
@@ -520,7 +522,7 @@ def main():
                     "S32_EXPECT_CORE": ids[name][0],
                     "S32_EXPECT_CLIENT": ids[name][1],
                     "S34_DISTANCE": str(int(a.distance_expansion)),
-                    "S35_GENERATOR": ("14" if name == names[1] else "13") if a.caves_v3 else ("13" if name == names[1] else "12") if a.terrain_balance else ("12" if name == names[1] else "11") if a.biome_v2 else ("11" if name == names[1] else "10") if a.terrain_v4 else ("10" if a.terrain_v3 and name == names[1] else "9"),
+                    "S35_GENERATOR": ("14" if name == names[1] else str(a.baseline_generator)) if a.caves_v3 else ("13" if name == names[1] else "12") if a.terrain_balance else ("12" if name == names[1] else "11") if a.biome_v2 else ("11" if name == names[1] else "10") if a.terrain_v4 else ("10" if a.terrain_v3 and name == names[1] else "9"),
                 },
             )
             subprocess.run(
@@ -541,7 +543,7 @@ def main():
                     "S32_EXPECT_CORE": ids[name][0],
                     "S32_EXPECT_CLIENT": ids[name][1],
                     "S34_DISTANCE": str(int(a.distance_expansion)),
-                    "S35_GENERATOR": ("14" if name == names[1] else "13") if a.caves_v3 else ("13" if name == names[1] else "12") if a.terrain_balance else ("12" if name == names[1] else "11") if a.biome_v2 else ("11" if name == names[1] else "10") if a.terrain_v4 else ("10" if a.terrain_v3 and name == names[1] else "9"),
+                    "S35_GENERATOR": ("14" if name == names[1] else str(a.baseline_generator)) if a.caves_v3 else ("13" if name == names[1] else "12") if a.terrain_balance else ("12" if name == names[1] else "11") if a.biome_v2 else ("11" if name == names[1] else "10") if a.terrain_v4 else ("10" if a.terrain_v3 and name == names[1] else "9"),
                 },
             )
             if a.rendering_install:

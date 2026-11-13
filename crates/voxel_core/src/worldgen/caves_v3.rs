@@ -4,6 +4,7 @@
 //! chunks, mutable RNG, biome labels or hydrological source admission.
 use super::{Generator, caves, hash, hydrology, noise};
 use crate::{Block, BlockPos, Chunk, ChunkPos, LocalPos};
+mod density;
 const CELL: i32 = 128;
 const MIN_Y: i32 = -60;
 const STEP: i32 = 4;
@@ -280,6 +281,7 @@ fn node(g: &Generator, cell: [i32; 2]) -> Option<Node> {
 pub(super) struct Plan {
     shapes: Vec<Shape>,
     field: Option<Field>,
+    network: density::Network,
 }
 struct Builder {
     min: [i32; 2],
@@ -314,6 +316,17 @@ impl Builder {
         self.add(Shape::new(a, a, radius.map(|v| v * 16), true, false, h));
     }
     fn route(&mut self, a: [i32; 3], b: [i32; 3], h: u64, narrow: bool, entrance: bool) {
+        self.curve(a, b, h, narrow, entrance, false);
+    }
+    fn curve(
+        &mut self,
+        a: [i32; 3],
+        b: [i32; 3],
+        h: u64,
+        narrow: bool,
+        entrance: bool,
+        gentle: bool,
+    ) {
         let a = a.map(|v| v * 16 + 8);
         let b = b.map(|v| v * 16 + 8);
         // Cubic Bezier: shared endpoints guarantee joins, independent lateral
@@ -325,12 +338,20 @@ impl Builder {
             a,
             [
                 a[0] + dx / 3 - dz * bend / 3,
-                a[1] + (b[1] - a[1]) / 4 + ((h >> 8) % 17) as i32 * 16 - 128,
+                if gentle {
+                    a[1] + (b[1] - a[1]) / 3
+                } else {
+                    a[1] + (b[1] - a[1]) / 4 + ((h >> 8) % 17) as i32 * 16 - 128
+                },
                 a[2] + dz / 3 + dx * bend / 3,
             ],
             [
                 a[0] + dx * 2 / 3 + dz * bend / 4,
-                a[1] + (b[1] - a[1]) * 3 / 4,
+                if gentle {
+                    a[1] + (b[1] - a[1]) * 2 / 3
+                } else {
+                    a[1] + (b[1] - a[1]) * 3 / 4
+                },
                 a[2] + dz * 2 / 3 - dx * bend / 4,
             ],
             b,
@@ -357,7 +378,9 @@ impl Builder {
             });
             // Slowly varying anisotropic width. Min noodle diameter >2 blocks.
             let wave = (t - 12).abs();
-            let r = if narrow {
+            let r = if gentle {
+                34 + ((h >> 16) % 10) as i32 + wave / 6
+            } else if narrow {
                 23 + ((h >> 16) % 7) as i32 + wave / 4
             } else {
                 42 + ((h >> 16) % 24) as i32 + wave / 2
@@ -376,6 +399,52 @@ impl Builder {
             ));
             prev = next;
         }
+    }
+    fn ordinary_entrance(&mut self, g: &Generator, cell: [i32; 2]) {
+        let h = hash(g.config.seed, cell[0], cell[1], 0xe510);
+        if !h.is_multiple_of(4) {
+            return;
+        }
+        let x = cell[0] * 64 + 12 + ((h >> 8) % 40) as i32;
+        let z = cell[1] * 64 + 12 + ((h >> 16) % 40) as i32;
+        let dir = [[1, 0], [0, 1], [-1, 0], [0, -1]][((h >> 32) % 4) as usize];
+        let sideways = ((h >> 40) % 33) as i32 - 16;
+        let end = [
+            x + dir[0] * 80 - dir[1] * sideways,
+            z + dir[1] * 80 + dir[0] * sideways,
+        ];
+        // A conservative convex-hull reject precedes all terrain/water probes.
+        for axis in 0..2 {
+            let start = [x, z];
+            let margin = (end[1 - axis] - start[1 - axis]).abs() / 3 + 8;
+            if end[axis].max(start[axis]) + margin < self.min[axis]
+                || end[axis].min(start[axis]) - margin > self.max[axis]
+            {
+                return;
+            }
+        }
+        let mouth = hydrology::surface_for(g, x, z);
+        let bed = mouth.bed;
+        if mouth.depth() != 0
+            || bed <= hydrology::SEA_LEVEL + 6
+            || !super::terrain_v5::profile(g.config.seed, x, z).solid(bed)
+        {
+            return;
+        }
+        let bottom = (bed - 32).max(MIN_Y + 8);
+        if bottom > bed - 24 || hydrology::surface_for(g, end[0], end[1]).bed < bottom + 8 {
+            return;
+        }
+        let middle = [x + (end[0] - x) * 2 / 5, bed - 14, z + (end[1] - z) * 2 / 5];
+        self.curve([x, bed + 1, z], middle, h, false, true, true);
+        self.curve(
+            middle,
+            [end[0], bottom, end[1]],
+            h.rotate_left(23),
+            false,
+            false,
+            true,
+        );
     }
     fn system(&mut self, g: &Generator, n: Node, neighbors: [Option<Node>; 2]) {
         let h = n.h;
@@ -491,6 +560,14 @@ impl Plan {
                 if let Some(n) = nodes[i] {
                     builder.system(g, n, [nodes[i + 1], nodes[i + nx]]);
                 }
+                for dz in 0..2 {
+                    for dx in 0..2 {
+                        builder.ordinary_entrance(
+                            g,
+                            [(lo[0] + x as i32) * 2 + dx, (lo[1] + z as i32) * 2 + dz],
+                        );
+                    }
+                }
             }
         }
         let rooms: Vec<_> = builder.shapes.iter().filter(|s| s.room).collect();
@@ -508,6 +585,7 @@ impl Plan {
         Self {
             shapes: builder.shapes,
             field,
+            network: density::Network::new(g.config.seed, min, max),
         }
     }
     fn allowed(p: [i32; 3], h: i32, entrance: bool) -> bool {
@@ -521,6 +599,7 @@ impl Plan {
         self.shapes
             .iter()
             .any(|s| Self::allowed(p.0, h, s.entrance) && s.contains(p.0, self.field.as_ref()))
+            || (Self::allowed(p.0, h, false) && self.network.contains(p.0))
     }
     fn carve_if(
         &self,
@@ -558,6 +637,7 @@ impl Plan {
                 }
             }
         }
+        self.network.carve_if(c, cp, &height, &permitted);
         c.compact();
     }
 }
@@ -627,6 +707,29 @@ mod tests {
                 "{line}"
             );
         }
+    }
+    #[test]
+    fn ordinary_entrances_fit_bounded_owner_discovery() {
+        let mut emitted = 0;
+        for seed in [0, 42, 2026, u64::MAX] {
+            let g = Generator::new(super::super::GenerationConfig { seed, version: 14 }).unwrap();
+            for z in -3..=3 {
+                for x in -3..=3 {
+                    let mut b = Builder {
+                        min: [-32768; 2],
+                        max: [32767; 2],
+                        shapes: vec![],
+                    };
+                    b.ordinary_entrance(&g, [x, z]);
+                    for s in b.shapes {
+                        emitted += 1;
+                        assert!(s.min[0] >= (x - 2) * 64 && s.max[0] < (x + 3) * 64, "{s:?}");
+                        assert!(s.min[2] >= (z - 2) * 64 && s.max[2] < (z + 3) * 64, "{s:?}");
+                    }
+                }
+            }
+        }
+        assert!(emitted > 0);
     }
     #[test]
     fn owner_discovery_envelope_and_density_bounds_are_proven() {

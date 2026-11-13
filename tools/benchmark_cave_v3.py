@@ -9,15 +9,16 @@ from benchmark_stabilization import instrument,ROOT
 from benchmark_terrain_balance import wrap
 BASE='c6d36393c037e4295bf93c6a4efbc9fa12dd053c'
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--samples',type=int,default=128);p.add_argument('--warmups',type=int,default=8);p.add_argument('--reverse',action='store_true');p.add_argument('--reuse',action='store_true');p.add_argument('--build-only',action='store_true');a=p.parse_args();assert 1<=a.samples<=10000
- out=a.output.resolve();out.mkdir(parents=True,exist_ok=True);scratch=ROOT/'work/cave-v3-benchmark';names=['slice38','slice39']
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--samples',type=int,default=128);p.add_argument('--warmups',type=int,default=8);p.add_argument('--reverse',action='store_true');p.add_argument('--reuse',action='store_true');p.add_argument('--build-only',action='store_true');p.add_argument('--include-original',action='store_true',help='Include exact unmerged v14 ce690b0 as a third arm');a=p.parse_args();assert 1<=a.samples<=10000
+ original='ce690b004d8711ddb944838f2f5619be9233d5d0'
+ out=a.output.resolve();out.mkdir(parents=True,exist_ok=True);scratch=ROOT/('work/cave-v3-followup-benchmark' if a.include_original else 'work/cave-v3-benchmark');names=['slice38']+(['v14-original'] if a.include_original else [])+['slice39']
  if not a.reuse:
   sources={}
   for name in names:
    root=scratch/name
    if root.exists():shutil.rmtree(root)
    root.mkdir(parents=True)
-   data=subprocess.check_output(['git','archive',BASE,'Cargo.toml','Cargo.lock','rust-toolchain.toml','crates/voxel_core','client/Cargo.toml','client/src/main.rs'],cwd=ROOT)
+   data=subprocess.check_output(['git','archive',original if name=='v14-original' else BASE,'Cargo.toml','Cargo.lock','rust-toolchain.toml','crates/voxel_core','client/Cargo.toml','client/src/main.rs'],cwd=ROOT)
    with tarfile.open(fileobj=io.BytesIO(data)) as t:t.extractall(root,filter='data')
    if name=='slice39':shutil.rmtree(root/'crates/voxel_core');shutil.copytree(ROOT/'crates/voxel_core',root/'crates/voxel_core')
    sources[name]={str(f.relative_to(root)):hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted((root/'crates/voxel_core/src').rglob('*.rs'))}
@@ -30,6 +31,10 @@ def main():
     wrap(root/'crates/voxel_core/src/worldgen/caves_v3.rs','fn new(g:',15)
     # New dispatcher includes the entire v14 graph and room-field plan.
     wrap(root/'crates/voxel_core/src/worldgen/caves_v3.rs','fn new(seed:',17)
+    density=root/'crates/voxel_core/src/worldgen/caves_v3/density.rs'
+    if density.exists():
+     wrap(density,'fn build(',17)
+     density.write_text(density.read_text().replace('super::slice30_add','super::super::slice30_add'))
     wrap(root/'crates/voxel_core/src/worldgen/caves_v3.rs','fn carve_if(',16)
    b=root/'crates/voxel_core/examples/stabilization_bench.rs';s=b.read_text()
    s=s.replace('raw_requested_bytes"','raw_requested_bytes,cave_plan_us,cave_carve_us"').replace('{raw_requested}",','{raw_requested},{:.3},{:.3}",').replace('planning[15] as f64 / 1000.','planning[17] as f64 / 1000.,planning[15] as f64 / 1000.,planning[16] as f64 / 1000.').replace('density_plan_us','room_field_us')
@@ -38,7 +43,7 @@ def main():
    b.write_text(s)
    with (out/f'{name}-build.log').open('w') as log:subprocess.run(['cargo','build','--release','--locked','--target-dir',str(root/'target'),'-p','voxel_core','--example','stabilization_bench','--example','vegetation_edits_bench'],cwd=root,stdout=log,stderr=log,check=True)
    for example,label in [('stabilization_bench','bench'),('vegetation_edits_bench','lifecycle')]:shutil.copy2(root/f'target/release/examples/{example}',out/f'{name}-{label}')
-  (out/'sources.json').write_text(json.dumps(dict(baseline=BASE,files=sources,binary_sha256={n+'-'+b:hashlib.sha256((out/(n+'-'+b)).read_bytes()).hexdigest() for n in names for b in ['bench','lifecycle']},rustc=subprocess.check_output(['rustc','--version'],text=True),platform=platform.platform(),harness_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()),indent=2)+'\n')
+  (out/'sources.json').write_text(json.dumps(dict(baseline=BASE,original=original if a.include_original else None,files=sources,binary_sha256={n+'-'+b:hashlib.sha256((out/(n+'-'+b)).read_bytes()).hexdigest() for n in names for b in ['bench','lifecycle']},rustc=subprocess.check_output(['rustc','--version'],text=True),platform=platform.platform(),harness_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()),indent=2)+'\n')
  if a.build_only:return
  manifest=json.loads((out/'sources.json').read_text());order=names[::-1] if a.reverse else names
  for path,expected in manifest['files']['slice39'].items():

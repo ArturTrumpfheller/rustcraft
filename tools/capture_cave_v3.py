@@ -7,6 +7,8 @@ import argparse,json,subprocess,tempfile
 from pathlib import Path
 from generate_textures import png
 SCENES=[
+ ('survey-ordinary',0,(1659.5,-9.38,-1741.5),(0,0.04,-1)),
+ ('survey-entrance',0,(1646.5,26,-1733.5),(0,-0.4,-1)),
  ('rich-complex',18446744073709551615,(-181.5,-12.38,-180.5),(0.5,0.05,0.8660254)),
  ('large-cavern',42,(42.5,-25.38,70.5),(0.85,0.10,0.5)),
  ('ordinary-chamber',42,(-36.5,-47.38,76.5),(1,0.06,0.2)),
