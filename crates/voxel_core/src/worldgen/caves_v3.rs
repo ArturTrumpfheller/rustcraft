@@ -145,7 +145,8 @@ impl Field {
 struct Shape {
     a: [i32; 3], // Q4 voxel centers, absolute
     b: [i32; 3],
-    radius: [i32; 3], // Q4
+    radius: [i32; 3],        // Q4
+    lower_weights: [i32; 3], // downward-rounded Q16 reciprocal, rejection only
     min: [i32; 3],
     max: [i32; 3],
     room: bool,
@@ -167,6 +168,11 @@ impl Shape {
             a,
             b,
             radius,
+            lower_weights: if room {
+                radius.map(|r| (1024 << 16) / r)
+            } else {
+                [0; 3]
+            },
             room,
             entrance,
             salt,
@@ -188,8 +194,11 @@ impl Shape {
             // [64,48,64] Q4 and the greatest density threshold is 1753.
             let lower: i64 = (0..3)
                 .map(|i| {
-                    let q =
-                        (d[i].abs() - [64, 48, 64][i]).max(0) * 1024 / i64::from(self.radius[i]);
+                    // Downward rounding only weakens rejection. The exact
+                    // cavity metric below retains its original division.
+                    let q = ((d[i].abs() - [64, 48, 64][i]).max(0)
+                        * i64::from(self.lower_weights[i]))
+                        >> 16;
                     q * q / 1024
                 })
                 .sum();

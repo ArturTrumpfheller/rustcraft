@@ -350,7 +350,8 @@ def main():
                 s = s.replace('"meadow" => [208,-116]', '"meadow" => [-39,-38]')
                 s = s.replace('"grove" => [220,108]', '"grove" => [5,-12]')
                 s = s.replace('"mountain" => [-249,-197]', '"mountain" => [-45,-36]')
-                s = s.replace('let seed = if scene=="grove" { 2026 } else if matches!(scene,', 'let seed = if scene=="grove" { 2026 } else if matches!(scene,"forest"|"birch"|"meadow"|"mountain") {42} else if matches!(scene,')
+                s = s.replace('"desert" => [-168,-200]', '"desert" => [-12,-12]')
+                s = s.replace('let seed = if scene=="grove" { 2026 } else if matches!(scene,', 'let seed = if scene=="desert" { u64::MAX } else if scene=="grove" { 2026 } else if matches!(scene,"forest"|"birch"|"meadow"|"mountain") {42} else if matches!(scene,')
                 tests.write_text(s)
             if a.rendering_install:
                 tests = root / "client/src/scene/tests.rs"
@@ -658,7 +659,7 @@ def main():
                 "frame_hz": 240,
                 "rendering_install": a.rendering_install,
                 "distance_expansion": a.distance_expansion,
-                "transition_scope": ("Caves compares v13/v14: forest=cavern, birch=intersection, taiga=narrow, meadow=deep, grove=entrance; mountain is upper caves; headless radii2-4. Geometry/resources intentionally differ." if a.caves_v3 else "Terrain balance compares v12/v13 at matched ecosystem sites and radii2-4; geometry/resources intentionally differ." if a.terrain_balance else "Biome mode compares v11/v12 at matched ecosystem sites and radii2-4; geometry/resource signatures intentionally differ." if a.biome_v2 else "Terrain mode compares v10/v11 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds." if a.terrain_v4 else "Terrain mode compares v9/v10 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds." if a.terrain_v3 else "In distance mode, radius stress visits each build's own maximum (baseline3, candidate4); common final signatures match but these rows are not matched-workload regression evidence."),
+                "transition_scope": ("Caves compares v13/v14: forest=cavern, birch=intersection, taiga=narrow, meadow=deep, grove=entrance, desert=rich-complex; mountain is upper caves; headless radii2-4. Geometry/resources intentionally differ." if a.caves_v3 else "Terrain balance compares v12/v13 at matched ecosystem sites and radii2-4; geometry/resources intentionally differ." if a.terrain_balance else "Biome mode compares v11/v12 at matched ecosystem sites and radii2-4; geometry/resource signatures intentionally differ." if a.biome_v2 else "Terrain mode compares v10/v11 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds." if a.terrain_v4 else "Terrain mode compares v9/v10 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds." if a.terrain_v3 else "In distance mode, radius stress visits each build's own maximum (baseline3, candidate4); common final signatures match but these rows are not matched-workload regression evidence."),
                 "aggregation_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                 "machine": platform.platform(),
                 "note": "Headless scripted position/velocity, fixed 240Hz deadlines, no rendered frames/GPU. RSS is process-wide; requested heap peak is additional process heap during worker window, excludes stacks/allocator metadata/GPU and may include concurrent main allocations.",

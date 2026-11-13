@@ -34,7 +34,7 @@ def main():
    b=root/'crates/voxel_core/examples/stabilization_bench.rs';s=b.read_text()
    s=s.replace('raw_requested_bytes"','raw_requested_bytes,cave_plan_us,cave_carve_us"').replace('{raw_requested}",','{raw_requested},{:.3},{:.3}",').replace('planning[15] as f64 / 1000.','planning[17] as f64 / 1000.,planning[15] as f64 / 1000.,planning[16] as f64 / 1000.').replace('density_plan_us','room_field_us')
    marker='    for (name, seed, c) in scenes {'
-   s=s.replace(marker,"    scenes = vec![(\"quiet-plain\",0,[-220,-252]),(\"cavern\",42,[-13,5]),(\"intersection\",42,[-12,5]),(\"narrow\",0,[-7,12]),(\"deep\",42,[-39,-38]),(\"mountain\",42,[-45,-36]),(\"entrance\",2026,[5,-12]),(\"distant\",2026,[-1464,1272])];\n"+marker)
+   s=s.replace(marker,"    scenes = vec![(\"quiet-plain\",0,[-220,-252]),(\"cavern\",42,[-13,5]),(\"rich-complex\",u64::MAX,[-12,-12]),(\"intersection\",42,[-12,5]),(\"narrow\",0,[-7,12]),(\"deep\",42,[-39,-38]),(\"mountain\",42,[-45,-36]),(\"entrance\",2026,[5,-12]),(\"distant\",2026,[-1464,1272])];\n"+marker)
    b.write_text(s)
    with (out/f'{name}-build.log').open('w') as log:subprocess.run(['cargo','build','--release','--locked','--target-dir',str(root/'target'),'-p','voxel_core','--example','stabilization_bench','--example','vegetation_edits_bench'],cwd=root,stdout=log,stderr=log,check=True)
    for example,label in [('stabilization_bench','bench'),('vegetation_edits_bench','lifecycle')]:shutil.copy2(root/f'target/release/examples/{example}',out/f'{name}-{label}')

@@ -21,9 +21,11 @@ def until(condition,timeout=60):
   time.sleep(.2)
  raise TimeoutError('Production client did not reach the requested state')
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--data-root',type=Path,required=True);p.add_argument('--executable',type=Path,default=Path('target/release/rustcraft'));a=p.parse_args()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--data-root',type=Path,required=True);p.add_argument('--cave-v3',action='store_true');p.add_argument('--executable',type=Path,default=Path('target/release/rustcraft'));a=p.parse_args()
  a.output.mkdir(parents=True,exist_ok=True);a.data_root.mkdir(parents=True,exist_ok=False);records=[]
- for name,seed,chunk,radius in [('birch',0,[-120,-252],4),('grove',18446744073709551615,[-101,-252],2)]:
+ version=14 if a.cave_v3 else 12
+ scenes=[('cave-entrance',2026,[5,-11],4)] if a.cave_v3 else [('birch',0,[-120,-252],4),('grove',18446744073709551615,[-101,-252],2)]
+ for name,seed,chunk,radius in scenes:
   data=(a.data_root/name).resolve();data.mkdir();log_path=a.output/f'gameplay-{name}-r{radius}.log'
   with log_path.open('w') as log:
    proc=subprocess.Popen([str(a.executable.resolve())],stdout=log,stderr=log,env={**os.environ,'RUSTCRAFT_DATA_DIR':str(data),'RUSTCRAFT_WORLD_SEED':str(seed),'RUSTCRAFT_START_CHUNK':','.join(map(str,chunk)),'RUSTCRAFT_LOAD_RADIUS':str(radius)})
@@ -36,16 +38,18 @@ def main():
     for _ in range(3):key(window,'Down')
     key(window,'Return');key(window,'Tab');key(window,'Tab');key(window,'Return')
     until(lambda:list((data/'worlds').glob('*/world.meta')));time.sleep(1)
-    for _ in range(3):key(window,'Down')
-    key(window,'Return')
+    if a.cave_v3:click(350,558)
+    else:
+     for _ in range(3):key(window,'Down')
+     key(window,'Return')
     expected_chunks=(radius*2+1)**2*16
-    title=until(lambda:(t if f'Chunks: {expected_chunks} pending 0 dirty 0' in (t:=xdo('getwindowname',window)) and f'gen12 radius {radius}' in t else None),timeout=90)
+    title=until(lambda:(t if f'Chunks: {expected_chunks} pending 0 dirty 0' in (t:=xdo('getwindowname',window)) and f'gen{version} radius {radius}' in t else None),timeout=90)
     time.sleep(2);key(window,'Escape');key(window,'Escape')
-    before=xdo('getwindowname',window);xdo('keydown','w');time.sleep(1);xdo('keyup','w');time.sleep(1);after=xdo('getwindowname',window)
+    before=xdo('getwindowname',window);xdo('keydown','w');time.sleep(2.5 if a.cave_v3 else 1);xdo('keyup','w');time.sleep(1);after=xdo('getwindowname',window)
     for debug in [False,True]:
      if debug:key(window,'F3');time.sleep(1)
      path=a.output/f'gameplay-{name}-r{radius}{"-f3" if debug else ""}.png';ImageGrab.grab(xdisplay=os.environ.get('DISPLAY')).save(path)
-     records.append(dict(file=path.name,sha256=hashlib.sha256(path.read_bytes()).hexdigest(),seed=seed,generator=12,radius=radius,start_chunk=chunk,development_panorama=False,production_client=True,title_ready=title,title_before_walk=before,title_after_walk=after,executable_sha256=hashlib.sha256(a.executable.read_bytes()).hexdigest()))
+     records.append(dict(file=path.name,sha256=hashlib.sha256(path.read_bytes()).hexdigest(),seed=seed,generator=version,radius=radius,start_chunk=chunk,development_panorama=False,production_client=True,title_ready=title,title_before_walk=before,title_after_walk=after,executable_sha256=hashlib.sha256(a.executable.read_bytes()).hexdigest()))
     key(window,'Escape')
     for _ in range(3):key(window,'Down')
     key(window,'Return');proc.wait(timeout=30);assert proc.returncode==0

@@ -5,6 +5,7 @@ use voxel_core::{
     worldgen::{GenerationConfig, Generator, caves_v3},
 };
 fn main() {
+    println!("kind,seed,x,feet_y,z,anchor_x,anchor_y,anchor_z,surface_y");
     for (seed, min, max) in [
         (42, [-256, -256], [256, 256]),
         (0, [-256, -256], [256, 256]),
@@ -45,7 +46,10 @@ fn main() {
             }
             if let Some((x, y, z, _)) = found {
                 println!(
-                    "{kind},{seed},{x},{y},{z},anchor={p:?},surface={}",
+                    "{kind},{seed},{x},{y},{z},{},{},{},{}",
+                    p[0],
+                    p[1],
+                    p[2],
                     g.height(x, z).unwrap()
                 );
             }
