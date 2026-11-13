@@ -1,0 +1,11 @@
+{
+  "samples": 128,
+  "warmups": 8,
+  "order": [
+    "slice39",
+    "v14-original",
+    "slice38"
+  ],
+  "percentile": "floor((n-1)*p/100)",
+  "limitations": "Clock overhead included. Requested heap excludes allocator metadata/stacks/GPU. Mesh/light output intentionally differs. No native FPS/GPU claims."
+}

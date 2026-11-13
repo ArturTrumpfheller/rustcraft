@@ -318,3 +318,23 @@ constants, reference photographs or assets are distributed. NumPy/SciPy/Matplotl
 are offline analysis tools available in the development environment, not game
 requirements or bundled dependencies. Public research links and their sampling
 limits are recorded in `performance/slice38/README.md`.
+
+## Slice39 follow-up provenance
+
+The continuous cave fields, carver composition, RCV1 protocol, NBT/Anvil reader
+and analysis code are original project code under MIT OR Apache-2.0. Official
+Java26.3 release notes and historical cave-development notes were researched.
+Public extracted26.3 registry structure at `misode/mcmeta` tag `26.3-data`
+(commit `538b2b167248c648b2198f2c0d56eced10dfc0cf`) was inspected read-only
+for conceptual composition. No registry files, proprietary implementations,
+noise tables, binaries, Minecraft textures or Minecraft world data are bundled.
+The environment blocks official Mojang downloads; no genuine26.3 distributions
+are claimed. The importer operates only on an authorized local world and never
+accepts a EULA or downloads game software.
+
+Disposable analysis uses installed NumPy2.3.5 and SciPy1.17.0 (BSD3-clause),
+and Matplotlib3.10.8 (Matplotlib license based on PSF). These are analysis-only
+tools, not RustCraft runtime dependencies or vendored distributions; upstream
+package notices apply when installing them separately. Cargo manifests, lockfile
+and runtime assets are unchanged. Follow-up screenshots show RustCraft's original
+materials in the actual Bevy renderer; diagnostic lighting is explicitly labeled.

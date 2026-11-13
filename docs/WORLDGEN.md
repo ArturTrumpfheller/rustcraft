@@ -1,3 +1,17 @@
+# Slice39 follow-up: continuous cave fields and ordinary entrances
+
+Unmerged generator14 now combines the original bounded chamber/connection graph
+with continuous signed 3D fields. Intersecting fields form winding routes between
+owners; a separate regional broad field forms larger irregular cavities. Shared
+4³ samples are built lazily per16-block vertical band and interval bounds reject
+whole cells without changing classification. Independent64-block feature owners
+also emit occasional small, gently descending dry entrances, addressing the
+poor discovery rate measured on conservative surface walks. Terrain, water caps,
+spawn/foundation protection and the frozen1–13 paths remain unchanged.
+
+[Current model, larger survey, native reproduction and reference limitations](performance/slice39/followup/README.md).
+Earlier Slice39 sections describe the original candidate before this follow-up.
+
 # Cave Generation v3 — generator14
 
 New regional worlds select14. The complete model, independent fixtures,

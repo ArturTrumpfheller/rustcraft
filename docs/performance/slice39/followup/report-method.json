@@ -1,0 +1,19 @@
+{
+  "analysis_sha256": "86968688e80f04f1b8ce318b2e347158aa2b6f6dec3d27cba4c29e2a07f8c8d5",
+  "report_sha256": "5a88131a205bb9276a6c20b77d620432db496ea3f60d7bad78ce5ae79eb7e437",
+  "inputs": {
+    "v13": "0ebac070b90a0448662a8a3d23d5be871813ebe8302a2bbe47ae297f734ef003",
+    "v14-original": "945b6946ab590753312d3bf05d36c877dba36db8761d362fa4c12c6c0f5ead63",
+    "v14-revised": "6849d540dd2088033e01891bf1542cabd588b7e0ceb80e51556cccb7e1669583"
+  },
+  "bootstrap": "4096 resamples of whole seed clusters; RNG392026; percentile95%; windows/voxels are not independent trials",
+  "caveats": [
+    "Conditional terrain strata are separate, not population weights.",
+    "All-zero bootstrap intervals are degenerate observed-sample intervals, not upper population bounds.",
+    "This is a fixed tuning/evaluation cohort, not held-out validation of distributional parity.",
+    "Voxel runs/broad cores are shape proxies, not unique physical tunnels/chambers.",
+    "Window-clipped geodesics are two-sweep lower bounds.",
+    "Surface walks use conservative floor graphs and count unreachable endpoint pairs.",
+    "No Minecraft measurements exist unless a genuine reference arm is supplied."
+  ]
+}

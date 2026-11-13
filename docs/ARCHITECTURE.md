@@ -1,3 +1,18 @@
+# Slice39 follow-up: continuous cave composition
+
+V14's local feature graph is supplemented by a globally aligned4³ integer field.
+Three signed samples compose intersecting winding passages and broad cavities;
+regional X/Z modulation varies broad-cavity admission. A per-plan lazy array of
+16 vertical bands avoids constructing fields above terrain or for surface-only
+root queries. Each band caches its field corners and conservative cell intervals.
+No density map survives the existing column sampler. Small dry entrance carvers
+use independent64-block ownership, convex-hull rejection before terrain probes,
+and bounded grades; they do not depend on chamber-owner admission. All carving
+still passes the existing final roof/spawn/foundation and water-permission gates.
+Point/chunk paths share the same predicate. Historical dispatch is untouched.
+
+[Evidence and remaining comparison limits](performance/slice39/followup/README.md).
+
 # Slice39: bounded dry cavity graph and density
 
 Generator14 explicitly reuses v13 terrain parameters at every dependent query.

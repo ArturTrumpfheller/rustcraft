@@ -6,6 +6,8 @@
 - [x] Preserve exact historical1–13 geometry, biomes, water and persistence envelopes
 - [x] Protected water beds/foundation/spawn and explicit dry-v14/old-pool contract
 - [x] Bounded multiseed air topology and separate standing-player floor diagnostics
+- [x] Continuous v14 cave fields, ordinary graded entrances and 256-window/32-seed follow-up
+- [ ] Quantitative Java26.3 distribution matching; official reference download blocked
 - [x] Complete rendered inspection and matched performance analysis
 - [x] Complete locked local checks; Linux/Windows CI results linked on the PR
 - [ ] Native Gentoo/Void X11/Wayland and Windows/Radeon owner acceptance

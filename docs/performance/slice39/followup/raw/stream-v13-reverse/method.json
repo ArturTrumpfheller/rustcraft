@@ -1,0 +1,16 @@
+{
+  "baseline": "c6d36393c037e4295bf93c6a4efbc9fa12dd053c",
+  "order": [
+    "slice39",
+    "slice38"
+  ],
+  "repeats": 1,
+  "frames": 40,
+  "frame_hz": 240,
+  "rendering_install": true,
+  "distance_expansion": true,
+  "transition_scope": "Caves compares v13/v14: forest=cavern, birch=intersection, taiga=narrow, meadow=deep, grove=entrance, desert=rich-complex; mountain is upper caves; headless radii2-4. Geometry/resources intentionally differ.",
+  "aggregation_sha256": "70a465e5f6ff6985fe69f099c2ee4453353b26aa7005159d6ca9dd6f56e56cda",
+  "machine": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "note": "Headless scripted position/velocity, fixed 240Hz deadlines, no rendered frames/GPU. RSS is process-wide; requested heap peak is additional process heap during worker window, excludes stacks/allocator metadata/GPU and may include concurrent main allocations."
+}

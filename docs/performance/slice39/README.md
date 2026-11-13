@@ -1,5 +1,7 @@
 # Slice 39 — Cave Generation v3 (generator14)
 
+**Current unmerged v14:** the [26.3-reference follow-up](followup/README.md) adds continuous 3D cave fields, small graded entrance carvers, a 256-window/32-seed survey, conservative surface walks and a three-version cost comparison. The sections below retain the original `ce690b0` design and measurements as archived evidence; they are not the revised v14 statistics. Quantitative Minecraft parity remains unverified because official vanilla downloads are blocked in this environment.
+
 Base: exact merged Slice38 `c6d36393c037e4295bf93c6a4efbc9fa12dd053c`.
 
 ## Investigation, before implementation
