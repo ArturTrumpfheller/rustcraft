@@ -97,6 +97,8 @@ pub(super) struct Plan {
 /// real cave opening. Sampling is cached per candidate footprint during planning.
 struct Roots<'a> {
     known: Option<([i32; 2], &'a [hydrology::Surface])>,
+    ecology: Option<([i32; 2], &'a [super::biome_v2::Sample])>,
+    elevation_cache: BTreeMap<[i32; 2], i32>,
     geography: hydrology::Geography,
     caves: caves::Plan,
     water: BTreeMap<[i32; 2], hydrology::Surface>,
@@ -105,6 +107,8 @@ impl Roots<'_> {
     fn new(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Self {
         Self {
             known: None,
+            ecology: None,
+            elevation_cache: BTreeMap::new(),
             geography: hydrology::Geography::for_generator(g, min, max),
             caves: caves::Plan::new(g.config.seed, min, max),
             water: BTreeMap::new(),
@@ -123,7 +127,7 @@ impl Roots<'_> {
                 g.config.seed,
                 x,
                 z,
-                if g.config.version == 11 {
+                if g.config.version >= 11 {
                     super::terrain_v4::height(g.config.seed, x, z)
                 } else if g.config.version == 10 {
                     super::terrain_v3::height(g.config.seed, x, z)
@@ -133,21 +137,58 @@ impl Roots<'_> {
             )
         })
     }
-    fn ground(&mut self, g: &Generator, x: i32, z: i32) -> (i32, Block) {
+    fn sample_v12(&mut self, g: &Generator, x: i32, z: i32) -> super::biome_v2::Sample {
+        if let Some((min, samples)) = self.ecology {
+            let dx = x - min[0];
+            let dz = z - min[1];
+            if (0..18).contains(&dx) && (0..18).contains(&dz) {
+                return samples[(dz * 18 + dx) as usize];
+            }
+        }
+        let water = self.surface(g, x, z);
+        let slope = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+            .into_iter()
+            .map(|[dx, dz]| (self.surface(g, x + dx, z + dz).bed - water.bed).abs())
+            .max()
+            .unwrap();
+        super::biome_v2::evaluate(
+            g,
+            x,
+            z,
+            super::biome_v2::parameters_with_elevation(g.config.seed, x, z, |px, pz| {
+                *self.elevation_cache.entry([px, pz]).or_insert_with(|| {
+                    super::terrain_v4::parameters(g.config.seed, px, pz).offset / 4
+                })
+            }),
+            water,
+            slope,
+        )
+    }
+    fn dry_ground(&mut self, g: &Generator, x: i32, z: i32) -> Option<i32> {
         let water = self.surface(g, x, z);
         let h = water.bed;
         if h <= hydrology::SEA_LEVEL {
-            return (h, Block::Air);
+            return None;
         }
         if self.caves.contains(BlockPos([x, h, z]), h) {
             let sealed = [[-1, 0], [1, 0], [0, -1], [0, 1]]
                 .into_iter()
                 .any(|[dx, dz]| self.surface(g, x + dx, z + dz).depth() > 0);
             if !sealed {
-                return (h, Block::Air);
+                return None;
             }
         }
-        let c = if g.config.version >= 10 {
+        Some(h)
+    }
+    fn ground(&mut self, g: &Generator, x: i32, z: i32) -> (i32, Block) {
+        let water = self.surface(g, x, z);
+        let h = water.bed;
+        if self.dry_ground(g, x, z).is_none() {
+            return (h, Block::Air);
+        }
+        let c = if g.config.version == 12 {
+            self.sample_v12(g, x, z).column()
+        } else if g.config.version >= 10 {
             let slope = [[-1, 0], [1, 0], [0, -1], [0, 1]]
                 .into_iter()
                 .map(|[dx, dz]| (self.surface(g, x + dx, z + dz).bed - h).abs())
@@ -161,7 +202,8 @@ impl Roots<'_> {
         } else {
             biome::column(g.config.seed, x, z)
         };
-        let top = if h <= hydrology::SEA_LEVEL + 2
+        let top = if g.config.version < 12
+            && h <= hydrology::SEA_LEVEL + 2
             && water.coastal
             && !matches!(c.top, Block::SnowyGround | Block::Stone)
         {
@@ -190,7 +232,7 @@ fn density(seed: u64, x: i32, z: i32, c: Climate) -> u64 {
 }
 impl Plan {
     pub(super) fn trees(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Self {
-        Self::trees_with_surface(g, min, max, None)
+        Self::trees_with_surface(g, min, max, None, None)
     }
     pub(super) fn trees_on_surface(
         g: &Generator,
@@ -199,16 +241,27 @@ impl Plan {
         columns: &[hydrology::Surface],
     ) -> Self {
         debug_assert_eq!(columns.len(), 324);
-        Self::trees_with_surface(g, min, max, Some(columns))
+        Self::trees_with_surface(g, min, max, Some(columns), None)
+    }
+    pub(super) fn trees_v12(
+        g: &Generator,
+        min: [i32; 2],
+        max: [i32; 2],
+        columns: &[hydrology::Surface],
+        ecology: &[super::biome_v2::Sample],
+    ) -> Self {
+        Self::trees_with_surface(g, min, max, Some(columns), Some(ecology))
     }
     fn trees_with_surface(
         g: &Generator,
         min: [i32; 2],
         max: [i32; 2],
         known: Option<&[hydrology::Surface]>,
+        ecology: Option<&[super::biome_v2::Sample]>,
     ) -> Self {
         let mut result = Self::default();
         let mut ground_cache = BTreeMap::new();
+        let mut support_cache = BTreeMap::new();
         let mut roots: Option<Roots<'_>> = None;
         for gz in (min[1] - 9).div_euclid(8)..=(max[1] + 2).div_euclid(8) {
             for gx in (min[0] - 9).div_euclid(8)..=(max[0] + 2).div_euclid(8) {
@@ -227,18 +280,61 @@ impl Plan {
                 {
                     continue;
                 }
-                let c = biome::sample_climate(g.config.seed, x, z).unwrap();
-                if biome::classify(c) == Biome::Desert
-                    || (h >> 24) % 1000 >= density(g.config.seed, x, z, c)
-                {
-                    continue;
-                }
-                let species = if c.temperature < -180 || c.geography > 200 {
-                    Species::Spruce
-                } else if (h >> 36) % 100 < (42 + c.moisture / 40).clamp(20, 60) as u64 {
-                    Species::Birch
+                let ecological = if g.config.version == 12 {
+                    let roots = roots.get_or_insert_with(|| {
+                        let mut roots = Roots::new(g, min.map(|v| v - 5), max.map(|v| v + 5));
+                        roots.known = known.map(|columns| (min, columns));
+                        roots.ecology = ecology.map(|samples| (min, samples));
+                        roots
+                    });
+                    Some(roots.sample_v12(g, x, z))
                 } else {
-                    Species::Oak
+                    None
+                };
+                let species = if let Some(s) = ecological {
+                    if (hash(g.config.seed, gx, gz, 0xc030) >> 24) % 1000
+                        >= super::biome_v2::tree_density(g.config.seed, x, z, s)
+                    {
+                        continue;
+                    }
+                    match s.biome {
+                        Biome::Taiga | Biome::Grove | Biome::SnowyPlains => Species::Spruce,
+                        Biome::BirchForest => {
+                            if (h >> 36) % 100 < 92 {
+                                Species::Birch
+                            } else {
+                                Species::Oak
+                            }
+                        }
+                        Biome::Meadow => {
+                            if (h >> 36) % 100 < 65 {
+                                Species::Birch
+                            } else {
+                                Species::Oak
+                            }
+                        }
+                        _ => {
+                            if (h >> 36) % 100 < 25 {
+                                Species::Birch
+                            } else {
+                                Species::Oak
+                            }
+                        }
+                    }
+                } else {
+                    let c = biome::sample_climate(g.config.seed, x, z).unwrap();
+                    if biome::classify(c) == Biome::Desert
+                        || (h >> 24) % 1000 >= density(g.config.seed, x, z, c)
+                    {
+                        continue;
+                    }
+                    if c.temperature < -180 || c.geography > 200 {
+                        Species::Spruce
+                    } else if (h >> 36) % 100 < (42 + c.moisture / 40).clamp(20, 60) as u64 {
+                        Species::Birch
+                    } else {
+                        Species::Oak
+                    }
                 };
                 let height = match species {
                     Species::Oak => 4 + (h >> 42) % 3,
@@ -262,10 +358,28 @@ impl Plan {
                 // cave mouths; every admitted leaf stays above the final terrain.
                 let clear = (-2..=2).all(|dx| {
                     (-2..=2).all(|dz| {
-                        let (other, material) = *ground_cache
-                            .entry([x + dx, z + dz])
-                            .or_insert_with(|| roots.ground(g, x + dx, z + dz));
-                        (other - ground).abs() <= 1 && material != Block::Air
+                        let support = if g.config.version == 12 {
+                            // A neighbor only proves dry support and crown
+                            // clearance; its ecological material is irrelevant.
+                            *support_cache
+                                .entry([x + dx, z + dz])
+                                .or_insert_with(|| roots.dry_ground(g, x + dx, z + dz))
+                        } else {
+                            let (h, material) = *ground_cache
+                                .entry([x + dx, z + dz])
+                                .or_insert_with(|| roots.ground(g, x + dx, z + dz));
+                            (material != Block::Air).then_some(h)
+                        };
+                        let Some(other) = support else {
+                            return false;
+                        };
+                        // Downhill ground cannot intersect a crown. Higher
+                        // neighbors must stay below its lowest cell (root+3).
+                        if g.config.version == 12 {
+                            other <= ground + 2
+                        } else {
+                            (other - ground).abs() <= 1
+                        }
                     })
                 });
                 if clear {
@@ -333,6 +447,7 @@ impl Plan {
                             })
                         }
                     }
+                    _ => unreachable!("historical classifier"),
                 };
                 if let Some(b) = b
                     && b.supported_by(support(BlockPos([px, heights[i], pz])))
@@ -340,6 +455,33 @@ impl Plan {
                 {
                     self.plants.push((p, b));
                 }
+            }
+        }
+    }
+    pub(super) fn plants_v12(
+        &mut self,
+        seed: u64,
+        min: [i32; 2],
+        samples: &[super::biome_v2::Sample],
+        support: impl Fn(BlockPos) -> Block,
+    ) {
+        for (i, &s) in samples.iter().enumerate() {
+            let x = min[0] + (i % 18) as i32;
+            let z = min[1] + (i / 18) as i32;
+            if !(-32768..32768).contains(&x)
+                || !(-32768..32768).contains(&z)
+                || reserved(x, z)
+                || s.height <= hydrology::SEA_LEVEL
+            {
+                continue;
+            }
+            let p = BlockPos([x, s.height + 1, z]);
+            if self.block(p).is_none()
+                && let Some(b) = super::biome_v2::plant(seed, x, z, s)
+                && b.supported_by(support(BlockPos([x, s.height, z])))
+                && support(p) == Block::Air
+            {
+                self.plants.push((p, b));
             }
         }
     }
@@ -507,6 +649,7 @@ mod tests {
                                 assert_eq!(block, Block::Fern)
                             }
                             Biome::Plains | Biome::Forest => assert_ne!(block, Block::DeadBush),
+                            _ => unreachable!("historical classifier"),
                         }
                         let below = p.offset([0, -1, 0]).unwrap();
                         assert!(block.supported_by(b.block(below)));

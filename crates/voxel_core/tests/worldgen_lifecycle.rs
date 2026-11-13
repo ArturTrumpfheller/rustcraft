@@ -36,7 +36,7 @@ fn load(store: &SaveStore, world: &mut World, c: [i32; 2]) {
 }
 #[test]
 fn generated_removals_and_cross_region_builds_survive_save_evict_regenerate_restart() {
-    for version in [3, 6, 8, 9, 10, 11] {
+    for version in [3, 6, 8, 9, 10, 11, 12] {
         let dir = Directory::new();
         let id = RegionIdentity {
             seed: 0,
@@ -47,19 +47,27 @@ fn generated_removals_and_cross_region_builds_survive_save_evict_regenerate_rest
             SaveStore::open_with(&dir.0, || Ok(World::regional(id))).unwrap();
         let _ = store.load_player(&mut world).unwrap();
         let root = std::fs::read(store.path()).unwrap();
-        let left = [-137, -256];
-        let right = [-136, -256];
+        let left = if version == 12 {
+            [-121, -252]
+        } else {
+            [-137, -256]
+        };
+        let right = [left[0] + 1, left[1]];
         load(&store, &mut world, left);
         // Unknown support dependencies fail closed. Read the neighboring overlay
         // without materializing its chunks, then edit while that side is pending.
-        let stone = BlockPos([-2177, world.world_height().min + 1, -4095]);
+        let stone = BlockPos([
+            right[0] * 16 - 1,
+            world.world_height().min + 1,
+            right[1] * 16 + 1,
+        ]);
         assert_eq!(world.block(stone), Block::Stone);
         assert_eq!(
             world.set_block(stone, Block::Air),
             Err(voxel_core::interaction::EditError::NotLoaded)
         );
         store.prepare_regional_column(&mut world, right).unwrap();
-        assert!(!world.ready(BlockPos([-2176, stone.0[1], -4095])));
+        assert!(!world.ready(BlockPos([right[0] * 16, stone.0[1], right[1] * 16 + 1])));
         world.set_block(stone, Block::Air).unwrap();
         let mut inv = Inventory::empty();
         store.save_player_session(&world, &inv, true).unwrap();
@@ -109,7 +117,11 @@ fn generated_removals_and_cross_region_builds_survive_save_evict_regenerate_rest
             assert_eq!(batch.changes()[0].position, p);
             removals.push(p);
         }
-        let build = BlockPos([-2176, world.world_height().max - 2, -4095]);
+        let build = BlockPos([
+            right[0] * 16,
+            world.world_height().max - 2,
+            right[1] * 16 + 1,
+        ]);
         world.set_block(build, Block::BirchWood).unwrap();
         let snapshot = world.save_snapshot();
         assert_eq!(snapshot.chunk_count(), 0);

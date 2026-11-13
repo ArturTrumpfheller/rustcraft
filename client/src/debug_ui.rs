@@ -31,6 +31,11 @@ pub(crate) struct DebugOverlay {
     seconds_since_refresh: f64,
     frame_seconds: Option<f64>,
     text: String,
+    biome_cache: Option<(
+        voxel_core::StreamIdentity,
+        [i32; 2],
+        Option<voxel_core::worldgen::Biome>,
+    )>,
 }
 impl DebugOverlay {
     fn sample_frame(&mut self, seconds: f64) {
@@ -307,7 +312,25 @@ fn update(
     );
     if let Some(id) = world.identity() {
         if id.generator >= 5 {
-            if let Some(biome) = voxel_core::worldgen::sample_biome(id.seed, block[0], block[2]) {
+            let position = [block[0], block[2]];
+            let biome = if id.generator == 12 {
+                if let Some((cached_id, cached_position, biome)) = overlay.biome_cache
+                    && cached_id == id
+                    && cached_position == position
+                {
+                    biome
+                } else {
+                    let biome = data
+                        .stream
+                        .as_ref()
+                        .and_then(|s| s.biome(block[0], block[2]));
+                    overlay.biome_cache = Some((id, position, biome));
+                    biome
+                }
+            } else {
+                voxel_core::worldgen::sample_biome(id.seed, block[0], block[2])
+            };
+            if let Some(biome) = biome {
                 let _ = writeln!(
                     overlay.text,
                     "BIOME: {} / GENERATOR: {}",

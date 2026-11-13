@@ -38,6 +38,8 @@ jobs:
         run: python tools/terrain_v3_reference.py --check
       - name: Independent v11 density fixtures
         run: python tools/terrain_v4_reference.py --check
+      - name: Independent v12 climate fixtures
+        run: python tools/biome_v2_reference.py --check
       - name: Cargo format
         run: cargo fmt --all -- --check
       - name: Cargo Clippy
@@ -65,8 +67,14 @@ jobs:
       - name: Optimized voxel processing regressions
         run: cargo test --release --locked -p voxel_core --lib
       - name: Optimized terrain and persistence integration
-        run: cargo test --release --locked -p voxel_core --test terrain_v3 --test terrain_v4 --test worldgen_integration --test worldgen_lifecycle
+        run: cargo test --release --locked -p voxel_core --test terrain_v3 --test terrain_v4 --test biome_v2 --test worldgen_integration --test worldgen_lifecycle
       - name: Optimized streaming and lifecycle regressions
         run: 'cargo test --release --locked -p rustcraft --bin rustcraft streaming:: -- --test-threads=1'
       - name: Optimized session regressions
         run: 'cargo test --release --locked -p rustcraft --bin rustcraft session:: -- --test-threads=1'
+      - name: Optimized rendering regressions
+        run: 'cargo test --release --locked -p rustcraft --bin rustcraft scene:: -- --test-threads=1'
+      - name: Optimized F3 biome diagnostics
+        run: 'cargo test --release --locked -p rustcraft --bin rustcraft debug_ui:: -- --test-threads=1'
+      - name: Release workspace build
+        run: cargo build --release --locked --workspace

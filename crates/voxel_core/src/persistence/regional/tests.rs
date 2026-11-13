@@ -964,7 +964,7 @@ fn v7_manifest_and_region_keep_formats_and_reject_future_generator_identity() {
     assert_eq!(u32_at(&bytes, 8), 1);
     assert_eq!(decode_region(&bytes, id, p).unwrap(), edits);
     assert!(decode_region(&bytes, RegionIdentity { generator: 6, ..id }, p).is_err());
-    for future in [12, u32::MAX] {
+    for future in [13, u32::MAX] {
         let mut invalid = root.clone();
         invalid[32..36].copy_from_slice(&future.to_le_bytes());
         assert!(matches!(decode(&finish(invalid)),Err(FormatError::Generator(v)) if v==future));
@@ -1088,7 +1088,7 @@ fn vegetation_registry_round_trips_in_old_and_new_worlds_and_interrupted_journal
         assert_eq!(stored_block(22 + i as u16, 2).unwrap(), b);
     }
     assert_eq!(stored_block(31, 2), Err(FormatError::BlockId(31)));
-    for version in [3, 4, 5, 6, 7, 8, 9, 10, 11] {
+    for version in [3, 4, 5, 6, 7, 8, 9, 10, 11, 12] {
         for stage in [
             SaveStage::SessionPrepared,
             SaveStage::WorldSaved,
@@ -1130,10 +1130,15 @@ fn vegetation_registry_round_trips_in_old_and_new_worlds_and_interrupted_journal
             assert_eq!(w.dropped_items().len(), 1);
             // Explicit Air remains authoritative over generated vegetation.
             let mut removed = None;
-            if version == 9 {
-                load_column(&store, &mut w, [-152, -256]);
+            let vegetation_column = if version == 12 {
+                [-120, -252]
+            } else {
+                [-152, -256]
+            };
+            if version == 9 || version == 12 {
+                load_column(&store, &mut w, vegetation_column);
                 'search: for y in 0..2 {
-                    let cp = ChunkPos([-152, y, -256]);
+                    let cp = ChunkPos([vegetation_column[0], y, vegetation_column[1]]);
                     for i in 0..4096 {
                         let lp = crate::LocalPos::new([i % 16, i / 256, i / 16 % 16]).unwrap();
                         if w.chunk(cp).unwrap().get(lp).is_plant() {
@@ -1171,10 +1176,10 @@ fn vegetation_registry_round_trips_in_old_and_new_worlds_and_interrupted_journal
             assert_eq!(restored.region_identity(), Some(id));
             assert_eq!(fs::read(store.path()).unwrap(), root);
             if let Some(p) = removed {
-                load_column(&store, &mut restored, [-152, -256]);
+                load_column(&store, &mut restored, vegetation_column);
                 assert_eq!(restored.block(p), Block::Air);
-                restored.evict_column([-152, -256]);
-                load_column(&store, &mut restored, [-152, -256]);
+                restored.evict_column(vegetation_column);
+                load_column(&store, &mut restored, vegetation_column);
                 assert_eq!(restored.block(p), Block::Air);
             }
         }

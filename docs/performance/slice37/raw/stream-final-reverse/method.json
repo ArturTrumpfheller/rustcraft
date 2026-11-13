@@ -1,0 +1,16 @@
+{
+  "baseline": "3d0f13c7e603ed060d53a722cf73c51619ade308",
+  "order": [
+    "slice37",
+    "slice36"
+  ],
+  "repeats": 1,
+  "frames": 64,
+  "frame_hz": 240,
+  "rendering_install": true,
+  "distance_expansion": true,
+  "transition_scope": "Biome mode compares v11/v12 at matched ecosystem sites and radii2-4; geometry/resource signatures intentionally differ.",
+  "aggregation_sha256": "6d570454b6c43ba489619050ed7b3f26f6dc83a7581b79b5f4bf1ffbd717ccde",
+  "machine": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "note": "Headless scripted position/velocity, fixed 240Hz deadlines, no rendered frames/GPU. RSS is process-wide; requested heap peak is additional process heap during worker window, excludes stacks/allocator metadata/GPU and may include concurrent main allocations."
+}

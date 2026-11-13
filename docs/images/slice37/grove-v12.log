@@ -1,0 +1,13 @@
+BIOME_SCENE generator=12 seed=18446744073709551615 center=(-1616, -4032) biome=Grove
+CAVE_CAMERA seed=18446744073709551615 generator=12 world_eye=Vec3(-1615.5, 56.62, -4031.5) direction=Vec3(1.0, -0.08, 4.371139e-8) torch_fixture=false
+TERRAIN_SCENE generator=12 seed=18446744073709551615 x=-1616 z=-4032 surface_y=54 yaw=90 radius=4 overview=false feet=[-1615.5, 55.0, -4031.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(0.5, 56.62, 0.5)
+CAPTURE_FRAME_MS samples=19 p50=337.61 p95=388.43 p99=388.43
+2026-11-12T22:07:57.742241Z  WARN winit::platform_impl::linux::x11::xdisplay: error setting XSETTINGS; Xft options won't reload automatically
+2026-11-12T22:07:57.841015Z  INFO bevy_render::renderer: AdapterInfo { name: "llvmpipe (LLVM 19.1.7, 256 bits)", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: "", driver: "llvmpipe", driver_info: "Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-12T22:07:57.841102Z  WARN bevy_render::renderer: The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+2026-11-12T22:07:57.942805Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-12T22:07:57.947850Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-11-12T22:07:57.949500Z  INFO bevy_winit::system: Creating new window RustCraft terrain gallery (64v0)
+2026-11-12T22:07:57.949636Z  WARN winit::platform_impl::linux::x11::util::randr: XRandR reported that the display's 0mm in size, which is certifiably insane
+2026-11-12T22:07:57.949667Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1

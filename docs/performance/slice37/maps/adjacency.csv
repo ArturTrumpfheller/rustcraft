@@ -1,0 +1,78 @@
+a,b,edges
+Plains,Forest,250
+Plains,Desert,3131
+Plains,Snowy Plains,1771
+Plains,Rocky Highlands,30665
+Plains,Meadow,19543
+Plains,Birch Forest,5812
+Plains,Taiga,4960
+Plains,Grove,6189
+Plains,Snowy Slopes,4698
+Plains,Stony Peaks,26
+Plains,Beach,5976
+Plains,Ocean,10223
+Plains,River,105
+Plains,Lake,763
+Forest,Rocky Highlands,801
+Forest,Meadow,15011
+Forest,Birch Forest,4991
+Forest,Taiga,2828
+Forest,Grove,5476
+Forest,Snowy Slopes,66
+Forest,Stony Peaks,3
+Forest,Beach,1562
+Forest,Ocean,2900
+Forest,River,65
+Forest,Lake,267
+Desert,Rocky Highlands,8512
+Desert,Meadow,3
+Desert,Stony Peaks,28
+Desert,Beach,690
+Desert,Ocean,1061
+Desert,River,18
+Desert,Lake,201
+Snowy Plains,Rocky Highlands,20
+Snowy Plains,Taiga,3021
+Snowy Plains,Snowy Slopes,16694
+Snowy Plains,Beach,1569
+Snowy Plains,Ocean,2969
+Snowy Plains,River,14
+Snowy Plains,Lake,180
+Rocky Highlands,Meadow,7672
+Rocky Highlands,Birch Forest,169
+Rocky Highlands,Taiga,14741
+Rocky Highlands,Grove,17354
+Rocky Highlands,Snowy Slopes,40899
+Rocky Highlands,Stony Peaks,6483
+Rocky Highlands,Beach,2
+Rocky Highlands,Ocean,1
+Meadow,Birch Forest,10804
+Meadow,Grove,11074
+Meadow,Snowy Slopes,2345
+Meadow,Stony Peaks,5075
+Meadow,Beach,1
+Birch Forest,Taiga,83
+Birch Forest,Grove,3150
+Birch Forest,Snowy Slopes,19
+Birch Forest,Stony Peaks,1
+Birch Forest,Beach,1347
+Birch Forest,Ocean,2407
+Birch Forest,River,33
+Birch Forest,Lake,167
+Taiga,Grove,4915
+Taiga,Snowy Slopes,9766
+Taiga,Beach,3389
+Taiga,Ocean,5944
+Taiga,River,34
+Taiga,Lake,508
+Grove,Snowy Slopes,3874
+Grove,Stony Peaks,233
+Snowy Slopes,Stony Peaks,5121
+Snowy Slopes,Beach,2
+Snowy Slopes,Ocean,1
+Beach,Ocean,10947
+Beach,River,4
+Beach,Lake,27
+Ocean,River,24
+Ocean,Lake,161
+River,Lake,12

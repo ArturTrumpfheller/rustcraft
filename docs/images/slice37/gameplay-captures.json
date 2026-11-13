@@ -1,0 +1,74 @@
+[
+  {
+    "file": "gameplay-birch-r4.png",
+    "sha256": "e7ba2979ff6016a50f2d632612463707c2a2a0c71e2f37ed76418004aafbde14",
+    "seed": 0,
+    "generator": 12,
+    "radius": 4,
+    "start_chunk": [
+      -120,
+      -252
+    ],
+    "development_panorama": false,
+    "production_client": true,
+    "title_ready": "RustCraft [Saved] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 0 gen12 radius 4 | Pos -1911.5 20.0 -4023.5",
+    "title_before_walk": "RustCraft [Saved] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 0 gen12 radius 4 | Pos -1911.5 20.0 -4023.5",
+    "title_after_walk": "RustCraft [Saved] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 0 gen12 radius 4 | Pos -1911.5 20.0 -4027.8",
+    "executable_sha256": "530dc9f5ffc72ab8961450bf9941d4215220aa61661d8153ad28cbe969751736",
+    "normal_save_quit_exit_code": 0
+  },
+  {
+    "file": "gameplay-birch-r4-f3.png",
+    "sha256": "b3c204700e8f46cb0c312b4e6382df4c6a8fd3dbc2f37d56099c83645b854843",
+    "seed": 0,
+    "generator": 12,
+    "radius": 4,
+    "start_chunk": [
+      -120,
+      -252
+    ],
+    "development_panorama": false,
+    "production_client": true,
+    "title_ready": "RustCraft [Saved] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 0 gen12 radius 4 | Pos -1911.5 20.0 -4023.5",
+    "title_before_walk": "RustCraft [Saved] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 0 gen12 radius 4 | Pos -1911.5 20.0 -4023.5",
+    "title_after_walk": "RustCraft [Saved] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 0 gen12 radius 4 | Pos -1911.5 20.0 -4027.8",
+    "executable_sha256": "530dc9f5ffc72ab8961450bf9941d4215220aa61661d8153ad28cbe969751736",
+    "normal_save_quit_exit_code": 0
+  },
+  {
+    "file": "gameplay-grove-r2.png",
+    "sha256": "b3d586b8442131be5bb658b12056cb8bcc681da6a6cde7aa68cc129e7dc0690a",
+    "seed": 18446744073709551615,
+    "generator": 12,
+    "radius": 2,
+    "start_chunk": [
+      -101,
+      -252
+    ],
+    "development_panorama": false,
+    "production_client": true,
+    "title_ready": "RustCraft [Loaded] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 400 pending 0 dirty 0 | Seed 18446744073709551615 gen12 radius 2 | Pos -1607.5 53.0 -4023.5",
+    "title_before_walk": "RustCraft [Loaded] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 400 pending 0 dirty 0 | Seed 18446744073709551615 gen12 radius 2 | Pos -1607.5 53.0 -4023.5",
+    "title_after_walk": "RustCraft [Loaded] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 400 pending 0 dirty 0 | Seed 18446744073709551615 gen12 radius 2 | Pos -1607.5 52.0 -4027.8",
+    "executable_sha256": "530dc9f5ffc72ab8961450bf9941d4215220aa61661d8153ad28cbe969751736",
+    "normal_save_quit_exit_code": 0
+  },
+  {
+    "file": "gameplay-grove-r2-f3.png",
+    "sha256": "9f22d1e20034b4d29449d7c5fb3c9af0a4d34f09e0b0facb38d820122dc9a9af",
+    "seed": 18446744073709551615,
+    "generator": 12,
+    "radius": 2,
+    "start_chunk": [
+      -101,
+      -252
+    ],
+    "development_panorama": false,
+    "production_client": true,
+    "title_ready": "RustCraft [Loaded] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 400 pending 0 dirty 0 | Seed 18446744073709551615 gen12 radius 2 | Pos -1607.5 53.0 -4023.5",
+    "title_before_walk": "RustCraft [Loaded] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 400 pending 0 dirty 0 | Seed 18446744073709551615 gen12 radius 2 | Pos -1607.5 53.0 -4023.5",
+    "title_after_walk": "RustCraft [Loaded] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 400 pending 0 dirty 0 | Seed 18446744073709551615 gen12 radius 2 | Pos -1607.5 52.0 -4027.8",
+    "executable_sha256": "530dc9f5ffc72ab8961450bf9941d4215220aa61661d8153ad28cbe969751736",
+    "normal_save_quit_exit_code": 0
+  }
+]

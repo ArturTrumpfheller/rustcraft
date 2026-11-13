@@ -273,6 +273,13 @@ pub(super) fn profile(seed: u64, x: i32, z: i32) -> Profile {
 /// One column's bounded shared noise vertices; discarded after planning. Never
 /// a global/world-sized density map or a full-height per-voxel noise loop.
 pub(super) fn profiles(seed: u64, min: [i32; 2], size: i32) -> Vec<Profile> {
+    profiles_with_fields(seed, min, size).0
+}
+pub(super) fn profiles_with_fields(
+    seed: u64,
+    min: [i32; 2],
+    size: i32,
+) -> (Vec<Profile>, Vec<Parameters>) {
     let fields: Vec<_> = (0..size * size)
         .map(|i| parameters(seed, min[0] + i % size, min[1] + i / size))
         .collect();
@@ -302,8 +309,9 @@ pub(super) fn profiles(seed: u64, min: [i32; 2], size: i32) -> Vec<Profile> {
     // Dense bounded memo: <12 KiB even at the theoretical full altitude span.
     // A sentinel avoids Option padding and tree allocations per lattice vertex.
     let mut cache = vec![i32::MIN; (nx * ny * nz) as usize];
-    fields
-        .into_iter()
+    let profiles = fields
+        .iter()
+        .copied()
         .enumerate()
         .map(|(i, p)| {
             Profile::build(p, min[0] + i as i32 % size, min[1] + i as i32 / size, |v| {
@@ -315,7 +323,8 @@ pub(super) fn profiles(seed: u64, min: [i32; 2], size: i32) -> Vec<Profile> {
                 cache[i]
             })
         })
-        .collect()
+        .collect();
+    (profiles, fields)
 }
 
 pub(super) fn material(seed: u64, x: i32, z: i32, h: i32, slope: i32) -> biome::Column {

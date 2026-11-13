@@ -251,6 +251,7 @@ pub(super) struct Plan {
     profiles: Vec<super::terrain_v4::Profile>,
     materials: Vec<super::biome::Column>,
     trees: Vec<Tree>,
+    ecology: Vec<super::biome_v2::Sample>,
     caves: Option<super::caves::Plan>,
     water: Option<super::hydrology::Plan>,
     vegetation: Option<super::vegetation::Plan>,
@@ -259,12 +260,15 @@ impl Plan {
     fn new(g: &Generator, c: [i32; 2]) -> Self {
         let min = [c[0] * 16 - 1, c[1] * 16 - 1];
         let max = [min[0] + 17, min[1] + 17];
-        let (profiles, v11_materials, raw_rim) = if g.config.version == 11 {
-            super::terrain_v4::columns(g.config.seed, min)
+        let (profiles, v11_materials, raw_rim, climate) = if g.config.version == 12 {
+            super::biome_v2::columns(g.config.seed, min)
+        } else if g.config.version == 11 {
+            let (p, m, r) = super::terrain_v4::columns(g.config.seed, min);
+            (p, m, r, Vec::new())
         } else {
-            (Vec::new(), Vec::new(), Vec::new())
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new())
         };
-        let mut materials = if g.config.version == 11 {
+        let mut materials = if g.config.version >= 11 {
             v11_materials
         } else if g.config.version == 10 {
             super::terrain_v3::columns(g.config.seed, min)
@@ -274,16 +278,31 @@ impl Plan {
             Vec::new()
         };
         let water = (g.config.version >= 8).then(|| {
-            if g.config.version == 11 {
+            if g.config.version >= 11 {
                 super::hydrology::Plan::new_with_rim(g, min, max, &materials, Some(&raw_rim))
             } else {
                 super::hydrology::Plan::new(g, min, max, &materials)
             }
         });
-        if g.config.version >= 10 {
+        let mut ecology = Vec::new();
+        if g.config.version == 12 {
+            let w = water.as_ref().unwrap();
+            let mut coast = super::biome_v2::Coast::new(min, &raw_rim);
+            ecology.reserve(324);
+            for (i, material) in materials.iter_mut().enumerate() {
+                let s = super::biome_v2::evaluate_with_coast(
+                    climate[i],
+                    w.columns[i],
+                    w.slopes[i],
+                    || coast.near(g, min[0] + (i % 18) as i32, min[1] + (i / 18) as i32),
+                );
+                *material = s.column();
+                ecology.push(s);
+            }
+        } else if g.config.version >= 10 {
             let w = water.as_ref().unwrap();
             for (i, material) in materials.iter_mut().enumerate() {
-                let resurface = if g.config.version == 11 {
+                let resurface = if g.config.version >= 11 {
                     super::terrain_v4::resurface
                 } else {
                     super::terrain_v3::resurface
@@ -321,20 +340,33 @@ impl Plan {
                 trees(g, min, max)
             },
             vegetation: None,
+            ecology,
             water,
             caves: (g.config.version >= 7)
                 .then(|| super::caves::Plan::new(g.config.seed, min, max)),
         };
         if g.config.version >= 9 {
-            let mut vegetation = if g.config.version == 11 {
+            let mut vegetation = if g.config.version == 12 {
+                super::vegetation::Plan::trees_v12(
+                    g,
+                    min,
+                    max,
+                    &plan.water.as_ref().unwrap().columns,
+                    &plan.ecology,
+                )
+            } else if g.config.version == 11 {
                 let columns = &plan.water.as_ref().unwrap().columns;
                 super::vegetation::Plan::trees_on_surface(g, min, max, columns)
             } else {
                 super::vegetation::Plan::trees(g, min, max)
             };
-            vegetation.plants(g.config.seed, min, &plan.heights, &plan.materials, |p| {
-                plan.block(g, p)
-            });
+            if g.config.version == 12 {
+                vegetation.plants_v12(g.config.seed, min, &plan.ecology, |p| plan.block(g, p));
+            } else {
+                vegetation.plants(g.config.seed, min, &plan.heights, &plan.materials, |p| {
+                    plan.block(g, p)
+                });
+            }
             plan.vegetation = Some(vegetation);
         }
         plan
@@ -354,7 +386,8 @@ impl Plan {
                 material.top
             };
         }
-        if h <= super::hydrology::SEA_LEVEL + 2
+        if self.ecology.is_empty()
+            && h <= super::hydrology::SEA_LEVEL + 2
             && column.coastal
             && material.top != Block::SnowyGround
             && material.top != Block::Stone
@@ -382,7 +415,7 @@ impl Plan {
         {
             return Chunk::filled(Block::WaterSource);
         }
-        let stone_limit = if g.config.version == 11 {
+        let stone_limit = if g.config.version >= 11 {
             self.profiles
                 .iter()
                 .zip(&self.heights)
@@ -414,7 +447,7 @@ impl Plan {
                         } else {
                             sample(g, pos, h, &self.trees, Some(material))
                         };
-                        let b = if g.config.version == 11
+                        let b = if g.config.version >= 11
                             && pos.0[1] <= h
                             && column.depth() == 0
                             && h == self.profiles
@@ -485,7 +518,7 @@ impl Plan {
                 };
             }
             let material = self.water_material(px, pz, h, column);
-            let baseline = if g.config.version == 11
+            let baseline = if g.config.version >= 11
                 && y <= h
                 && column.depth() == 0
                 && h == self.profiles[(z * 18 + x) as usize].top
@@ -530,6 +563,22 @@ impl<'a> Sampler<'a> {
                     .all(|v| (-g.chunk_limit()..g.chunk_limit()).contains(v)))
             .then(|| Plan::new(g, c)),
         }
+    }
+    pub fn biome_sample(&self, x: i32, z: i32) -> Option<super::biome_v2::Sample> {
+        if self.g.config.version != 12
+            || !(-32768..32768).contains(&x)
+            || !(-32768..32768).contains(&z)
+        {
+            return None;
+        }
+        if let Some(plan) = &self.plan {
+            let dx = x - plan.min[0];
+            let dz = z - plan.min[1];
+            if (0..18).contains(&dx) && (0..18).contains(&dz) {
+                return Some(plan.ecology[(dz * 18 + dx) as usize]);
+            }
+        }
+        super::biome_v2::sample(self.g, x, z)
     }
     pub fn vegetation_bytes(&self) -> usize {
         self.plan

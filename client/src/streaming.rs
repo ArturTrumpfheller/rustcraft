@@ -303,6 +303,9 @@ pub(crate) struct StreamState {
     recent_jobs: VecDeque<Duration>,
 }
 impl StreamState {
+    pub(crate) fn biome(&self, x: i32, z: i32) -> Option<voxel_core::worldgen::Biome> {
+        self.generator.as_ref().and_then(|g| g.biome(x, z))
+    }
     pub(crate) fn radius(&self) -> i32 {
         self.radius
     }

@@ -1,3 +1,27 @@
+# Slice 37: shared geography, versioned surface ecology
+
+Generator12 uses the unchanged v11 density/hydrology/cave evaluators. The v11
+parameter/profile builder can return its already-computed fields to the v12
+planner; historical arithmetic/output remains pinned by independent fixtures and
+merged-Slice36 column CRCs. V12 computes temperature/humidity once per halo column,
+then classifies/resurfaces after hydrology has established the final bed/slope.
+The18² ecology samples are borrowed by vegetation and diagnostic queries. A
+small per-plan32-lattice elevation vector suppresses density-ledged biome islands;
+all ecology scratch dies with the sampler. No persistent biome map/cache, global
+RNG, extra worker, scheduling/publication, world bounds or rendering change.
+
+Root plans borrow known ecology/water and use their existing bounded coordinate
+caches outside the halo. V12 admits higher footprint ground at most two blocks above the root; downhill ground stays clear;
+all existing species' lowest crown cells are at least three blocks above roots.
+Historical v9–v11 retain their one-block rule. Root support, actual water/caves,
+full footprint, finite edge and ceiling checks remain mandatory. Authoritative
+edits, planted vegetation, explicit Air, region eviction and session lifetime
+continue through the existing paths. F3 queries the versioned generator and keeps
+one identity/position/biome tuple; unchanged coordinates do no further climate work.
+
+[Evidence and native acceptance](performance/slice37/README.md).
+The following sections retain their historical version scope/defaults.
+
 # Slice 36: sparse surface density and frozen historical worlds
 
 New world creation selects generator11; strict manifest/region/height validation

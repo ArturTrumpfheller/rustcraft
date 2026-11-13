@@ -1,0 +1,18 @@
+{
+  "samples": 1179648,
+  "grass_on_cliff": 0,
+  "sand_on_highland": 0,
+  "snowy_slope_samples": 104116,
+  "snowline_violations": 0,
+  "gentle_snowy_slope_samples": 75633,
+  "missing_snow_on_gentle_slopes": 0,
+  "stony_peak_samples": 6800,
+  "non_stone_peaks": 0,
+  "ecosystem_trees_in_treeline_fade": 4,
+  "ecosystem_trees_above_fade": 0,
+  "ecosystem_invalid_roots": 0,
+  "ecosystem_invalid_plants": 0,
+  "ecosystem_grass_on_steep": 0,
+  "ecosystem_sand_on_highland": 0,
+  "ecosystem_water_label_conflicts": 0
+}

@@ -1,3 +1,42 @@
+# Slice 37: Biome Generation v2 (generator12)
+
+New worlds select generator12. Every v1–v11 world retains its recorded generator,
+procedural blocks/biomes, water, caves, vegetation and authoritative overlays,
+including explicit Air. No migration, regeneration, registry reinterpretation,
+save envelope or world bounds change is introduced. Unknown13+ fails closed.
+
+V12 composes **the exact v11 solid/air density profiles and hydrology** with a
+separate original `worldgen::biome_v2` surface ecology model. It never selects a
+height formula by biome. C/E/W come from the same v11 parameter evaluation;
+new rotated, warped Q10 temperature/humidity fields organize broad climate
+regions. Original interval-distance regions choose lowland families; shared
+relief and elevation organize Meadow/Grove/alpine zones. A bounded absolute32
+lattice low-passes geographical elevation so individual density ledges do not
+become separate ecosystems. Actual final height still contributes one quarter;
+projected dry banks cap the proxy. Actual slopes choose exposed rock, not biome
+labels. Surface depth is zero; underground biomes remain a later generator.
+
+Stable biome discriminants0–4 remain Plains, Forest, Desert, Snowy Plains, Rocky
+Highlands. Append-only5–14 are Meadow, Birch Forest, Taiga, Grove, Snowy Slopes,
+Stony Peaks, Beach, Ocean, River, Lake (including ponds). Biomes are derived, not
+stored in region records. Historical `sample_biome`/`sample_climate` remain frozen;
+versioned `Generator::biome`, `biome_v2::sample` and sampler diagnostics serve v12.
+F3 uses the saved identity and retains one current-position sample only.
+
+Marine/river/lake labels require actual v11 water-body membership and positive
+water depth. Beaches require low, gentle, dry coastal ground and actual ocean
+water within eight blocks on cardinal probes or six on diagonals. No river,
+lake, sea level, watershed or new water source is created by biome selection.
+V11's old climate still controls admission of inherited water features to preserve
+all water-bed geometry. Their sparse rivers, uniform datum and small rounded
+ponds are explicit Slice39 limitations, not new biome noise strips.
+
+Materials reuse existing Grass/Dirt/Stone/Sand/Snowy Ground. Tree species,
+continuous moisture-dependent forest density, ecological treelines, broad
+clearings and independent grass/fern/flower/bush placement are v12-only.
+[Full roster, original algorithms, evidence and limitations](performance/slice37/README.md).
+Earlier sections below describe frozen historical generators.
+
 # Generator 11 — terrain v4 (Slice 36)
 
 New regional worlds pin generator11. Historical generators1–10 and their saves

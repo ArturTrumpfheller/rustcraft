@@ -357,3 +357,66 @@ fn mesh_diagnostics_use_only_world_view_and_label_resident_triangles() {
     assert!(text.contains("VIEW MESH O/W/P: 1 / 0 / 0 (PREVIOUS)"));
     assert!(text.contains("RESIDENT TRIS O/W/P: 12 / 12 / 12"));
 }
+
+#[test]
+fn v12_f3_uses_actual_geography_and_invalidates_its_single_sample_on_world_switch() {
+    for (seed, version, x, z) in [
+        (0, 12, -1920, -4032),
+        (0, 11, -1920, -4032),
+        (42, 12, 3328, -3264),
+        (2026, 12, 3520, 1728),
+    ] {
+        let mut app = app();
+        let world = voxel_core::World::regional(voxel_core::regions::RegionIdentity {
+            seed,
+            generator: version,
+            nonce: [37; 16],
+        });
+        let g = std::sync::Arc::new(
+            voxel_core::worldgen::Generator::new(voxel_core::worldgen::GenerationConfig {
+                seed,
+                version,
+            })
+            .unwrap(),
+        );
+        let expected = g.biome(x, z).unwrap().name().to_ascii_uppercase();
+        app.insert_resource(VoxelWorld(world));
+        app.insert_resource(crate::streaming::StreamState::new(g, 4));
+        app.world_mut().resource_mut::<PlayerState>().body.position =
+            [f64::from(x) + 0.5, 128., f64::from(z) + 0.5];
+        app.world_mut().resource_mut::<DebugOverlay>().enabled = true;
+        frame(&mut app);
+        assert!(
+            app.world()
+                .resource::<DebugOverlay>()
+                .text
+                .contains(&format!("BIOME: {expected} / GENERATOR: {version}"))
+        );
+        // Same overlay/coordinates but a different saved identity must resample.
+        let other = std::sync::Arc::new(
+            voxel_core::worldgen::Generator::new(voxel_core::worldgen::GenerationConfig {
+                seed: seed + 1,
+                version,
+            })
+            .unwrap(),
+        );
+        let expected = other.biome(x, z).unwrap().name().to_ascii_uppercase();
+        app.insert_resource(VoxelWorld(voxel_core::World::regional(
+            voxel_core::regions::RegionIdentity {
+                seed: seed + 1,
+                generator: version,
+                nonce: [38; 16],
+            },
+        )));
+        app.insert_resource(crate::streaming::StreamState::new(other, 4));
+        for _ in 0..15 {
+            frame(&mut app);
+        }
+        assert!(
+            app.world()
+                .resource::<DebugOverlay>()
+                .text
+                .contains(&format!("BIOME: {expected} / GENERATOR: {version}"))
+        );
+    }
+}

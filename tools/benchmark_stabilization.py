@@ -49,8 +49,13 @@ pub fn slice30_take()->[u128;16]{SLICE30_PROFILE.with(|p|p.replace([0;16]))}
         replace_once(core / 'worldgen/local.rs',
                      'super::vegetation::Plan::trees_on_surface(g, min, max, columns)',
                      '{ let start=std::time::Instant::now(); let v=super::vegetation::Plan::trees_on_surface(g,min,max,columns); super::slice30_add(0,start.elapsed().as_nanos()); v }')
-    replace_once(core / 'worldgen/local.rs', '            vegetation.plants(',
-                 '            let plant_start=std::time::Instant::now();\n            vegetation.plants(')
+    if 'vegetation.plants_v12(' in (core / 'worldgen/local.rs').read_text():
+        replace_once(core / 'worldgen/local.rs',
+                     '            if g.config.version == 12 {\n                vegetation.plants_v12(',
+                     '            let plant_start=std::time::Instant::now();\n            if g.config.version == 12 {\n                vegetation.plants_v12(')
+    else:
+        replace_once(core / 'worldgen/local.rs', '            vegetation.plants(',
+                     '            let plant_start=std::time::Instant::now();\n            vegetation.plants(')
     replace_once(core / 'worldgen/local.rs', '            plan.vegetation = Some(vegetation);',
                  '            super::slice30_add(1,plant_start.elapsed().as_nanos());\n            plan.vegetation = Some(vegetation);')
     replace_once(core / 'streaming.rs', '    let light = crate::lighting::Skylight::for_chunks(source, targets);',

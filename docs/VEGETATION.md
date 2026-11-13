@@ -1,3 +1,31 @@
+# Slice 37: v12 ecosystems
+
+V12 reuses every existing original species, crown, plant asset and block/item ID.
+V9–v11 distributions and root rules remain frozen. Player planting, support
+transactions, fluid displacement, dropped items and save formats are unchanged.
+
+Lowland Plains/Forest/Birch Forest/Taiga share a continuous humidity-based density
+curve; they do not switch independent random forest masks at each biome edge.
+An80-block clearing field creates broad openings; independent hashes thin fully
+jittered eight-block candidates and choose species/heights. Forest favors Oak
+with25% Birch candidate choices; Birch Forest favors92% Birch. Taiga/Grove and
+rare Snowy Plains candidates use Spruce. Meadow is mostly open with sparse
+Birch/Oak. Upper alpine, desert and water/shore labels reject trees. Regional
+snowline minus18 blocks defines the treeline; a smooth8-block fade reduces density.
+
+V12 alone admits a5×5 footprint whose higher ground is at most two blocks above the root; lower ground cannot intersect a crown. Every species'
+lowest crown voxel is at least three blocks above its root surface, so the full
+crown remains clear. Actual cave mouths, water, unsupported roots, finite edges,
+spawn reserve and ceiling still reject the candidate. Known final ecology/water
+samples are reused; no per-voxel terrain replanning or global cache is introduced.
+
+Grass/ferns and red/yellow flowers follow24/40/64-block patches and independent
+per-cell thinning. Meadow increases flowers; Birch/ordinary Forest add varied
+undergrowth; Taiga/Grove strongly favor ferns; Desert has sparse Dead Bushes.
+Plants require the actual supported dry surface and empty placement cell.
+[Measured populations, captures and compatibility](performance/slice37/README.md).
+The following sections document the historical v9 rules.
+
 # Vegetation and world details — Slice 29
 
 New worlds select **generator9**. Generators1–8 retain their exact block output,
