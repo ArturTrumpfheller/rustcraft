@@ -6,7 +6,7 @@ use voxel_core::{
 };
 fn main() {
     println!("version,seed,cx,cz,crc,biome");
-    for version in 1..=12 {
+    for version in 1..=13 {
         for seed in [0, 42, 2026, u64::MAX] {
             let g = Generator::new(GenerationConfig { seed, version }).unwrap();
             for c in if version < 3 {

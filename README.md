@@ -1,3 +1,12 @@
+# Cave Generation v3 (Slice39)
+
+New worlds use generator14: irregular underground caverns, winding connected
+passages, narrow branches and multiple cave levels under the accepted v13
+landscape and fifteen biomes. Existing generators1–13 and saved edits retain
+their recorded worlds. V14 caves remain dry pending the separate hydrology
+redesign; surface water and player water mechanics continue unchanged.
+[Model, measurements, real Bevy captures and native acceptance](docs/performance/slice39/README.md).
+
 # Biome Generation v2 (Slice 37)
 
 New worlds select generator12: geographically shared climate, recognizable mixed

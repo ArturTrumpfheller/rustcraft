@@ -1,3 +1,18 @@
+# Slice39 — Cave Generation v3
+
+- [x] Audit historical cave, terrain, water and vegetation integration before implementation
+- [x] Separate v14 density/carver graph with actual terrain-relative vertical geography
+- [x] Irregular caverns, pillars/shelves, winding routes, narrow links and steep connections
+- [x] Preserve exact historical1–13 geometry, biomes, water and persistence envelopes
+- [x] Protected water beds/foundation/spawn and explicit dry-v14/old-pool contract
+- [x] Bounded multiseed air topology and separate standing-player floor diagnostics
+- [ ] Complete rendered visual acceptance and matched performance analysis
+- [ ] Complete locked local checks and Linux/Windows CI
+- [ ] Native Gentoo/Void X11/Wayland and Windows/Radeon owner acceptance
+
+[Implementation, evidence and remaining limits](performance/slice39/README.md).
+Hydrology v2 remains Slice40. No automatic merge or world migration.
+
 # Slice 38 — Terrain balancing and geography
 
 - [x] Diagnose v12 relief, compare original parameter controls and document reference limits

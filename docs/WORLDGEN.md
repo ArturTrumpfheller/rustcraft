@@ -1,3 +1,19 @@
+# Cave Generation v3 — generator14
+
+New regional worlds select14. The complete model, independent fixtures,
+quality metrics, genuine Bevy interior captures and native acceptance are in
+[Slice39](performance/slice39/README.md). V14 retains v13 surface profiles,
+hydrology and fifteen-biome ecology, with a separate integer cavity graph,
+warped3D chambers, winding and narrow passages, multi-level links and actual
+surface-height entrance probes. V1–v13 remain frozen; saves are never migrated.
+
+`caves_v3::Versioned` gates both column rasterization and vegetation-root cave
+admission. Major routes compose with residual-pillar/shelf density; all paths
+use the same final foundation, roof, spawn and water-bed guards. Historical cave
+pools are disabled only in14 because their v7 closure proof is inapplicable.
+Slice40 must establish a new final-cavity ownership/closure proof for aquifers.
+Unknown15+ is rejected. All earlier sections retain their historical versions.
+
 # Slice 38: terrain balance (generator13)
 
 New regional worlds select generator13. Existing worlds retain their recorded

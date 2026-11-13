@@ -1,3 +1,22 @@
+# Slice39: bounded dry cavity graph and density
+
+Generator14 explicitly reuses v13 terrain parameters at every dependent query.
+A separate `caves_v3` plan discovers bounded owner features and graph edges
+without neighbors or mutable generation state. Globally aligned4³ integer
+samples shape cavern density; anisotropic curved carvers create connections,
+narrow branches and steep links. One halo-column plan serves all sixteen
+vertical chunks; room-only density scratch is bounded by intersecting envelopes.
+Tube-only/empty plans have no lattice. Uniform slab proofs and per-shape
+bounding boxes preserve compact sky/rock storage.
+
+The versioned wrapper preserves frozen v7–v13 primitives. V14 vegetation root
+admission uses the same cave version as terrain and final plant support. Water
+bed/bank guards suppress carving; v14 never invokes old pool closure/planning.
+All point/column/chunk/halo paths agree. Persistence formats, overlays including
+Air, worker/publication/cancellation, cache limits, render radii and original
+renderer remain. New gallery-only illumination cannot affect the client.
+[Design, evidence and Slice40 contract](performance/slice39/README.md).
+
 # Slice 38: versioned geography proportions
 
 Generator13 is the new-world default, accepted by strict generator/height/manifest

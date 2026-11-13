@@ -42,6 +42,8 @@ jobs:
         run: python tools/biome_v2_reference.py --check
       - name: Independent v13 terrain fixtures
         run: python tools/terrain_v5_reference.py --check
+      - name: Independent v14 cave field fixtures
+        run: python tools/cave_v3_reference.py --check
       - name: Cargo format
         run: cargo fmt --all -- --check
       - name: Cargo Clippy
@@ -69,7 +71,7 @@ jobs:
       - name: Optimized voxel processing regressions
         run: cargo test --release --locked -p voxel_core --lib
       - name: Optimized terrain and persistence integration
-        run: cargo test --release --locked -p voxel_core --test terrain_v3 --test terrain_v4 --test terrain_v5 --test biome_v2 --test worldgen_integration --test worldgen_lifecycle
+        run: cargo test --release --locked -p voxel_core --test caves_v3 --test terrain_v3 --test terrain_v4 --test terrain_v5 --test biome_v2 --test worldgen_integration --test worldgen_lifecycle
       - name: Optimized streaming and lifecycle regressions
         run: 'cargo test --release --locked -p rustcraft --bin rustcraft streaming:: -- --test-threads=1'
       - name: Optimized session regressions

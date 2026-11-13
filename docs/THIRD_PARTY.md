@@ -1,3 +1,12 @@
+# Slice39 provenance
+
+The cavity graph, fixed-point density/carvers, independent Python fixtures,
+diagnostics, regressions, benchmark/capture extensions and documentation are
+original RustCraft work under MIT OR Apache-2.0. New images are genuine Bevy
+captures using the existing original materials and textures. Development-only
+torch placement/diagnostic lighting is explicitly recorded. No external art,
+Minecraft source/tables/assets, dependency, shader system or lockfile change.
+
 # Slice37 provenance
 
 Biome-v12 climate/interval selection, ecological elevation interpolation,
