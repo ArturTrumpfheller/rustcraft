@@ -8,8 +8,8 @@ fn generator(seed: u64, version: u32) -> Generator {
     Generator::new(GenerationConfig { seed, version }).unwrap()
 }
 #[test]
-fn exact_merged_slice36_historical_columns_and_biomes() {
-    for line in include_str!("fixtures/history-v1-v11.csv").lines().skip(1) {
+fn exact_merged_slice37_historical_columns_and_biomes() {
+    for line in include_str!("fixtures/history-v1-v12.csv").lines().skip(1) {
         let v: Vec<_> = line.split(',').collect();
         let version = v[0].parse().unwrap();
         let seed = v[1].parse().unwrap();
@@ -215,8 +215,8 @@ fn append_only_biome_ids_and_v12_fail_closed_identity() {
         assert_eq!(b as usize, i);
         assert!(!b.name().is_empty());
     }
-    assert_eq!(voxel_core::worldgen::CURRENT_LOCAL_GENERATOR, 12);
-    for version in [0, 13, u32::MAX] {
+    assert_eq!(voxel_core::worldgen::CURRENT_LOCAL_GENERATOR, 13);
+    for version in [0, 14, u32::MAX] {
         assert!(Generator::new(GenerationConfig { seed: 0, version }).is_err());
     }
     assert!(biome_v2::sample(&generator(42, 11), 0, 0).is_none());

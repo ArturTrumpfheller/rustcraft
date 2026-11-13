@@ -9,6 +9,15 @@ remain. [Design, actual renders, surveys, costs and acceptance](docs/performance
 
 # RustCraft
 
+## Terrain balance (Slice 38)
+
+New worlds use generator13: broader rolling lowlands and foothills, more selective
+mountain regions and fewer narrow deep valleys. Distinctive v11 ridge geometry,
+v12's fifteen ecosystems and occasional high cliffs remain. Existing v1–v12 worlds
+and saved edits keep their generator. No world bounds, assets, save format or
+render-distance changes. [Measurements, real Bevy comparisons and platform
+acceptance](docs/performance/slice38/README.md).
+
 The sections below summarize historical slices; their new-world defaults refer to those versions.
 
 ## Minecraft-style terrain v4 (Slice 36)

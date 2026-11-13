@@ -386,7 +386,7 @@ fn low_footprint(version: u32, seed: u64, p: [i32; 2], radius: i32) -> bool {
     [-radius, 0, radius].into_iter().all(|dx| {
         [-radius, 0, radius].into_iter().all(|dz| {
             if version >= 11 {
-                let p = super::terrain_v4::parameters(seed, p[0] + dx, p[1] + dz);
+                let p = super::terrain_v5::parameters_for(version, seed, p[0] + dx, p[1] + dz);
                 (p.offset + p.amplitude) / 4096 <= 20
             } else {
                 super::terrain_v3::height(seed, p[0] + dx, p[1] + dz) <= 20
@@ -424,7 +424,7 @@ pub(super) fn surface_for(g: &Generator, x: i32, z: i32) -> Surface {
         x,
         z,
         if g.config.version >= 11 {
-            super::terrain_v4::height(g.config.seed, x, z)
+            super::terrain_v5::height_for(g.config.version, g.config.seed, x, z)
         } else {
             super::terrain_v3::height(g.config.seed, x, z)
         },
@@ -477,7 +477,12 @@ impl Plan {
                 } else if (0..18).contains(&x) && (0..18).contains(&z) {
                     materials[(z * 18 + x) as usize].height
                 } else if g.config.version >= 11 {
-                    super::terrain_v4::height(g.config.seed, min[0] + x, min[1] + z)
+                    super::terrain_v5::height_for(
+                        g.config.version,
+                        g.config.seed,
+                        min[0] + x,
+                        min[1] + z,
+                    )
                 } else if g.config.version == 10 {
                     super::terrain_v3::height(g.config.seed, min[0] + x, min[1] + z)
                 } else {

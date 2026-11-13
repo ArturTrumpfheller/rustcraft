@@ -362,6 +362,8 @@ fn mesh_diagnostics_use_only_world_view_and_label_resident_triangles() {
 fn v12_f3_uses_actual_geography_and_invalidates_its_single_sample_on_world_switch() {
     for (seed, version, x, z) in [
         (0, 12, -1920, -4032),
+        (0, 13, -1920, -4032),
+        (42, 13, 3328, -3264),
         (0, 11, -1920, -4032),
         (42, 12, 3328, -3264),
         (2026, 12, 3520, 1728),

@@ -50,9 +50,9 @@ pub fn slice30_take()->[u128;16]{SLICE30_PROFILE.with(|p|p.replace([0;16]))}
                      'super::vegetation::Plan::trees_on_surface(g, min, max, columns)',
                      '{ let start=std::time::Instant::now(); let v=super::vegetation::Plan::trees_on_surface(g,min,max,columns); super::slice30_add(0,start.elapsed().as_nanos()); v }')
     if 'vegetation.plants_v12(' in (core / 'worldgen/local.rs').read_text():
-        replace_once(core / 'worldgen/local.rs',
-                     '            if g.config.version == 12 {\n                vegetation.plants_v12(',
-                     '            let plant_start=std::time::Instant::now();\n            if g.config.version == 12 {\n                vegetation.plants_v12(')
+        comparison = '>=' if 'if g.config.version >= 12 {' in (core / 'worldgen/local.rs').read_text() else '=='
+        marker = f'            if g.config.version {comparison} 12 {{\n                vegetation.plants_v12('
+        replace_once(core / 'worldgen/local.rs', marker, '            let plant_start=std::time::Instant::now();\n' + marker)
     else:
         replace_once(core / 'worldgen/local.rs', '            vegetation.plants(',
                      '            let plant_start=std::time::Instant::now();\n            vegetation.plants(')

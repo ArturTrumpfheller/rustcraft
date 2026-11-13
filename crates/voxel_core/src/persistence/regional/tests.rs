@@ -964,7 +964,7 @@ fn v7_manifest_and_region_keep_formats_and_reject_future_generator_identity() {
     assert_eq!(u32_at(&bytes, 8), 1);
     assert_eq!(decode_region(&bytes, id, p).unwrap(), edits);
     assert!(decode_region(&bytes, RegionIdentity { generator: 6, ..id }, p).is_err());
-    for future in [13, u32::MAX] {
+    for future in [14, u32::MAX] {
         let mut invalid = root.clone();
         invalid[32..36].copy_from_slice(&future.to_le_bytes());
         assert!(matches!(decode(&finish(invalid)),Err(FormatError::Generator(v)) if v==future));
@@ -1088,7 +1088,7 @@ fn vegetation_registry_round_trips_in_old_and_new_worlds_and_interrupted_journal
         assert_eq!(stored_block(22 + i as u16, 2).unwrap(), b);
     }
     assert_eq!(stored_block(31, 2), Err(FormatError::BlockId(31)));
-    for version in [3, 4, 5, 6, 7, 8, 9, 10, 11, 12] {
+    for version in [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] {
         for stage in [
             SaveStage::SessionPrepared,
             SaveStage::WorldSaved,
@@ -1130,12 +1130,12 @@ fn vegetation_registry_round_trips_in_old_and_new_worlds_and_interrupted_journal
             assert_eq!(w.dropped_items().len(), 1);
             // Explicit Air remains authoritative over generated vegetation.
             let mut removed = None;
-            let vegetation_column = if version == 12 {
+            let vegetation_column = if version >= 12 {
                 [-120, -252]
             } else {
                 [-152, -256]
             };
-            if version == 9 || version == 12 {
+            if version == 9 || version >= 12 {
                 load_column(&store, &mut w, vegetation_column);
                 'search: for y in 0..2 {
                     let cp = ChunkPos([vegetation_column[0], y, vegetation_column[1]]);

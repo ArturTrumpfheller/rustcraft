@@ -260,8 +260,8 @@ impl Plan {
     fn new(g: &Generator, c: [i32; 2]) -> Self {
         let min = [c[0] * 16 - 1, c[1] * 16 - 1];
         let max = [min[0] + 17, min[1] + 17];
-        let (profiles, v11_materials, raw_rim, climate) = if g.config.version == 12 {
-            super::biome_v2::columns(g.config.seed, min)
+        let (profiles, v11_materials, raw_rim, climate) = if g.config.version >= 12 {
+            super::biome_v2::columns(g.config.seed, g.config.version, min)
         } else if g.config.version == 11 {
             let (p, m, r) = super::terrain_v4::columns(g.config.seed, min);
             (p, m, r, Vec::new())
@@ -285,7 +285,7 @@ impl Plan {
             }
         });
         let mut ecology = Vec::new();
-        if g.config.version == 12 {
+        if g.config.version >= 12 {
             let w = water.as_ref().unwrap();
             let mut coast = super::biome_v2::Coast::new(min, &raw_rim);
             ecology.reserve(324);
@@ -346,7 +346,7 @@ impl Plan {
                 .then(|| super::caves::Plan::new(g.config.seed, min, max)),
         };
         if g.config.version >= 9 {
-            let mut vegetation = if g.config.version == 12 {
+            let mut vegetation = if g.config.version >= 12 {
                 super::vegetation::Plan::trees_v12(
                     g,
                     min,
@@ -360,7 +360,7 @@ impl Plan {
             } else {
                 super::vegetation::Plan::trees(g, min, max)
             };
-            if g.config.version == 12 {
+            if g.config.version >= 12 {
                 vegetation.plants_v12(g.config.seed, min, &plan.ecology, |p| plan.block(g, p));
             } else {
                 vegetation.plants(g.config.seed, min, &plan.heights, &plan.materials, |p| {
@@ -565,7 +565,7 @@ impl<'a> Sampler<'a> {
         }
     }
     pub fn biome_sample(&self, x: i32, z: i32) -> Option<super::biome_v2::Sample> {
-        if self.g.config.version != 12
+        if self.g.config.version < 12
             || !(-32768..32768).contains(&x)
             || !(-32768..32768).contains(&z)
         {

@@ -1,3 +1,17 @@
+# Slice 38 — Terrain balancing and geography
+
+- [x] Diagnose v12 relief, compare original parameter controls and document reference limits
+- [x] Generator13 default with version-gated relief/valley/density mappings
+- [x] Broader gentle regions, selective distinctive ranges and unchanged fifteen-biome rules
+- [ ] Exact v1–v12 fixtures and complete local regression/build/asset checks
+- [ ] Multi-scale geography, real Bevy comparisons and matched performance evidence
+- [ ] Linux and Windows CI on the PR head
+- [ ] Native Gentoo/Void X11/Wayland and Windows/Radeon visual/gameplay acceptance
+
+[Implementation, evidence and remaining acceptance](performance/slice38/README.md).
+Caves v3 and hydrology v2 remain separate upcoming slices. No automatic migration
+or PR merge.
+
 # Slice 37 — Biome Generation v2
 
 - [x] Original multi-noise surface ecology over exact v11 density/water/caves
@@ -10,7 +24,7 @@
 - [ ] Native Gentoo/Void X11/Wayland and Windows/Radeon owner acceptance
 
 [Model, evidence and acceptance](performance/slice37/README.md).
-Slice38 caves v3, Slice39 hydrology v2 and Slice40 final worldgen stabilization
+Caves v3, hydrology v2 and final worldgen stabilization
 remain separate work. No automatic generator migration or PR merge.
 
 # Slice 36 — Minecraft-style terrain v4

@@ -1,0 +1,45 @@
+{
+  "baseline": "cec8f593d20c012725ed17308bb9c7d44b470e08",
+  "seeds": [
+    "0",
+    "42",
+    "2026",
+    "18446744073709551615"
+  ],
+  "windows": [
+    [
+      -4096,
+      -4096,
+      8192
+    ],
+    [
+      -24000,
+      20000,
+      2048
+    ],
+    [
+      28000,
+      -30000,
+      2048
+    ]
+  ],
+  "raw_files": {
+    "raw12.csv": {
+      "sha256": "cbf376931d480005d3d8a6f99d30b3c8171ba9d0ba3e04a36315d31ae3e9ee4e",
+      "bytes": 64521705
+    },
+    "raw13-a.csv": {
+      "sha256": "25f42c50c87feed7e2dbb01f85f8a829ed83e3a1ee6a59afad3e4a4e13970194",
+      "bytes": 62812701
+    },
+    "final12.csv": {
+      "sha256": "504228e4256b1d9747354cd8bb277afdf7a9000c5257278d4309a77be4d5dde4",
+      "bytes": 3902266
+    },
+    "final13.csv": {
+      "sha256": "3bee8225d791c391392301ae57efd0c066af07e201c4cc1d47849d5aee50a972",
+      "bytes": 3795453
+    }
+  },
+  "method": "Default density surfaces spacing16; --final water-bed/ecology surfaces spacing64. Raw CSV is regenerated using the documented commands; numeric summaries/maps are retained."
+}

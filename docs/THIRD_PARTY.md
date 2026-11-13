@@ -299,3 +299,13 @@ Minecraft source, art, biome IDs, block/item IDs or renderer features are added.
 The Slice35 PNGs are actual software-Vulkan Bevy gallery captures of original
 RustCraft assets. Explicit development panorama fog/radius settings are recorded;
 these are not AI-generated images or claims of native GPU performance.
+
+## Slice 38 terrain balance
+
+The v13 curves, shared integration, Python reference, measurements, diagnostics
+and actual Bevy captures of original RustCraft assets are project-authored
+MIT OR Apache-2.0. No new runtime dependencies, copied Minecraft source, datapack
+constants, reference photographs or assets are distributed. NumPy/SciPy/Matplotlib
+are offline analysis tools available in the development environment, not game
+requirements or bundled dependencies. Public research links and their sampling
+limits are recorded in `performance/slice38/README.md`.

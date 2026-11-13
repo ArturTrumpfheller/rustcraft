@@ -1,3 +1,33 @@
+# Slice 38: terrain balance (generator13)
+
+New regional worlds select generator13. Existing worlds retain their recorded
+v1–v12 generator and authoritative edits, including saved Air. Bounds, block/item
+IDs, manifest5, region1 and journal/player formats are unchanged; unknown14+
+is rejected. There is no migration or regeneration of existing worlds.
+
+`terrain_v5.rs` retains the v11 signed gradient/ridge directions, Hermite splines,
+Q12 arithmetic, summit compression and absolute4³ sparse density evaluator.
+Only v13 mappings change. Erosion wavelengths768/320/128 weighted5:2:1 form
+broader regions than v12's512/224/96 weighted4:2:1. Strong relief moves into the
+negative erosion tail: (-2400,128),(-1600,108),(-1000,58),(-400,18),(200,7),(900,3).
+Signed weirdness keeps the original rotating anisotropic ridge octaves, with
+raised negative-weirdness basin floors and preserved positive summits. Density
+amplitude is the original12-block ceiling times inland, low-erosion and upper-ridge
+weights; ordinary hills and negative-weirdness basins no longer inherit it.
+Continentalness, coastal datum, rolling noise and spawn protection remain.
+
+The v11 profile builder accepts a pure parameter function; its old public paths
+still use their exact historical function. Versioned terrain inputs consistently
+feed hydrology admission/beds, ecology's32-block elevation proxy, coastal proofs,
+root/crown support, point queries and chunk plans. V13 shares the exact v12
+fifteen-biome classifier, temperature/humidity, snow/treeline and vegetation rules.
+Caves v2, water sources/solver, lighting, meshes, streaming and radius1–4 remain.
+There are no retained world-sized maps, extra workers or full-height noise loops.
+
+[Diagnosis, reference limits, maps, genuine captures, measurements and native
+acceptance](performance/slice38/README.md). Historical sections below retain their
+original version/default scope.
+
 # Slice 37: Biome Generation v2 (generator12)
 
 New worlds select generator12. Every v1–v11 world retains its recorded generator,

@@ -6,23 +6,23 @@
 use super::{biome, hash};
 use crate::Block;
 const Q: i32 = 4096;
-fn mul(a: i32, b: i32) -> i32 {
+pub(super) fn mul(a: i32, b: i32) -> i32 {
     (i64::from(a) * i64::from(b) / i64::from(Q)) as i32
 }
-fn lerp(a: i32, b: i32, t: i32) -> i32 {
+pub(super) fn lerp(a: i32, b: i32, t: i32) -> i32 {
     a + mul(b - a, t)
 }
 fn fade(t: i32) -> i32 {
     // Quintic interpolation, with zero first/second derivatives at lattice edges.
     mul(mul(mul(t, t), t), mul(t, 6 * t - 15 * Q) + 10 * Q)
 }
-fn ramp(x: i32, lo: i32, hi: i32) -> i32 {
+pub(super) fn ramp(x: i32, lo: i32, hi: i32) -> i32 {
     let t = ((x - lo) * Q / (hi - lo)).clamp(0, Q);
     mul(mul(t, t), 3 * Q - 2 * t)
 }
 /// Shape-preserving cubic Hermite curve. Shared harmonic tangents preserve
 /// monotonicity without flattening every knot into a contour shelf.
-fn spline(x: i32, points: &[(i32, i32)]) -> i32 {
+pub(super) fn spline(x: i32, points: &[(i32, i32)]) -> i32 {
     let i = points.partition_point(|p| p.0 < x);
     if i == 0 {
         return points[0].1 * Q;
@@ -57,7 +57,7 @@ fn spline(x: i32, points: &[(i32, i32)]) -> i32 {
         + mul(t3 - 2 * t2 + t, mul(tangent(i - 1), x1 - x0))
         + mul(t3 - t2, mul(tangent(i), x1 - x0))
 }
-fn gradient2(seed: u64, x: i32, z: i32, sx: i32, sz: i32, salt: u64) -> i32 {
+pub(super) fn gradient2(seed: u64, x: i32, z: i32, sx: i32, sz: i32, salt: u64) -> i32 {
     // Seeded phases avoid making every field vanish at the world origin.
     let phase = hash(seed, 0, 0, salt ^ 0xb000);
     let px = x + (phase % (sx as u64 * Q as u64)) as i32;
@@ -212,10 +212,19 @@ pub(super) struct Profile {
     bits: u64,
 }
 impl Profile {
+    #[cfg(test)]
+    pub(super) fn bits_for_test(self) -> u64 {
+        self.bits
+    }
     pub(super) fn solid(self, y: i32) -> bool {
         y < self.floor || (y <= self.top && self.bits & (1u64 << (y - self.floor)) != 0)
     }
-    fn build(p: Parameters, x: i32, z: i32, mut sample: impl FnMut([i32; 3]) -> i32) -> Self {
+    pub(super) fn build(
+        p: Parameters,
+        x: i32,
+        z: i32,
+        mut sample: impl FnMut([i32; 3]) -> i32,
+    ) -> Self {
         if p.amplitude == 0 {
             return Self {
                 top: p.offset.div_euclid(Q),
@@ -261,7 +270,7 @@ impl Profile {
         Self { top, floor, bits }
     }
 }
-fn lattice(seed: u64, p: [i32; 3]) -> i32 {
+pub(super) fn lattice(seed: u64, p: [i32; 3]) -> i32 {
     (gradient3(seed, p, [32, 28, 32], 0xb020) * 2 + gradient3(seed, p, [12, 8, 12], 0xb021)) / 3
 }
 pub fn height(seed: u64, x: i32, z: i32) -> i32 {
@@ -279,6 +288,14 @@ pub(super) fn profiles_with_fields(
     seed: u64,
     min: [i32; 2],
     size: i32,
+) -> (Vec<Profile>, Vec<Parameters>) {
+    profiles_with(seed, min, size, parameters)
+}
+pub(super) fn profiles_with(
+    seed: u64,
+    min: [i32; 2],
+    size: i32,
+    parameters: impl Fn(u64, i32, i32) -> Parameters,
 ) -> (Vec<Profile>, Vec<Parameters>) {
     let fields: Vec<_> = (0..size * size)
         .map(|i| parameters(seed, min[0] + i % size, min[1] + i / size))

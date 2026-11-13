@@ -12,11 +12,12 @@ pub use biome::{Biome, Climate, sample_biome, sample_climate};
 mod terrain;
 pub mod terrain_v3;
 pub mod terrain_v4;
+pub mod terrain_v5;
 pub use local::Sampler;
 
 pub const GENERATOR_VERSION: u32 = 1;
 /// Default for newly created regional worlds; historical defaults remain frozen.
-pub const CURRENT_LOCAL_GENERATOR: u32 = 12;
+pub const CURRENT_LOCAL_GENERATOR: u32 = 13;
 pub const DEFAULT_SEED: u64 = 2026;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GenerationConfig {
@@ -86,7 +87,7 @@ fn noise(seed: u64, x: i32, z: i32, scale: i32, salt: u64) -> i32 {
 }
 impl Generator {
     pub fn new(config: GenerationConfig) -> Result<Self, UnsupportedGenerator> {
-        if ![GENERATOR_VERSION, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].contains(&config.version) {
+        if ![GENERATOR_VERSION, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].contains(&config.version) {
             return Err(UnsupportedGenerator(config.version));
         }
         if config.version >= 3 {
@@ -196,7 +197,7 @@ impl Generator {
     }
     /// Historical worlds have no biome identity. Never reinterpret their generator.
     pub fn biome(&self, x: i32, z: i32) -> Option<Biome> {
-        if self.config.version == 12 {
+        if self.config.version >= 12 {
             return biome_v2::sample(self, x, z).map(|s| s.biome);
         }
         (self.config.version >= 5)
