@@ -5,7 +5,7 @@ mod support {
 use support::cave_quality::*;
 fn main() {
     println!(
-        "version,seed,site,x,z,n,underground,air,solid_percent,depth_abs_air,depth_relative_air,components,largest,tiny_components,entrance_components,vertical_extent,horizontal_extent,standing_nodes,standing_components,largest_standing,width_bins,height_bins,uniform_air,uniform_stone,mixed,water,invalid_water_faces,air_geodesic_lower_bound,standing_geodesic_lower_bound"
+        "version,seed,site,x,z,n,underground,air,solid_percent,depth_abs_air,depth_relative_air,components,largest,tiny_components,entrance_components,vertical_extent,horizontal_extent,standing_nodes,standing_components,largest_standing,width_bins,height_bins,uniform_air,uniform_stone,mixed,water,invalid_water_faces,air_geodesic_lower_bound,standing_geodesic_lower_bound,interior_solid_face_area"
     );
     for seed in SEEDS {
         for (site, min) in [
@@ -40,6 +40,7 @@ fn main() {
                 let stand_count = stands.iter().filter(|b| **b != 0).count();
                 let stand_geodesic = v.geodesic(stands.clone(), true);
                 let walk = v.components(stands, true);
+                let area = v.interior_area();
                 let (width, height) = v.widths();
                 let join = |v: &[usize]| {
                     v.iter()
@@ -48,7 +49,7 @@ fn main() {
                         .join(";")
                 };
                 println!(
-                    "{version},{seed},{site},{},{},128,{total},{air},{:.4},{},{},{},{},{},{},{},{},{stand_count},{},{},{},{},{},{},{},{},{},{air_geodesic},{stand_geodesic}",
+                    "{version},{seed},{site},{},{},128,{total},{air},{:.4},{},{},{},{},{},{},{},{},{stand_count},{},{},{},{},{},{},{},{},{},{air_geodesic},{stand_geodesic},{area}",
                     min[0],
                     min[1],
                     100. * (total - air) as f64 / total.max(1) as f64,

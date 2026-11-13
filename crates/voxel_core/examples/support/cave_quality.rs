@@ -56,8 +56,13 @@ impl Volume {
                                 let xx = cx * 16 + x;
                                 let zz = cz * 16 + z;
                                 let b = c.get(LocalPos::new([x, y, z]).unwrap());
-                                v.cells[(zz * n + xx) * 256 + yy] =
-                                    if b == Block::Air { 1 } else { 0 };
+                                v.cells[(zz * n + xx) * 256 + yy] = if b == Block::Air {
+                                    1
+                                } else if b.is_solid() {
+                                    0
+                                } else {
+                                    2
+                                };
                                 if b == Block::WaterSource {
                                     v.water += 1;
                                     let p = cp
@@ -182,6 +187,21 @@ impl Volume {
         }
         result.sort_by_key(|c| std::cmp::Reverse(c.cells));
         result
+    }
+    /// Dry Air/solid faces below the ordinary roof guard, in unit block².
+    /// Window boundaries are excluded, so this is a clipped lower bound.
+    pub fn interior_area(&self) -> usize {
+        self.underground()
+            .iter()
+            .enumerate()
+            .filter(|(i, b)| **b != 0 && (*i % 256) as i32 <= self.heights[*i / 256] + 56)
+            .map(|(i, _)| {
+                self.neighbors(i, false)
+                    .into_iter()
+                    .filter(|&n| self.cells[n] == 0)
+                    .count()
+            })
+            .sum()
     }
     /// Two-sweep shortest-path lower bound for the largest clipped component.
     pub fn geodesic(&self, mask: Vec<u8>, standing: bool) -> usize {

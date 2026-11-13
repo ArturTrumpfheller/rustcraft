@@ -183,6 +183,19 @@ impl Shape {
         }
         let mut d: [i64; 3] = std::array::from_fn(|i| i64::from(p[i] * 16 + 8 - self.a[i]));
         if self.room {
+            // A conservative lower metric rejects the expanded room envelope
+            // before fetching/interpolating density. Warps are bounded by
+            // [64,48,64] Q4 and the greatest density threshold is 1753.
+            let lower: i64 = (0..3)
+                .map(|i| {
+                    let q =
+                        (d[i].abs() - [64, 48, 64][i]).max(0) * 1024 / i64::from(self.radius[i]);
+                    q * q / 1024
+                })
+                .sum();
+            if lower > 1753 {
+                return false;
+            }
             let n = field.expect("rooms have a density lattice").sample(p);
             d[0] += i64::from(n[0] * 64 / 1024);
             d[2] += i64::from(n[1] * 64 / 1024);
@@ -313,6 +326,16 @@ impl Builder {
             ],
             b,
         ];
+        // Every Bezier point is inside its controls' convex hull. Ninety-six
+        // Q4 units exceed every horizontal tube radius (at most79), including
+        // narrow/entrance routes. Reject remote owner edges before subdividing.
+        for (axis, horizontal) in [(0, 0), (2, 1)] {
+            let lo = (controls.iter().map(|p| p[axis]).min().unwrap() - 96).div_euclid(16);
+            let hi = (controls.iter().map(|p| p[axis]).max().unwrap() + 96).div_euclid(16);
+            if hi < self.min[horizontal] || lo > self.max[horizontal] {
+                return;
+            }
+        }
         let mut prev = a;
         for t in 1i32..=24 {
             let u = 24 - t;

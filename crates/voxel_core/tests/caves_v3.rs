@@ -245,3 +245,23 @@ fn connected_air_and_player_floor_graph_measure_real_multi_chunk_complexes() {
         "actual surface air must continue underground: {components:?}"
     );
 }
+
+#[test]
+fn v14_post_design_columns_pin_cross_platform_cavity_output_for_future_versions() {
+    // Post-design snapshots, separate from the independent mathematical field oracle.
+    for line in include_str!("fixtures/columns-v14.csv").lines().skip(1) {
+        let v: Vec<_> = line.split(',').collect();
+        let seed = v[1].parse().unwrap();
+        let c = [v[2].parse().unwrap(), v[3].parse().unwrap()];
+        let g = Generator::new(GenerationConfig { seed, version: 14 }).unwrap();
+        assert_eq!(
+            audit::crc(&audit::column(&g, c)),
+            v[4].parse::<u32>().unwrap(),
+            "{line}"
+        );
+        assert_eq!(
+            g.biome(c[0] * 16 + 8, c[1] * 16 + 8).unwrap() as u8,
+            v[5].parse::<u8>().unwrap()
+        );
+    }
+}
