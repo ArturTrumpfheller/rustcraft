@@ -1,0 +1,55 @@
+[
+  {
+    "file": "gameplay-cave-entrance-r4.png",
+    "sha256": "a2e149cd71b72cda8e94d7000914437a0ec6f2cbeee3f786d79b241f5d7308c8",
+    "seed": 2026,
+    "generator": 14,
+    "radius": 4,
+    "start_chunk": [
+      5,
+      -11
+    ],
+    "development_panorama": false,
+    "production_client": true,
+    "title_ready": "RustCraft [Loaded] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 2026 gen14 radius 4 | Pos 88.5 55.0 -167.5",
+    "title_before_walk": "RustCraft [Loaded] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 2026 gen14 radius 4 | Pos 88.5 55.0 -167.5",
+    "title_after_walk": "RustCraft [Saved] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1248 pending 3 dirty 0 | Seed 2026 gen14 radius 4 | Pos 88.5 42.0 -178.1",
+    "executable_sha256": "0120f392b531bd8556c77b111f0c2c3644fbce45411dc3fdd306f37a25fd7e50",
+    "normal_save_quit_exit_code": 0
+  },
+  {
+    "file": "gameplay-cave-entrance-r4-f3.png",
+    "sha256": "c6e6e890ac7c9093debae3e5f3c4cef7c143ff757dae2e45ed66d775f57a0de6",
+    "seed": 2026,
+    "generator": 14,
+    "radius": 4,
+    "start_chunk": [
+      5,
+      -11
+    ],
+    "development_panorama": false,
+    "production_client": true,
+    "title_ready": "RustCraft [Loaded] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 2026 gen14 radius 4 | Pos 88.5 55.0 -167.5",
+    "title_before_walk": "RustCraft [Loaded] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 2026 gen14 radius 4 | Pos 88.5 55.0 -167.5",
+    "title_after_walk": "RustCraft [Saved] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1248 pending 3 dirty 0 | Seed 2026 gen14 radius 4 | Pos 88.5 42.0 -178.1",
+    "executable_sha256": "0120f392b531bd8556c77b111f0c2c3644fbce45411dc3fdd306f37a25fd7e50",
+    "normal_save_quit_exit_code": 0
+  },
+  {
+    "file": "gameplay-cave-entrance-r4-torch.png",
+    "sha256": "fd8f6128e3707e5e9eb1607a83c73f5c702b109cf37da2c2a62551fa92e3abba",
+    "seed": 2026,
+    "generator": 14,
+    "radius": 4,
+    "start_chunk": [
+      5,
+      -11
+    ],
+    "development_panorama": false,
+    "production_client": true,
+    "normal_torch_placement_input": true,
+    "title_after_input": "RustCraft [Dirty] | Slot: 6 Torch | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 2026 gen14 radius 4 | Pos 88.5 42.0 -178.1",
+    "executable_sha256": "0120f392b531bd8556c77b111f0c2c3644fbce45411dc3fdd306f37a25fd7e50",
+    "normal_save_quit_exit_code": 0
+  }
+]

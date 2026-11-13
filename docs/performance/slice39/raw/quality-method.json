@@ -1,0 +1,13 @@
+{
+  "baseline": "c6d36393c037e4295bf93c6a4efbc9fa12dd053c",
+  "implementation_commit": "24e70c7ce380b6565a5ff3fb79c35d59f3b5f86f",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "source_sha256": {
+    "Cargo.lock": "d3a41a8153801c614d01e82cccbf70fd6ae9d62e53946fd3d8c95aa404831b3f",
+    "crates/voxel_core/src/worldgen/caves_v3.rs": "6675b428fefb99f09e627eb88ead6169491d33c22e255e37490d342113926625",
+    "crates/voxel_core/examples/cave_quality.rs": "930ee6238a1b77a892b8b353fdff82fc73251d57b6b5e316b476795f1ef65ef0",
+    "crates/voxel_core/examples/support/cave_quality.rs": "8fd851e38cfa17c90147df3c4bdf95a4a792ac8d828444c0e3d07855e85471a5"
+  },
+  "support": "Dry Air and actual solid blocks distinguished from Water; standing graph never treats Water as floor.",
+  "source_state": "Working-tree analysis harness on the recorded checkout commit; file hashes identify the exact inputs. Final CPU rejection changes preserve all frozen v14 column outputs."
+}

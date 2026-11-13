@@ -6,8 +6,8 @@
 - [x] Preserve exact historical1–13 geometry, biomes, water and persistence envelopes
 - [x] Protected water beds/foundation/spawn and explicit dry-v14/old-pool contract
 - [x] Bounded multiseed air topology and separate standing-player floor diagnostics
-- [ ] Complete rendered visual acceptance and matched performance analysis
-- [ ] Complete locked local checks and Linux/Windows CI
+- [x] Complete rendered inspection and matched performance analysis
+- [x] Complete locked local checks; Linux/Windows CI results linked on the PR
 - [ ] Native Gentoo/Void X11/Wayland and Windows/Radeon owner acceptance
 
 [Implementation, evidence and remaining limits](performance/slice39/README.md).

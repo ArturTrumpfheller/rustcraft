@@ -41,6 +41,8 @@ def main():
   (out/'sources.json').write_text(json.dumps(dict(baseline=BASE,files=sources,binary_sha256={n+'-'+b:hashlib.sha256((out/(n+'-'+b)).read_bytes()).hexdigest() for n in names for b in ['bench','lifecycle']},rustc=subprocess.check_output(['rustc','--version'],text=True),platform=platform.platform(),harness_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()),indent=2)+'\n')
  if a.build_only:return
  manifest=json.loads((out/'sources.json').read_text());order=names[::-1] if a.reverse else names
+ for path,expected in manifest['files']['slice39'].items():
+  assert hashlib.sha256((ROOT/path).read_bytes()).hexdigest()==expected, f'Current sources changed: {path}; rebuild first'
  for name in order:
   for kind in ['bench','lifecycle']:
    assert hashlib.sha256((out/f'{name}-{kind}').read_bytes()).hexdigest()==manifest['binary_sha256'][name+'-'+kind]

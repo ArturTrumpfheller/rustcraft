@@ -1,0 +1,7 @@
+BIOME_SCENE generator=14 seed=42 center=(-719, -564) biome=Snowy Slopes
+CAVE_LIGHTING_FIXTURE supported_floor_torches=42; procedural geometry unmodified
+DIAGNOSTIC_LIGHT development_only=true
+CAVE_CAMERA seed=42 generator=14 world_eye=Vec3(-719.5, 67.62, -564.5) direction=Vec3(0.5, 0.05, 0.8) torch_fixture=true
+TERRAIN_SCENE generator=14 seed=42 x=-719 z=-564 surface_y=99 yaw=0 radius=4 overview=false feet=[-718.5, 100.0, -563.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(0.5, 67.62, 11.5)
+CAPTURE_FRAME_MS samples=90 p50=732.89 p95=1252.02 p99=2023.56

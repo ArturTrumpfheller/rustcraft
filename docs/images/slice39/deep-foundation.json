@@ -1,0 +1,31 @@
+{
+  "seed": 42,
+  "generator": 14,
+  "eye": [
+    -613.5,
+    -50.38,
+    -595.5
+  ],
+  "direction": [
+    1,
+    0.08,
+    0.1
+  ],
+  "diagnostic_light": true,
+  "supported_floor_torches": true,
+  "command": [
+    "/workspace/rustcraft/target/debug/examples/terrain_gallery",
+    "42",
+    "-613",
+    "-595",
+    "0",
+    "--generator=14",
+    "--capture=/tmp/rustcraft-cave-v3-gbju0h37/capture.ppm",
+    "--capture-frames=120",
+    "--radius=4",
+    "--eye=-613.5,-50.38,-595.5",
+    "--direction=1,0.08,0.1",
+    "--cave-torches",
+    "--diagnostic-light"
+  ]
+}

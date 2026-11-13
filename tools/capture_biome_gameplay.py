@@ -50,6 +50,12 @@ def main():
      if debug:key(window,'F3');time.sleep(1)
      path=a.output/f'gameplay-{name}-r{radius}{"-f3" if debug else ""}.png';ImageGrab.grab(xdisplay=os.environ.get('DISPLAY')).save(path)
      records.append(dict(file=path.name,sha256=hashlib.sha256(path.read_bytes()).hexdigest(),seed=seed,generator=version,radius=radius,start_chunk=chunk,development_panorama=False,production_client=True,title_ready=title,title_before_walk=before,title_after_walk=after,executable_sha256=hashlib.sha256(a.executable.read_bytes()).hexdigest()))
+    if a.cave_v3:
+     key(window,'F3');key(window,'6')
+     xdo('mousemove_relative','--',0,350);time.sleep(1)
+     xdo('mousedown',3);time.sleep(.3);xdo('mouseup',3);time.sleep(2)
+     path=a.output/f'gameplay-{name}-r{radius}-torch.png';ImageGrab.grab(xdisplay=os.environ.get('DISPLAY')).save(path)
+     records.append(dict(file=path.name,sha256=hashlib.sha256(path.read_bytes()).hexdigest(),seed=seed,generator=version,radius=radius,start_chunk=chunk,development_panorama=False,production_client=True,normal_torch_placement_input=True,title_after_input=xdo('getwindowname',window),executable_sha256=hashlib.sha256(a.executable.read_bytes()).hexdigest()))
     key(window,'Escape')
     for _ in range(3):key(window,'Down')
     key(window,'Return');proc.wait(timeout=30);assert proc.returncode==0
