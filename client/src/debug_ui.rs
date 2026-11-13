@@ -313,7 +313,7 @@ fn update(
     if let Some(id) = world.identity() {
         if id.generator >= 5 {
             let position = [block[0], block[2]];
-            let biome = if id.generator == 12 {
+            let biome = if id.generator >= 12 {
                 if let Some((cached_id, cached_position, biome)) = overlay.biome_cache
                     && cached_id == id
                     && cached_position == position

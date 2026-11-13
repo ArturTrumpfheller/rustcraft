@@ -50,7 +50,7 @@ fn light(w: &World) -> Skylight {
 }
 #[test]
 fn identities_define_exclusive_bounds_and_old_worlds_never_expand() {
-    for version in 1..=12 {
+    for version in 1..=13 {
         let h = WorldHeight::for_generator(version).unwrap();
         assert_eq!(
             h,
@@ -70,7 +70,7 @@ fn identities_define_exclusive_bounds_and_old_worlds_never_expand() {
         assert!(g.chunk(ChunkPos([0, h.chunks().start - 1, 0])).is_none());
         assert!(g.chunk(ChunkPos([0, h.chunks().end, 0])).is_none());
     }
-    for version in 3..=12 {
+    for version in 3..=13 {
         let w = world(version);
         assert_eq!(w.bounds().0[0], -32768);
         assert_eq!(w.bounds().1[2], 32768);
@@ -83,9 +83,9 @@ fn identities_define_exclusive_bounds_and_old_worlds_never_expand() {
     }
     assert_eq!(
         streaming::new_large_world(42).identity().unwrap().generator,
-        12
+        13
     );
-    for v in [0, 13, u32::MAX] {
+    for v in [0, 14, u32::MAX] {
         assert!(WorldHeight::for_generator(v).is_err());
         assert!(
             Generator::new(GenerationConfig {

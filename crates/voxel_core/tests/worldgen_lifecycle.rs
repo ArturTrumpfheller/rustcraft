@@ -36,7 +36,7 @@ fn load(store: &SaveStore, world: &mut World, c: [i32; 2]) {
 }
 #[test]
 fn generated_removals_and_cross_region_builds_survive_save_evict_regenerate_restart() {
-    for version in [3, 6, 8, 9, 10, 11, 12] {
+    for version in [3, 6, 8, 9, 10, 11, 12, 13] {
         let dir = Directory::new();
         let id = RegionIdentity {
             seed: 0,
@@ -47,7 +47,7 @@ fn generated_removals_and_cross_region_builds_survive_save_evict_regenerate_rest
             SaveStore::open_with(&dir.0, || Ok(World::regional(id))).unwrap();
         let _ = store.load_player(&mut world).unwrap();
         let root = std::fs::read(store.path()).unwrap();
-        let left = if version == 12 {
+        let left = if version >= 12 {
             [-121, -252]
         } else {
             [-137, -256]

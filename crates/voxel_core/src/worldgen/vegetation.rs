@@ -128,7 +128,7 @@ impl Roots<'_> {
                 x,
                 z,
                 if g.config.version >= 11 {
-                    super::terrain_v4::height(g.config.seed, x, z)
+                    super::terrain_v5::height_for(g.config.version, g.config.seed, x, z)
                 } else if g.config.version == 10 {
                     super::terrain_v3::height(g.config.seed, x, z)
                 } else {
@@ -155,11 +155,19 @@ impl Roots<'_> {
             g,
             x,
             z,
-            super::biome_v2::parameters_with_elevation(g.config.seed, x, z, |px, pz| {
-                *self.elevation_cache.entry([px, pz]).or_insert_with(|| {
-                    super::terrain_v4::parameters(g.config.seed, px, pz).offset / 4
-                })
-            }),
+            super::biome_v2::parameters_with_elevation_for(
+                g.config.version,
+                g.config.seed,
+                x,
+                z,
+                |px, pz| {
+                    *self.elevation_cache.entry([px, pz]).or_insert_with(|| {
+                        super::terrain_v5::parameters_for(g.config.version, g.config.seed, px, pz)
+                            .offset
+                            / 4
+                    })
+                },
+            ),
             water,
             slope,
         )
@@ -186,7 +194,7 @@ impl Roots<'_> {
         if self.dry_ground(g, x, z).is_none() {
             return (h, Block::Air);
         }
-        let c = if g.config.version == 12 {
+        let c = if g.config.version >= 12 {
             self.sample_v12(g, x, z).column()
         } else if g.config.version >= 10 {
             let slope = [[-1, 0], [1, 0], [0, -1], [0, 1]]
@@ -280,7 +288,7 @@ impl Plan {
                 {
                     continue;
                 }
-                let ecological = if g.config.version == 12 {
+                let ecological = if g.config.version >= 12 {
                     let roots = roots.get_or_insert_with(|| {
                         let mut roots = Roots::new(g, min.map(|v| v - 5), max.map(|v| v + 5));
                         roots.known = known.map(|columns| (min, columns));
@@ -358,7 +366,7 @@ impl Plan {
                 // cave mouths; every admitted leaf stays above the final terrain.
                 let clear = (-2..=2).all(|dx| {
                     (-2..=2).all(|dz| {
-                        let support = if g.config.version == 12 {
+                        let support = if g.config.version >= 12 {
                             // A neighbor only proves dry support and crown
                             // clearance; its ecological material is irrelevant.
                             *support_cache
@@ -375,7 +383,7 @@ impl Plan {
                         };
                         // Downhill ground cannot intersect a crown. Higher
                         // neighbors must stay below its lowest cell (root+3).
-                        if g.config.version == 12 {
+                        if g.config.version >= 12 {
                             other <= ground + 2
                         } else {
                             (other - ground).abs() <= 1

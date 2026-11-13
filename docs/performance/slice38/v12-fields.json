@@ -1,0 +1,90 @@
+{
+  "0": {
+    "n": 16384,
+    "erosion_negative_fraction": 0.49847412109375,
+    "erosion_lt650_fraction": 0.70263671875,
+    "density_above6_blocks_fraction": 0.3209228515625,
+    "height_above130_before_density_fraction": 0.0103759765625,
+    "weirdness_nonnegative_fraction": 0.50482177734375,
+    "erosion_quantiles": [
+      -3867,
+      -1924,
+      4,
+      1912,
+      3977
+    ],
+    "weirdness_quantiles": [
+      -3594,
+      -1718,
+      13,
+      1738,
+      3674
+    ]
+  },
+  "42": {
+    "n": 16384,
+    "erosion_negative_fraction": 0.50836181640625,
+    "erosion_lt650_fraction": 0.70379638671875,
+    "density_above6_blocks_fraction": 0.348388671875,
+    "height_above130_before_density_fraction": 0.011962890625,
+    "weirdness_nonnegative_fraction": 0.50189208984375,
+    "erosion_quantiles": [
+      -3941,
+      -1906,
+      -25,
+      1942,
+      3750
+    ],
+    "weirdness_quantiles": [
+      -3956,
+      -1755,
+      4,
+      1776,
+      3614
+    ]
+  },
+  "2026": {
+    "n": 16384,
+    "erosion_negative_fraction": 0.49932861328125,
+    "erosion_lt650_fraction": 0.70196533203125,
+    "density_above6_blocks_fraction": 0.30133056640625,
+    "height_above130_before_density_fraction": 0.00927734375,
+    "weirdness_nonnegative_fraction": 0.49615478515625,
+    "erosion_quantiles": [
+      -4038,
+      -1918,
+      1,
+      1923,
+      4069
+    ],
+    "weirdness_quantiles": [
+      -3773,
+      -1740,
+      -11,
+      1704,
+      3521
+    ]
+  },
+  "18446744073709551615": {
+    "n": 16384,
+    "erosion_negative_fraction": 0.49053955078125,
+    "erosion_lt650_fraction": 0.70562744140625,
+    "density_above6_blocks_fraction": 0.30462646484375,
+    "height_above130_before_density_fraction": 0.00787353515625,
+    "weirdness_nonnegative_fraction": 0.50555419921875,
+    "erosion_quantiles": [
+      -3691,
+      -1827,
+      28,
+      1874,
+      3950
+    ],
+    "weirdness_quantiles": [
+      -3584,
+      -1701,
+      14,
+      1725,
+      3697
+    ]
+  }
+}

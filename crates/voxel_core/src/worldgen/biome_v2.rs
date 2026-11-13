@@ -69,11 +69,20 @@ pub(super) fn parameters_with_elevation(
     z: i32,
     at: impl FnMut(i32, i32) -> i32,
 ) -> Parameters {
+    parameters_with_elevation_for(12, seed, x, z, at)
+}
+pub(super) fn parameters_with_elevation_for(
+    version: u32,
+    seed: u64,
+    x: i32,
+    z: i32,
+    at: impl FnMut(i32, i32) -> i32,
+) -> Parameters {
     fields(
         seed,
         x,
         z,
-        terrain_v4::parameters(seed, x, z),
+        super::terrain_v5::parameters_for(version, seed, x, z),
         elevation(x, z, at),
     )
 }
@@ -197,7 +206,9 @@ fn ocean_near_with(g: &Generator, x: i32, z: i32, mut height: impl FnMut(i32, i3
     })
 }
 fn ocean_near(g: &Generator, x: i32, z: i32) -> bool {
-    ocean_near_with(g, x, z, |x, z| terrain_v4::height(g.config.seed, x, z))
+    ocean_near_with(g, x, z, |x, z| {
+        super::terrain_v5::height_for(g.config.version, g.config.seed, x, z)
+    })
 }
 /// Reuse the already-computed unmodified20² density tops for shore probes.
 /// Only the eight-block exterior stencil needs additional memoized point tops.
@@ -223,10 +234,9 @@ impl<'a> Coast<'a> {
             if (0..20).contains(&dx) && (0..20).contains(&dz) {
                 self.rim[(dz * 20 + dx) as usize]
             } else {
-                *self
-                    .extra
-                    .entry([px, pz])
-                    .or_insert_with(|| terrain_v4::height(g.config.seed, px, pz))
+                *self.extra.entry([px, pz]).or_insert_with(|| {
+                    super::terrain_v5::height_for(g.config.version, g.config.seed, px, pz)
+                })
             }
         })
     }
@@ -314,10 +324,12 @@ impl Sample {
     }
 }
 pub fn sample(g: &Generator, x: i32, z: i32) -> Option<Sample> {
-    if g.config().version != 12 || !in_bounds(x, z) {
+    if !matches!(g.config().version, 12 | 13) || !in_bounds(x, z) {
         return None;
     }
-    let c = parameters(g.config.seed, x, z).unwrap();
+    let c = parameters_with_elevation_for(g.config.version, g.config.seed, x, z, |px, pz| {
+        super::terrain_v5::parameters_for(g.config.version, g.config.seed, px, pz).offset / 4
+    });
     let water = hydrology::surface_for(g, x, z);
     let slope = [[-1, 0], [1, 0], [0, -1], [0, 1]]
         .into_iter()
@@ -329,6 +341,7 @@ pub fn sample(g: &Generator, x: i32, z: i32) -> Option<Sample> {
 /// Reuse the v11 profile parameter evaluation; no old climate sampling in v12.
 pub(super) fn columns(
     seed: u64,
+    version: u32,
     min: [i32; 2],
 ) -> (
     Vec<terrain_v4::Profile>,
@@ -336,14 +349,21 @@ pub(super) fn columns(
     Vec<i32>,
     Vec<Parameters>,
 ) {
-    let (grid, terrain) = terrain_v4::profiles_with_fields(seed, min.map(|v| v - 1), 20);
+    let (grid, terrain) = terrain_v4::profiles_with(seed, min.map(|v| v - 1), 20, |seed, x, z| {
+        super::terrain_v5::parameters_for(version, seed, x, z)
+    });
     let origin = min.map(|v| v.div_euclid(32) * 32);
     let nx = (min[0] + 17 - origin[0]) / 32 + 2;
     let nz = (min[1] + 17 - origin[1]) / 32 + 2;
     let heights: Vec<_> = (0..nx * nz)
         .map(|i| {
-            terrain_v4::parameters(seed, origin[0] + (i % nx) * 32, origin[1] + (i / nx) * 32)
-                .offset
+            super::terrain_v5::parameters_for(
+                version,
+                seed,
+                origin[0] + (i % nx) * 32,
+                origin[1] + (i / nx) * 32,
+            )
+            .offset
                 / 4
         })
         .collect();
@@ -489,7 +509,7 @@ mod tests {
             }
             for chunk in [[208, -204], [-1, 0], [-2048, 2047]] {
                 let min = chunk.map(|v| v * 16 - 1);
-                let (_, _, rim, _) = columns(seed, min);
+                let (_, _, rim, _) = columns(seed, 12, min);
                 let mut coast = Coast::new(min, &rim);
                 for i in 0..324 {
                     let x = min[0] + i % 18;

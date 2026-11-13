@@ -1,3 +1,19 @@
+# Slice 38: versioned geography proportions
+
+Generator13 is the new-world default, accepted by strict generator/height/manifest
+validation. V1–v12 output and saves remain frozen. `terrain_v5` provides v13's
+parameter mapping, sharing the original gradient/spline primitives and compact
+bounded density builder. The v12 planner now receives its recorded version and
+uses the matching profile fields, ecological elevation proxy, coast probes and
+hydrology admission. Every dependent terrain query uses this same dispatch.
+The fifteen-biome ecology, support rules, cave primitives and source-water solver
+are shared unchanged. Existing overlays, journal recovery, compact slabs,
+single-worker cancellation/publication, cache limits, floating origin and render
+radius1–4 remain. Only disposable analysis tools build large survey maps.
+
+[Model, compatibility evidence and platform limits](performance/slice38/README.md).
+The sections below retain their historical scope/defaults.
+
 # Slice 37: shared geography, versioned surface ecology
 
 Generator12 uses the unchanged v11 density/hydrology/cave evaluators. The v11
