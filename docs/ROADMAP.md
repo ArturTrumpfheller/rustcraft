@@ -3,9 +3,9 @@
 - [x] Diagnose v12 relief, compare original parameter controls and document reference limits
 - [x] Generator13 default with version-gated relief/valley/density mappings
 - [x] Broader gentle regions, selective distinctive ranges and unchanged fifteen-biome rules
-- [ ] Exact v1–v12 fixtures and complete local regression/build/asset checks
-- [ ] Multi-scale geography, real Bevy comparisons and matched performance evidence
-- [ ] Linux and Windows CI on the PR head
+- [x] Exact v1–v12 fixtures and complete local regression/build/asset checks
+- [x] Multi-scale geography,36 real Bevy captures and matched performance in both orders
+- [x] Linux/Windows implementation CI passed; final-head results linked on the PR
 - [ ] Native Gentoo/Void X11/Wayland and Windows/Radeon visual/gameplay acceptance
 
 [Implementation, evidence and remaining acceptance](performance/slice38/README.md).

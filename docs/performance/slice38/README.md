@@ -79,7 +79,9 @@ measurements, target quotas or substitutes for the final full-density survey.
 1,179,648 samples/version across301,989,888 blocks². One-block slope is the largest
 actual cardinal height difference. Maps use identical fixed color scales. Heights
 include sparse surface density; a separate73,728-point/version `--final --step=64`
-survey includes actual water beds and the fifteen-biome classifier.
+survey includes hydrology-adjusted beds and the fifteen-biome classifier.
+Here “final” means the planned surface after hydrology, before cave openings and
+decoration; full-height block audits separately verify those intersections/support.
 
 Centered square local relief is max−min, with inclusive endpoints at16/32/64/128/
 256/512-block spans. Height-difference distributions measure both cardinal axes
@@ -162,8 +164,14 @@ full rugged slopes retain the original sharp-ridge character. The stochastic
 field is spatially continuous, while discrete block steps and occasional cliffs
 are intentional.
 
-Actual Bevy captures, matched performance and complete check status are recorded
-below when verified. Native GPU/Windows GUI acceptance remains separate.
+## Evidence index
+
+- [36 genuine matched Bevy captures and visual review](comparison.md).
+- [Matched CPU, memory, streaming and adverse observations](performance.md).
+- [Final-bed biome counts for all fifteen IDs](biomes.md).
+- [Local checks, deterministic fixtures and platform status](validation.md).
+
+Native GPU/Windows GUI acceptance remains separate.
 
 ## Native Gentoo/Void Linux and Windows acceptance
 
@@ -188,7 +196,7 @@ set -lx RUSTCRAFT_START_CHUNK '-224,-244'
 cargo run --release --locked -p rustcraft
 ```
 
-Create seed0 and compare the broad-plains site at X/Z(-3584,-3904), Forest at
+Create seed0 and compare the broad-plains site at X/Z(-3584,-3904), the former70-block ridge now nearY21 at(-2032,-3872), Forest at
 (1984,-3904), uplands at(-3008,-640) and coast at(-2688,-2304). Also try seed42
 at(-768,-640) and(-992,-3488), seed2026 at(-1536,-3904) and distant(-23296,20896),
 and u64::MAX signed/distant exploration. `RUSTCRAFT_START_CHUNK` takes block X/Z

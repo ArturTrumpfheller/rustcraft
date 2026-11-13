@@ -1,0 +1,16 @@
+{
+  "baseline": "cec8f593d20c012725ed17308bb9c7d44b470e08",
+  "order": [
+    "slice38",
+    "slice37"
+  ],
+  "repeats": 1,
+  "frames": 64,
+  "frame_hz": 240,
+  "rendering_install": true,
+  "distance_expansion": true,
+  "transition_scope": "Terrain balance compares v12/v13 at matched ecosystem sites and radii2-4; geometry/resources intentionally differ.",
+  "aggregation_sha256": "0827d3beed8e892f418aa39df62ed1796a285b8d3842fb1dc39e13528c39ff39",
+  "machine": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "note": "Headless scripted position/velocity, fixed 240Hz deadlines, no rendered frames/GPU. RSS is process-wide; requested heap peak is additional process heap during worker window, excludes stacks/allocator metadata/GPU and may include concurrent main allocations."
+}

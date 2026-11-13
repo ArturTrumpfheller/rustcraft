@@ -1,0 +1,8 @@
+{
+  "os": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "cpu_quota": "2 CPUs (cgroup200000/100000)",
+  "toolchain": "Rust1.99.1 / Bevy0.20.0",
+  "measurement": "Sequential isolated runs, no concurrent builds/tests/renderers. Core128 samples+8 warmups per13 sites; lifecycle24 trials; streaming12 scripts at radii2/3/4,64 CPU observation frames,1 repeat, both execution orders.",
+  "source_scope": "Core snapshot equals final core source hashes. Streaming snapshot differs only in test-only terrain occupancy count assertions and the separately executed v12/v13 cancellation test loop; production evaluators are identical. Full original snapshot hashes and embedded runtime IDs are retained.",
+  "not_measured": "Native FPS/GPU/VRAM, compositor/input, physical Gentoo/Void/Windows."
+}
