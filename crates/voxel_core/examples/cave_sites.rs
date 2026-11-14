@@ -14,17 +14,26 @@ fn main() {
         (42, [-896, -896], [-384, -384]),
     ] {
         let g = Generator::new(GenerationConfig { seed, version: 14 }).unwrap();
+        let mut considered = 0;
         for (kind, p) in caves_v3::landmarks(&g, min, max) {
             if !matches!(
                 kind,
-                "cavern" | "chamber" | "shaft" | "entrance-route" | "narrow" | "tunnel"
+                "carver" | "cavern" | "chamber" | "shaft" | "entrance-route" | "narrow" | "tunnel"
             ) {
                 continue;
             }
-            if matches!(kind, "narrow" | "tunnel" | "shaft" | "entrance-route")
-                && (p[0] + p[2]).rem_euclid(13) != 0
+            if matches!(
+                kind,
+                "carver" | "narrow" | "tunnel" | "shaft" | "entrance-route"
+            ) && (p[0] + p[2]).rem_euclid(13) != 0
             {
                 continue;
+            }
+            // Random walks expose far more anchors than the archived room graph.
+            // Bound this development probe independently of population surveys.
+            considered += 1;
+            if considered > 32 {
+                break;
             }
             // Search a small floor footprint; never move Stone for a camera.
             let mut found = None;

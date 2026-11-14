@@ -29,6 +29,8 @@ SCENES=[
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',required=True,type=Path);p.add_argument('--executable',type=Path,default=Path('target/release/examples/terrain_gallery'));p.add_argument('--scene',choices=[s[0] for s in SCENES]);p.add_argument('--torch-only',action='store_true');p.add_argument('--skip-existing',action='store_true');a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
  for name,seed,eye,direction in SCENES:
+  # Old poses remain explicit choices for frozen historical executables.
+  if not a.scene and not name.startswith('horizon-'):continue
   if a.scene and name!=a.scene:continue
   version=13 if name.startswith('historical') else 14
   label=name+('-torches' if a.torch_only else '')

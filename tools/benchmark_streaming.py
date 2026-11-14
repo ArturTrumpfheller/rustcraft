@@ -513,6 +513,9 @@ def main():
     assert manifest.get("baseline_generator", 13) == a.baseline_generator, "Reused baseline generator differs"
     assert manifest.get("terrain_balance", False) == a.terrain_balance, "Reused terrain-balance mode differs"
     assert manifest.get("biome_v2", False) == a.biome_v2, "Reused biome mode differs"
+    if not a.summarize_only:
+        for path,expected in manifest["files"][names[1]].items():
+            assert hashlib.sha256((ROOT/path).read_bytes()).hexdigest() == expected, f"Current sources changed: {path}; rebuild first"
     ids = manifest["runtime_ids"]
     assert set(ids) == set(names), "Reused build labels differ"
     executables = json.loads((out / "executables-sha256.json").read_text())

@@ -17,7 +17,7 @@ Run the printed build command, then:
 ```
 
 The cave exporter executes the original density graph, interpolation, positional
-noise, noise-based aquifer and all three ordered Overworld carvers. All 56 land
+noise, noise-based aquifer and all three ordered Overworld carvers. All 56 Overworld
 biomes in the pinned registry select the same cave/cave-extra/canyon set. Four
 logical states classify Stone/Air/Water/Lava without importing block assets.
 Carver application runs downwards and skips only uncarvable bedrock (absent from

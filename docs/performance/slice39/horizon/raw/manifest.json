@@ -1,0 +1,497 @@
+{
+  "scope": "Final Horizon follow-up data, performance, verification and genuine captures",
+  "files": {
+    "docs/images/slice39/horizon/gameplay-captures.json": {
+      "bytes": 2998,
+      "sha256": "56a41ed4d7e6688ce2f6dca581572febd74ed91d2a223572280d01be51e17a3e"
+    },
+    "docs/images/slice39/horizon/gameplay-cave-entrance-r4-f3.png": {
+      "bytes": 877555,
+      "sha256": "08cb413d8595af4403f81fe2f5ee14af559fe0dd334c7680f5024b7c9c0dfb0d"
+    },
+    "docs/images/slice39/horizon/gameplay-cave-entrance-r4-torch.png": {
+      "bytes": 609527,
+      "sha256": "918579e57407253bf32c78cf1a1d6a94475029dcc0c5c9673a0a3a64216ac6bd"
+    },
+    "docs/images/slice39/horizon/gameplay-cave-entrance-r4.png": {
+      "bytes": 864270,
+      "sha256": "87ade43212937205438adf739a0ffcfa2f1a3a789857dfd9b4c85f566526aa9a"
+    },
+    "docs/images/slice39/horizon/gameplay-fixed-site-torch.png": {
+      "bytes": 617665,
+      "sha256": "87320ae572578ea8aefeabb890ee086c7be5bb671f6cefd7836cba65b22fbef1"
+    },
+    "docs/images/slice39/horizon/gameplay-fixed-site.png": {
+      "bytes": 832755,
+      "sha256": "f77de0c32fa850b53062bd5e1010818ece47b6d9f2a529a35eaf55188c699578"
+    },
+    "docs/images/slice39/horizon/horizon-mountain.json": {
+      "bytes": 581,
+      "sha256": "576a4a53332b7ed756129273f22dd6335d4aea38b7a69310edfcfdd7158c044b"
+    },
+    "docs/images/slice39/horizon/horizon-mountain.png": {
+      "bytes": 744630,
+      "sha256": "5e173ee09fde2f7ec36aca9362eb1612d90befee2b6053ff87e7d991d5f0fe66"
+    },
+    "docs/images/slice39/horizon/horizon-ordinary-0-torches.json": {
+      "bytes": 529,
+      "sha256": "3a57368ef5458d89cfcb6b143707876a35b8b07f7334609227299c836ca8eec8"
+    },
+    "docs/images/slice39/horizon/horizon-ordinary-0-torches.png": {
+      "bytes": 820008,
+      "sha256": "4fde63b0e97e36e76ba7752b039488852c5e8a3e245d0f95e01f3a2e36b5f2d3"
+    },
+    "docs/images/slice39/horizon/horizon-ordinary-0.json": {
+      "bytes": 554,
+      "sha256": "7f90aceba5c2319d9505d84adf0708a1a277772d5104c65072a372d3b3937824"
+    },
+    "docs/images/slice39/horizon/horizon-ordinary-0.png": {
+      "bytes": 746432,
+      "sha256": "c56cb33deb5f13db773a08457d3b8fc9c84b40b147d246390eec55dff54dca2b"
+    },
+    "docs/images/slice39/horizon/horizon-ordinary-42.json": {
+      "bytes": 553,
+      "sha256": "8f29c5473f457d0fb388b802c1d97d15f1b8a50ae3a2a32b9b6ab47383b12900"
+    },
+    "docs/images/slice39/horizon/horizon-ordinary-42.png": {
+      "bytes": 810527,
+      "sha256": "c6ed4ee046541e08be882f6ccdd3c5ff167d67cd91815ad59672a7f6448ed7e7"
+    },
+    "docs/images/slice39/horizon/manual-record.json": {
+      "bytes": 1290,
+      "sha256": "2c6d358fc90c6e41ac244bba5ca71e29bdf805b8cc3761ff04b583f2a2441580"
+    },
+    "docs/performance/slice39/horizon/README.md": {
+      "bytes": 26635,
+      "sha256": "c208d6300e0cc128c6b7b4ac0dc7c44671307659c993955f53d664ff7c116c98"
+    },
+    "docs/performance/slice39/horizon/comparison-remapped.json": {
+      "bytes": 1112,
+      "sha256": "e46504ec47945905247c05b10467e41707d0ca3777b36cdb4151bbce31390f1c"
+    },
+    "docs/performance/slice39/horizon/comparison.json": {
+      "bytes": 1114,
+      "sha256": "bf6cf1dc456fc5ff9887ccc4b772b41d15f9afbdbe0ae419c9518f94a525ee7a"
+    },
+    "docs/performance/slice39/horizon/depth-and-size.png": {
+      "bytes": 289375,
+      "sha256": "a81e6b5cbfa4a5086402a4dffbc2e33cf7d13b5654b13554a0dfdfcf5a6e3202"
+    },
+    "docs/performance/slice39/horizon/raw/analysis-environment.json": {
+      "bytes": 1508,
+      "sha256": "d2e5172b7d321c9b4101fafc99f81fab7f0b10e4fa02ae95509ebda3af403ec5"
+    },
+    "docs/performance/slice39/horizon/raw/captures/gameplay-cave-entrance-r4.log.gz": {
+      "bytes": 20,
+      "sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+    },
+    "docs/performance/slice39/horizon/raw/captures/horizon-mountain.log.gz": {
+      "bytes": 391,
+      "sha256": "cafae083fcadd8fa7dead34165fea0d759218dfb646cb44c44b5421fea1aaed2"
+    },
+    "docs/performance/slice39/horizon/raw/captures/horizon-ordinary-0-torches.log.gz": {
+      "bytes": 392,
+      "sha256": "5b88e0a91b11000172c80b6f574b40ab7c83e36a5f2ee9ab20e40986eea1afec"
+    },
+    "docs/performance/slice39/horizon/raw/captures/horizon-ordinary-0.log.gz": {
+      "bytes": 389,
+      "sha256": "d941f3ec77ec8464898237bd769dadbe93ff5e482efc3218684506cef0fb9af9"
+    },
+    "docs/performance/slice39/horizon/raw/captures/horizon-ordinary-42.log.gz": {
+      "bytes": 385,
+      "sha256": "a6519234e3c6c6e3d4ab9cccdf125eecef9262b262abb7f25aa51ac2ee4762d2"
+    },
+    "docs/performance/slice39/horizon/raw/checks/cave-sites-final-build.log.gz": {
+      "bytes": 168,
+      "sha256": "e68713171d201d5d6c17f11adea12c0d068fa9a6e696d3402a533a00659ee0c9"
+    },
+    "docs/performance/slice39/horizon/raw/checks/clippy-after-tools.log.gz": {
+      "bytes": 139,
+      "sha256": "dfc54665bf30f80e1d0b774b56b850144280e24574ae0944954fd27ab9494ec0"
+    },
+    "docs/performance/slice39/horizon/raw/checks/clippy-last.log.gz": {
+      "bytes": 140,
+      "sha256": "00a791e8740efe0f8880ea86c34ca8548f4732a0badea44b929a925a3073be4e"
+    },
+    "docs/performance/slice39/horizon/raw/checks/fmt-complete.log.gz": {
+      "bytes": 20,
+      "sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+    },
+    "docs/performance/slice39/horizon/raw/checks/fmt-last.log.gz": {
+      "bytes": 20,
+      "sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+    },
+    "docs/performance/slice39/horizon/raw/checks/optimized-final-tests.log.gz": {
+      "bytes": 10707,
+      "sha256": "579bf29a6d6be0abf2b412d17dca36740a3cf8866e43699d0b7a9ec8d74e1cb8"
+    },
+    "docs/performance/slice39/horizon/raw/checks/release-final-build.log.gz": {
+      "bytes": 171,
+      "sha256": "6067e077073daef8ddf0a962c5a24d81cb16b05b41184fbd375bf3ad15a91cba"
+    },
+    "docs/performance/slice39/horizon/raw/checks/workspace-idle-tests.log.gz": {
+      "bytes": 16926,
+      "sha256": "9bee4fab91bcee8118ad803234bdda90be15b49807ed4889251ce1d253dcf98b"
+    },
+    "docs/performance/slice39/horizon/raw/diagnostics/exploratory-cache.csv.gz": {
+      "bytes": 5158,
+      "sha256": "838436ca49eca719daec7cdb7afc83bfd50ae97f7bce8ac53bacf37ea796c168"
+    },
+    "docs/performance/slice39/horizon/raw/diagnostics/exploratory-contended.csv.gz": {
+      "bytes": 5185,
+      "sha256": "3835bb36bc4882241f410c320eaa0030f0f033eb9f24f576aff84100af58d213"
+    },
+    "docs/performance/slice39/horizon/raw/diagnostics/exploratory-fast.csv.gz": {
+      "bytes": 5095,
+      "sha256": "9e464ffa81b46e14e461d504f795b905e65d672a5570e2ebe4c982ab57b44fb7"
+    },
+    "docs/performance/slice39/horizon/raw/diagnostics/method.json": {
+      "bytes": 690,
+      "sha256": "608d4c74a39b16b345865d998d5dfa2f7b4fd215e5d7e4537fc7f1de183993c2"
+    },
+    "docs/performance/slice39/horizon/raw/diagnostics/workspace-final-tests.log.gz": {
+      "bytes": 7323,
+      "sha256": "d8f9bf1ff344e921687d856b3f6f0d08514c6a57bfc41fda932d08b79a63138f"
+    },
+    "docs/performance/slice39/horizon/raw/diagnostics/workspace-initial-tests.log.gz": {
+      "bytes": 5927,
+      "sha256": "9e0d148838e3e5376918474e14655be241cef76be902a251a2397958a2935fb6"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-forward/method.json": {
+      "bytes": 309,
+      "sha256": "610127db99645801aa178b8c226963d3e55fe445f892fd4c5c51e42c359933ed"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-forward/percentiles.csv": {
+      "bytes": 68534,
+      "sha256": "373ee3b2bf06476b5f017ad841ebebb9ae604e04a7f353c7db7ee52a1519f5ca"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-forward/slice38-lifecycle.csv.gz": {
+      "bytes": 529,
+      "sha256": "68be658ca8c771dfea2cf6cf35eb531bc5cc3c4c6ee8b53d240d0b7d26053b4b"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-forward/slice38.csv.gz": {
+      "bytes": 96030,
+      "sha256": "82c65a45f4fbc9c32867e6ba902c623cfc9db088556e10c8bb617fb92229ccb4"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-forward/slice39-lifecycle.csv.gz": {
+      "bytes": 534,
+      "sha256": "808be13fef638cd7afd9f4240ef933fc23fb50f21c12017fa326527351b0bf60"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-forward/slice39.csv.gz": {
+      "bytes": 111131,
+      "sha256": "59d6c747abe265b1f74ae089b56e09527ce23102367041144f371e5964d20de8"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-forward/sources.json": {
+      "bytes": 26461,
+      "sha256": "15a942d444adb6132c37b2fdea1a7f105de7c31ab4fe20c722ffff7fc688d11b"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-forward/v14-original-lifecycle.csv.gz": {
+      "bytes": 533,
+      "sha256": "6fa419cdca94c1ebf7f5352f72c3d35aa19ce56291eae2b2f84336ed53b8a2f6"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-forward/v14-original.csv.gz": {
+      "bytes": 107623,
+      "sha256": "43492feded0e6009f1d69a44aebdafe0e95c1aa5be330b9af78fbe83a064a045"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-reverse/method.json": {
+      "bytes": 309,
+      "sha256": "ce456c540a2599e4bd98cf776fadb65aef66a9d0a80283067218100e196c297b"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-reverse/percentiles.csv": {
+      "bytes": 68571,
+      "sha256": "475d1660c1c8b9f5a8a5bbca791a327b185acb946efddc683c02b3df80490393"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-reverse/slice38-lifecycle.csv.gz": {
+      "bytes": 533,
+      "sha256": "ab00535dc764e090f4312cfb06a2d93dfc0714989f08d185c1cd9a60696562b2"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-reverse/slice38.csv.gz": {
+      "bytes": 96074,
+      "sha256": "6d158efcbeeb448f6aad1efb5bc9fdbc87ba3788dc386929fd5d993f7a4b01e2"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-reverse/slice39-lifecycle.csv.gz": {
+      "bytes": 535,
+      "sha256": "af89a85ddc1ca72d44410515fc9ab4614e4cef91f7e8408198f57d7fc6a55825"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-reverse/slice39.csv.gz": {
+      "bytes": 111769,
+      "sha256": "4d2cab0057e7f85a45627047041dd90b390cef0f4a4439f1b7dff75eda3f32e7"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-reverse/sources.json": {
+      "bytes": 26461,
+      "sha256": "15a942d444adb6132c37b2fdea1a7f105de7c31ab4fe20c722ffff7fc688d11b"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-reverse/v14-original-lifecycle.csv.gz": {
+      "bytes": 534,
+      "sha256": "4acf47c0fc33f512193cf1d08e4156b00be62f13063d864078cb587afa5d1082"
+    },
+    "docs/performance/slice39/horizon/raw/performance/core-reverse/v14-original.csv.gz": {
+      "bytes": 108395,
+      "sha256": "b16660a7d55f2368e870998daf38980b9972ac13edceeaae9c5b04b7a5280d80"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-forward/comparison.csv": {
+      "bytes": 195193,
+      "sha256": "6a5a7042945c62e3b366f56ef89a46d2ab16b35a99cea1cf18f45c44d2eea196"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-forward/executables-sha256.json": {
+      "bytes": 174,
+      "sha256": "9c387b01806890ce02374dabf29e89c1c2864b2689e0ae5e68df7f9a50b1cc67"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-forward/horizon-v14.txt.gz": {
+      "bytes": 1167239,
+      "sha256": "1b612e93c23a7252adc7d389c9bd8e0b7641cf7f92387b9fa857617afe8d6f6b"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-forward/method.json": {
+      "bytes": 875,
+      "sha256": "55b109cf0b643d1f967c92a40622c4ce199c7c6c6d36deadaa2d4be0f190e9b5"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-forward/percentiles.csv": {
+      "bytes": 390458,
+      "sha256": "8c6531acf24cf429ed5acfc3be77678dc3760d3d097e57a870efe30fbaf0edc6"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-forward/previous-v14.txt.gz": {
+      "bytes": 960077,
+      "sha256": "9a913b269252495bb1e16d7a2bd54b4e106f67fe4a286055fc86054579817efb"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-forward/runner.log.gz": {
+      "bytes": 86,
+      "sha256": "ec81d83be6088f0ab9b1e4ebc2919daa5a025e5713d2066c2da308fad87664f9"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-forward/samples.csv.gz": {
+      "bytes": 2127006,
+      "sha256": "a1091f5a58f4efb145e28c3521fc70e9736c5a1e4d48441b5b1f8e2a4aaac65c"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-forward/sources.json": {
+      "bytes": 28521,
+      "sha256": "c28cc9d3433ab722b0792ac507b78254db819aa5d0f83e79612b84deaa910c74"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-forward/states.json": {
+      "bytes": 5641,
+      "sha256": "e44f935754b76d9362df6cff88357fae5be37a55be5b75abb6582d2970f3757c"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-reverse/comparison.csv": {
+      "bytes": 195346,
+      "sha256": "a0772b635317a2c9309010840f87b6bd0cda3194a79f20aee81f6a154d338d21"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-reverse/executables-sha256.json": {
+      "bytes": 174,
+      "sha256": "9c387b01806890ce02374dabf29e89c1c2864b2689e0ae5e68df7f9a50b1cc67"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-reverse/horizon-v14.txt.gz": {
+      "bytes": 1185767,
+      "sha256": "f9200be7752c1b00b7194589a792918fb666153fdc41e415d43babb835860597"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-reverse/method.json": {
+      "bytes": 875,
+      "sha256": "c389fec1621e43d6c987af74b04850b5972af77f9e79c758305ad480b3e8b11a"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-reverse/percentiles.csv": {
+      "bytes": 390765,
+      "sha256": "117b7b25da37c723b2f12e17162527db59900cbdf33bd8cd24da8bd0e73946ed"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-reverse/previous-v14.txt.gz": {
+      "bytes": 956930,
+      "sha256": "3fcfdb65d05d70a30f9e351bd082011a570910487530d6953ec95b8e18d8e4f0"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-reverse/runner.log.gz": {
+      "bytes": 85,
+      "sha256": "e7ac00a5be9e28922c9a9f160e2fbcb17f310a48a4d296e1dbd71b9b2f971629"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-reverse/samples.csv.gz": {
+      "bytes": 2144706,
+      "sha256": "c6d1c8e2875ed79cc6cf2c5c6e371516bada8d82cfdf0b218c7e1ca73d2fc634"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-reverse/sources.json": {
+      "bytes": 28521,
+      "sha256": "c28cc9d3433ab722b0792ac507b78254db819aa5d0f83e79612b84deaa910c74"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-previous-reverse/states.json": {
+      "bytes": 5641,
+      "sha256": "e44f935754b76d9362df6cff88357fae5be37a55be5b75abb6582d2970f3757c"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-forward/comparison.csv": {
+      "bytes": 195027,
+      "sha256": "aa2109dd841614657786560bd85574e121ea466e967c37fc0af64c31c3462b6d"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-forward/executables-sha256.json": {
+      "bytes": 172,
+      "sha256": "b3812e70d4d791ef68c4526eb75e0aa72d6e7d7e3c7277f0f96d0cc9180bcc53"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-forward/horizon-v14.txt.gz": {
+      "bytes": 1207449,
+      "sha256": "8f697cb120c8b15152c7bc1fd0eb823218271d576496bd0cd57bb4474bd5e867"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-forward/merged-v13.txt.gz": {
+      "bytes": 899637,
+      "sha256": "b30cb0bae1e2a25509746c640c7506d12796ee3c173ab26d30cf369c2c91233d"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-forward/method.json": {
+      "bytes": 873,
+      "sha256": "661507b1bd6b8320d1698cd798fbe1b5228cbcf5ce230094f2a50c594d4ce933"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-forward/percentiles.csv": {
+      "bytes": 386503,
+      "sha256": "e30dbae839ec93f04dbf5c652f13399ce6871ef4408cb9ab2ca62ac10e8e439a"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-forward/runner.log.gz": {
+      "bytes": 85,
+      "sha256": "cda6e825da3491e0a2b6ca19d7e9a7a3acb6c145e66c5cffdcc15981f08191b7"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-forward/samples.csv.gz": {
+      "bytes": 2105410,
+      "sha256": "55ffaf309ef84455ca6127f4f23011b955f6b179306810f344e29a67d9915c26"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-forward/sources.json": {
+      "bytes": 28269,
+      "sha256": "e4727ebe1b8342dd8d877c8da78b7ded936c09d389d9f22f5a3fb40c12bd6da9"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-forward/states.json": {
+      "bytes": 5641,
+      "sha256": "8d4c44be4725fb60bc209774bd8b66d8564d11b02d22c71a08dfc244c0bcc948"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-reverse/comparison.csv": {
+      "bytes": 194737,
+      "sha256": "2eacd8e2a8cd3eb11ff9796af42b60d0c98178e5611b5167d0f9779ed92d3bac"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-reverse/executables-sha256.json": {
+      "bytes": 172,
+      "sha256": "b3812e70d4d791ef68c4526eb75e0aa72d6e7d7e3c7277f0f96d0cc9180bcc53"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-reverse/horizon-v14.txt.gz": {
+      "bytes": 1181582,
+      "sha256": "41418a674c0b8ca05d2a7e4afa573679e43b7a6908f0dc3769513ee22cec27d1"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-reverse/merged-v13.txt.gz": {
+      "bytes": 889530,
+      "sha256": "a28066813566c2f1afdc8b2253d0c34b0d539a43a8eccf9e933b45be5f12a058"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-reverse/method.json": {
+      "bytes": 873,
+      "sha256": "2a17ccecb0f546ccd7880527f11a61c4759f2586c8e43d3cff3ccfb8d51c91db"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-reverse/percentiles.csv": {
+      "bytes": 386167,
+      "sha256": "a1ea97f9097d9ab5950d6879d67484ce5175f141f4219ba535a6b7be238a1e08"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-reverse/runner.log.gz": {
+      "bytes": 84,
+      "sha256": "5366eb1cdbccdb243e8f913e894f2b54ee629f3c637925fa838fa33ec8146fef"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-reverse/samples.csv.gz": {
+      "bytes": 2069190,
+      "sha256": "39ed98807e242a070adefb5d98734eaf83da17f0d5009bfc616e10c916d7f7e0"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-reverse/sources.json": {
+      "bytes": 28269,
+      "sha256": "e4727ebe1b8342dd8d877c8da78b7ded936c09d389d9f22f5a3fb40c12bd6da9"
+    },
+    "docs/performance/slice39/horizon/raw/performance/stream-v13-reverse/states.json": {
+      "bytes": 5641,
+      "sha256": "8d4c44be4725fb60bc209774bd8b66d8564d11b02d22c71a08dfc244c0bcc948"
+    },
+    "docs/performance/slice39/horizon/raw/previous-all.jsonl.gz": {
+      "bytes": 23080,
+      "sha256": "4424ac8dcb81e118ac9f9c784426fd6aed72e99bd53be31be9024ae2116b2c95"
+    },
+    "docs/performance/slice39/horizon/raw/production-provenance.json": {
+      "bytes": 15912,
+      "sha256": "2d6f48e9b6a36926c577de82ddb2d2ad718e00f87278ad9a2b73affd57e6cdbe"
+    },
+    "docs/performance/slice39/horizon/raw/reference/Cargo.lock": {
+      "bytes": 11728,
+      "sha256": "2582154d2d77c326b5b1959054446ba5f06d69ab698cf83883dedf072bd8b4ad"
+    },
+    "docs/performance/slice39/horizon/raw/reference/Cargo.toml": {
+      "bytes": 362,
+      "sha256": "07945e2d5e3566cd23ded4732242680acfa26c841f2ebd81dab6e3c341ca577e"
+    },
+    "docs/performance/slice39/horizon/raw/reference/LICENSE": {
+      "bytes": 1099,
+      "sha256": "b4b374ae9d0f2d8f7be35c6783e41327431da3b5662605da9ba31493630621df"
+    },
+    "docs/performance/slice39/horizon/raw/reference/THIRD_PARTY_NOTICES.md": {
+      "bytes": 23915,
+      "sha256": "b3f55eeb60ac3139d0c4dbdaf8ee8c9c2fcf9f20658036195b1f66ea0b02b523"
+    },
+    "docs/performance/slice39/horizon/raw/reference/provenance.json": {
+      "bytes": 111285,
+      "sha256": "9e6c1333acb53ef9945595a5e1087a73ded8ed332ad9eb4c882e56b983775ab7"
+    },
+    "docs/performance/slice39/horizon/raw/reference/rustcraft_cave_reference.rs": {
+      "bytes": 5270,
+      "sha256": "5d2eb48629d941ea276ffdbf0fa9e594934bfca3b2892e25bfd77e88bb826e72"
+    },
+    "docs/performance/slice39/horizon/raw/reference/rustcraft_noise_reference.rs": {
+      "bytes": 1855,
+      "sha256": "6a217aaebd0df51d9bc2679c636a31d25a509748996f347f41f07fedee350271"
+    },
+    "docs/performance/slice39/horizon/raw/reference/rustcraft_terrain_reference.rs": {
+      "bytes": 2878,
+      "sha256": "f69ceb602748305e55bea5290fbae6bbfad4ac857968aa35a56bbd10c404dc37"
+    },
+    "docs/performance/slice39/horizon/raw/reference-all.jsonl.gz": {
+      "bytes": 27444,
+      "sha256": "a0e5f99fa21a5c7aba5dfca1ee70c49aa058b6f8c2ed28208657ec0fdb38bde0"
+    },
+    "docs/performance/slice39/horizon/raw/reference-conditional-plan.csv": {
+      "bytes": 1020,
+      "sha256": "fd1e422205f9ae6804f4050bc9192bcb20594165abaee3efcd950201c651afca"
+    },
+    "docs/performance/slice39/horizon/raw/reference-random-plan.csv": {
+      "bytes": 4334,
+      "sha256": "392818e05f7b030fe3097f7043a91cec1500aaac6c0a9de72ae1cfa8a015fedf"
+    },
+    "docs/performance/slice39/horizon/raw/reference-remapped.jsonl.gz": {
+      "bytes": 20442,
+      "sha256": "665764af07c65f8656d774e0f4c501b4aa298a2f6fd4c36f732d7b16ecfecaa8"
+    },
+    "docs/performance/slice39/horizon/raw/revised-all.jsonl.gz": {
+      "bytes": 24655,
+      "sha256": "80dd91b6bcbd8af876ff0ca3945681c43b200cf2dc4d56c558803eb42279e557"
+    },
+    "docs/performance/slice39/horizon/raw/rust-all-plan.csv": {
+      "bytes": 5282,
+      "sha256": "3bf7db1f42c7d00cbbe0274307503c09b661ed1bbd15353f48cb7a3f267623cd"
+    },
+    "docs/performance/slice39/horizon/raw/rust-conditional-plan.csv": {
+      "bytes": 997,
+      "sha256": "be555d118bdccc4ffa512ae9c21a9082831a28fdfc365168759372a47068d39d"
+    },
+    "docs/performance/slice39/horizon/raw/source-ci.json": {
+      "bytes": 9151,
+      "sha256": "f288e99e284311afb05a5f4066522ad9d650606e572aad66dad627503c5df6ae"
+    },
+    "docs/performance/slice39/horizon/raw/v13-all.jsonl.gz": {
+      "bytes": 21738,
+      "sha256": "91daae130f5da48c8c22fd369b4c7f6db35c0da47f6ff8a29c4bb6aea1b0a6da"
+    },
+    "docs/performance/slice39/horizon/raw/validation.json": {
+      "bytes": 1268,
+      "sha256": "b2fc2e3d0619a5a70574d2e148bbae2583efb7ef8fb515d3cf607591991d4b5c"
+    },
+    "docs/performance/slice39/horizon/regional-comparison.png": {
+      "bytes": 70624,
+      "sha256": "945230e0a685346fda8552dbb427ae3df878482965eb623caea334f7ac7ec3d8"
+    },
+    "docs/performance/slice39/horizon/report-method.json": {
+      "bytes": 1275,
+      "sha256": "62000c66a1a764b3d9fe3b9081964443d3c8a5f525201dd03e8aa690d9ecb47e"
+    },
+    "docs/performance/slice39/horizon/sections-s00-0.png": {
+      "bytes": 1010300,
+      "sha256": "f72f1fcdd01425053836f7d7ecbf04668db2ab0a1d2434fb709307396824349b"
+    },
+    "docs/performance/slice39/horizon/sections-s01-0.png": {
+      "bytes": 1060142,
+      "sha256": "bbede52885ccc69ed458f402a572d2976cea547a4deae18bd3be12e65e648f67"
+    },
+    "docs/performance/slice39/horizon/sections-s08-1.png": {
+      "bytes": 979080,
+      "sha256": "f97c1881b5d2ad321f26c9c84986e4b78d76800a5a2da3a55ccdf73d6c0136f0"
+    },
+    "docs/performance/slice39/horizon/summary.json": {
+      "bytes": 68311,
+      "sha256": "2542597b1b69b70fbd389e4d03d31cc4a478d86aa2b17132849054876990eee6"
+    }
+  }
+}

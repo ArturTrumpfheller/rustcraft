@@ -39,7 +39,7 @@ A temporary minimal workspace compiled the original `horizon-core`,
 `horizon-world` and `horizon-threads` sources. Source hashes were checked against
 the pinned checkout. The original density graph, interpolation, noise-based
 aquifer and three ordered Overworld carvers actually executed for80 regions.
-All56 land biomes in these inputs select cave, cave-extra-underground and canyon
+All56 Overworld biomes in these inputs select cave, cave-extra-underground and canyon
 in the same order. Four logical states classify Stone/Air/Water/Lava; carver mask
 application proceeds downwards. Input/source/binary hashes and exact measurement
 adapters are in [raw/reference](raw/reference); the reusable adapters and isolated
@@ -53,7 +53,7 @@ reduce material-stage effects; they cannot prove those stages are irrelevant.
 
 ### What Horizon's published parity tests establish
 
-At this pinned commit, `docs/world-generation.md` reports whole-chunk block-state,
+At this pinned commit, [world-generation.md](https://github.com/horizon-rust/horizon/blob/0de893227f0dc4ad7bbbedee37744e007df04151/docs/world-generation.md) reports whole-chunk block-state,
 quart-biome, canonical block-entity NBT, scheduled block/fluid tick and
 postprocessing comparisons, with explicit format/default-state normalizations.
 Its reported Overworld seed12345 corpus covers42 sites/372 chunks: structure
@@ -62,7 +62,7 @@ chunks differing by three blocks and one block entity. Other documented corpora
 include decorated regions and Nether/End. These are **upstream-reported results**,
 not experiments rerun here or a proof about every seed/region.
 
-`tools/test_chunk_generation_parity.py` invokes a Java26.3 oracle with pinned
+[The chunk parity harness](https://github.com/horizon-rust/horizon/blob/0de893227f0dc4ad7bbbedee37744e007df04151/tools/test_chunk_generation_parity.py) invokes a Java26.3 oracle with pinned
 official libraries and Horizon's `world_probe chunk_dump`. Its default terrain
 corpus uses three seeds and six sites/seed with radius1, plus structure-specific
 selection/regressions. Noise parity tools additionally compare scalar/volume
@@ -167,6 +167,7 @@ mean≥139/relief≥12 for mountains. RustCraft retains its previously defined
 v13 terrain-only thresholds20–42/≤28 and≥78/≥12. These **separate conditional
 coordinates** are not presented as matched columns or population weights.
 All attempts, coordinates and criteria are recorded in the plans/adapters.
+Reference seeds reinterpret the same64 bits as signed Java/Horizon i64 values.
 
 The common analyzer reads actual final occupancy at each engine's bounds,
 excludes four foundation layers/eight roof blocks, and normalizes depth by local
@@ -220,7 +221,11 @@ Conditional cavity percentages (eight windows/four seeds in each stratum) are
 Horizon11.12% plains/7.44% mountains versus new v1412.18%/11.72%; previous v14
 was9.32%/3.96%. New v14 therefore over-carves the sampled mountain geology.
 Conditional portal densities also differ strongly and should not be hidden by
-the pooled result. The raw component, broad-core, width, height, regional,
+the pooled result: sampled plains have1197.8/km² in Horizon versus206.0/km²
+in RustCraft, whereas mountains have1243.6 versus1480.1/km². The direction is
+therefore not uniform. Different geography and fluid coverage confound a global
+portal-rate interpretation; a blanket admission-frequency adjustment would not
+resolve those opposing errors. The raw component, broad-core, width, height, regional,
 vertical-extent and path records are retained for every window.
 
 ![Relative depth and passage dimensions](depth-and-size.png)
@@ -269,11 +274,132 @@ not a new cave-interior showcase. The keyboard-only initial capture attempt
 misnavigated the menu because pointer hover changed selection; the repeated
 flow used the visible buttons and is recorded in `manual-record.json`.
 
+The same scripted flow was then rerun successfully with the final clean release
+executable: [normal view](../../../images/slice39/horizon/gameplay-cave-entrance-r4.png),
+[F3](../../../images/slice39/horizon/gameplay-cave-entrance-r4-f3.png) and
+[Torch placement](../../../images/slice39/horizon/gameplay-cave-entrance-r4-torch.png).
+It reaches[88.5,42,-178.1], returns to1296 loaded chunks/zero pending, remains
+grounded, and saves/quits with exit0. F3's software-renderer FPS is observational,
+not a physical-GPU performance result. Commands and binary/image hashes are in
+`gameplay-captures.json`. The development site finder now admits carver anchors
+and caps them at32 probes/window; old gallery poses remain explicit choices for
+frozen executables, while default captures select the current Horizon scenes.
+
 ## Performance, compatibility and validation
 
-Performance measurements and complete checks are recorded below after the final
-source/binary fingerprints are verified. Raw samples retain outliers and both
-execution orders; v13 and the exact previous5c5673b candidate are distinct arms.
+Core comparisons use128 samples after8 warmups for each of nine fixed scenes,
+then reverse the three-arm execution order. Raw core labels are `slice38`=merged
+v13, `v14-original`=the **previous5c5673b v14** (not the earlier ce690b0 design),
+and `slice39`=this replacement. The command explicitly overrides the historical
+helper default with `--original-ref 5c5673bc15b3f8a11fc0981db0cd90413bc58897`.
+Source and binary fingerprints are asserted; all individual samples and outliers
+are retained. CPU measurements ran without competing builds, tests or renderers.
+The environment has a two-CPU quota; this is not a native-GPU FPS benchmark.
+
+Full-column thread-CPU P50 milliseconds, forward order (reverse in parentheses):
+
+| Scene | v13 | Previous v14 | New v14 |
+| --- | ---: | ---: | ---: |
+| Quiet plain | 0.743 (0.787) | 2.086 (2.180) | 6.009 (5.980) |
+| Cavern | 0.558 (0.556) | 2.394 (2.541) | 4.367 (4.470) |
+| Rich complex | 0.703 (0.719) | 2.669 (2.798) | 5.450 (5.531) |
+| Mountain | 1.320 (1.325) | 3.636 (3.695) | 8.280 (8.931) |
+| Entrance | 0.754 (0.783) | 2.710 (2.741) | 5.666 (5.647) |
+
+This is a **material CPU regression**, about1.8–2.9× the previous v14 in these
+scenes, rather than a speed-neutral change. Twenty named multi-octave fields
+replace three simple value fields. Avoidable repeated v13 height-profile work
+was removed by caching one exact X/Z plane per plan; scalar sampling avoids
+unnecessary host math and evaluates only the applicable near-surface branch.
+Historical generators do not allocate/initialize the v14 noise cache. All80
+region exports remained byte-identical through these CPU-only changes.
+
+Streaming compares exact v13/new and previous-v14/new in both orders, using the
+**identical final new-v14 executable SHA256** in all four runs. Each run has one
+complete trace per workload at radii2/3/4,40 simulated frames at240Hz, plus
+session/radius and real Bevy CPU installation/visibility probes. These short
+traces expose observed tails; they are not population latency guarantees.
+Embedded core/client identities, helper hashes, binary hashes and coverage
+assertions protect reused builds. Refreshing a current arm retains and records
+the SHA-verified frozen baseline provenance. Reuse also rejects changed current
+production sources. Nothing is measured while a build/test/renderer competes.
+
+Selected radius4 request-ready P99 milliseconds; forward (reverse):
+
+| Scene / pair | Baseline | New v14 |
+| --- | ---: | ---: |
+| Cavern, previous-v14/new | 412.6 (439.7) | 793.4 (823.4) |
+| Mountain, previous-v14/new | 563.7 (567.9) | 1341.6 (1395.3) |
+| Mountain, merged-v13/new | 417.6 (360.4) | 1710.5 (1395.5) |
+| Rich complex, previous-v14/new | 402.8 (417.9) | 873.2 (919.6) |
+
+Cold queues therefore regress, not just isolated column cost. Main-thread
+installation stays much smaller: cavern previous/new P50 is60.7/64.2µs and P99
+138.0/302.0µs in the forward pair; mountain is63.2/71.8µs and227.0/241.5µs.
+The separate prepare, worker, publication, command and visibility costs remain
+in raw samples. These headless CPU values do not include GPU upload/presentation.
+
+Deterministic radius4 resource states, previous/new v14:
+
+| Scene | Voxel-cache bytes | Light-cache bytes | Resident triangles | CPU mesh payload bytes |
+| --- | ---: | ---: | ---: | ---: |
+| Cavern | 1,413,120 / 2,260,992 | 2,618,568 / 2,787,696 | 64,618 / 111,428 | 8,010,072 / 13,814,512 |
+| Rich complex | 1,589,248 / 2,301,952 | 2,676,888 / 2,822,688 | 142,748 / 162,880 | 17,700,752 / 20,197,120 |
+| Mountain | 2,035,712 / 3,837,952 | 3,633,336 / 4,916,376 | 161,788 / 326,206 | 20,061,712 / 40,449,544 |
+
+Installed world voxel bytes, worker-owned cache bytes, requested-heap windows,
+RSS observations, cache hits/misses, pending peaks, cancellations and discarded
+work are separate retained metrics. The table's voxel cache is `cache_bytes`,
+not installed `voxel_bytes`. Mesh payload is not VRAM or total process memory.
+More detailed caves create more walls/meshes and larger light domains; the
+existing worker, publication, eviction and residency limits remain unchanged.
+The increased cost is an explicit review tradeoff, not a claimed performance win.
+
+### Validation and reproduction
+
+The [complete implementation CI](https://github.com/ArturTrumpfheller/rustcraft/actions/runs/43604564201)
+passed on **Ubuntu and Windows** for `bb660bd`, including formatting, Clippy,
+workspace tests, optimized voxel/terrain/persistence, streaming, sessions,
+rendering/F3 and locked release builds. Final evidence-head checks are recorded
+on the PR after publication.
+
+Local final optimized core/integration checks passed **374 tests,1 existing
+ignored measurement**, including exact historical1–13 columns, post-design v14
+CRCs, scalar/reference samples, negative seams, water/foundation/root protection,
+collision/edit/Torch/light and separate cavity/floor graphs. Assets and all
+independent terrain/noise reference checks passed, as did the six analysis/format
+tests. The production-client create/walk/Torch/save/quit completed with exit0.
+
+Two earlier local full-suite attempts under competing builds hit the unchanged
+30-second radius4 lifecycle timeout (the first was interrupted after failure).
+They are retained in [diagnostics](raw/diagnostics/method.json), not successful checks or performance evidence.
+The final serial idle workspace run passed **596 tests,7 existing ignored
+measurements,0 failures**, including that lifecycle without increasing its
+budget. The final locked release workspace build also passed after cleaning the
+shared core release artifacts, ensuring production binaries contain no temporary
+benchmark instrumentation.
+
+```sh
+cargo fmt --all -- --check
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo test --locked --workspace -- --test-threads=1
+cargo test --release --locked -p voxel_core
+cargo build --release --locked --workspace
+python tools/cave_v3_reference.py --check
+python -m unittest discover -s tools -p 'test_cave_analysis.py'
+python -m unittest discover -s tools -p 'test_vanilla_export.py'
+```
+
+The pinned reference adapters, plans, RCV hashes, compressed per-window analyses,
+both-order performance samples and manifests accompany this report.
+[Core forward percentiles](raw/performance/core-forward/percentiles.csv),
+[core reverse percentiles](raw/performance/core-reverse/percentiles.csv),
+[previous-v14 streaming](raw/performance/stream-previous-forward/comparison.csv)
+and [v13 streaming](raw/performance/stream-v13-forward/comparison.csv) provide
+compact entry points; both reverse traces and every raw sample are retained. Full RCV
+volumes/binaries are not committed. The reference prepare script refuses an
+existing destination; exporters refuse existing output files. Large analysis
+buffers and instrumentation stay outside the game.
 
 ## Remaining assessment
 
@@ -285,7 +411,8 @@ modern Minecraft underground. Ordinary screenshots expose the result without
 requiring a showcase cavern.
 
 There is still no basis to call the experience convincingly equivalent to
-vanilla. Surface portal frequency is too high in the primary cohort; dry
+vanilla. The observed surface portal rate exceeds the reference in the primary cohort
+but is lower in the conditional plains; dry
 navigation differs because RustCraft lacks reference fluids/pressure barriers;
 mountain cavity volume is excessive in the conditional cohort; vertical
 compression changes scale; the terrain router and carver RNG/paths are adapted,
