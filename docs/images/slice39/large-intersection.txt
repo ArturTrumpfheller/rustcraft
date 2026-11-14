@@ -1,0 +1,7 @@
+BIOME_SCENE generator=14 seed=42 center=(-180, 72) biome=Snowy Plains
+CAVE_LIGHTING_FIXTURE supported_floor_torches=95; procedural geometry unmodified
+DIAGNOSTIC_LIGHT development_only=true
+CAVE_CAMERA seed=42 generator=14 world_eye=Vec3(-180.5, -12.38, 72.5) direction=Vec3(-0.5, 0.05, 0.8660254) torch_fixture=true
+TERRAIN_SCENE generator=14 seed=42 x=-180 z=72 surface_y=18 yaw=0 radius=4 overview=false feet=[-179.5, 19.0, 72.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(11.5, -12.38, 8.5)
+CAPTURE_FRAME_MS samples=90 p50=285.54 p95=633.06 p99=2008.11

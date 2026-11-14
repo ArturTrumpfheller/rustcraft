@@ -1,3 +1,12 @@
+# Cave Generation v3 (Slice39)
+
+New worlds use the unmerged generator14 candidate: Horizon-informed layered
+noise caves, distinct spaghetti/noodle fields, residual rock pillars and bounded
+branching carvers under the accepted v13 landscape and fifteen biomes. Existing generators1–13 and saved edits retain
+their recorded worlds. V14 caves remain dry pending the separate hydrology
+redesign; surface water and player water mechanics continue unchanged.
+[Executed Horizon reference, comparison, real Bevy captures and limitations](docs/performance/slice39/horizon/README.md).
+
 # Biome Generation v2 (Slice 37)
 
 New worlds select generator12: geographically shared climate, recognizable mixed
@@ -126,7 +135,7 @@ migration occurs. Vertical bounds remain Y[-16,32), so mountains are modest upla
 - Checksummed files, recoverable replacement with a previous-generation backup and an exclusive world lock.
 - Coordinate, collision, targeting, mutation and rendering regression tests.
 
-This is **v0.1 / slice 37**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+This is **v0.1 / slice 39**. **World edits, inventory, selected hotbar slot and world time survive restart.** Further coordinate expansion, crafting and richer world generation remain future work. Walking is the default and there is no debug-flight mode. One-block terraces require jumping; automatic step-up is not implemented. See [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## First-person hand
 

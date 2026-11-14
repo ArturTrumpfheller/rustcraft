@@ -1,0 +1,24 @@
+{
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "packages": {
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "matplotlib": "3.10.8"
+  },
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "cpu_quota": "200000 100000",
+  "analysis": "Development-only; no new application dependency.",
+  "harness_sha256": {
+    "tools/benchmark_cave_v3.py": "a62849fa89c8ef29f42110f7e271bd0145a4bf5ee3509933a4ca7d49cf3855c4",
+    "tools/benchmark_streaming.py": "fedf78c53ecdfaff231733424cbf012e53f6eeb9332982cf23ed7ef664066aa5",
+    "tools/analyze_cave_volumes.py": "86968688e80f04f1b8ce318b2e347158aa2b6f6dec3d27cba4c29e2a07f8c8d5",
+    "tools/report_cave_survey.py": "716217d313a146be531ac5a6d357bc5a4745b4efee1d3d4cfefcccda8514b709",
+    "tools/compare_horizon_caves.py": "05dab3705cf24e68106d9f02399a7e66075ffcd6633b4be691be1f9284916b81",
+    "tools/remap_horizon_depth.py": "ea2fa27532447de24874ddba90818e312fe13a98f6a245b4a5917bd9c46b978e",
+    "tools/streaming_bench/distance.rs": "7c7bb08acd4a56df3ed8f5fc86c29a42b4fbec149a512c503a4de9a94b8d8e99",
+    "tools/streaming_bench/probe.rs": "750401fc07633b2ad5f30c3719770ee71dbc583a0da0fc76a697aacb5b30694d",
+    "tools/streaming_bench/sessions.rs": "366bdaa51bdd942e09c8dab6cb7a59f615d62f94d6ad6439173816d8f3a7f532",
+    "tools/streaming_bench/workloads.rs": "0dafcfeeab8a00df063ac82bbd6254bcc742a06b19e3cc21c957f9712564b3c9",
+    "tools/rendering_bench/install.rs": "1e686efe12e72ae1d54d741cd4a5340048a5ce47052409f8002f99a359e02112"
+  }
+}

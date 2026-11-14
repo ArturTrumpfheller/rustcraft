@@ -1,0 +1,42 @@
+{
+  "baseline_v13": "c6d36393c037e4295bf93c6a4efbc9fa12dd053c",
+  "original_v14": "ce690b004d8711ddb944838f2f5619be9233d5d0",
+  "revised_v14": "8db1cae471af42cde8931274cd99a2edaf080569",
+  "sample_windows": 256,
+  "seeds": 32,
+  "primary_unconditional_windows": 128,
+  "conditional_windows_per_terrain_stratum": 64,
+  "window_shape_zxy": [
+    128,
+    128,
+    256
+  ],
+  "rustcraft_sea_level": 2,
+  "minecraft_sea_level": 63,
+  "minecraft_world_range": [
+    -64,
+    320
+  ],
+  "minecraft_reference_worlds_measured": 0,
+  "reference_blocker": "Enforced network policy HTTP403 for piston-meta.mojang.com; piston-data.mojang.com not allowed; no authorized local dataset supplied.",
+  "normalization": "final natural ground excludes trees/liquids; floor=min_y+4; roof exclusion8; normalized depth=(surface-y)/(surface-floor+1)",
+  "voxel_codes": {
+    "0": "solid cube",
+    "1": "dry Air",
+    "2": "water/fluid",
+    "3": "lava (vanilla importer)",
+    "4": "conservative other obstacle"
+  },
+  "analysis_sha256": "86968688e80f04f1b8ce318b2e347158aa2b6f6dec3d27cba4c29e2a07f8c8d5",
+  "exporter_sha256": "593193af3fa08cdad32d5150835a613de3cffd42d984d4f65234a8a48a8cbd7d",
+  "gallery_sha256": "9eb8f7f1fd21d076ecb9990e6495c53e160239dbd42f6a51eefa5acd47ea9826",
+  "client_sha256": "28d4c2f2c78236d52aea5ceac1f988ab14298cfe6f48b21885c9cd9233d712f3",
+  "adverse_trial": "Original broad-field width70+clamp(c+400,0,800)/10; revised width22+clamp(c+400,0,800)/25. Pre-entrance density-only data retained separately.",
+  "limitations": [
+    "No measured Minecraft percentages or claimed frequency parity.",
+    "Fixed tuning/evaluation cohort, not held-out validation.",
+    "Seed-cluster bootstrap; degenerate zero-event intervals are not population upper bounds.",
+    "Static supported paths are conservative and window-clipped; no visual detection at range.",
+    "Cloud software-rendered captures are not native GPU/FPS/VRAM measurements."
+  ]
+}

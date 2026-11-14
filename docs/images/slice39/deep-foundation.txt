@@ -1,0 +1,7 @@
+BIOME_SCENE generator=14 seed=42 center=(-613, -595) biome=Taiga
+CAVE_LIGHTING_FIXTURE supported_floor_torches=90; procedural geometry unmodified
+DIAGNOSTIC_LIGHT development_only=true
+CAVE_CAMERA seed=42 generator=14 world_eye=Vec3(-613.5, -50.38, -595.5) direction=Vec3(1.0, 0.08, 0.1) torch_fixture=true
+TERRAIN_SCENE generator=14 seed=42 x=-613 z=-595 surface_y=31 yaw=0 radius=4 overview=false feet=[-612.5, 32.0, -594.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(10.5, -50.38, 12.5)
+CAPTURE_FRAME_MS samples=90 p50=481.95 p95=795.53 p99=2003.84

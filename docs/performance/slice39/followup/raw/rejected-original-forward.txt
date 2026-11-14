@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/workspace/rustcraft/tools/benchmark_streaming.py", line 676, in <module>
+    main()
+  File "/workspace/rustcraft/tools/benchmark_streaming.py", line 496, in main
+    assert manifest.get("baseline_generator", 13) == a.baseline_generator, "Reused baseline generator differs"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Reused baseline generator differs

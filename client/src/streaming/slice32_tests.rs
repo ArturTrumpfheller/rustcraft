@@ -235,8 +235,8 @@ fn leaving_then_returning_cannot_revive_a_stopped_job_and_normal_completion_coun
 }
 
 #[test]
-fn v12_v13_cancelled_generation_cannot_revive_an_evicted_biome_column() {
-    for version in [12, 13] {
+fn v12_to_v14_cancelled_generation_cannot_revive_an_evicted_column() {
+    for version in [12, 13, 14] {
         let dir = RegionalDir::new();
         let mut app = large_app_with_generator(&dir.0, version);
         let release = gated(&mut app, Work::Load([0, 0]));
