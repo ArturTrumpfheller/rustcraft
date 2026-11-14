@@ -1,0 +1,40 @@
+{
+  "name": "small",
+  "kind": "small",
+  "seed": 0,
+  "eye": [
+    1679.5,
+    -18.38,
+    -1725.5
+  ],
+  "direction": [
+    1,
+    0.04,
+    1
+  ],
+  "width": 2,
+  "headroom": 5,
+  "sight_blocks": 8,
+  "volume": "s00-0.rcv",
+  "generator": 15,
+  "diagnostic_light": true,
+  "supported_floor_torches": 0,
+  "inspection_radius": 6,
+  "geometry_untouched": true,
+  "command": [
+    "/workspace/rustcraft/target/release/examples/terrain_gallery",
+    "0",
+    "1679",
+    "-1725",
+    "0",
+    "--generator=15",
+    "--capture=/workspace/rustcraft/work/slice42/views/small-v15-diagnostic.ppm",
+    "--capture-frames=32",
+    "--radius=6",
+    "--eye=1679.5,-18.38,-1725.5",
+    "--direction=1,0.04,1",
+    "--diagnostic-light"
+  ],
+  "executable_sha256": "ae7d10ef9b49e62215e1754d825cb0cf5d92272f5b9ccbc161e4215f4d8056fa",
+  "screenshot_sha256": "6afc690fc58706eb4c656536d64a374c53880492b59c3586f0a42073b40ec2f1"
+}

@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo clippy --locked --workspace --all-targets -- -D warnings",
+    "cargo test --locked --workspace -- --test-threads=1",
+    "cargo test --release --locked -p voxel_core",
+    "cargo build --release --locked --workspace"
+  ],
+  "results": {
+    "workspace-tests-final.log": {
+      "passed": 601,
+      "failed": 0,
+      "ignored": 7
+    },
+    "release-core-tests-final.log": {
+      "passed": 379,
+      "failed": 0,
+      "ignored": 1
+    }
+  },
+  "independent_checks": [
+    "original texture artifacts",
+    "v10/v11/v12/v13 independent field fixtures",
+    "720 executed Horizon noise samples",
+    "5 cave-analysis tests",
+    "2 authorized-export format tests"
+  ],
+  "visual": "10 genuine final release production-pipeline Bevy captures; diagnostic floor10 or normal lighting/3 supported torches; no geometry clearing",
+  "native_acceptance": "Void X11/Wayland and Windows physical GPU/input/VRAM acceptance pending; no native FPS claim"
+}

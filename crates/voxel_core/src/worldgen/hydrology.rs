@@ -516,7 +516,7 @@ impl Plan {
         }
         let mut pools = Vec::new();
         // Historical pool closure is proved against v7 cavities only.
-        if g.config.version != 14 {
+        if g.config.version < 14 {
             for cz in (min[1] - 48).div_euclid(96)..=(max[1] + 48).div_euclid(96) {
                 for cx in (min[0] - 48).div_euclid(96)..=(max[0] + 48).div_euclid(96) {
                     let pool = g.pool([cx, cz]);

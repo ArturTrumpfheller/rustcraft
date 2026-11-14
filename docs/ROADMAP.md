@@ -1,3 +1,18 @@
+# Slice42 — Cave Generation Final Refinement
+
+- [x] Separate generator15 default with exact historical1–14 output/identities preserved
+- [x] Retain Horizon noise/lattice/carvers; physical vertical grain and bounded junction blending
+- [x] Terrain-aware broad entrances/highland cover/cheese and near-surface noodle fading
+- [x] Regenerate pinned reference;160 windows/arm across primary/additional/stress/confirmation cohorts
+- [x] Separate cavity/floor routes, vertical reach, regional/depth/size/portal measurements and honest remaining gaps
+- [x] Ten final-release production-pipeline captures with explicit lighting/context metadata
+- [x] Both-order CPU/radius2–4 streaming/resource traces and complete locked local checks
+- [ ] Native Void X11/Wayland and Windows physical-GPU/controller/VRAM owner acceptance
+
+[Implementation, raw evidence, reproducible commands and limitations](performance/slice42/README.md).
+PR remains stacked on unmerged Slice39; no automatic merge, terrain/fluid rewrite
+or world migration. Pooled entrance parity is not established.
+
 # Slice39 — Cave Generation v3
 
 - [x] Audit historical cave, terrain, water and vegetation integration before implementation

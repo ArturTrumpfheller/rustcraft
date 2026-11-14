@@ -1,0 +1,6 @@
+BIOME_SCENE generator=15 seed=0 center=(1679, -1725) biome=Plains
+DIAGNOSTIC_LIGHT development_only=true
+CAVE_CAMERA seed=0 generator=15 world_eye=Vec3(1679.5, -18.38, -1725.5) direction=Vec3(1.0, 0.04, 1.0) torch_fixture=false
+TERRAIN_SCENE generator=15 seed=0 x=1679 z=-1725 surface_y=22 yaw=0 radius=6 overview=false feet=[1679.5, 23.0, -1724.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(15.5, -18.38, 2.5)
+CAPTURE_FRAME_MS samples=57 p50=135.98 p95=179.97 p99=189.87

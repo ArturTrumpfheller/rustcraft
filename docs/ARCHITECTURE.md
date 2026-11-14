@@ -1,3 +1,28 @@
+# Slice 42: versioned cave refinement
+
+Generator15 is selected only for new worlds. Historical1–14 remain on their
+recorded paths, including the exact v14 noise/composition, carvers and fixtures.
+V15 uses the shared Horizon scalar primitives, bounded traditional carvers and
+global Q20/4³ interpolation, with composition isolated in
+`caves_v3/density/refinement.rs`. Its noise Y is physical Y+32 throughout the
+world; foundation fading and geological cover use RustCraft coordinates. This
+removes the old deep1.924× frequency stretch and the derivative change at sea2.
+The offset centers the2D elevation band in RustCraft's existing underground;
+it is not a block correspondence to native Horizon.
+
+One padded height-lattice ring provides coordinate-stable central slope estimates.
+Broad entrance bias varies continuously with actual v13 height/slope, high-altitude
+cheese retains more rock, and noodle thickness fades to solid near the surface.
+Traditional walks, narrow families, spawn/foundation/water guards and final terrain
+classification still apply. V15 shares v13 terrain/ecology/hydrology inputs and
+v14's dry-cave contract. No terrain router, fluid system, world extent, scheduling,
+cache budget, dependency, asset or save-format changes. Strict generator/manifest/
+region validation now accepts15; unknown16+ fails closed. Explicit saved Air and
+constructions remain authoritative through eviction/restart.
+
+[Full rationale, evaluation and reproducible commands](performance/slice42/README.md).
+Earlier sections below describe their historical versions.
+
 # Slice39: Horizon-informed caves (unmerged generator14)
 
 V14 replaces its previous owner-room graph, three value-noise fields and graded

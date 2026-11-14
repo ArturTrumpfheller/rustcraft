@@ -1,3 +1,14 @@
+# Slice42 provenance
+
+The v15 composition, terrain coupling, version dispatch, regressions, analysis and
+capture extensions are original RustCraft work, MIT OR Apache-2.0. The existing
+Horizon scalar subset stays MIT-only with its complete upstream copyright/license;
+its pinned revision is unchanged. New screenshots capture existing original assets
+through Bevy's production shaders/mesh pipeline. Diagnostic lighting/ordinary
+supported torches are recorded per image. Reference crates and functional registry
+inputs remain external scratch checkouts; no new third-party code, assets,
+dependencies or lockfile changes enter the application.
+
 # Slice39 Horizon follow-up provenance
 
 The current candidate includes a small **MIT-only** adapted scalar noise/RNG

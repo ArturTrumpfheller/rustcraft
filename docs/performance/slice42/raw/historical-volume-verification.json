@@ -1,0 +1,6 @@
+{
+  "v14_exact_slice39_volumes": 80,
+  "horizon_exact_slice39_volumes": 80,
+  "method": "Regenerated RCV files were SHA256-checked directly against Slice39 records before timing. Current analyses retain the identical hashes. Historical Rust v1-14 fixtures run separately.",
+  "source_commit": "0818031a5d2a9dab248098ea5a45a4338748cd4b"
+}

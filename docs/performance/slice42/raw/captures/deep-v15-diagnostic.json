@@ -1,0 +1,40 @@
+{
+  "name": "deep",
+  "kind": "deep",
+  "seed": 31415,
+  "eye": [
+    -336.5,
+    -55.38,
+    -998.5
+  ],
+  "direction": [
+    1,
+    0.04,
+    0
+  ],
+  "width": 4,
+  "headroom": 3,
+  "sight_blocks": 21,
+  "volume": "v02-0.rcv",
+  "generator": 15,
+  "diagnostic_light": true,
+  "supported_floor_torches": 0,
+  "inspection_radius": 6,
+  "geometry_untouched": true,
+  "command": [
+    "/workspace/rustcraft/target/release/examples/terrain_gallery",
+    "31415",
+    "-336",
+    "-998",
+    "0",
+    "--generator=15",
+    "--capture=/workspace/rustcraft/work/slice42/views/deep-v15-diagnostic.ppm",
+    "--capture-frames=32",
+    "--radius=6",
+    "--eye=-336.5,-55.38,-998.5",
+    "--direction=1,0.04,0",
+    "--diagnostic-light"
+  ],
+  "executable_sha256": "ae7d10ef9b49e62215e1754d825cb0cf5d92272f5b9ccbc161e4215f4d8056fa",
+  "screenshot_sha256": "1c52b1af82cfb7f2141a882e2a428222bb6b7db0d533bc2db60062983936ac0c"
+}

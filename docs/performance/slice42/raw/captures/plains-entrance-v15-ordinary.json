@@ -1,0 +1,44 @@
+{
+  "name": "plains-entrance",
+  "kind": "plains-entrance",
+  "seed": 7,
+  "eye": [
+    7299.5,
+    10.620000000000005,
+    17266.5
+  ],
+  "direction": [
+    -6.0,
+    -1.0,
+    1.0
+  ],
+  "volume": "v00-5.rcv",
+  "portal": [
+    7293,
+    7,
+    17266
+  ],
+  "selection": "supported exterior floor with clear air ray to a portal in a floor component reaching >=24 blocks geological depth",
+  "generator": 15,
+  "diagnostic_light": false,
+  "supported_floor_torches": 3,
+  "inspection_radius": 6,
+  "geometry_untouched": true,
+  "command": [
+    "/workspace/rustcraft/target/release/examples/terrain_gallery",
+    "7",
+    "7299",
+    "17266",
+    "0",
+    "--generator=15",
+    "--capture=/workspace/rustcraft/work/slice42/views/plains-entrance-v15-ordinary.ppm",
+    "--capture-frames=32",
+    "--radius=6",
+    "--eye=7299.5,10.620000000000005,17266.5",
+    "--direction=-6.0,-1.0,1.0",
+    "--cave-torches",
+    "--cave-torch-limit=3"
+  ],
+  "executable_sha256": "ae7d10ef9b49e62215e1754d825cb0cf5d92272f5b9ccbc161e4215f4d8056fa",
+  "screenshot_sha256": "73f997e6da137449f12d1235168839852464977cbaced2c1566360b99bb5720d"
+}

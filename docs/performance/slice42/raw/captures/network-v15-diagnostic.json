@@ -1,0 +1,40 @@
+{
+  "name": "network",
+  "kind": "network",
+  "seed": 18446744073709551615,
+  "eye": [
+    17806.5,
+    -49.38,
+    13759.5
+  ],
+  "direction": [
+    0,
+    0.04,
+    -1
+  ],
+  "width": 3,
+  "headroom": 3,
+  "sight_blocks": 32,
+  "volume": "s03-3.rcv",
+  "generator": 15,
+  "diagnostic_light": true,
+  "supported_floor_torches": 0,
+  "inspection_radius": 6,
+  "geometry_untouched": true,
+  "command": [
+    "/workspace/rustcraft/target/release/examples/terrain_gallery",
+    "18446744073709551615",
+    "17806",
+    "13759",
+    "0",
+    "--generator=15",
+    "--capture=/workspace/rustcraft/work/slice42/views/network-v15-diagnostic.ppm",
+    "--capture-frames=32",
+    "--radius=6",
+    "--eye=17806.5,-49.38,13759.5",
+    "--direction=0,0.04,-1",
+    "--diagnostic-light"
+  ],
+  "executable_sha256": "ae7d10ef9b49e62215e1754d825cb0cf5d92272f5b9ccbc161e4215f4d8056fa",
+  "screenshot_sha256": "de06c528835eea9e15581c0dae74470709c464071a87a329dd8bae462140f03c"
+}

@@ -153,6 +153,12 @@ def summarize(cells, surface, meta):
     floors = standing & under
     walk_graph, walk_coords = graph(floors, dry)
     walk_labels, walk_counts, walk_route = routes(walk_graph)
+    if len(walk_counts):
+        largest_walk = walk_coords[walk_labels == walk_counts.argmax()]
+        standing_vertical_extent = int(np.ptp(largest_walk[:, 2])+1)
+        standing_levels = len(np.unique((largest_walk[:, 2]+meta['min_y'])//16))
+    else:
+        standing_vertical_extent = standing_levels = 0
     full_graph, full_coords = graph(standing, dry)
     if len(full_coords):
         _, full_labels = csgraph.connected_components(full_graph, directed=False)
@@ -211,6 +217,8 @@ def summarize(cells, surface, meta):
                 standing_nodes=int(floors.sum()), standing_components=len(walk_counts),
                 largest_standing=int(walk_counts.max(initial=0)),
                 standing_geodesic_lower_bound=walk_route,
+                largest_standing_vertical_extent=standing_vertical_extent,
+                largest_standing_levels=standing_levels,
                 entrance_portal_clusters=int(mouths), transect_portal_clusters=route_mouths,
                 transect_block_length=4*cells.shape[0],
                 walked_portal_clusters=walk_mouths, surface_walk_block_length=walk_length,

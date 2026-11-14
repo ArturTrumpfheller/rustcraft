@@ -6,6 +6,7 @@
 use super::{Generator, MIN_Y, Plan, STEP, horizon::Noise, mix};
 use crate::{Block, BlockPos, Chunk, ChunkPos, LocalPos};
 use std::sync::{Arc, OnceLock};
+mod refinement;
 const Q: i32 = 1 << 20;
 const NAMES: [(&str, i32, f64, &[f64]); 20] = [
     (
@@ -123,6 +124,7 @@ pub(super) type Cache = Arc<OnceLock<Fields>>;
 pub(super) struct Network {
     fields: Cache,
     seed: u64,
+    refined: bool,
     min: [i32; 2],
     max: [i32; 2],
     bands: OnceLock<Box<[OnceLock<Lattice>; 16]>>,
@@ -132,6 +134,7 @@ pub(super) struct Network {
 // the plan's aligned X/Z vertices, and share it across all lazy vertical bands.
 struct Heights {
     values: Vec<i32>,
+    slopes: Option<Vec<f32>>,
 }
 impl Heights {
     fn new(seed: u64, min: [i32; 2], max: [i32; 2]) -> Self {
@@ -147,7 +150,10 @@ impl Heights {
                 )
             })
             .collect();
-        Self { values }
+        Self {
+            values,
+            slopes: None,
+        }
     }
 }
 struct Lattice {
@@ -161,6 +167,7 @@ impl Network {
         Self {
             fields: g.cave_noise.get_or_init(Default::default).clone(),
             seed: g.config.seed,
+            refined: g.config.version == 15,
             min,
             max,
             bands: OnceLock::new(),
@@ -175,8 +182,13 @@ impl Network {
                 let fields = self.fields.get_or_init(|| Fields::new(self.seed));
                 Lattice::build(
                     fields,
-                    self.heights
-                        .get_or_init(|| Heights::new(self.seed, self.min, self.max)),
+                    self.heights.get_or_init(|| {
+                        if self.refined {
+                            Heights::refined(self.seed, self.min, self.max)
+                        } else {
+                            Heights::new(self.seed, self.min, self.max)
+                        }
+                    }),
                     self.min,
                     self.max,
                     band as i32 * 16 - 64,
@@ -263,7 +275,11 @@ impl Lattice {
                         (min[2] + z as i32) * STEP,
                     ];
                     let h = heights.values[x + z * size[0]];
-                    values.push(fields.values(p, h));
+                    values.push(if let Some(slopes) = &heights.slopes {
+                        fields.refined(p, h, slopes[x + z * size[0]])
+                    } else {
+                        fields.values(p, h)
+                    });
                 }
             }
         }

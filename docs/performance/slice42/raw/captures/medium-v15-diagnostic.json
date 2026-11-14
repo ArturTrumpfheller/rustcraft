@@ -1,0 +1,40 @@
+{
+  "name": "medium",
+  "kind": "medium",
+  "seed": 42,
+  "eye": [
+    1248.5,
+    -27.38,
+    1200.5
+  ],
+  "direction": [
+    1,
+    0.04,
+    -1
+  ],
+  "width": 11,
+  "headroom": 18,
+  "sight_blocks": 26,
+  "volume": "s01-0.rcv",
+  "generator": 15,
+  "diagnostic_light": true,
+  "supported_floor_torches": 0,
+  "inspection_radius": 6,
+  "geometry_untouched": true,
+  "command": [
+    "/workspace/rustcraft/target/release/examples/terrain_gallery",
+    "42",
+    "1248",
+    "1200",
+    "0",
+    "--generator=15",
+    "--capture=/workspace/rustcraft/work/slice42/views/medium-v15-diagnostic.ppm",
+    "--capture-frames=32",
+    "--radius=6",
+    "--eye=1248.5,-27.38,1200.5",
+    "--direction=1,0.04,-1",
+    "--diagnostic-light"
+  ],
+  "executable_sha256": "ae7d10ef9b49e62215e1754d825cb0cf5d92272f5b9ccbc161e4215f4d8056fa",
+  "screenshot_sha256": "3b0689501b522dd4af10f48cbb716027cbfa84d07a04f5570754e34a88c0621e"
+}

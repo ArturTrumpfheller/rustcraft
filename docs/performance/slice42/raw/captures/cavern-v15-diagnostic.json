@@ -1,0 +1,40 @@
+{
+  "name": "cavern",
+  "kind": "cavern",
+  "seed": 42,
+  "eye": [
+    1244.5,
+    -25.38,
+    1200.5
+  ],
+  "direction": [
+    1,
+    0.04,
+    -1
+  ],
+  "width": 22,
+  "headroom": 14,
+  "sight_blocks": 32,
+  "volume": "s01-0.rcv",
+  "generator": 15,
+  "diagnostic_light": true,
+  "supported_floor_torches": 0,
+  "inspection_radius": 6,
+  "geometry_untouched": true,
+  "command": [
+    "/workspace/rustcraft/target/release/examples/terrain_gallery",
+    "42",
+    "1244",
+    "1200",
+    "0",
+    "--generator=15",
+    "--capture=/workspace/rustcraft/work/slice42/views/cavern-v15-diagnostic.ppm",
+    "--capture-frames=32",
+    "--radius=6",
+    "--eye=1244.5,-25.38,1200.5",
+    "--direction=1,0.04,-1",
+    "--diagnostic-light"
+  ],
+  "executable_sha256": "ae7d10ef9b49e62215e1754d825cb0cf5d92272f5b9ccbc161e4215f4d8056fa",
+  "screenshot_sha256": "6971c342e21bcfbd9c3c42fe988f11c51123a0bcc8c51b938591569998d080de"
+}
