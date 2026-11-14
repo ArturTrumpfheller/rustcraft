@@ -1,0 +1,30 @@
+{
+  "seed": 0,
+  "generator": 14,
+  "eye": [
+    1678.5,
+    -16.38,
+    -1725.5
+  ],
+  "direction": [
+    0,
+    0.05,
+    -1
+  ],
+  "diagnostic_light": false,
+  "supported_floor_torches": true,
+  "command": [
+    "/workspace/rustcraft/work/horizon/final-gallery",
+    "0",
+    "1678",
+    "-1725",
+    "0",
+    "--generator=14",
+    "--capture=/tmp/rustcraft-cave-v3-z9yxqar6/capture.ppm",
+    "--capture-frames=120",
+    "--radius=4",
+    "--eye=1678.5,-16.38,-1725.5",
+    "--direction=0,0.05,-1",
+    "--cave-torches"
+  ]
+}

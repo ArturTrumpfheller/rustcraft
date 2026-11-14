@@ -1,0 +1,17 @@
+id,seed,x,z,n,stratum,attempt,mean_height,relief
+s00-4,0,-12048,25680,128,lowland-conditional,5,24,27
+s00-5,0,25536,-14816,128,lowland-conditional,10,23,4
+s00-6,0,10432,20336,128,mountain-conditional,39,83,72
+s00-7,0,-8688,-17872,128,mountain-conditional,20,78,121
+s01-4,42,10000,4448,128,lowland-conditional,1,21,2
+s01-5,42,9904,-11152,128,lowland-conditional,5,22,14
+s01-6,42,25760,23200,128,mountain-conditional,11,83,98
+s01-7,42,-8688,16944,128,mountain-conditional,11,100,109
+s02-4,2026,11568,-16416,128,lowland-conditional,2,23,7
+s02-5,2026,3120,3728,128,lowland-conditional,0,25,19
+s02-6,2026,3776,-7520,128,mountain-conditional,119,100,104
+s02-7,2026,-17584,20352,128,mountain-conditional,120,87,93
+s03-4,18446744073709551615,27664,20080,128,lowland-conditional,9,25,28
+s03-5,18446744073709551615,14640,-13536,128,lowland-conditional,4,35,26
+s03-6,18446744073709551615,-5824,22960,128,mountain-conditional,3,87,103
+s03-7,18446744073709551615,26976,-7568,128,mountain-conditional,56,86,112

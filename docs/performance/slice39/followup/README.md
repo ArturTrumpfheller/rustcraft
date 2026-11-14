@@ -1,3 +1,6 @@
+> Archived candidate measurements. The current unmerged v14 implementation
+> and executed Horizon comparison are in [the Horizon follow-up](../horizon/README.md).
+
 # Slice39 follow-up — continuous v14 caves and ordinary entrances
 
 This is the revised, still-unmerged generator14 in PR #57. The original candidate

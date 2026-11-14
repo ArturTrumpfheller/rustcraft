@@ -153,16 +153,27 @@ fn real_v14_cave_collision_mining_placing_and_torch_light_across_chunk_seams() {
             }
         }
     }
-    let floor = (-59..-30)
-        .rev()
-        .find(|&y| {
-            w.block(BlockPos([36, y, 61])).is_solid()
-                && w.block(BlockPos([36, y + 1, 61])) == Block::Air
-                && w.block(BlockPos([36, y + 2, 61])) == Block::Air
+    // Choose the first supported player position in the fixed center chunk.
+    // The candidate's geometry may change; collision/edit/light contracts may not.
+    let (px, pz, floor) = (48..64)
+        .flat_map(|z| (32..48).map(move |x| (x, z)))
+        .find_map(|(x, z)| {
+            (-47..-18)
+                .rev()
+                .find(|&y| {
+                    w.block(BlockPos([x, y, z])).is_solid()
+                        && w.block(BlockPos([x, y + 1, z])) == Block::Air
+                        && w.block(BlockPos([x, y + 2, z])) == Block::Air
+                })
+                .map(|y| (x, z, y))
         })
-        .unwrap();
+        .expect("fixed neighborhood must contain a supported cave floor");
     let cfg = PhysicsConfig::default();
-    let mut p = Player::new([36.5, f64::from(floor + 1), 61.5]);
+    let mut p = Player::new([
+        f64::from(px) + 0.5,
+        f64::from(floor + 1),
+        f64::from(pz) + 0.5,
+    ]);
     for _ in 0..120 {
         p.tick(&w, Default::default(), &cfg);
     }
@@ -179,14 +190,14 @@ fn real_v14_cave_collision_mining_placing_and_torch_light_across_chunk_seams() {
             .unwrap()
             .is_some()
     );
-    assert_eq!(w.block(BlockPos([36, floor, 61])), Block::Air);
+    assert_eq!(w.block(BlockPos([px, floor, pz])), Block::Air);
     assert!(
         inventory::edit_inventory(&mut w, &mut inventory, ray, true, &p, &cfg)
             .unwrap()
             .is_some()
     );
-    assert_eq!(w.block(BlockPos([36, floor, 61])), Block::Stone);
-    let torch = BlockPos([36, floor + 1, 61]);
+    assert_eq!(w.block(BlockPos([px, floor, pz])), Block::Stone);
+    let torch = BlockPos([px, floor + 1, pz]);
     w.set_block(torch, Block::Torch).unwrap();
     let targets: BTreeSet<_> = w.chunks().map(|(cp, _)| cp).collect();
     let full = Skylight::for_chunks(&w, &targets);

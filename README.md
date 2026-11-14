@@ -1,11 +1,11 @@
 # Cave Generation v3 (Slice39)
 
-New worlds use generator14: irregular underground caverns, winding connected
-passages, narrow branches and multiple cave levels under the accepted v13
-landscape and fifteen biomes. Existing generators1–13 and saved edits retain
+New worlds use the unmerged generator14 candidate: Horizon-informed layered
+noise caves, distinct spaghetti/noodle fields, residual rock pillars and bounded
+branching carvers under the accepted v13 landscape and fifteen biomes. Existing generators1–13 and saved edits retain
 their recorded worlds. V14 caves remain dry pending the separate hydrology
 redesign; surface water and player water mechanics continue unchanged.
-[Model, measurements, real Bevy captures and native acceptance](docs/performance/slice39/README.md).
+[Executed Horizon reference, comparison, real Bevy captures and limitations](docs/performance/slice39/horizon/README.md).
 
 # Biome Generation v2 (Slice 37)
 

@@ -42,7 +42,7 @@ jobs:
         run: python tools/biome_v2_reference.py --check
       - name: Independent v13 terrain fixtures
         run: python tools/terrain_v5_reference.py --check
-      - name: Independent v14 cave field fixtures
+      - name: Independent comparison with executed Horizon noise
         run: python tools/cave_v3_reference.py --check
       - name: Cargo format
         run: cargo fmt --all -- --check

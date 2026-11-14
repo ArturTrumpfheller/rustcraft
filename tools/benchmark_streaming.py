@@ -256,6 +256,7 @@ def main():
         help="Build optional instrumented GUI executables instead of running headless tests.",
     )
     p.add_argument("--reuse", action="store_true")
+    p.add_argument("--refresh-current", action="store_true", help="Rebuild only current sources; retain SHA-verified frozen baseline")
     p.add_argument("--summarize-only", action="store_true", help="Aggregate existing verified raw runs without running or rebuilding them")
     p.add_argument("--caves-v3", action="store_true", help="Exact Slice38 v13/current v14 cave sites at radii2-4")
     p.add_argument("--baseline-generator", type=int, choices=[13,14], default=13, help="Cave comparison only: 14 selects original unmerged v14 baseline")
@@ -293,8 +294,22 @@ def main():
     assert names[0].casefold() != names[1].casefold() and all(n.replace("-", "").replace("_", "").isalnum() for n in names)
     sources = {}
     ids = {}
+    frozen = None
+    if a.refresh_current:
+        assert not a.reuse and not a.native and not a.prepare_only
+        previous = json.loads((out / "sources.json").read_text())
+        assert previous["baseline"] == baseline and previous.get("baseline_generator",13) == a.baseline_generator
+        assert set(previous["files"]) == set(names)
+        hashes = json.loads((out / "executables-sha256.json").read_text())
+        assert hashlib.sha256((out / f"{names[0]}-bench").read_bytes()).hexdigest() == hashes[names[0]]
+        for path,value in previous["harness_sha256"].items():
+            if path != "tools/benchmark_streaming.py":
+                assert hashlib.sha256((ROOT/path).read_bytes()).hexdigest() == value
+        sources=previous["files"];ids=previous["runtime_ids"]
+        frozen={"harness_sha256":previous["harness_sha256"],"executable_sha256":hashes[names[0]]}
+    build_names=names[1:] if a.refresh_current else names
     if not a.reuse:
-        for name in names:
+        for name in build_names:
             root = scratch / name
             if root.exists():
                 shutil.rmtree(root)
@@ -370,6 +385,7 @@ def main():
                  "terrain_balance": a.terrain_balance,
                  "caves_v3": a.caves_v3,
                  "baseline_generator": a.baseline_generator,
+                 "frozen_baseline_provenance": frozen,
                  "harness_sha256": {str(f.relative_to(ROOT)): hashlib.sha256(f.read_bytes()).hexdigest()
                     for f in [Path(__file__).resolve(), ROOT / "tools/rendering_bench/install.rs", *sorted((ROOT / "tools/streaming_bench").glob("*.rs"))]}}, indent=2
             )
@@ -430,7 +446,7 @@ def main():
                     out / f"{name}-native{suffix}",
                 )
             return
-        for name in names:
+        for name in build_names:
             root = scratch / name
             for d in ["client", "crates/voxel_core"]:
                 for f in (root / d).rglob("*.rs"):

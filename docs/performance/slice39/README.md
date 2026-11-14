@@ -1,3 +1,6 @@
+> Archived candidate measurements. The current unmerged v14 implementation
+> and executed Horizon comparison are in [the Horizon follow-up](horizon/README.md).
+
 # Slice 39 — Cave Generation v3 (generator14)
 
 **Current unmerged v14:** the [26.3-reference follow-up](followup/README.md) adds continuous 3D cave fields, small graded entrance carvers, a 256-window/32-seed survey, conservative surface walks and a three-version cost comparison. The sections below retain the original `ce690b0` design and measurements as archived evidence; they are not the revised v14 statistics. Quantitative Minecraft parity remains unverified because official vanilla downloads are blocked in this environment.

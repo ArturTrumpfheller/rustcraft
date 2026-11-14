@@ -58,6 +58,7 @@ pub struct Generator {
     entrance_height: i32,
     extent: i32,
     water_cache: hydrology::PoolCache,
+    cave_noise: caves_v3::NoiseCache,
 }
 fn hash(seed: u64, x: i32, z: i32, salt: u64) -> u64 {
     let mut v = seed
@@ -116,6 +117,7 @@ impl Generator {
                 entrance_height: 0,
                 extent: crate::regions::LARGE_EXTENT,
                 water_cache: Default::default(),
+                cave_noise: Default::default(),
             });
         }
         let extent = if config.version == 1 { 32 } else { 64 };
@@ -135,6 +137,7 @@ impl Generator {
             entrance_height: 0,
             extent,
             water_cache: Default::default(),
+            cave_noise: Default::default(),
         };
         generator.entrance_height = generator.height(-10, 20).unwrap() + 1;
         let trees = extent / 8 - 1;

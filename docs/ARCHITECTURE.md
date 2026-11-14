@@ -1,36 +1,39 @@
-# Slice39 follow-up: continuous cave composition
+# Slice39: Horizon-informed caves (unmerged generator14)
 
-V14's local feature graph is supplemented by a globally aligned4³ integer field.
-Three signed samples compose intersecting winding passages and broad cavities;
-regional X/Z modulation varies broad-cavity admission. A per-plan lazy array of
-16 vertical bands avoids constructing fields above terrain or for surface-only
-root queries. Each band caches its field corners and conservative cell intervals.
-No density map survives the existing column sampler. Small dry entrance carvers
-use independent64-block ownership, convex-hull rejection before terrain probes,
-and bounded grades; they do not depend on chamber-owner admission. All carving
-still passes the existing final roof/spawn/foundation and water-permission gates.
-Point/chunk paths share the same predicate. Historical dispatch is untouched.
+V14 replaces its previous owner-room graph, three value-noise fields and graded
+entrance templates with named gradient-Perlin octave stacks, layered cheese,
+separate 2D/3D spaghetti, roughness, gated noodles, residual pillar density and
+bounded branching cave/canyon walks. Negative density carves actual v13 terrain;
+no predefined room graph or fixed entrance descent remains.
 
-[Evidence and remaining comparison limits](performance/slice39/followup/README.md).
+The small adapted Horizon noise/RNG subset has its own **MIT** copyright and
+full license in `caves_v3/horizon/`; it is not relicensed as Apache-2.0. All other
+new integration and carver code is independently authored. No Horizon engine,
+renderer, external registry JSON or game asset is imported into the application.
 
-# Slice39: bounded dry cavity graph and density
+Each Generator owns a lazy immutable noise cache. Column plans cache global4³
+Q20 corners in lazy16-block bands and conservative intervals; no resident world
+cave map or neighboring chunks are needed. Carvers discover eight source-chunk
+rings, with a nominal96-step walk budget and bounded radii. Point/column/halo paths
+share guards and classification. Floating noise samples use fixed IEEE operation
+order, then quantize before integer interpolation; Windows/Linux CRCs pin output.
 
-Generator14 explicitly reuses v13 terrain parameters at every dependent query.
-A separate `caves_v3` plan discovers bounded owner features and graph edges
-without neighbors or mutable generation state. Globally aligned4³ integer
-samples shape cavern density; anisotropic curved carvers create connections,
-narrow branches and steep links. One halo-column plan serves all sixteen
-vertical chunks; room-only density scratch is bounded by intersecting envelopes.
-Tube-only/empty plans have no lattice. Uniform slab proofs and per-shape
-bounding boxes preserve compact sky/rock storage.
+The reference sea/foundation interval [-64,63] maps to RustCraft [-64,2]; above
+sea the reference coordinate is RustCraft Y+61. Horizontal scales stay unchanged.
+The terrain-density input is adapted from existing v13 local depth, preserving
+surface geography and all fifteen biomes. This compresses deep cave heights;
+it does not make absolute Y coordinates interchangeable.
 
-The versioned wrapper preserves frozen v7–v13 primitives. V14 vegetation root
-admission uses the same cave version as terrain and final plant support. Water
-bed/bank guards suppress carving; v14 never invokes old pool closure/planning.
-All point/column/chunk/halo paths agree. Persistence formats, overlays including
-Air, worker/publication/cancellation, cache limits, render radii and original
-renderer remain. New gallery-only illumination cannot affect the client.
-[Design, evidence and Slice40 contract](performance/slice39/README.md).
+Foundation, protected spawn, actual ground, water-bed/bank guards, vegetation
+support and authoritative saved edits remain. Ordinary cave density and carvers
+can intersect dry surfaces naturally; the previous blanket eight-block roof and
+explicit entrance-template exception are replaced by density composition. V14
+remains dry, with old underground-pool planning disabled. Surface/player water,
+world bounds, formats, one-worker streaming and radii1–4 remain unchanged.
+Historical1–13 dispatch and fixtures remain exact; unknown15+ fails closed.
+
+[Executed reference, algorithms, measurements and remaining gaps](performance/slice39/horizon/README.md).
+The earlier Slice39 reports are archived candidate records, not the current model.
 
 # Slice 38: versioned geography proportions
 

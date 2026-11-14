@@ -1,64 +1,90 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT OR Apache-2.0
-"""Independent Q10 3D field oracle; signed division follows Rust truncation.
-Does not read Rust source or derive expected values from the production generator.
+"""Independent scalar oracle against executed Horizon 0de8932 noise samples.
+
+Uses only Python's standard library. No downloaded game files, Horizon runtime
+or platform libraries are needed in CI. Fixtures are measured numeric outputs,
+not post-design RustCraft snapshots. The old value-field fixtures are archived.
 """
-from pathlib import Path
 import argparse
-MASK=(1<<64)-1
+import hashlib
+import math
+from pathlib import Path
+import struct
 ROOT=Path(__file__).resolve().parents[1]
-def trunc(a,b):return (abs(a)//abs(b))*(-1 if (a<0) != (b<0) else 1)
-def hash3(seed,x,y,z,salt):
- seed^=((y&MASK)*0x632be59bd9b4e019)&MASK
- v=seed^((x&MASK)*0x9e3779b97f4a7c15&MASK)^((z&MASK)*0xd1b54a32d192ed03&MASK)^salt
+MASK=(1<<64)-1
+PARAMETERS=[
+ ('cave_cheese',-8,.8361300524356068,[.5,1,2,1,2,1,0,2,0]),
+ ('cave_layer',-8,.955388882960065,[1]),
+ ('cave_entrance',-7,.8500634887071167,[.4,.5,1]),
+ *[(n,b,.955388882960065,[1]) for n,b in [
+ ('spaghetti_3d_1',-7),('spaghetti_3d_2',-7),('spaghetti_3d_rarity',-11),
+ ('spaghetti_3d_thickness',-8),('spaghetti_roughness',-5),('spaghetti_roughness_modulator',-8),
+ ('spaghetti_2d',-7),('spaghetti_2d_elevation',-8),('spaghetti_2d_modulator',-11),('spaghetti_2d_thickness',-11)]],
+ ('pillar',-7,.9494731054427981,[1,1]),
+ *[(n,-8,.955388882960065,[1]) for n in ['pillar_rareness','pillar_thickness','noodle','noodle_thickness']],
+ *[(n,-7,.955388882960065,[1]) for n in ['noodle_ridge_a','noodle_ridge_b']]]
+def rotate(v,n):return ((v<<n)|(v>>(64-n)))&MASK
+def mix(v):
  v=((v^(v>>30))*0xbf58476d1ce4e5b9)&MASK
  v=((v^(v>>27))*0x94d049bb133111eb)&MASK
  return v^(v>>31)
-def mix(a,b,t,q):return a+trunc((b-a)*t,q)
-def noise(seed,p,scale,salt):
- c=[p[i]//scale[i] for i in range(3)]
- f=[]
- for i in range(3):
-  t=(p[i]%scale[i])*1024//scale[i];f.append((t*t//1024)*(3072-2*t)//1024)
- v=[hash3(seed,c[0]+(i&1),c[1]+((i>>1)&1),c[2]+((i>>2)&1),salt)%2049-1024 for i in range(8)]
- return mix(mix(mix(v[0],v[1],f[0],1024),mix(v[2],v[3],f[0],1024),f[1],1024),mix(mix(v[4],v[5],f[0],1024),mix(v[6],v[7],f[0],1024),f[1],1024),f[2],1024)
-def sample(seed,p,k):
- scale,salt=([32,20,28],0xe301) if k==0 else ([14,12,16],0xe302)
- return interpolate(seed,p,scale,salt)
-def interpolate(seed,p,scale,salt):
- base=[v//4*4 for v in p];f=[v%4 for v in p]
- v=[noise(seed,[base[j]+4*((i>>j)&1) for j in range(3)],scale,salt) for i in range(8)]
- return mix(mix(mix(v[0],v[1],f[0],4),mix(v[2],v[3],f[0],4),f[1],4),mix(mix(v[4],v[5],f[0],4),mix(v[6],v[7],f[0],4),f[1],4),f[2],4)
-def region(seed,x,z):
- cx,cz=x//512,z//512
- f=[]
- for v in [x,z]:
-  t=(v%512)*1024//512;f.append((t*t//1024)*(3072-2*t)//1024)
- v=[hash3(seed,cx+(i&1),0,cz+((i>>1)&1),0xe40a)%2049-1024 for i in range(4)]
- return mix(mix(v[0],v[1],f[0],1024),mix(v[2],v[3],f[0],1024),f[1],1024)
-def network(seed,p):
- a,b,c=[interpolate(seed,p,scale,salt) for scale,salt in [([64,40,64],0xe401),([80,52,80],0xe402),([104,60,104],0xe403)]]
- x,z=p[0]//4*4,p[2]//4*4
- t=[560-trunc(region(seed,x+4*(i&1),z+4*((i>>1)&1))*160,1024) for i in range(4)]
- threshold=mix(mix(t[0],t[1],p[0]%4,4),mix(t[2],t[3],p[0]%4,4),p[2]%4,4)
- width=22+max(0,min(800,c+400))//25
- inside=c-abs(a)//5>threshold or (abs(a)<width and abs(b)<width*5//4)
- return [a,b,c,threshold,int(inside)]
+class Random:
+ def __init__(self,state):self.a,self.b=state if any(state) else [0x9e3779b97f4a7c15,0x6a09e667f3bcc909]
+ @classmethod
+ def world(cls,seed):
+  s=seed^0x6a09e667f3bcc909
+  return cls([mix(s),mix((s+0x9e3779b97f4a7c15)&MASK)])
+ def next(self):
+  a,b=self.a,self.b
+  value=(rotate((a+b)&MASK,17)+a)&MASK
+  c=a^b;self.a=rotate(a,49)^c^((c<<21)&MASK);self.b=rotate(c,28)
+  return value
+ def fork(self):return self.next(),self.next()
+ def bound(self,n):
+  threshold=((-n)&0xffffffff)%n
+  while True:
+   value=(self.next()&0xffffffff)*n
+   if value&0xffffffff>=threshold:return value>>32
+ def double(self):return (self.next()>>11)/2**53
+ def named(self,name):
+  h=struct.unpack('>QQ',hashlib.md5(name.encode()).digest())
+  return Random([self.a^h[0],self.b^h[1]])
+G=[(1,1,0),(-1,1,0),(1,-1,0),(-1,-1,0),(1,0,1),(-1,0,1),(1,0,-1),(-1,0,-1),(0,1,1),(0,-1,1),(0,1,-1),(0,-1,-1),(1,1,0),(0,-1,1),(-1,1,0),(0,-1,-1)]
+class Perlin:
+ def __init__(self,rng):
+  self.offsets=[rng.double()*256 for _ in range(3)];self.table=list(range(256))
+  for i in range(256):j=i+rng.bound(256-i);self.table[i],self.table[j]=self.table[j],self.table[i]
+ def get(self,p):
+  p=[v-math.floor(v/33554432+.5)*33554432+o for v,o in zip(p,self.offsets)]
+  c=[math.floor(v) for v in p];f=[v-math.floor(v) for v in p]
+  perm=lambda n:self.table[n&255]
+  values=[]
+  for i in range(8):
+   d=[i&1,(i>>1)&1,(i>>2)&1];g=G[perm(perm(perm(c[0]+d[0])+c[1]+d[1])+c[2]+d[2])&15]
+   values.append(sum(g[j]*(f[j]-d[j]) for j in range(3)))
+  for t in [v*v*v*(v*(v*6-15)+10) for v in f]:values=[a+t*(b-a) for a,b in zip(values[::2],values[1::2])]
+  return values[0]
+def noise(seed,index):
+ name,base,amplitude,modifiers=PARAMETERS[index]
+ rng=Random(Random.world(seed).fork()).named('minecraft:'+name)
+ factories=[Random(rng.fork()),Random(rng.fork())]
+ n=len(modifiers);weights=[2**(n-1)/(2**n-1)*v*2**(-i) for i,v in enumerate(modifiers)]
+ factor=sum(weights)/3/(sum((.2702247831245211*w)**2 for w in weights)**.5*2**.5)
+ layers=[]
+ for i,w in enumerate(weights):
+  if w:
+   for j,r in enumerate(factories):layers.append((Perlin(r.named('octave_'+str(base+i))),2**(base+i)*(1 if j==0 else 1.0181268882175227),factor*amplitude*w))
+ return lambda p:sum(a*layer.get([v*f for v in p]) for layer,f,a in layers)
 def main():
- a=argparse.ArgumentParser();a.add_argument('--check',action='store_true');args=a.parse_args()
- out='seed,x,y,z,coarse,detail,lattice_coarse,lattice_detail\n'
- for seed in [0,42,2026,MASK]:
-  for p in [[0,-60,10],[-1,-1,-1],[15,-17,16],[-129,63,127],[28000,120,-30000],[-32768,-59,32767],[32767,190,-32768],[-253,-33,-129],[64,0,64]]:
-   v=[noise(seed,p,[32,20,28],0xe301),noise(seed,p,[14,12,16],0xe302),sample(seed,p,0),sample(seed,p,1)]
-   out+=','.join(map(str,[seed,*p,*v]))+'\n'
- path=ROOT/'crates/voxel_core/tests/fixtures/caves-v14-fields.csv'
- if args.check:assert path.read_text()==out,'independent cave field fixtures changed'
- else:path.write_text(out)
- out='seed,x,y,z,a,b,c,threshold,inside\n'
- for seed in [0,42,2026,MASK]:
-  for p in [[0,-60,10],[-1,-1,-1],[15,-17,16],[-129,63,127],[28000,120,-30000],[-32768,-59,32767],[32767,190,-32768],[-253,-33,-129],[64,0,64]]:
-   out+=','.join(map(str,[seed,*p,*network(seed,p)]))+'\n'
- path=ROOT/'crates/voxel_core/tests/fixtures/caves-v14-network.csv'
- if args.check:assert path.read_text()==out,'independent cave network fixtures changed'
- else:path.write_text(out)
+ parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--check',action='store_true');parser.parse_args()
+ previous=None;sample=None;count=0
+ for row in (ROOT/'crates/voxel_core/tests/fixtures/horizon-noise.csv').read_text().splitlines()[1:]:
+  seed,index,x,y,z,bits=map(int,row.split(','))
+  if previous!=(seed,index):sample=noise(seed,index);previous=(seed,index)
+  expected=struct.unpack('<f',struct.pack('<I',bits))[0];actual=sample([x,y,z])
+  assert abs(actual-expected)<=.000002,(row,actual,expected)
+  count+=1
+ assert count==720
+ print(f'{count} independent samples match executed Horizon noise within 2e-6')
 if __name__=='__main__':main()

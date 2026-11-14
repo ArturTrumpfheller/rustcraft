@@ -1,32 +1,39 @@
-# Slice39 follow-up: continuous cave fields and ordinary entrances
+# Slice39: Horizon-informed caves (unmerged generator14)
 
-Unmerged generator14 now combines the original bounded chamber/connection graph
-with continuous signed 3D fields. Intersecting fields form winding routes between
-owners; a separate regional broad field forms larger irregular cavities. Shared
-4³ samples are built lazily per16-block vertical band and interval bounds reject
-whole cells without changing classification. Independent64-block feature owners
-also emit occasional small, gently descending dry entrances, addressing the
-poor discovery rate measured on conservative surface walks. Terrain, water caps,
-spawn/foundation protection and the frozen1–13 paths remain unchanged.
+V14 replaces its previous owner-room graph, three value-noise fields and graded
+entrance templates with named gradient-Perlin octave stacks, layered cheese,
+separate 2D/3D spaghetti, roughness, gated noodles, residual pillar density and
+bounded branching cave/canyon walks. Negative density carves actual v13 terrain;
+no predefined room graph or fixed entrance descent remains.
 
-[Current model, larger survey, native reproduction and reference limitations](performance/slice39/followup/README.md).
-Earlier Slice39 sections describe the original candidate before this follow-up.
+The small adapted Horizon noise/RNG subset has its own **MIT** copyright and
+full license in `caves_v3/horizon/`; it is not relicensed as Apache-2.0. All other
+new integration and carver code is independently authored. No Horizon engine,
+renderer, external registry JSON or game asset is imported into the application.
 
-# Cave Generation v3 — generator14
+Each Generator owns a lazy immutable noise cache. Column plans cache global4³
+Q20 corners in lazy16-block bands and conservative intervals; no resident world
+cave map or neighboring chunks are needed. Carvers discover eight source-chunk
+rings, with a nominal96-step walk budget and bounded radii. Point/column/halo paths
+share guards and classification. Floating noise samples use fixed IEEE operation
+order, then quantize before integer interpolation; Windows/Linux CRCs pin output.
 
-New regional worlds select14. The complete model, independent fixtures,
-quality metrics, genuine Bevy interior captures and native acceptance are in
-[Slice39](performance/slice39/README.md). V14 retains v13 surface profiles,
-hydrology and fifteen-biome ecology, with a separate integer cavity graph,
-warped3D chambers, winding and narrow passages, multi-level links and actual
-surface-height entrance probes. V1–v13 remain frozen; saves are never migrated.
+The reference sea/foundation interval [-64,63] maps to RustCraft [-64,2]; above
+sea the reference coordinate is RustCraft Y+61. Horizontal scales stay unchanged.
+The terrain-density input is adapted from existing v13 local depth, preserving
+surface geography and all fifteen biomes. This compresses deep cave heights;
+it does not make absolute Y coordinates interchangeable.
 
-`caves_v3::Versioned` gates both column rasterization and vegetation-root cave
-admission. Major routes compose with residual-pillar/shelf density; all paths
-use the same final foundation, roof, spawn and water-bed guards. Historical cave
-pools are disabled only in14 because their v7 closure proof is inapplicable.
-Slice40 must establish a new final-cavity ownership/closure proof for aquifers.
-Unknown15+ is rejected. All earlier sections retain their historical versions.
+Foundation, protected spawn, actual ground, water-bed/bank guards, vegetation
+support and authoritative saved edits remain. Ordinary cave density and carvers
+can intersect dry surfaces naturally; the previous blanket eight-block roof and
+explicit entrance-template exception are replaced by density composition. V14
+remains dry, with old underground-pool planning disabled. Surface/player water,
+world bounds, formats, one-worker streaming and radii1–4 remain unchanged.
+Historical1–13 dispatch and fixtures remain exact; unknown15+ fails closed.
+
+[Executed reference, algorithms, measurements and remaining gaps](performance/slice39/horizon/README.md).
+The earlier Slice39 reports are archived candidate records, not the current model.
 
 # Slice 38: terrain balance (generator13)
 

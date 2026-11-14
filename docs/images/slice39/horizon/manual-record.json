@@ -1,0 +1,17 @@
+{
+  "before": "RustCraft [Saved] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 2026 gen14 radius 4 | Pos 88.5 55.0 -167.5",
+  "after": "RustCraft [Saved] | Slot: 1 Grass | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 2026 gen14 radius 4 | Pos 88.5 42.0 -175.2",
+  "seed": 2026,
+  "generator": 14,
+  "radius": 4,
+  "executable": "work/horizon/final-client",
+  "isolated_data_root": "work/horizon/gameplay-manual",
+  "creation_input": "ordinary mouse clicks: Singleplayer/Create New World/Create World/Play Selected World",
+  "after_torch_input": "RustCraft [Dirty] | Slot: 6 Torch | 1\u20139 / wheel | E inventory | LMB break | RMB place | F5 save | Esc pause | R respawn | Chunks: 1296 pending 0 dirty 0 | Seed 2026 gen14 radius 4 | Pos 88.5 42.0 -175.2",
+  "executable_sha256": "28d4c2f2c78236d52aea5ceac1f988ab14298cfe6f48b21885c9cd9233d712f3",
+  "normal_save_quit_exit_code": 0,
+  "images": {
+    "gameplay-fixed-site-torch.png": "87320ae572578ea8aefeabb890ee086c7be5bb671f6cefd7836cba65b22fbef1",
+    "gameplay-fixed-site.png": "f77de0c32fa850b53062bd5e1010818ece47b6d9f2a529a35eaf55188c699578"
+  }
+}

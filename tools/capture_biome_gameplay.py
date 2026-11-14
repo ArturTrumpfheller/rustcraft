@@ -34,9 +34,13 @@ def main():
      try:return xdo('search','--onlyvisible','--pid',proc.pid,'--name','RustCraft').splitlines()[0]
      except (subprocess.CalledProcessError,IndexError):return None
     window=until(find_window);xdo('windowsize',window,1280,720);xdo('windowmove',window,0,0);xdo('windowfocus','--sync',window);time.sleep(2)
-    key(window,'Return');time.sleep(1)
-    for _ in range(3):key(window,'Down')
-    key(window,'Return');key(window,'Tab');key(window,'Tab');key(window,'Return')
+    if a.cave_v3:
+     # Initial pointer hover can change keyboard selection: use visible buttons.
+     click(640,355);time.sleep(1);click(920,558);time.sleep(1);click(350,600)
+    else:
+     key(window,'Return');time.sleep(1)
+     for _ in range(3):key(window,'Down')
+     key(window,'Return');key(window,'Tab');key(window,'Tab');key(window,'Return')
     until(lambda:list((data/'worlds').glob('*/world.meta')));time.sleep(1)
     if a.cave_v3:click(350,558)
     else:

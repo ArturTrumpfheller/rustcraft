@@ -59,6 +59,7 @@ def main():
     p.add_argument('--arm',action='append',required=True,help='LABEL=analysis.jsonl')
     p.add_argument('--volumes',action='append',default=[],help='LABEL=directory, for fixed section figures')
     p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--site',action='append',help='Fixed section window ID; may be repeated')
     a=p.parse_args()
     arms={label:Path(path) for label,path in (s.split('=',1) for s in a.arm)}
     volumes={label:Path(path) for label,path in (s.split('=',1) for s in a.volumes)}
@@ -86,7 +87,7 @@ def main():
         for ax,key in zip(axes[1:],['width_bins','headroom_bins']):
             v=np.array(summary[label]['unconditional'][key],float)
             ax.plot(range(7),v/max(1,v.sum())*100,marker='o',label=label)
-    axes[0].set(xlabel='Depth / local geological thickness',ylabel='Cavity / geological volume (%)',title='128 unconditional windows; seed-cluster 95% intervals')
+    axes[0].set(xlabel='Depth / local geological thickness',ylabel='Cavity / geological volume (%)',title='Unconditional windows; seed-cluster 95% intervals')
     for ax,title in zip(axes[1:],['Minimum horizontal run','Vertical run / headroom']):
         ax.set(xticks=range(7),xticklabels=['<2','2–3','4–7','8–15','16–31','32–63','64+'],
                xlabel='Contiguous voxel run (blocks)',ylabel='Fraction of cavity voxels (%)',title=title)
@@ -110,7 +111,7 @@ def main():
     fig.savefig(a.output/'regional-comparison.png',dpi=150)
     plt.close(fig)
     cmap=ListedColormap(['#59636b','#f5f6f8','#409ed4','#d75b34','#b39b73'])
-    for site in ['s00-0','s01-4','s01-6']:
+    for site in (a.site or ['s00-0','s01-4','s01-6']):
         if not volumes:break
         fig,axes=plt.subplots(len(volumes),3,figsize=(12,3.4*len(volumes)),squeeze=False,layout='constrained')
         for row,(label,directory) in enumerate(volumes.items()):

@@ -9,12 +9,16 @@ from benchmark_stabilization import instrument,ROOT
 from benchmark_terrain_balance import wrap
 BASE='c6d36393c037e4295bf93c6a4efbc9fa12dd053c'
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--samples',type=int,default=128);p.add_argument('--warmups',type=int,default=8);p.add_argument('--reverse',action='store_true');p.add_argument('--reuse',action='store_true');p.add_argument('--build-only',action='store_true');p.add_argument('--include-original',action='store_true',help='Include exact unmerged v14 ce690b0 as a third arm');a=p.parse_args();assert 1<=a.samples<=10000
- original='ce690b004d8711ddb944838f2f5619be9233d5d0'
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--samples',type=int,default=128);p.add_argument('--warmups',type=int,default=8);p.add_argument('--reverse',action='store_true');p.add_argument('--reuse',action='store_true');p.add_argument('--build-only',action='store_true');p.add_argument('--refresh-current',action='store_true',help='Rebuild only the current arm after a source change; retain verified frozen baseline executables');p.add_argument('--original-ref',default='ce690b004d8711ddb944838f2f5619be9233d5d0',help='Git reference for the previous v14 arm');p.add_argument('--include-original',action='store_true',help='Include exact unmerged v14 ce690b0 as a third arm');a=p.parse_args();assert 1<=a.samples<=10000
+ original=subprocess.check_output(['git','rev-parse',a.original_ref],cwd=ROOT,text=True).strip()
  out=a.output.resolve();out.mkdir(parents=True,exist_ok=True);scratch=ROOT/('work/cave-v3-followup-benchmark' if a.include_original else 'work/cave-v3-benchmark');names=['slice38']+(['v14-original'] if a.include_original else [])+['slice39']
  if not a.reuse:
-  sources={}
-  for name in names:
+  sources=json.loads((out/'sources.json').read_text())['files'] if a.refresh_current else {}
+  if a.refresh_current:
+   old=json.loads((out/'sources.json').read_text());assert old['baseline']==BASE and old['original']==(original if a.include_original else None)
+   for name in names[:-1]:
+    for kind in ['bench','lifecycle']:assert hashlib.sha256((out/f'{name}-{kind}').read_bytes()).hexdigest()==old['binary_sha256'][name+'-'+kind]
+  for name in (['slice39'] if a.refresh_current else names):
    root=scratch/name
    if root.exists():shutil.rmtree(root)
    root.mkdir(parents=True)
@@ -30,7 +34,7 @@ def main():
    else:
     wrap(root/'crates/voxel_core/src/worldgen/caves_v3.rs','fn new(g:',15)
     # New dispatcher includes the entire v14 graph and room-field plan.
-    wrap(root/'crates/voxel_core/src/worldgen/caves_v3.rs','fn new(seed:',17)
+    if 'fn new(seed:' in (root/'crates/voxel_core/src/worldgen/caves_v3.rs').read_text():wrap(root/'crates/voxel_core/src/worldgen/caves_v3.rs','fn new(seed:',17)
     density=root/'crates/voxel_core/src/worldgen/caves_v3/density.rs'
     if density.exists():
      wrap(density,'fn build(',17)

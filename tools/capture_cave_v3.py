@@ -7,6 +7,10 @@ import argparse,json,subprocess,tempfile
 from pathlib import Path
 from generate_textures import png
 SCENES=[
+ ('horizon-mountain', 42, [25828.5, 13.620000000000001, 23284.5], [1, 0.05, 0]),
+ ('horizon-ordinary-0', 0, [1678.5, -16.38, -1725.5], [0, 0.05, -1]),
+ ('horizon-ordinary-42', 42, [1248.5, -27.38, 1200.5], [1, 0.05, -1]),
+ ('horizon-ordinary-8', 14509286893405221997, [287.5, -31.38, 705.5], [1, 0.05, 0]),
  ('survey-ordinary',0,(1659.5,-9.38,-1741.5),(0,0.04,-1)),
  ('survey-entrance',0,(1646.5,26,-1733.5),(0,-0.4,-1)),
  ('rich-complex',18446744073709551615,(-181.5,-12.38,-180.5),(0.5,0.05,0.8660254)),
