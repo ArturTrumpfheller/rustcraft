@@ -197,8 +197,8 @@ fn setup(
     }
     if scene.cave_torches {
         assert!(
-            (7..=15).contains(&scene.version),
-            "procedural cave torch fixture requires v7–v15"
+            (7..=16).contains(&scene.version),
+            "procedural cave torch fixture requires v7–v16"
         );
         use voxel_core::{Block, BlockPos};
         let mut candidates = Vec::new();
@@ -447,7 +447,7 @@ fn setup(
         eye + Vec3::new(origin[0] as f32, 0., origin[1] as f32),
         scene.cave_torches
     );
-    if scene.eye.is_some() && matches!(scene.version, 14 | 15) {
+    if scene.eye.is_some() && matches!(scene.version, 14..=16) {
         let wp = eye + Vec3::new(origin[0] as f32, 0., origin[1] as f32);
         let p = voxel_core::BlockPos([
             wp.x.floor() as i32,

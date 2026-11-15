@@ -8,7 +8,7 @@ fn main() {
     let version = std::env::args()
         .nth(1)
         .map_or(14, |v| v.parse::<u32>().unwrap());
-    assert!(matches!(version, 14 | 15));
+    assert!(matches!(version, 14..=16));
     println!("version,seed,chunk_x,chunk_z,crc,biome");
     for line in include_str!("../tests/fixtures/columns-v14.csv")
         .lines()

@@ -1,3 +1,24 @@
+# Slice42 follow-up: generator16 surface exposure
+
+Only new worlds default to16; recorded generators1–15 retain their identities and
+procedural output. Version16 evaluates the frozen v15 density composition, then
+adds nonnegative, spatially correlated relief near the surface. A global4-block
+height/slope/control lattice uses independent144/56-block gradient fields. Height
+and slope grade the closure threshold; cliffs retain more exposure and a shorter
+transition than flat uplands. Cubic relief becomes exactly zero after12–16 blocks
+of cover at each lattice vertex. Main density and noodle thickness receive
+separate positive offsets. Traditional ellipsoids taper by the same cover control
+before carving, with the exact historical predicate when relief is zero. There is
+no completed-terrain cap pass or change to deep noise, cave paths or materials.
+Interpolation can extend influence beyond the local vertical band on steep
+terrain; the report measures distance from actual uncaved geology as well.
+
+The cached control is global and independent of request order/plan extents.
+Admission accepts16 and rejects17+; save layouts, bounds and existing edits are
+unchanged. The production render distance and worker/cache budgets are unchanged.
+[Implementation, stable-geology comparisons and limits](performance/slice42/entrances/README.md).
+The following sections describe the preserved v15 and earlier implementations.
+
 # Slice 42: versioned cave refinement
 
 Generator15 is selected only for new worlds. Historical1–14 remain on their

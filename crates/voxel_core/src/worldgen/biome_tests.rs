@@ -49,7 +49,7 @@ fn climate_is_broad_balanced_continuous_and_independent_of_request_order() {
         assert_eq!(sample_biome(42, x, z), None);
         assert_eq!(sample_climate(42, x, z), None);
     }
-    assert_eq!(CURRENT_LOCAL_GENERATOR, 15);
+    assert_eq!(CURRENT_LOCAL_GENERATOR, 16);
     for version in 1..5 {
         assert_eq!(
             Generator::new(GenerationConfig { seed: 42, version })
@@ -61,7 +61,7 @@ fn climate_is_broad_balanced_continuous_and_independent_of_request_order() {
     assert!(
         Generator::new(GenerationConfig {
             seed: 42,
-            version: 16
+            version: 17
         })
         .is_err()
     );

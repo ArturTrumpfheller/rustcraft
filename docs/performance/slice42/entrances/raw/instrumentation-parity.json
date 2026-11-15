@@ -1,0 +1,34 @@
+[
+  {
+    "window": "s00-3",
+    "sha256": "ea0b02c4d387b6f4b524dade6d42c7c38ee9d732cea56435be34ed54487e1d30"
+  },
+  {
+    "window": "s03-4",
+    "sha256": "706d23ef8d18bfeeb7cd59ae37fbb1908141763b414f4b9dcb165c55f5c8b888"
+  },
+  {
+    "window": "s00-2",
+    "sha256": "36d3605c1079f66fd3bf463b922f906e138f0394c76f574286990c11ecf1f0c6"
+  },
+  {
+    "window": "s03-7",
+    "sha256": "f54b48a23ae947de1cc1a5c01377d21c00c79b628b5944f3dde10925f6323bfa"
+  },
+  {
+    "window": "s03-6",
+    "sha256": "28c11e37c691bb188b274941dd8fd36c0d7116a67782fd442efadcab1da02520"
+  },
+  {
+    "window": "s00-1",
+    "sha256": "6c711c959ca30c51bda0d5f962bd3d82ac0ba38dab592f41a3124be8ac7a0e59"
+  },
+  {
+    "window": "s00-0",
+    "sha256": "8789537c52028dbd32ebecfc5fbcf8b085f839bce52e20cc73d2d366027fdd28"
+  },
+  {
+    "window": "s03-5",
+    "sha256": "c23eadbb44286f98bea80a5e362d09fcc792b44f76f6e5b3316336f3348ef8f9"
+  }
+]

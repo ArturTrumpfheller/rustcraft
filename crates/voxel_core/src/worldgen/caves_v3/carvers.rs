@@ -188,6 +188,24 @@ pub(super) fn build(seed: u64, min: [i32; 2], max: [i32; 2]) -> Vec<Ellipsoid> {
     }
     b.shapes
 }
+impl Ellipsoid {
+    pub(super) fn contains_exposed(&self, p: [i32; 3], amount: i32) -> bool {
+        if amount == 0 {
+            return self.contains(p);
+        }
+        if (0..3).any(|i| p[i] < self.min[i] || p[i] > self.max[i]) {
+            return false;
+        }
+        let d: [i64; 3] = std::array::from_fn(|i| {
+            i64::from(p[i] * 256 + 128 - self.center[i]) * 4096 / i64::from(self.radius[i])
+        });
+        let retained = i64::from(1024 - amount);
+        let radius = 4096 * retained / 1024;
+        d[1] >= i64::from(self.floor) * retained / 1024
+            && d.iter().map(|v| v * v).sum::<i64>() < radius * radius
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

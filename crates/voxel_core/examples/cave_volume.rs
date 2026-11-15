@@ -14,7 +14,7 @@ fn scramble(mut v: u64) -> u64 {
     v ^ (v >> 31)
 }
 
-fn plan(validation: bool, confirmation: bool) {
+fn plan(validation: bool, confirmation: bool, exposure: bool) {
     println!("id,seed,x,z,n,stratum,attempt,mean_height,relief");
     let seeds = (0u64..if confirmation {
         2
@@ -24,7 +24,9 @@ fn plan(validation: bool, confirmation: bool) {
         32
     })
         .map(|i| {
-            if confirmation {
+            if exposure {
+                [123, 777, 4099, 900001][i as usize]
+            } else if confirmation {
                 [65537, 99991][i as usize]
             } else {
                 match (validation, i) {
@@ -74,7 +76,9 @@ fn plan(validation: bool, confirmation: bool) {
             }
             let (x, z, attempt, mean, relief) =
                 selected.expect("bounded terrain-only stratum search exhausted");
-            let prefix = if confirmation {
+            let prefix = if exposure {
+                "e"
+            } else if confirmation {
                 "h"
             } else if validation {
                 "v"
@@ -90,11 +94,17 @@ fn plan(validation: bool, confirmation: bool) {
 
 fn main() {
     let args: Vec<_> = env::args().collect();
-    if args
-        .get(1)
-        .is_some_and(|s| s == "--plan" || s == "--validation-plan" || s == "--confirmation-plan")
-    {
-        plan(args[1] != "--plan", args[1] == "--confirmation-plan");
+    if args.get(1).is_some_and(|s| {
+        s == "--plan"
+            || s == "--validation-plan"
+            || s == "--confirmation-plan"
+            || s == "--exposure-plan"
+    }) {
+        plan(
+            args[1] != "--plan",
+            args[1] == "--confirmation-plan",
+            args[1] == "--exposure-plan",
+        );
         return;
     }
     assert_eq!(

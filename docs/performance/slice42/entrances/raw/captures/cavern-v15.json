@@ -1,0 +1,41 @@
+{
+  "name": "cavern",
+  "kind": "cavern",
+  "seed": 42,
+  "eye": [
+    1244.5,
+    -25.38,
+    1200.5
+  ],
+  "direction": [
+    1,
+    0.04,
+    -1
+  ],
+  "width": 22,
+  "headroom": 14,
+  "sight_blocks": 32,
+  "volume": "s01-0.rcv",
+  "diagnostic": true,
+  "selection": "unchanged original Slice42 interior pose",
+  "generator": 15,
+  "command": [
+    "/workspace/rustcraft/target/release/examples/terrain_gallery",
+    "42",
+    "1244",
+    "1200",
+    "0",
+    "--generator=15",
+    "--capture=/workspace/rustcraft/work/slice42-entrances/captures/cavern-v15.ppm",
+    "--capture-frames=32",
+    "--radius=6",
+    "--eye=1244.5,-25.38,1200.5",
+    "--direction=1,0.04,-1",
+    "--diagnostic-light"
+  ],
+  "inspection_radius": 6,
+  "geometry_untouched": true,
+  "placed_lights": 0,
+  "executable_sha256": "eccf0aed2033b968aebf30ab8414859413fb1ed48960d6edc531dd75d0f0a40a",
+  "screenshot_sha256": "6971c342e21bcfbd9c3c42fe988f11c51123a0bcc8c51b938591569998d080de"
+}

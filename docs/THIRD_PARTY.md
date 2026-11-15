@@ -1,3 +1,15 @@
+# Slice42 generator16 follow-up provenance
+
+The exposure control, regressions, geometric/visibility analysis, scratch-only
+source probes and paired capture tools are original MIT OR Apache-2.0 work.
+The existing attributed MIT Horizon scalar subset is unchanged. Both optional
+cave-disabled controls are explicitly analysis counterfactuals: RustCraft disables
+cave queries in an exported frozen v15 workspace; the external Horizon adapter
+removes cave graph branches and carvers while retaining its terrain/fluid pipeline.
+These controls are not executable vanilla-world claims. No external source or
+registry JSON, new assets, runtime dependencies or lockfile changes are imported.
+[Measurements, source hashes and limits](performance/slice42/entrances/README.md).
+
 # Slice42 provenance
 
 The v15 composition, terrain coupling, version dispatch, regressions, analysis and

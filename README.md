@@ -1,13 +1,15 @@
-# Slice 42: Cave Generation Final Refinement (generator15)
+# Slice 42: Cave Generation Final Refinement (generator16)
 
-New worlds select generator15. V14 and every earlier generator keep their exact
-procedural output and saved identities. The Horizon-informed density/lattice and
-traditional carver architecture is retained. V15 restores physical vertical noise
-wavelengths, grades broad openings using existing terrain height/slope, reduces
-high mountain cheese carving and fades noodles near the surface. Terrain, biomes,
-world bounds, water protection, assets, saves and render radii1–4 remain unchanged.
+New worlds select generator16. Historical generators1–15 and saved identities
+keep their exact output. V16 controls exposure only near the existing landscape:
+coherent patches, geological cover and slope grade the cave density and taper
+traditional carvers into their unchanged underground networks. Large openings and
+small hillside entrances remain possible. V15's Horizon-informed cave composition
+and physical noise wavelengths remain the underground baseline.
 
-[Measurements, actual Bevy captures, compatibility and limitations](docs/performance/slice42/README.md).
+[Entrance follow-up, measurements and paired Bevy captures](docs/performance/slice42/entrances/README.md).
+[Original v15 refinement and its archived evidence](docs/performance/slice42/README.md).
+Terrain, biomes, bounds, water, materials, saves and render radii1–4 stay unchanged.
 The following sections retain their historical defaults.
 
 # Cave Generation v3 (Slice39)

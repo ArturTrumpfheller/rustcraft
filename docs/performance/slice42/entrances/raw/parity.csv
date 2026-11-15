@@ -1,0 +1,9 @@
+id,seed,x,z,n,stratum,attempt,mean_height,relief
+s00-0,0,1616,-1792,128,near-unconditional,0,20,2
+s00-1,0,736,752,128,near-unconditional,0,8,7
+s00-2,0,-6000,21200,128,distant-unconditional,0,-24,5
+s00-3,0,12208,-22400,128,distant-unconditional,0,11,10
+s03-4,18446744073709551615,27664,20080,128,lowland-conditional,9,25,28
+s03-5,18446744073709551615,14640,-13536,128,lowland-conditional,4,35,26
+s03-6,18446744073709551615,-5824,22960,128,mountain-conditional,3,87,103
+s03-7,18446744073709551615,26976,-7568,128,mountain-conditional,56,86,112

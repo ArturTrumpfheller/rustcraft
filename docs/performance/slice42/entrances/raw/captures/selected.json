@@ -1,0 +1,356 @@
+[
+  {
+    "name": "plains",
+    "diagnostic": false,
+    "seed": 0,
+    "eye": [
+      1668.5,
+      24.620000000000005,
+      -1713.5
+    ],
+    "direction": [
+      5.0,
+      -2.1200000000000045,
+      7.0
+    ],
+    "volume": "s00-0.rcv",
+    "aperture": {
+      "id": 26,
+      "box": [
+        [
+          76,
+          96
+        ],
+        [
+          41,
+          75
+        ],
+        [
+          85,
+          87
+        ]
+      ],
+      "center": [
+        84.53416149068323,
+        56.62111801242236,
+        85.90062111801242
+      ],
+      "two_block": true,
+      "penetration": 2.0,
+      "penetrating": false,
+      "voxels": 161,
+      "faces": 184,
+      "roof_faces": 155,
+      "side_faces": 29,
+      "horizontal_span": 34,
+      "vertical_span": 2,
+      "systems": [
+        52,
+        53
+      ],
+      "deep": false,
+      "navigable": false,
+      "visible": true,
+      "visibility_rays": 1,
+      "terrain": "plain",
+      "source_bits": 160,
+      "isolated_shallow": true,
+      "large": false
+    },
+    "interior_air_target": false,
+    "selection": "supported uncaved exterior floor, clear v15 supercover ray; same air camera in both versions"
+  },
+  {
+    "name": "hills",
+    "diagnostic": false,
+    "seed": 0,
+    "eye": [
+      12231.5,
+      6.6200000000000045,
+      -22316.5
+    ],
+    "direction": [
+      6.0,
+      -7.1200000000000045,
+      -2.0
+    ],
+    "volume": "s00-3.rcv",
+    "aperture": {
+      "id": 54,
+      "box": [
+        [
+          78,
+          82
+        ],
+        [
+          28,
+          33
+        ],
+        [
+          69,
+          70
+        ]
+      ],
+      "center": [
+        79.75,
+        30.083333333333332,
+        69.0
+      ],
+      "two_block": false,
+      "penetration": 9.0,
+      "penetrating": true,
+      "voxels": 12,
+      "faces": 12,
+      "roof_faces": 12,
+      "side_faces": 0,
+      "horizontal_span": 5,
+      "vertical_span": 1,
+      "systems": [
+        19
+      ],
+      "deep": true,
+      "navigable": false,
+      "visible": true,
+      "visibility_rays": 1,
+      "terrain": "hill",
+      "source_bits": 4,
+      "isolated_shallow": false,
+      "large": false
+    },
+    "interior_air_target": true,
+    "selection": "supported uncaved exterior floor, clear v15 supercover ray; same air camera in both versions"
+  },
+  {
+    "name": "mountains",
+    "diagnostic": false,
+    "seed": 42,
+    "eye": [
+      -18587.5,
+      112.62,
+      -22285.5
+    ],
+    "direction": [
+      -3.0,
+      -13.120000000000005,
+      -2.0
+    ],
+    "volume": "s01-2.rcv",
+    "aperture": {
+      "id": 49,
+      "box": [
+        [
+          22,
+          37
+        ],
+        [
+          7,
+          22
+        ],
+        [
+          154,
+          167
+        ]
+      ],
+      "center": [
+        29.2027027027027,
+        13.58108108108108,
+        160.95945945945945
+      ],
+      "two_block": true,
+      "penetration": 1.4142135623730951,
+      "penetrating": false,
+      "voxels": 74,
+      "faces": 204,
+      "roof_faces": 71,
+      "side_faces": 133,
+      "horizontal_span": 15,
+      "vertical_span": 13,
+      "systems": [
+        574,
+        610,
+        611,
+        612,
+        644,
+        645,
+        646,
+        670,
+        671,
+        702,
+        730,
+        731,
+        732,
+        733,
+        734,
+        735,
+        764,
+        765,
+        766,
+        767,
+        793,
+        794,
+        795,
+        796,
+        797,
+        798,
+        830,
+        831,
+        832,
+        833,
+        834,
+        835,
+        856,
+        857,
+        858,
+        859,
+        860,
+        880,
+        881,
+        882,
+        883,
+        884,
+        899,
+        900,
+        901,
+        902,
+        903,
+        936,
+        937,
+        938,
+        939,
+        957,
+        980
+      ],
+      "deep": false,
+      "navigable": false,
+      "visible": true,
+      "visibility_rays": 1,
+      "terrain": "mountain",
+      "source_bits": 32,
+      "isolated_shallow": true,
+      "large": false
+    },
+    "interior_air_target": false,
+    "selection": "camera14 blocks above the original supported exterior pose; identical close mountain context in both versions"
+  },
+  {
+    "name": "large-mouth",
+    "diagnostic": false,
+    "seed": 0,
+    "eye": [
+      813.5,
+      9.620000000000005,
+      787.5
+    ],
+    "direction": [
+      7.0,
+      -4.1200000000000045,
+      3.0
+    ],
+    "volume": "s00-1.rcv",
+    "aperture": {
+      "id": 15,
+      "box": [
+        [
+          17,
+          56
+        ],
+        [
+          65,
+          105
+        ],
+        [
+          71,
+          74
+        ]
+      ],
+      "center": [
+        38.65,
+        84.10357142857143,
+        71.68928571428572
+      ],
+      "two_block": true,
+      "penetration": 9.0,
+      "penetrating": true,
+      "voxels": 560,
+      "faces": 664,
+      "roof_faces": 560,
+      "side_faces": 104,
+      "horizontal_span": 40,
+      "vertical_span": 3,
+      "systems": [
+        2,
+        47,
+        75
+      ],
+      "deep": true,
+      "navigable": false,
+      "visible": true,
+      "visibility_rays": 1,
+      "terrain": "plain",
+      "source_bits": 36,
+      "isolated_shallow": false,
+      "large": true
+    },
+    "interior_air_target": true,
+    "selection": "supported uncaved exterior floor, clear v15 supercover ray; same air camera in both versions"
+  },
+  {
+    "name": "ordinary",
+    "diagnostic": false,
+    "seed": 18268918950509715601,
+    "eye": [
+      630.5,
+      25.62,
+      -1403.5
+    ],
+    "direction": [
+      1.0,
+      -0.04,
+      1.0
+    ],
+    "volume": "s13-0.rcv",
+    "selection": "quietest bounded unconditional flat lowland window with no qualifying surface opening; supported unchanged5x5 exterior patch nearest the center"
+  },
+  {
+    "name": "network",
+    "kind": "network",
+    "seed": 18446744073709551615,
+    "eye": [
+      17806.5,
+      -49.38,
+      13759.5
+    ],
+    "direction": [
+      0,
+      0.04,
+      -1
+    ],
+    "width": 3,
+    "headroom": 3,
+    "sight_blocks": 32,
+    "volume": "s03-3.rcv",
+    "diagnostic": true,
+    "selection": "unchanged original Slice42 interior pose"
+  },
+  {
+    "name": "cavern",
+    "kind": "cavern",
+    "seed": 42,
+    "eye": [
+      1244.5,
+      -25.38,
+      1200.5
+    ],
+    "direction": [
+      1,
+      0.04,
+      -1
+    ],
+    "width": 22,
+    "headroom": 14,
+    "sight_blocks": 32,
+    "volume": "s01-0.rcv",
+    "diagnostic": true,
+    "selection": "unchanged original Slice42 interior pose"
+  }
+]

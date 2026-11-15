@@ -18,7 +18,7 @@ pub use local::Sampler;
 
 pub const GENERATOR_VERSION: u32 = 1;
 /// Default for newly created regional worlds; historical defaults remain frozen.
-pub const CURRENT_LOCAL_GENERATOR: u32 = 15;
+pub const CURRENT_LOCAL_GENERATOR: u32 = 16;
 pub const DEFAULT_SEED: u64 = 2026;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GenerationConfig {
@@ -105,6 +105,7 @@ impl Generator {
             13,
             14,
             15,
+            16,
         ]
         .contains(&config.version)
         {

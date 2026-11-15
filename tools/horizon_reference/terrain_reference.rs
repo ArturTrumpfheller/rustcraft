@@ -39,9 +39,12 @@ fn main() -> Result<()> {
     let noises = bundle(&data.join("noise"))?;
     let defs = bundle(&data.join("density_function"))?;
     println!("id,seed,x,z,n,stratum,attempt,mean_height,relief");
+    let exposure = env::args().any(|s| s == "--exposure");
     let confirmation = env::args().any(|s| s == "--confirmation");
-    let validation = confirmation || env::args().any(|s| s == "--validation");
-    let seeds: &[u64] = if confirmation {
+    let validation = exposure || confirmation || env::args().any(|s| s == "--validation");
+    let seeds: &[u64] = if exposure {
+        &[123, 777, 4099, 900001]
+    } else if confirmation {
         &[65537, 99991]
     } else if validation {
         &[7, 19, 31415, 8675309]
@@ -57,7 +60,11 @@ fn main() -> Result<()> {
         let field = compiler.get_sampler(id)?;
         for site in 4u64..if validation { 10 } else { 8 } {
             let mut selected = None;
-            for attempt in 0u64..if confirmation { 16384 } else { 4096 } {
+            for attempt in 0u64..if confirmation || exposure {
+                16384
+            } else {
+                4096
+            } {
                 let mut h = seed ^ (site * 314159 + attempt * 271828 + 1);
                 h = (h ^ (h >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
                 h = (h ^ (h >> 27)).wrapping_mul(0x94d049bb133111eb);
@@ -90,7 +97,9 @@ fn main() -> Result<()> {
             } else {
                 "hill-conditional"
             };
-            let prefix = if confirmation {
+            let prefix = if exposure {
+                "e"
+            } else if confirmation {
                 "h"
             } else if validation {
                 "v"

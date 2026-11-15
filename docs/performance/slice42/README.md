@@ -1,12 +1,14 @@
 # Slice 42: Cave Generation Final Refinement
 
+**Follow-up:** new worlds now select **v16**. See the [entrance-frequency refinement](entrances/README.md) for the current implementation, paired v15/v16 captures and new measurements. The v15 report and raw evidence below are preserved as historical results.
+
 This is a refinement of Slice39 commit `0818031a5d2a9dab248098ea5a45a4338748cd4b`,
 not a replacement architecture. PR #57 was open/unmerged when inspected; Slice42
 is stacked on `feat/slice-39-cave-generation-v3`. Main was `c6d3639`. No other
 open implementation PR or Slice42 issue superseded the supplied request. Neither
 PR is merged automatically.
 
-New worlds select **generator15**. Recorded generators1–14 and all existing edits
+At the original v15 checkpoint, new worlds selected **generator15**. Recorded generators1–14 and all existing edits
 keep their original behavior. Bounds remain Y[-64,192), sea2; terrain, fifteen
 biomes, materials, assets, save envelopes, water mechanics, renderer and supported
 radii1–4 are unchanged.

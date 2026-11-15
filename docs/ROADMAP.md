@@ -1,3 +1,16 @@
+# Slice42 follow-up — Reduce Cave Entrance Frequency
+
+- [x] Separate v16 new-world default; historical1–15 and saved identities preserved
+- [x] Correlated, cover/slope-aware surface exposure; unchanged deep cave composition
+- [x] Separate superficial scars, physical entrances, visibility and supported access
+- [x] Reuse established cohorts and add independent terrain-only seed/location selection
+- [x] Source attribution and cave-disabled geological controls, including pinned Horizon
+- [x] Fourteen paired captures, fixed-geology topology/performance evidence and full validation
+- [ ] Native Void X11/Wayland and Windows physical GPU/input owner acceptance
+
+[Focused follow-up and evidence](performance/slice42/entrances/README.md).
+Same PR #58, stacked on PR #57; no automatic merge or next terrain/hydrology slice.
+
 # Slice42 — Cave Generation Final Refinement
 
 - [x] Separate generator15 default with exact historical1–14 output/identities preserved

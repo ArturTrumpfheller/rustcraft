@@ -28,6 +28,7 @@ impl Heights {
         Self {
             values,
             slopes: Some(slopes),
+            exposure: None,
         }
     }
 }

@@ -31,7 +31,7 @@ fn exact_merged_slice38_history_including_all_v13_geometry_and_water() {
 fn all_paths_halos_foundation_supported_ecology_quiet_water_and_signed_bounds() {
     for (seed, version) in SEEDS
         .into_iter()
-        .flat_map(|seed| [14, 15].map(move |v| (seed, v)))
+        .flat_map(|seed| [14, 15, 16].map(move |v| (seed, v)))
     {
         for c in [
             [-1, -1],
@@ -54,7 +54,7 @@ fn all_paths_halos_foundation_supported_ecology_quiet_water_and_signed_bounds() 
 fn surface_geography_climate_and_material_contracts_are_exactly_v13() {
     for (seed, version) in SEEDS
         .into_iter()
-        .flat_map(|seed| [14, 15].map(move |v| (seed, v)))
+        .flat_map(|seed| [14, 15, 16].map(move |v| (seed, v)))
     {
         let a = Generator::new(GenerationConfig { seed, version: 13 }).unwrap();
         let b = Generator::new(GenerationConfig { seed, version }).unwrap();
@@ -97,8 +97,8 @@ fn v14_safe_spawn_and_default_fail_closed() {
         regions::RegionIdentity,
         streaming,
     };
-    assert_eq!(voxel_core::worldgen::CURRENT_LOCAL_GENERATOR, 15);
-    for v in [0, 16, u32::MAX] {
+    assert_eq!(voxel_core::worldgen::CURRENT_LOCAL_GENERATOR, 16);
+    for v in [0, 17, u32::MAX] {
         assert!(
             Generator::new(GenerationConfig {
                 seed: 0,
@@ -109,7 +109,7 @@ fn v14_safe_spawn_and_default_fail_closed() {
     }
     for (seed, version) in SEEDS
         .into_iter()
-        .flat_map(|seed| [14, 15].map(move |v| (seed, v)))
+        .flat_map(|seed| [14, 15, 16].map(move |v| (seed, v)))
     {
         let mut w = World::regional(RegionIdentity {
             seed,
@@ -308,14 +308,16 @@ fn v15_post_design_columns_pin_output_without_replacing_v14_fixtures() {
     }
 }
 
-#[test]
-fn v15_real_underground_edits_and_torch_survive_eviction_and_reopen_with_saved_identity() {
+fn assert_saved_cave_edits(version: u32) {
     use voxel_core::{World, persistence::SaveStore, regions::RegionIdentity, streaming};
-    let path = std::env::temp_dir().join(format!("rustcraft-slice42-cave-{}", std::process::id()));
+    let path = std::env::temp_dir().join(format!(
+        "rustcraft-slice42-cave-{version}-{}",
+        std::process::id()
+    ));
     std::fs::create_dir(&path).unwrap();
     let id = RegionIdentity {
         seed: 42,
-        generator: 15,
+        generator: version,
         nonce: [42; 16],
     };
     {
@@ -418,5 +420,67 @@ fn refined_caves_keep_narrow_routes_broad_spaces_and_separate_air_and_floor_grap
             heights[3..].iter().sum::<usize>() > 100,
             "occasional tall spaces remain"
         );
+    }
+}
+
+#[test]
+fn v15_real_underground_edits_keep_saved_generator_identity() {
+    assert_saved_cave_edits(15);
+}
+#[test]
+fn v16_real_underground_edits_keep_saved_generator_identity() {
+    assert_saved_cave_edits(16);
+}
+#[test]
+fn real_v16_cave_collision_mining_placing_and_torch_light_across_chunk_seams() {
+    assert_cave_gameplay(16);
+}
+#[test]
+fn v16_post_design_columns_pin_output_without_replacing_historical_fixtures() {
+    for line in include_str!("fixtures/columns-v16.csv").lines().skip(1) {
+        let v: Vec<_> = line.split(',').collect();
+        let seed = v[1].parse().unwrap();
+        let c = [v[2].parse().unwrap(), v[3].parse().unwrap()];
+        let g = Generator::new(GenerationConfig { seed, version: 16 }).unwrap();
+        assert_eq!(
+            audit::crc(&audit::column(&g, c)),
+            v[4].parse::<u32>().unwrap(),
+            "{line}"
+        );
+    }
+}
+
+#[test]
+fn v16_keeps_deep_voxels_and_only_reduces_cavities_in_the_surface_band() {
+    for seed in [42, u64::MAX] {
+        let old = Generator::new(GenerationConfig { seed, version: 15 }).unwrap();
+        let new = Generator::new(GenerationConfig { seed, version: 16 }).unwrap();
+        for c in [[-13, 5], [-12, -12], [74, 71], [-1511, 1250]] {
+            let a = audit::column(&old, c);
+            let b = audit::column(&new, c);
+            let minimum_height = (-4..=20)
+                .flat_map(|z| (-4..=20).map(move |x| (x, z)))
+                .map(|(x, z)| old.height(c[0] * 16 + x, c[1] * 16 + z).unwrap())
+                .min()
+                .unwrap();
+            for ((cp, before), (_, after)) in a.iter().zip(&b) {
+                for i in 0..4096 {
+                    let l = LocalPos::new([i % 16, i / 256, i / 16 % 16]).unwrap();
+                    let p = cp.block_position(l).unwrap();
+                    if p.0[1] <= minimum_height - 20 {
+                        assert_eq!(before.get(l), after.get(l), "deep voxel {seed} {p:?}");
+                    }
+                    if before.get(l).is_solid() && after.get(l) == Block::Air {
+                        assert!(
+                            matches!(
+                                before.get(l),
+                                Block::Leaves | Block::BirchLeaves | Block::SpruceLeaves
+                            ),
+                            "new cavity {seed} {p:?}"
+                        );
+                    }
+                }
+            }
+        }
     }
 }

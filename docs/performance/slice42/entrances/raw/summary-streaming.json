@@ -1,0 +1,826 @@
+{
+  "forward": {
+    "request_ready_us": {
+      "n": 36,
+      "median_ratio": 1.0162680910028747,
+      "max_base": 1125517.275,
+      "max_new": 1127571.606,
+      "worst": [
+        {
+          "scene": "birch",
+          "radius": "2",
+          "base_n": "33",
+          "new_n": "33",
+          "base_p99": "208126.726",
+          "new_p99": "247202.432",
+          "base_max": "213026.094",
+          "new_max": "252966.698"
+        },
+        {
+          "scene": "stationary",
+          "radius": "2",
+          "base_n": "33",
+          "new_n": "33",
+          "base_p99": "199739.114",
+          "new_p99": "226766.697",
+          "base_max": "205554.675",
+          "new_max": "232498.214"
+        },
+        {
+          "scene": "grove",
+          "radius": "2",
+          "base_n": "33",
+          "new_n": "33",
+          "base_p99": "299429.693",
+          "new_p99": "335453.663",
+          "base_max": "309402.722",
+          "new_max": "346169.428"
+        }
+      ]
+    },
+    "generation_us": {
+      "n": 40,
+      "median_ratio": 1.0193207321785227,
+      "max_base": 90047.648,
+      "max_new": 88310.406,
+      "worst": [
+        {
+          "scene": "session",
+          "radius": "3",
+          "base_n": "12",
+          "new_n": "12",
+          "base_p99": "4759.562",
+          "new_p99": "7499.21",
+          "base_max": "5359.604",
+          "new_max": "7955.401"
+        },
+        {
+          "scene": "stationary",
+          "radius": "2",
+          "base_n": "34",
+          "new_n": "34",
+          "base_p99": "24728.42",
+          "new_p99": "34592.98",
+          "base_max": "36091.883",
+          "new_max": "41796.826"
+        },
+        {
+          "scene": "taiga",
+          "radius": "2",
+          "base_n": "34",
+          "new_n": "34",
+          "base_p99": "30708.615",
+          "new_p99": "42930.432",
+          "base_max": "40832.925",
+          "new_max": "45006.133"
+        }
+      ]
+    },
+    "worker_window_peak_requested_heap": {
+      "n": 40,
+      "median_ratio": 1.0000862260703465,
+      "max_base": 2904340.0,
+      "max_new": 2904452.0,
+      "worst": [
+        {
+          "scene": "session",
+          "radius": "3",
+          "base_n": "12",
+          "new_n": "12",
+          "base_p99": "159693.0",
+          "new_p99": "190414.0",
+          "base_max": "167365.0",
+          "new_max": "200455.0"
+        },
+        {
+          "scene": "session",
+          "radius": "4",
+          "base_n": "12",
+          "new_n": "12",
+          "base_p99": "167683.0",
+          "new_p99": "196050.0",
+          "base_max": "176972.0",
+          "new_max": "243630.0"
+        },
+        {
+          "scene": "session",
+          "radius": "1",
+          "base_n": "12",
+          "new_n": "12",
+          "base_p99": "159581.0",
+          "new_p99": "173159.0",
+          "base_max": "179243.0",
+          "new_max": "196295.0"
+        }
+      ]
+    },
+    "worker_cache_bytes": {
+      "n": 40,
+      "median_ratio": 1.0,
+      "max_base": 4128768.0,
+      "max_new": 4136960.0,
+      "worst": [
+        {
+          "scene": "meadow",
+          "radius": "2",
+          "base_n": "34",
+          "new_n": "34",
+          "base_p99": "1052672.0",
+          "new_p99": "1077248.0",
+          "base_max": "1073152.0",
+          "new_max": "1097728.0"
+        },
+        {
+          "scene": "meadow",
+          "radius": "3",
+          "base_n": "58",
+          "new_n": "58",
+          "base_p99": "1794048.0",
+          "new_p99": "1818624.0",
+          "base_max": "1814528.0",
+          "new_max": "1839104.0"
+        },
+        {
+          "scene": "meadow",
+          "radius": "4",
+          "base_n": "90",
+          "new_n": "90",
+          "base_p99": "2711552.0",
+          "new_p99": "2740224.0",
+          "base_max": "2736128.0",
+          "new_max": "2764800.0"
+        }
+      ]
+    },
+    "voxel_bytes": {
+      "n": 36,
+      "median_ratio": 1.0,
+      "max_base": 2887680.0,
+      "max_new": 2887680.0,
+      "worst": [
+        {
+          "scene": "meadow",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "512000.0",
+          "new_p99": "524288.0",
+          "base_max": "512000.0",
+          "new_max": "524288.0"
+        },
+        {
+          "scene": "meadow",
+          "radius": "3",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "1073152.0",
+          "new_p99": "1097728.0",
+          "base_max": "1073152.0",
+          "new_max": "1097728.0"
+        },
+        {
+          "scene": "desert",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "471040.0",
+          "new_p99": "479232.0",
+          "base_max": "471040.0",
+          "new_max": "479232.0"
+        }
+      ]
+    },
+    "cache_columns": {
+      "n": 36,
+      "median_ratio": 1.0,
+      "max_base": 121.0,
+      "max_new": 121.0,
+      "worst": [
+        {
+          "scene": "birch",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "49.0",
+          "new_p99": "49.0",
+          "base_max": "49.0",
+          "new_max": "49.0"
+        },
+        {
+          "scene": "birch",
+          "radius": "3",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "81.0",
+          "new_p99": "81.0",
+          "base_max": "81.0",
+          "new_max": "81.0"
+        },
+        {
+          "scene": "birch",
+          "radius": "4",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "121.0",
+          "new_p99": "121.0",
+          "base_max": "121.0",
+          "new_max": "121.0"
+        }
+      ]
+    },
+    "resident_descriptors": {
+      "n": 36,
+      "median_ratio": 1.0,
+      "max_base": 1296.0,
+      "max_new": 1296.0,
+      "worst": [
+        {
+          "scene": "birch",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "400.0",
+          "new_p99": "400.0",
+          "base_max": "400.0",
+          "new_max": "400.0"
+        },
+        {
+          "scene": "birch",
+          "radius": "3",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "784.0",
+          "new_p99": "784.0",
+          "base_max": "784.0",
+          "new_max": "784.0"
+        },
+        {
+          "scene": "birch",
+          "radius": "4",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "1296.0",
+          "new_p99": "1296.0",
+          "base_max": "1296.0",
+          "new_max": "1296.0"
+        }
+      ]
+    },
+    "resident_meshes": {
+      "n": 4,
+      "median_ratio": 1.0,
+      "max_base": 243.0,
+      "max_new": 243.0,
+      "worst": [
+        {
+          "scene": "retained-install",
+          "radius": "1",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "3.0",
+          "new_p99": "3.0",
+          "base_max": "3.0",
+          "new_max": "3.0"
+        },
+        {
+          "scene": "retained-install",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "27.0",
+          "new_p99": "27.0",
+          "base_max": "27.0",
+          "new_max": "27.0"
+        },
+        {
+          "scene": "retained-install",
+          "radius": "3",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "147.0",
+          "new_p99": "147.0",
+          "base_max": "147.0",
+          "new_max": "147.0"
+        }
+      ]
+    },
+    "mesh_payload": {
+      "n": 36,
+      "median_ratio": 1.0029485516348053,
+      "max_base": 49895368.0,
+      "max_new": 50108896.0,
+      "worst": [
+        {
+          "scene": "desert",
+          "radius": "4",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "21150928.0",
+          "new_p99": "22501784.0",
+          "base_max": "21150928.0",
+          "new_max": "22501784.0"
+        },
+        {
+          "scene": "meadow",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "6970784.0",
+          "new_p99": "7298144.0",
+          "base_max": "6970784.0",
+          "new_max": "7298144.0"
+        },
+        {
+          "scene": "desert",
+          "radius": "3",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "13924208.0",
+          "new_p99": "14567768.0",
+          "base_max": "13924208.0",
+          "new_max": "14567768.0"
+        }
+      ]
+    },
+    "failed": {
+      "n": 36,
+      "median_ratio": null,
+      "max_base": 0.0,
+      "max_new": 0.0,
+      "worst": []
+    },
+    "discarded": {
+      "n": 36,
+      "median_ratio": 1.0,
+      "max_base": 1.0,
+      "max_new": 1.0,
+      "worst": [
+        {
+          "scene": "radius",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "1.0",
+          "new_p99": "1.0",
+          "base_max": "1.0",
+          "new_max": "1.0"
+        }
+      ]
+    },
+    "cancelled": {
+      "n": 36,
+      "median_ratio": 1.0,
+      "max_base": 1.0,
+      "max_new": 1.0,
+      "worst": [
+        {
+          "scene": "gated_teleport",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "1.0",
+          "new_p99": "1.0",
+          "base_max": "1.0",
+          "new_max": "1.0"
+        },
+        {
+          "scene": "gated_teleport",
+          "radius": "3",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "1.0",
+          "new_p99": "1.0",
+          "base_max": "1.0",
+          "new_max": "1.0"
+        },
+        {
+          "scene": "gated_teleport",
+          "radius": "4",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "1.0",
+          "new_p99": "1.0",
+          "base_max": "1.0",
+          "new_max": "1.0"
+        }
+      ]
+    }
+  },
+  "reverse": {
+    "request_ready_us": {
+      "n": 36,
+      "median_ratio": 1.0189067005605632,
+      "max_base": 1138666.071,
+      "max_new": 1092117.883,
+      "worst": [
+        {
+          "scene": "coast",
+          "radius": "3",
+          "base_n": "64",
+          "new_n": "64",
+          "base_p99": "381951.254",
+          "new_p99": "431948.269",
+          "base_max": "387346.952",
+          "new_max": "438383.166"
+        },
+        {
+          "scene": "grove",
+          "radius": "3",
+          "base_n": "57",
+          "new_n": "57",
+          "base_p99": "538849.163",
+          "new_p99": "603691.373",
+          "base_max": "546374.061",
+          "new_max": "613934.924"
+        },
+        {
+          "scene": "taiga",
+          "radius": "3",
+          "base_n": "57",
+          "new_n": "57",
+          "base_p99": "473283.186",
+          "new_p99": "528579.154",
+          "base_max": "479437.912",
+          "new_max": "535114.435"
+        }
+      ]
+    },
+    "generation_us": {
+      "n": 40,
+      "median_ratio": 1.005303210513829,
+      "max_base": 84710.416,
+      "max_new": 77031.905,
+      "worst": [
+        {
+          "scene": "radius",
+          "radius": "4",
+          "base_n": "97",
+          "new_n": "97",
+          "base_p99": "24070.612",
+          "new_p99": "28325.725",
+          "base_max": "30484.256",
+          "new_max": "33681.863"
+        },
+        {
+          "scene": "coast",
+          "radius": "2",
+          "base_n": "39",
+          "new_n": "39",
+          "base_p99": "27190.958",
+          "new_p99": "31947.272",
+          "base_max": "34641.25",
+          "new_max": "39950.396"
+        },
+        {
+          "scene": "meadow",
+          "radius": "3",
+          "base_n": "58",
+          "new_n": "58",
+          "base_p99": "29911.108",
+          "new_p99": "34916.541",
+          "base_max": "45139.217",
+          "new_max": "37665.366"
+        }
+      ]
+    },
+    "worker_window_peak_requested_heap": {
+      "n": 40,
+      "median_ratio": 1.0,
+      "max_base": 2904452.0,
+      "max_new": 2897940.0,
+      "worst": [
+        {
+          "scene": "session",
+          "radius": "2",
+          "base_n": "12",
+          "new_n": "12",
+          "base_p99": "149027.0",
+          "new_p99": "172662.0",
+          "base_max": "152628.0",
+          "new_max": "202138.0"
+        },
+        {
+          "scene": "meadow",
+          "radius": "4",
+          "base_n": "90",
+          "new_n": "90",
+          "base_p99": "1699108.0",
+          "new_p99": "1809900.0",
+          "base_max": "1932252.0",
+          "new_max": "1971444.0"
+        },
+        {
+          "scene": "meadow",
+          "radius": "3",
+          "base_n": "58",
+          "new_n": "58",
+          "base_p99": "1719196.0",
+          "new_p99": "1823452.0",
+          "base_max": "1962964.0",
+          "new_max": "2070452.0"
+        }
+      ]
+    },
+    "worker_cache_bytes": {
+      "n": 40,
+      "median_ratio": 1.0,
+      "max_base": 4128768.0,
+      "max_new": 4136960.0,
+      "worst": [
+        {
+          "scene": "meadow",
+          "radius": "2",
+          "base_n": "34",
+          "new_n": "34",
+          "base_p99": "1052672.0",
+          "new_p99": "1077248.0",
+          "base_max": "1073152.0",
+          "new_max": "1097728.0"
+        },
+        {
+          "scene": "meadow",
+          "radius": "3",
+          "base_n": "58",
+          "new_n": "58",
+          "base_p99": "1794048.0",
+          "new_p99": "1818624.0",
+          "base_max": "1814528.0",
+          "new_max": "1839104.0"
+        },
+        {
+          "scene": "meadow",
+          "radius": "4",
+          "base_n": "90",
+          "new_n": "90",
+          "base_p99": "2711552.0",
+          "new_p99": "2740224.0",
+          "base_max": "2736128.0",
+          "new_max": "2764800.0"
+        }
+      ]
+    },
+    "voxel_bytes": {
+      "n": 36,
+      "median_ratio": 1.0,
+      "max_base": 2887680.0,
+      "max_new": 2887680.0,
+      "worst": [
+        {
+          "scene": "meadow",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "512000.0",
+          "new_p99": "524288.0",
+          "base_max": "512000.0",
+          "new_max": "524288.0"
+        },
+        {
+          "scene": "meadow",
+          "radius": "3",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "1073152.0",
+          "new_p99": "1097728.0",
+          "base_max": "1073152.0",
+          "new_max": "1097728.0"
+        },
+        {
+          "scene": "desert",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "471040.0",
+          "new_p99": "479232.0",
+          "base_max": "471040.0",
+          "new_max": "479232.0"
+        }
+      ]
+    },
+    "cache_columns": {
+      "n": 36,
+      "median_ratio": 1.0,
+      "max_base": 121.0,
+      "max_new": 121.0,
+      "worst": [
+        {
+          "scene": "birch",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "49.0",
+          "new_p99": "49.0",
+          "base_max": "49.0",
+          "new_max": "49.0"
+        },
+        {
+          "scene": "birch",
+          "radius": "3",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "81.0",
+          "new_p99": "81.0",
+          "base_max": "81.0",
+          "new_max": "81.0"
+        },
+        {
+          "scene": "birch",
+          "radius": "4",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "121.0",
+          "new_p99": "121.0",
+          "base_max": "121.0",
+          "new_max": "121.0"
+        }
+      ]
+    },
+    "resident_descriptors": {
+      "n": 36,
+      "median_ratio": 1.0,
+      "max_base": 1296.0,
+      "max_new": 1296.0,
+      "worst": [
+        {
+          "scene": "birch",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "400.0",
+          "new_p99": "400.0",
+          "base_max": "400.0",
+          "new_max": "400.0"
+        },
+        {
+          "scene": "birch",
+          "radius": "3",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "784.0",
+          "new_p99": "784.0",
+          "base_max": "784.0",
+          "new_max": "784.0"
+        },
+        {
+          "scene": "birch",
+          "radius": "4",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "1296.0",
+          "new_p99": "1296.0",
+          "base_max": "1296.0",
+          "new_max": "1296.0"
+        }
+      ]
+    },
+    "resident_meshes": {
+      "n": 4,
+      "median_ratio": 1.0,
+      "max_base": 243.0,
+      "max_new": 243.0,
+      "worst": [
+        {
+          "scene": "retained-install",
+          "radius": "1",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "3.0",
+          "new_p99": "3.0",
+          "base_max": "3.0",
+          "new_max": "3.0"
+        },
+        {
+          "scene": "retained-install",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "27.0",
+          "new_p99": "27.0",
+          "base_max": "27.0",
+          "new_max": "27.0"
+        },
+        {
+          "scene": "retained-install",
+          "radius": "3",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "147.0",
+          "new_p99": "147.0",
+          "base_max": "147.0",
+          "new_max": "147.0"
+        }
+      ]
+    },
+    "mesh_payload": {
+      "n": 36,
+      "median_ratio": 1.0029485516348053,
+      "max_base": 49895368.0,
+      "max_new": 50108896.0,
+      "worst": [
+        {
+          "scene": "desert",
+          "radius": "4",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "21150928.0",
+          "new_p99": "22501784.0",
+          "base_max": "21150928.0",
+          "new_max": "22501784.0"
+        },
+        {
+          "scene": "meadow",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "6970784.0",
+          "new_p99": "7298144.0",
+          "base_max": "6970784.0",
+          "new_max": "7298144.0"
+        },
+        {
+          "scene": "desert",
+          "radius": "3",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "13924208.0",
+          "new_p99": "14567768.0",
+          "base_max": "13924208.0",
+          "new_max": "14567768.0"
+        }
+      ]
+    },
+    "failed": {
+      "n": 36,
+      "median_ratio": null,
+      "max_base": 0.0,
+      "max_new": 0.0,
+      "worst": []
+    },
+    "discarded": {
+      "n": 36,
+      "median_ratio": 1.0,
+      "max_base": 1.0,
+      "max_new": 1.0,
+      "worst": [
+        {
+          "scene": "radius",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "1.0",
+          "new_p99": "1.0",
+          "base_max": "1.0",
+          "new_max": "1.0"
+        },
+        {
+          "scene": "radius",
+          "radius": "3",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "1.0",
+          "new_p99": "1.0",
+          "base_max": "1.0",
+          "new_max": "1.0"
+        }
+      ]
+    },
+    "cancelled": {
+      "n": 36,
+      "median_ratio": 1.0,
+      "max_base": 1.0,
+      "max_new": 1.0,
+      "worst": [
+        {
+          "scene": "gated_teleport",
+          "radius": "2",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "1.0",
+          "new_p99": "1.0",
+          "base_max": "1.0",
+          "new_max": "1.0"
+        },
+        {
+          "scene": "gated_teleport",
+          "radius": "3",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "1.0",
+          "new_p99": "1.0",
+          "base_max": "1.0",
+          "new_max": "1.0"
+        },
+        {
+          "scene": "gated_teleport",
+          "radius": "4",
+          "base_n": "1",
+          "new_n": "1",
+          "base_p99": "1.0",
+          "new_p99": "1.0",
+          "base_max": "1.0",
+          "new_max": "1.0"
+        }
+      ]
+    }
+  }
+}

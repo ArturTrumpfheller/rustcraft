@@ -1,0 +1,79 @@
+{
+  "name": "hills",
+  "diagnostic": false,
+  "seed": 0,
+  "eye": [
+    12231.5,
+    6.6200000000000045,
+    -22316.5
+  ],
+  "direction": [
+    6.0,
+    -7.1200000000000045,
+    -2.0
+  ],
+  "volume": "s00-3.rcv",
+  "aperture": {
+    "id": 54,
+    "box": [
+      [
+        78,
+        82
+      ],
+      [
+        28,
+        33
+      ],
+      [
+        69,
+        70
+      ]
+    ],
+    "center": [
+      79.75,
+      30.083333333333332,
+      69.0
+    ],
+    "two_block": false,
+    "penetration": 9.0,
+    "penetrating": true,
+    "voxels": 12,
+    "faces": 12,
+    "roof_faces": 12,
+    "side_faces": 0,
+    "horizontal_span": 5,
+    "vertical_span": 1,
+    "systems": [
+      19
+    ],
+    "deep": true,
+    "navigable": false,
+    "visible": true,
+    "visibility_rays": 1,
+    "terrain": "hill",
+    "source_bits": 4,
+    "isolated_shallow": false,
+    "large": false
+  },
+  "interior_air_target": true,
+  "selection": "supported uncaved exterior floor, clear v15 supercover ray; same air camera in both versions",
+  "generator": 16,
+  "command": [
+    "/workspace/rustcraft/target/release/examples/terrain_gallery",
+    "0",
+    "12231",
+    "-22316",
+    "0",
+    "--generator=16",
+    "--capture=/workspace/rustcraft/work/slice42-entrances/captures/hills-v16.ppm",
+    "--capture-frames=32",
+    "--radius=6",
+    "--eye=12231.5,6.6200000000000045,-22316.5",
+    "--direction=6.0,-7.1200000000000045,-2.0"
+  ],
+  "inspection_radius": 6,
+  "geometry_untouched": true,
+  "placed_lights": 0,
+  "executable_sha256": "eccf0aed2033b968aebf30ab8414859413fb1ed48960d6edc531dd75d0f0a40a",
+  "screenshot_sha256": "33a3caacb7d8cad89650ff33a87cd717c28b71c2518920150c850aea8c14d4de"
+}

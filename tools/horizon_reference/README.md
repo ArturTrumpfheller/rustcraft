@@ -39,3 +39,22 @@ four-seed terrain-conditioned plan used in the report. It queries only the
 original surface-level root and chooses the first qualifying candidate out of
 4096, without evaluating cave volume. Its plains/mountain thresholds and search
 attempts are explicit in the original RustCraft adapter.
+
+## Generator16 exposure diagnostics
+
+The normal adapter and pinned revisions remain unchanged. Optional
+`rustcraft_cave_reference DATA PLAN OUT --uncaved` creates a counterfactual
+geological control: cave graph branches and carvers are disabled while terrain
+slides/interpolation/squeeze and fluid handling remain. This is an analysis
+adapter, not an unmodified vanilla-world export. The normal mode is separately
+checked against the original reference-volume hashes.
+
+`rustcraft_terrain_reference DATA --exposure` emits24 terrain-conditional sites
+for the independent seeds123,777,4099,900001. Combine these with the16
+unconditional rows from `cave_volume --exposure-plan`, preserving their X/Z.
+Selection uses terrain only, with the same bounded search and regional strata.
+For geometric exposure analysis, pass `--surface-offset=61` to
+`tools/analyze_cave_exposure.py` for native Horizon terrain-category labels.
+This affects labels only; exported Y, slopes, cover and cave geometry stay native.
+See [the follow-up report](../../docs/performance/slice42/entrances/README.md)
+for definitions, exact plans, optional controls and limitations.
