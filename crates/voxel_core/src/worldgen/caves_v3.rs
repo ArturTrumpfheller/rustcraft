@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! V14: signed multi-octave cave density and bounded branching random walks.
+//! V14–V16: signed multi-octave cave density and bounded branching random walks.
 //! Historical v1–13 are dispatched unchanged. All classifications use global
 //! coordinates; lattice samples are quantized before integer interpolation.
 use super::{Generator, caves, hash};
@@ -13,12 +13,12 @@ const STEP: i32 = 4;
 /// The historical implementation is intentionally kept behind an explicit gate.
 pub(super) enum Versioned {
     Historical(caves::Plan),
-    V14(Plan),
+    Density(Plan),
 }
 impl Versioned {
     pub(super) fn new(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Self {
-        if g.config.version == 14 {
-            Self::V14(Plan::new(g, min, max))
+        if matches!(g.config.version, 14..=16) {
+            Self::Density(Plan::new(g, min, max))
         } else {
             Self::Historical(caves::Plan::new(g.config.seed, min, max))
         }
@@ -26,13 +26,13 @@ impl Versioned {
     pub(super) fn contains(&self, p: BlockPos, height: i32) -> bool {
         match self {
             Self::Historical(c) => c.contains(p, height),
-            Self::V14(c) => c.contains(p, height),
+            Self::Density(c) => c.contains(p, height),
         }
     }
     pub(super) fn carve(&self, c: &mut Chunk, p: ChunkPos, height: impl Fn(i32, i32) -> i32) {
         match self {
             Self::Historical(plan) => plan.carve(c, p, height),
-            Self::V14(plan) => plan.carve_if(c, p, height, |_, _| true),
+            Self::Density(plan) => plan.carve_if(c, p, height, |_, _| true),
         }
     }
     pub(super) fn carve_if(
@@ -44,7 +44,7 @@ impl Versioned {
     ) {
         match self {
             Self::Historical(plan) => plan.carve_if(c, p, height, permitted),
-            Self::V14(plan) => plan.carve_if(c, p, height, permitted),
+            Self::Density(plan) => plan.carve_if(c, p, height, permitted),
         }
     }
 }
@@ -71,8 +71,17 @@ impl Plan {
             && (entrance || p[1] <= h - 8)
     }
     pub(super) fn contains(&self, p: BlockPos, h: i32) -> bool {
-        Self::allowed(p.0, h, true)
-            && (self.shapes.iter().any(|s| s.contains(p.0)) || self.network.contains(p.0))
+        if !Self::allowed(p.0, h, true) {
+            return false;
+        }
+        let amount = if h - p.0[1] >= 16 {
+            0
+        } else {
+            self.network
+                .surface_column(p.0[0], p.0[2], h)
+                .map_or(0, |c| c.amount(p.0[1]))
+        };
+        self.shapes.iter().any(|s| s.contains_exposed(p.0, amount)) || self.network.contains(p.0)
     }
     fn carve_if(
         &self,
@@ -94,6 +103,11 @@ impl Plan {
             for z in min[2]..=max[2] {
                 for x in min[0]..=max[0] {
                     let h = height(x, z);
+                    let exposure = if max[1] <= h - 16 {
+                        None
+                    } else {
+                        self.network.surface_column(x, z, h)
+                    };
                     for y in min[1].max(MIN_Y)..=max[1].min(h) {
                         let p = BlockPos([x, y, z]);
                         let l = LocalPos::new([
@@ -104,7 +118,7 @@ impl Plan {
                         .unwrap();
                         if c.get(l) != Block::Air
                             && Self::allowed(p.0, h, true)
-                            && s.contains(p.0)
+                            && s.contains_exposed(p.0, exposure.map_or(0, |c| c.amount(y)))
                             && permitted(p, h)
                         {
                             c.set(l, Block::Air);
@@ -120,7 +134,7 @@ impl Plan {
 /// Read-only candidate centers of traditional carver ellipsoids. These are
 /// proposed geometry, not guaranteed final air or a player-clearance assertion.
 pub fn landmarks(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Vec<(&'static str, [i32; 3])> {
-    if g.config.version != 14
+    if !matches!(g.config.version, 14..=16)
         || min
             .iter()
             .chain(max.iter())

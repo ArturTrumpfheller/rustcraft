@@ -1,0 +1,6 @@
+BIOME_SCENE generator=15 seed=2026 center=(356, -1799) biome=Meadow
+DIAGNOSTIC_LIGHT development_only=true
+CAVE_CAMERA seed=2026 generator=15 world_eye=Vec3(356.5, -47.38, -1799.5) direction=Vec3(0.0, 0.65, -1.0) torch_fixture=false
+TERRAIN_SCENE generator=15 seed=2026 x=356 z=-1799 surface_y=50 yaw=0 radius=6 overview=false feet=[356.5, 51.0, -1798.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(4.5, -47.38, 8.5)
+CAPTURE_FRAME_MS samples=32 p50=251.65 p95=338.04 p99=344.49

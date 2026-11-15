@@ -77,6 +77,20 @@ class AnalysisTests(unittest.TestCase):
         air[1,9,7] = True
         self.assertEqual(routes(graph(mask,air)[0])[1].tolist(),[10])
 
+    def test_vertical_floor_extent_counts_connected_steps_not_air_height(self):
+        cells = np.zeros((8,12,48),np.uint8)
+        for x in range(1,11):
+            cells[3,x,8+x:12+x] = 1
+        r = summarize(cells,np.full((8,12),40),dict(min_y=0))
+        self.assertEqual(r['largest_standing'],10)
+        self.assertEqual(r['standing_geodesic_lower_bound'],9)
+        self.assertEqual(r['largest_standing_vertical_extent'],10)
+        self.assertEqual(r['largest_standing_levels'],2)
+        # Remove jump head clearance without erasing the neighboring air volume.
+        cells[3,5,15]=0
+        r = summarize(cells,np.full((8,12),40),dict(min_y=0))
+        self.assertLess(r['largest_standing_vertical_extent'],10)
+
     def test_run_lengths_and_fluid_geometry(self):
         cells = np.zeros((8,12,32),np.uint8)
         cells[2:6,1:11,8:12] = 1

@@ -1,0 +1,6 @@
+BIOME_SCENE generator=15 seed=42 center=(1248, 1200) biome=Desert
+DIAGNOSTIC_LIGHT development_only=true
+CAVE_CAMERA seed=42 generator=15 world_eye=Vec3(1248.5, -27.38, 1200.5) direction=Vec3(1.0, 0.04, -1.0) torch_fixture=false
+TERRAIN_SCENE generator=15 seed=42 x=1248 z=1200 surface_y=17 yaw=0 radius=6 overview=false feet=[1248.5, 18.0, 1200.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(0.5, -27.38, 0.5)
+CAPTURE_FRAME_MS samples=42 p50=187.88 p95=213.39 p99=252.95

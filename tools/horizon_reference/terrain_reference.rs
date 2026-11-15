@@ -39,16 +39,32 @@ fn main() -> Result<()> {
     let noises = bundle(&data.join("noise"))?;
     let defs = bundle(&data.join("density_function"))?;
     println!("id,seed,x,z,n,stratum,attempt,mean_height,relief");
-    for (si, seed) in [0u64, 42, 2026, u64::MAX].into_iter().enumerate() {
+    let exposure = env::args().any(|s| s == "--exposure");
+    let confirmation = env::args().any(|s| s == "--confirmation");
+    let validation = exposure || confirmation || env::args().any(|s| s == "--validation");
+    let seeds: &[u64] = if exposure {
+        &[123, 777, 4099, 900001]
+    } else if confirmation {
+        &[65537, 99991]
+    } else if validation {
+        &[7, 19, 31415, 8675309]
+    } else {
+        &[0, 42, 2026, u64::MAX]
+    };
+    for (si, seed) in seeds.iter().copied().enumerate() {
         let mut registry = DensityRegistry::from_json(&noises, &defs)?;
         let id = registry
             .reference("minecraft:overworld/chunk_surface_level")
             .unwrap();
         let mut compiler = DensityCompiler::new_seeded(registry.into_graph(), seed as i64, false);
         let field = compiler.get_sampler(id)?;
-        for site in 4u64..8 {
+        for site in 4u64..if validation { 10 } else { 8 } {
             let mut selected = None;
-            for attempt in 0u64..4096 {
+            for attempt in 0u64..if confirmation || exposure {
+                16384
+            } else {
+                4096
+            } {
                 let mut h = seed ^ (site * 314159 + attempt * 271828 + 1);
                 h = (h ^ (h >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
                 h = (h ^ (h >> 27)).wrapping_mul(0x94d049bb133111eb);
@@ -65,7 +81,8 @@ fn main() -> Result<()> {
                 let mean = heights.iter().sum::<i32>() / 9;
                 let relief = heights.iter().max().unwrap() - heights.iter().min().unwrap();
                 if (site < 6 && (82..=104).contains(&mean) && relief <= 28)
-                    || (site >= 6 && mean >= 139 && relief >= 12)
+                    || ((6..8).contains(&site) && mean >= 139 && relief >= 12)
+                    || (site >= 8 && (105..139).contains(&mean) && relief >= 12)
                 {
                     selected = Some((x, z, attempt, mean, relief));
                     break;
@@ -75,10 +92,23 @@ fn main() -> Result<()> {
                 selected.ok_or("terrain stratum search exhausted")?;
             let stratum = if site < 6 {
                 "lowland-conditional"
-            } else {
+            } else if site < 8 {
                 "mountain-conditional"
+            } else {
+                "hill-conditional"
             };
-            println!("s{si:02}-{site},{seed},{x},{z},128,{stratum},{attempt},{mean},{relief}");
+            let prefix = if exposure {
+                "e"
+            } else if confirmation {
+                "h"
+            } else if validation {
+                "v"
+            } else {
+                "s"
+            };
+            println!(
+                "{prefix}{si:02}-{site},{seed},{x},{z},128,{stratum},{attempt},{mean},{relief}"
+            );
         }
     }
     Ok(())

@@ -14,22 +14,42 @@ fn scramble(mut v: u64) -> u64 {
     v ^ (v >> 31)
 }
 
-fn plan() {
+fn plan(validation: bool, confirmation: bool, exposure: bool) {
     println!("id,seed,x,z,n,stratum,attempt,mean_height,relief");
-    let seeds = (0u64..32).map(|i| match i {
-        0 => 0,
-        1 => 42,
-        2 => 2026,
-        3 => u64::MAX,
-        _ => scramble(i.wrapping_mul(0x9e3779b97f4a7c1)),
-    });
+    let seeds = (0u64..if confirmation {
+        2
+    } else if validation {
+        4
+    } else {
+        32
+    })
+        .map(|i| {
+            if exposure {
+                [123, 777, 4099, 900001][i as usize]
+            } else if confirmation {
+                [65537, 99991][i as usize]
+            } else {
+                match (validation, i) {
+                    (true, 0) => 7,
+                    (true, 1) => 19,
+                    (true, 2) => 31415,
+                    (true, _) => 8675309,
+                    (_, 0) => 0,
+                    (_, 1) => 42,
+                    (_, 2) => 2026,
+                    (_, 3) => u64::MAX,
+                    _ => scramble(i.wrapping_mul(0x9e3779b97f4a7c1)),
+                }
+            }
+        });
     for (si, seed) in seeds.enumerate() {
-        for site in 0..8 {
+        for site in 0..if validation { 10 } else { 8 } {
             let stratum = match site {
                 0..=1 => "near-unconditional",
                 2..=3 => "distant-unconditional",
                 4..=5 => "lowland-conditional",
-                _ => "mountain-conditional",
+                6..=7 => "mountain-conditional",
+                _ => "hill-conditional",
             };
             let mut selected = None;
             for attempt in 0..2048 {
@@ -47,7 +67,8 @@ fn plan() {
                 let relief = heights.iter().max().unwrap() - heights.iter().min().unwrap();
                 if site < 4
                     || (site < 6 && (20..=42).contains(&mean) && relief <= 28)
-                    || (site >= 6 && mean >= 78 && relief >= 12)
+                    || ((6..8).contains(&site) && mean >= 78 && relief >= 12)
+                    || (site >= 8 && (43..78).contains(&mean) && relief >= 12)
                 {
                     selected = Some((x, z, attempt, mean, relief));
                     break;
@@ -55,15 +76,35 @@ fn plan() {
             }
             let (x, z, attempt, mean, relief) =
                 selected.expect("bounded terrain-only stratum search exhausted");
-            println!("s{si:02}-{site},{seed},{x},{z},128,{stratum},{attempt},{mean},{relief}");
+            let prefix = if exposure {
+                "e"
+            } else if confirmation {
+                "h"
+            } else if validation {
+                "v"
+            } else {
+                "s"
+            };
+            println!(
+                "{prefix}{si:02}-{site},{seed},{x},{z},128,{stratum},{attempt},{mean},{relief}"
+            );
         }
     }
 }
 
 fn main() {
     let args: Vec<_> = env::args().collect();
-    if args.get(1).is_some_and(|s| s == "--plan") {
-        plan();
+    if args.get(1).is_some_and(|s| {
+        s == "--plan"
+            || s == "--validation-plan"
+            || s == "--confirmation-plan"
+            || s == "--exposure-plan"
+    }) {
+        plan(
+            args[1] != "--plan",
+            args[1] == "--confirmation-plan",
+            args[1] == "--exposure-plan",
+        );
         return;
     }
     assert_eq!(

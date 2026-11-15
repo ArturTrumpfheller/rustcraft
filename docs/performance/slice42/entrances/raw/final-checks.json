@@ -1,0 +1,188 @@
+[
+  {
+    "label": "core-forward",
+    "command": [
+      "python",
+      "tools/benchmark_cave_v3.py",
+      "--output",
+      "work/slice42-entrances/performance/core",
+      "--include-original",
+      "--original-ref",
+      "577b199f23a0995f765bdf81fe62f5a9f8414fe7",
+      "--original-generator",
+      "15",
+      "--current-generator",
+      "16",
+      "--reuse"
+    ],
+    "exit_code": 0,
+    "seconds": 24.53417772299997
+  },
+  {
+    "label": "core-reverse",
+    "command": [
+      "python",
+      "tools/benchmark_cave_v3.py",
+      "--output",
+      "work/slice42-entrances/performance/core",
+      "--include-original",
+      "--original-ref",
+      "577b199f23a0995f765bdf81fe62f5a9f8414fe7",
+      "--original-generator",
+      "15",
+      "--current-generator",
+      "16",
+      "--reuse",
+      "--reverse"
+    ],
+    "exit_code": 0,
+    "seconds": 24.494070701
+  },
+  {
+    "label": "streaming-forward",
+    "command": [
+      "python",
+      "tools/benchmark_streaming.py",
+      "--output",
+      "work/slice42-entrances/performance/streaming",
+      "--baseline",
+      "577b199f23a0995f765bdf81fe62f5a9f8414fe7",
+      "--labels",
+      "v15",
+      "v16",
+      "--baseline-generator",
+      "15",
+      "--current-generator",
+      "16",
+      "--caves-v3",
+      "--distance-expansion",
+      "--rendering-install",
+      "--frames",
+      "40",
+      "--repeats",
+      "1",
+      "--reuse"
+    ],
+    "exit_code": 0,
+    "seconds": 68.12626307799997
+  },
+  {
+    "label": "streaming-reverse",
+    "command": [
+      "python",
+      "tools/benchmark_streaming.py",
+      "--output",
+      "work/slice42-entrances/performance/streaming",
+      "--baseline",
+      "577b199f23a0995f765bdf81fe62f5a9f8414fe7",
+      "--labels",
+      "v15",
+      "v16",
+      "--baseline-generator",
+      "15",
+      "--current-generator",
+      "16",
+      "--caves-v3",
+      "--distance-expansion",
+      "--rendering-install",
+      "--frames",
+      "40",
+      "--repeats",
+      "1",
+      "--reuse",
+      "--reverse"
+    ],
+    "exit_code": 0,
+    "seconds": 66.84507986600005
+  },
+  {
+    "label": "fmt-final",
+    "command": [
+      "cargo",
+      "fmt",
+      "--all",
+      "--",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 0.8966001649999953
+  },
+  {
+    "label": "clippy-final",
+    "command": [
+      "cargo",
+      "clippy",
+      "--locked",
+      "--workspace",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "seconds": 0.6717336350000096
+  },
+  {
+    "label": "workspace-tests",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--workspace",
+      "--",
+      "--test-threads=1"
+    ],
+    "exit_code": 0,
+    "seconds": 954.536036254
+  },
+  {
+    "label": "reference-oracles",
+    "command": [
+      "python",
+      "tools/cave_v3_reference.py",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 0.10610761599991747
+  },
+  {
+    "label": "terrain-v5-oracle",
+    "command": [
+      "python",
+      "tools/terrain_v5_reference.py",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 0.05922458700001698
+  },
+  {
+    "label": "terrain-v4-oracle",
+    "command": [
+      "python",
+      "tools/terrain_v4_reference.py",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 0.2164675899998656
+  },
+  {
+    "label": "terrain-v3-oracle",
+    "command": [
+      "python",
+      "tools/terrain_v3_reference.py",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 0.03329096500010564
+  },
+  {
+    "label": "biome-v2-oracle",
+    "command": [
+      "python",
+      "tools/biome_v2_reference.py",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 0.0697689440000886
+  }
+]

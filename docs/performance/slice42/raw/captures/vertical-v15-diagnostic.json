@@ -1,0 +1,40 @@
+{
+  "name": "vertical",
+  "kind": "vertical",
+  "seed": 2026,
+  "eye": [
+    356.5,
+    -47.38,
+    -1799.5
+  ],
+  "direction": [
+    0,
+    0.65,
+    -1
+  ],
+  "width": 7,
+  "headroom": 16,
+  "sight_blocks": 10,
+  "volume": "s02-1.rcv",
+  "generator": 15,
+  "diagnostic_light": true,
+  "supported_floor_torches": 0,
+  "inspection_radius": 6,
+  "geometry_untouched": true,
+  "command": [
+    "/workspace/rustcraft/target/release/examples/terrain_gallery",
+    "2026",
+    "356",
+    "-1799",
+    "0",
+    "--generator=15",
+    "--capture=/workspace/rustcraft/work/slice42/views/vertical-v15-diagnostic.ppm",
+    "--capture-frames=32",
+    "--radius=6",
+    "--eye=356.5,-47.38,-1799.5",
+    "--direction=0,0.65,-1",
+    "--diagnostic-light"
+  ],
+  "executable_sha256": "ae7d10ef9b49e62215e1754d825cb0cf5d92272f5b9ccbc161e4215f4d8056fa",
+  "screenshot_sha256": "ae97823e061b629aac377aac384ec4a04025397ec4f9a89b42b3fa1e78dc0cb7"
+}

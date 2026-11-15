@@ -1,0 +1,44 @@
+{
+  "name": "mountain-entrance",
+  "kind": "mountain-entrance",
+  "seed": 7,
+  "eye": [
+    -1599.5,
+    87.62,
+    -26843.5
+  ],
+  "direction": [
+    6.0,
+    -3.0,
+    -3.0
+  ],
+  "volume": "v00-6.rcv",
+  "portal": [
+    -1595,
+    83,
+    -26847
+  ],
+  "selection": "supported exterior floor with clear air ray to a portal in a floor component reaching >=24 blocks geological depth",
+  "generator": 15,
+  "diagnostic_light": false,
+  "supported_floor_torches": 3,
+  "inspection_radius": 6,
+  "geometry_untouched": true,
+  "command": [
+    "/workspace/rustcraft/target/release/examples/terrain_gallery",
+    "7",
+    "-1599",
+    "-26843",
+    "0",
+    "--generator=15",
+    "--capture=/workspace/rustcraft/work/slice42/views/mountain-entrance-v15-ordinary.ppm",
+    "--capture-frames=32",
+    "--radius=6",
+    "--eye=-1599.5,87.62,-26843.5",
+    "--direction=6.0,-3.0,-3.0",
+    "--cave-torches",
+    "--cave-torch-limit=3"
+  ],
+  "executable_sha256": "ae7d10ef9b49e62215e1754d825cb0cf5d92272f5b9ccbc161e4215f4d8056fa",
+  "screenshot_sha256": "7c731ef222eb25febe5ebc202de05ea11d3c2706eeeabb6ab5d8ad011e792df9"
+}

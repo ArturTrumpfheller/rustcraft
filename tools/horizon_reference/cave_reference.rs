@@ -67,12 +67,46 @@ impl AquiferBlockStates for States {
 }
 fn main() -> Result<()> {
     let a: Vec<_> = env::args().collect();
-    assert_eq!(a.len(), 4, "METADATA_WORLDGEN PLAN.csv OUTPUT");
+    assert!(
+        (4..=5).contains(&a.len()),
+        "METADATA_WORLDGEN PLAN.csv OUTPUT [--uncaved]"
+    );
+    let uncaved = a.get(4).is_some_and(|s| s == "--uncaved");
     let data = Path::new(&a[1]);
     let out = Path::new(&a[3]);
     fs::create_dir_all(out)?;
     let noises = bundle(&data.join("noise"))?;
-    let defs = bundle(&data.join("density_function"))?;
+    let mut defs = bundle(&data.join("density_function"))?;
+    if uncaved {
+        // Analysis-only ablation: retain the original sloped terrain, slides,
+        // interpolation, blend/squeeze and aquifer. Remove cave composition.
+        fn without_caves(v: serde_json::Value) -> serde_json::Value {
+            match v {
+                serde_json::Value::String(ref s) if s.starts_with("minecraft:overworld/caves/") => {
+                    serde_json::json!(32.)
+                }
+                serde_json::Value::Object(ref o)
+                    if o.get("type").and_then(|v| v.as_str()) == Some("minecraft:range_choice")
+                        && o.get("input").and_then(|v| v.as_str())
+                            == Some("minecraft:overworld/sloped_cheese") =>
+                {
+                    serde_json::json!("minecraft:overworld/sloped_cheese")
+                }
+                serde_json::Value::Object(o) => serde_json::Value::Object(
+                    o.into_iter().map(|(k, v)| (k, without_caves(v))).collect(),
+                ),
+                serde_json::Value::Array(a) => {
+                    serde_json::Value::Array(a.into_iter().map(without_caves).collect())
+                }
+                other => other,
+            }
+        }
+        let key = "minecraft:overworld/final_density";
+        let value = without_caves(serde_json::from_str(
+            defs.get(key).ok_or("missing final density")?,
+        )?);
+        defs.insert(key.into(), value.to_string());
+    }
     let settings: serde_json::Value = serde_json::from_str(&fs::read_to_string(
         data.join("noise_settings/overworld.json"),
     )?)?;
@@ -143,21 +177,26 @@ fn main() -> Result<()> {
                         }
                     }
                 }
-                let mask = generate_carving_mask(
-                    seed as i64,
-                    ChunkPos::new(ox / 16, oz / 16),
-                    WorldGenerationContext::new(-64, 384, 63),
-                    false,
-                    |_| Ok::<_, std::convert::Infallible>(selected.as_slice()),
-                )?;
-                for col in mask.columns() {
-                    for yy in (col.min_y..=col.max_y).rev() {
-                        let i = ((cz * 16 + col.z as usize) * n + cx * 16 + col.x as usize) * 384
-                            + (yy + 64) as usize;
-                        if let Some(state) =
-                            aq.compute_substance(&mut context, [ox + col.x, yy, oz + col.z], 0.)?
-                        {
-                            cells[i] = state.0 as u8;
+                if !uncaved {
+                    let mask = generate_carving_mask(
+                        seed as i64,
+                        ChunkPos::new(ox / 16, oz / 16),
+                        WorldGenerationContext::new(-64, 384, 63),
+                        false,
+                        |_| Ok::<_, std::convert::Infallible>(selected.as_slice()),
+                    )?;
+                    for col in mask.columns() {
+                        for yy in (col.min_y..=col.max_y).rev() {
+                            let i = ((cz * 16 + col.z as usize) * n + cx * 16 + col.x as usize)
+                                * 384
+                                + (yy + 64) as usize;
+                            if let Some(state) = aq.compute_substance(
+                                &mut context,
+                                [ox + col.x, yy, oz + col.z],
+                                0.,
+                            )? {
+                                cells[i] = state.0 as u8;
+                            }
                         }
                     }
                 }

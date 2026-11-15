@@ -9,7 +9,7 @@ from benchmark_stabilization import instrument,ROOT
 from benchmark_terrain_balance import wrap
 BASE='c6d36393c037e4295bf93c6a4efbc9fa12dd053c'
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--samples',type=int,default=128);p.add_argument('--warmups',type=int,default=8);p.add_argument('--reverse',action='store_true');p.add_argument('--reuse',action='store_true');p.add_argument('--build-only',action='store_true');p.add_argument('--refresh-current',action='store_true',help='Rebuild only the current arm after a source change; retain verified frozen baseline executables');p.add_argument('--original-ref',default='ce690b004d8711ddb944838f2f5619be9233d5d0',help='Git reference for the previous v14 arm');p.add_argument('--include-original',action='store_true',help='Include exact unmerged v14 ce690b0 as a third arm');a=p.parse_args();assert 1<=a.samples<=10000
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--original-generator',type=int,choices=[14,15],default=14);p.add_argument('--current-generator',type=int,choices=[14,15,16],default=14);p.add_argument('--output',type=Path,required=True);p.add_argument('--samples',type=int,default=128);p.add_argument('--warmups',type=int,default=8);p.add_argument('--reverse',action='store_true');p.add_argument('--reuse',action='store_true');p.add_argument('--build-only',action='store_true');p.add_argument('--refresh-current',action='store_true',help='Rebuild only the current arm after a source change; retain verified frozen baseline executables');p.add_argument('--original-ref',default='ce690b004d8711ddb944838f2f5619be9233d5d0',help='Git reference for the previous v14 arm');p.add_argument('--include-original',action='store_true',help='Include exact unmerged v14 ce690b0 as a third arm');a=p.parse_args();assert 1<=a.samples<=10000
  original=subprocess.check_output(['git','rev-parse',a.original_ref],cwd=ROOT,text=True).strip()
  out=a.output.resolve();out.mkdir(parents=True,exist_ok=True);scratch=ROOT/('work/cave-v3-followup-benchmark' if a.include_original else 'work/cave-v3-benchmark');names=['slice38']+(['v14-original'] if a.include_original else [])+['slice39']
  if not a.reuse:
@@ -47,16 +47,16 @@ def main():
    b.write_text(s)
    with (out/f'{name}-build.log').open('w') as log:subprocess.run(['cargo','build','--release','--locked','--target-dir',str(root/'target'),'-p','voxel_core','--example','stabilization_bench','--example','vegetation_edits_bench'],cwd=root,stdout=log,stderr=log,check=True)
    for example,label in [('stabilization_bench','bench'),('vegetation_edits_bench','lifecycle')]:shutil.copy2(root/f'target/release/examples/{example}',out/f'{name}-{label}')
-  (out/'sources.json').write_text(json.dumps(dict(baseline=BASE,original=original if a.include_original else None,files=sources,binary_sha256={n+'-'+b:hashlib.sha256((out/(n+'-'+b)).read_bytes()).hexdigest() for n in names for b in ['bench','lifecycle']},rustc=subprocess.check_output(['rustc','--version'],text=True),platform=platform.platform(),harness_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()),indent=2)+'\n')
+  (out/'sources.json').write_text(json.dumps(dict(original_generator=a.original_generator,current_generator=a.current_generator,baseline=BASE,original=original if a.include_original else None,files=sources,binary_sha256={n+'-'+b:hashlib.sha256((out/(n+'-'+b)).read_bytes()).hexdigest() for n in names for b in ['bench','lifecycle']},rustc=subprocess.check_output(['rustc','--version'],text=True),platform=platform.platform(),harness_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()),indent=2)+'\n')
  if a.build_only:return
- manifest=json.loads((out/'sources.json').read_text());order=names[::-1] if a.reverse else names
+ manifest=json.loads((out/'sources.json').read_text());assert manifest.get('current_generator',14)==a.current_generator;assert manifest.get('original_generator',14)==a.original_generator;order=names[::-1] if a.reverse else names
  for path,expected in manifest['files']['slice39'].items():
   assert hashlib.sha256((ROOT/path).read_bytes()).hexdigest()==expected, f'Current sources changed: {path}; rebuild first'
  for name in order:
   for kind in ['bench','lifecycle']:
    assert hashlib.sha256((out/f'{name}-{kind}').read_bytes()).hexdigest()==manifest['binary_sha256'][name+'-'+kind]
    with (out/f'{name}{"-lifecycle" if kind=="lifecycle" else ""}.csv').open('w') as log:
-    subprocess.run([str(out/f'{name}-{kind}')],cwd=scratch/name,stdout=log,check=True,env={**os.environ,'RUSTCRAFT_BENCH_GENERATOR':'13' if name=='slice38' else '14','RUSTCRAFT_BENCH_BIOME_V2':'1','RUSTCRAFT_BENCH_RAW_LIFECYCLE':'1','RUSTCRAFT_BENCH_SAMPLES':str(a.samples),'RUSTCRAFT_BENCH_WARMUPS':str(a.warmups)})
+    subprocess.run([str(out/f'{name}-{kind}')],cwd=scratch/name,stdout=log,check=True,env={**os.environ,'RUSTCRAFT_BENCH_GENERATOR':'13' if name=='slice38' else str(a.current_generator) if name=='slice39' else str(a.original_generator),'RUSTCRAFT_BENCH_BIOME_V2':'1','RUSTCRAFT_BENCH_RAW_LIFECYCLE':'1','RUSTCRAFT_BENCH_SAMPLES':str(a.samples),'RUSTCRAFT_BENCH_WARMUPS':str(a.warmups)})
  with (out/'percentiles.csv').open('w',newline='') as f:
   w=csv.writer(f,lineterminator='\n');w.writerow(['build','scene','metric','n','p50','p95','p99','max'])
   for name in names:

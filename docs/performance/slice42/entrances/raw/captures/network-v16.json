@@ -1,0 +1,41 @@
+{
+  "name": "network",
+  "kind": "network",
+  "seed": 18446744073709551615,
+  "eye": [
+    17806.5,
+    -49.38,
+    13759.5
+  ],
+  "direction": [
+    0,
+    0.04,
+    -1
+  ],
+  "width": 3,
+  "headroom": 3,
+  "sight_blocks": 32,
+  "volume": "s03-3.rcv",
+  "diagnostic": true,
+  "selection": "unchanged original Slice42 interior pose",
+  "generator": 16,
+  "command": [
+    "/workspace/rustcraft/target/release/examples/terrain_gallery",
+    "18446744073709551615",
+    "17806",
+    "13759",
+    "0",
+    "--generator=16",
+    "--capture=/workspace/rustcraft/work/slice42-entrances/captures/network-v16.ppm",
+    "--capture-frames=32",
+    "--radius=6",
+    "--eye=17806.5,-49.38,13759.5",
+    "--direction=0,0.04,-1",
+    "--diagnostic-light"
+  ],
+  "inspection_radius": 6,
+  "geometry_untouched": true,
+  "placed_lights": 0,
+  "executable_sha256": "eccf0aed2033b968aebf30ab8414859413fb1ed48960d6edc531dd75d0f0a40a",
+  "screenshot_sha256": "de06c528835eea9e15581c0dae74470709c464071a87a329dd8bae462140f03c"
+}

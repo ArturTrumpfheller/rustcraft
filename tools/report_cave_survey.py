@@ -42,6 +42,13 @@ def aggregate(rows):
         mean_largest_standing_component=interval(rows,lambda r:r['largest_standing'],lambda r:1),
         mean_geometry_route_lower_bound=interval(rows,lambda r:r['geometry_geodesic_lower_bound'],lambda r:1),
         mean_standing_route_lower_bound=interval(rows,lambda r:r['standing_geodesic_lower_bound'],lambda r:1),
+        mean_geometry_vertical_extent=interval(rows,lambda r:r['largest_vertical_extent'],lambda r:1),
+        largest_geometry_share_percent=interval(rows,lambda r:r['largest'],lambda r:r['cavity'],100),
+        largest_standing_share_percent=interval(rows,lambda r:r['largest_standing'],lambda r:r['standing_nodes'],100),
+        **({
+            'mean_standing_vertical_extent':interval(rows,lambda r:r['largest_standing_vertical_extent'],lambda r:1),
+            'mean_standing_levels':interval(rows,lambda r:r['largest_standing_levels'],lambda r:1),
+        } if all('largest_standing_vertical_extent' in r for r in rows) else {}),
         total_walked_blocks=sum(r['surface_walk_block_length'] for r in rows),
         cavity_window_percentiles=dict(zip(['min','p50','p95','p99','max'],map(float,np.percentile(
             [r['cavity_fraction']*100 for r in rows],[0,50,95,99,100])))),
@@ -73,7 +80,8 @@ def main():
         strata=[
             ('unconditional',lambda r:r['stratum'].endswith('-unconditional')),
             ('lowland-conditional',lambda r:r['stratum'].startswith('lowland-')),
-            ('mountain-conditional',lambda r:r['stratum'].startswith('mountain-'))]
+            ('mountain-conditional',lambda r:r['stratum'].startswith('mountain-')),
+            ('hill-conditional',lambda r:r['stratum'].startswith('hill-'))]
         summary[label]={key:aggregate(group) for key,predicate in strata
                         if (group:=[r for r in rows if predicate(r)])}
         assert 'unconditional' in summary[label], 'each arm needs unconditional sample windows'
@@ -99,12 +107,12 @@ def main():
     labels=list(arms)
     for ax,key,title in zip(axes,['cavity_percent','mean_largest_standing_component','passable_portals_per_km2'],
             ['Cavity volume (%)','Largest supported floor component (nodes)','Passable portal clusters / km²']):
-        for i,stratum in enumerate(['unconditional','lowland-conditional','mountain-conditional']):
+        for i,stratum in enumerate(['unconditional','lowland-conditional','mountain-conditional','hill-conditional']):
             present=[j for j,label in enumerate(labels) if stratum in summary[label]]
             values=[summary[labels[j]][stratum][key] for j in present]
-            x=np.array(present)+(i-1)*.22
+            x=np.array(present)+(i-1.5)*.19
             mean=np.array([v['estimate'] for v in values])
-            ax.bar(x,mean,width=.21,label=stratum,yerr=[mean-[v['low'] for v in values],[v['high'] for v in values]-mean],capsize=2)
+            ax.bar(x,mean,width=.18,label=stratum,yerr=[mean-[v['low'] for v in values],[v['high'] for v in values]-mean],capsize=2)
         ax.set(xticks=range(len(labels)),xticklabels=labels,title=title)
         ax.grid(axis='y',alpha=.2)
     axes[0].legend(fontsize=7)
@@ -142,7 +150,7 @@ def main():
         bootstrap='4096 resamples of whole seed clusters; RNG392026; percentile95%; windows/voxels are not independent trials',
         caveats=['Conditional terrain strata are separate, not population weights.',
                  'All-zero bootstrap intervals are degenerate observed-sample intervals, not upper population bounds.',
-                 'This is a fixed tuning/evaluation cohort, not held-out validation of distributional parity.',
+                 'Intervals describe this fixed cohort; selection and holdout status are documented separately.',
                  'Voxel runs/broad cores are shape proxies, not unique physical tunnels/chambers.',
                  'Window-clipped geodesics are two-sweep lower bounds.',
                  'Surface walks use conservative floor graphs and count unreachable endpoint pairs.',

@@ -197,11 +197,11 @@ fn setup(
     }
     if scene.cave_torches {
         assert!(
-            (7..=14).contains(&scene.version),
-            "procedural cave torch fixture requires v7–v14"
+            (7..=16).contains(&scene.version),
+            "procedural cave torch fixture requires v7–v16"
         );
         use voxel_core::{Block, BlockPos};
-        let mut count = 0;
+        let mut candidates = Vec::new();
         for x in (scene.x - 36..=scene.x + 36).step_by(6) {
             for z in (scene.z - 36..=scene.z + 36).step_by(6) {
                 for y in -59..g.height(x, z).unwrap() {
@@ -210,11 +210,28 @@ fn setup(
                         && world.block(p) == Block::Air
                         && world.block(BlockPos([x, y - 1, z])).is_opaque()
                     {
-                        world.set_block(p, Block::Torch).unwrap();
-                        count += 1;
+                        candidates.push(p);
                     }
                 }
             }
+        }
+        let limit = std::env::args()
+            .find_map(|s| s.strip_prefix("--cave-torch-limit=").map(str::to_owned))
+            .map(|s| s.parse::<usize>().unwrap());
+        if limit.is_some() {
+            let eye = scene
+                .eye
+                .expect("limited cave lights require an explicit camera");
+            candidates.sort_by(|a, b| {
+                let distance = |p: &BlockPos| {
+                    (Vec3::new(p.0[0] as f32, p.0[1] as f32, p.0[2] as f32) - eye).length_squared()
+                };
+                distance(a).total_cmp(&distance(b))
+            });
+        }
+        let count = limit.unwrap_or(candidates.len()).min(candidates.len());
+        for p in candidates.into_iter().take(count) {
+            world.set_block(p, Block::Torch).unwrap();
         }
         println!(
             "CAVE_LIGHTING_FIXTURE supported_floor_torches={count}; procedural geometry unmodified"
@@ -430,7 +447,7 @@ fn setup(
         eye + Vec3::new(origin[0] as f32, 0., origin[1] as f32),
         scene.cave_torches
     );
-    if scene.eye.is_some() && scene.version == 14 {
+    if scene.eye.is_some() && matches!(scene.version, 14..=16) {
         let wp = eye + Vec3::new(origin[0] as f32, 0., origin[1] as f32);
         let p = voxel_core::BlockPos([
             wp.x.floor() as i32,

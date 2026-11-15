@@ -6,6 +6,8 @@
 use super::{Generator, MIN_Y, Plan, STEP, horizon::Noise, mix};
 use crate::{Block, BlockPos, Chunk, ChunkPos, LocalPos};
 use std::sync::{Arc, OnceLock};
+mod exposure;
+mod refinement;
 const Q: i32 = 1 << 20;
 const NAMES: [(&str, i32, f64, &[f64]); 20] = [
     (
@@ -123,6 +125,7 @@ pub(super) type Cache = Arc<OnceLock<Fields>>;
 pub(super) struct Network {
     fields: Cache,
     seed: u64,
+    version: u32,
     min: [i32; 2],
     max: [i32; 2],
     bands: OnceLock<Box<[OnceLock<Lattice>; 16]>>,
@@ -132,6 +135,8 @@ pub(super) struct Network {
 // the plan's aligned X/Z vertices, and share it across all lazy vertical bands.
 struct Heights {
     values: Vec<i32>,
+    slopes: Option<Vec<f32>>,
+    exposure: Option<Vec<i32>>,
 }
 impl Heights {
     fn new(seed: u64, min: [i32; 2], max: [i32; 2]) -> Self {
@@ -147,7 +152,11 @@ impl Heights {
                 )
             })
             .collect();
-        Self { values }
+        Self {
+            values,
+            slopes: None,
+            exposure: None,
+        }
     }
 }
 struct Lattice {
@@ -161,6 +170,7 @@ impl Network {
         Self {
             fields: g.cave_noise.get_or_init(Default::default).clone(),
             seed: g.config.seed,
+            version: g.config.version,
             min,
             max,
             bands: OnceLock::new(),
@@ -175,8 +185,15 @@ impl Network {
                 let fields = self.fields.get_or_init(|| Fields::new(self.seed));
                 Lattice::build(
                     fields,
-                    self.heights
-                        .get_or_init(|| Heights::new(self.seed, self.min, self.max)),
+                    self.heights.get_or_init(|| {
+                        if self.version == 16 {
+                            Heights::exposed(self.seed, self.min, self.max)
+                        } else if self.version == 15 {
+                            Heights::refined(self.seed, self.min, self.max)
+                        } else {
+                            Heights::new(self.seed, self.min, self.max)
+                        }
+                    }),
                     self.min,
                     self.max,
                     band as i32 * 16 - 64,
@@ -263,7 +280,22 @@ impl Lattice {
                         (min[2] + z as i32) * STEP,
                     ];
                     let h = heights.values[x + z * size[0]];
-                    values.push(fields.values(p, h));
+                    let mut value = if let Some(slopes) = &heights.slopes {
+                        fields.refined(p, h, slopes[x + z * size[0]])
+                    } else {
+                        fields.values(p, h)
+                    };
+                    if let Some(control) = &heights.exposure {
+                        let column = exposure::Column::new(
+                            h,
+                            heights.slopes.as_ref().unwrap()[x + z * size[0]],
+                            control[x + z * size[0]],
+                        );
+                        let amount = column.amount(p[1]);
+                        value[0] += amount * 2048;
+                        value[2] += amount * 154;
+                    }
+                    values.push(value);
                 }
             }
         }
@@ -346,6 +378,38 @@ impl Lattice {
     }
 }
 
+impl Network {
+    pub(super) fn surface_column(&self, x: i32, z: i32, h: i32) -> Option<exposure::Column> {
+        if self.version != 16 {
+            return None;
+        }
+        let heights = self
+            .heights
+            .get_or_init(|| Heights::exposed(self.seed, self.min, self.max));
+        let min = self.min.map(|v| v.div_euclid(STEP));
+        let stride = (self.max[0].div_euclid(STEP) + 2 - min[0]) as usize;
+        let xx = (x.div_euclid(STEP) - min[0]) as usize;
+        let zz = (z.div_euclid(STEP) - min[1]) as usize;
+        let i = xx + zz * stride;
+        let f = [x.rem_euclid(STEP), z.rem_euclid(STEP)];
+        let interpolate = |values: &[i32]| {
+            mix(
+                mix(values[i], values[i + 1], f[0], STEP),
+                mix(values[i + stride], values[i + stride + 1], f[0], STEP),
+                f[1],
+                STEP,
+            )
+        };
+        let control = interpolate(heights.exposure.as_ref().unwrap());
+        let slopes = heights.slopes.as_ref().unwrap();
+        let slope = slopes[i]
+            .max(slopes[i + 1])
+            .max(slopes[i + stride])
+            .max(slopes[i + stride + 1]);
+        Some(exposure::Column::new(h, slope, control))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -371,6 +435,43 @@ mod tests {
                 (actual - expected).abs() <= 0.000002,
                 "{line}: {actual} vs {expected}"
             );
+        }
+    }
+    #[test]
+    fn exposure_uses_global_coordinates_and_preserves_every_deep_density_value() {
+        let fields = Fields::new(42);
+        let large = Heights::exposed(42, [-32, -32], [32, 32]);
+        let small = Heights::exposed(42, [-1, -1], [16, 16]);
+        let old = Heights::refined(42, [-32, -32], [32, 32]);
+        for bottom in [-48, -16, 16, 48, 80] {
+            let a = Lattice::build(&fields, &large, [-32, -32], [32, 32], bottom, bottom + 16);
+            let b = Lattice::build(&fields, &small, [-1, -1], [16, 16], bottom, bottom + 16);
+            let c = Lattice::build(&fields, &old, [-32, -32], [32, 32], bottom, bottom + 16);
+            for x in -1..=16 {
+                for z in -1..=16 {
+                    for y in bottom..bottom + 16 {
+                        let p = [x, y, z];
+                        assert_eq!(a.sample(p), b.sample(p), "global lattice seam {p:?}");
+                        let corners = c.cell(p);
+                        let mut covered = true;
+                        for dz in 0..=1 {
+                            for dx in 0..=1 {
+                                covered &= old.values
+                                    [corners[0] + dx + (corners[2] + dz) * c.size[0]]
+                                    - (y.div_euclid(4) * 4 + 4)
+                                    >= 16;
+                            }
+                        }
+                        if covered {
+                            assert_eq!(a.sample(p), c.sample(p), "deep value {p:?}");
+                        }
+                        assert!(
+                            !a.contains(p) || c.contains(p),
+                            "exposure created cavity {p:?}"
+                        );
+                    }
+                }
+            }
         }
     }
     #[test]

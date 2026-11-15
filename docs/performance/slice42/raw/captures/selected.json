@@ -1,0 +1,160 @@
+[
+  {
+    "name": "small",
+    "kind": "small",
+    "seed": 0,
+    "eye": [
+      1679.5,
+      -18.38,
+      -1725.5
+    ],
+    "direction": [
+      1,
+      0.04,
+      1
+    ],
+    "width": 2,
+    "headroom": 5,
+    "sight_blocks": 8,
+    "volume": "s00-0.rcv"
+  },
+  {
+    "name": "medium",
+    "kind": "medium",
+    "seed": 42,
+    "eye": [
+      1248.5,
+      -27.38,
+      1200.5
+    ],
+    "direction": [
+      1,
+      0.04,
+      -1
+    ],
+    "width": 11,
+    "headroom": 18,
+    "sight_blocks": 26,
+    "volume": "s01-0.rcv"
+  },
+  {
+    "name": "cavern",
+    "kind": "cavern",
+    "seed": 42,
+    "eye": [
+      1244.5,
+      -25.38,
+      1200.5
+    ],
+    "direction": [
+      1,
+      0.04,
+      -1
+    ],
+    "width": 22,
+    "headroom": 14,
+    "sight_blocks": 32,
+    "volume": "s01-0.rcv"
+  },
+  {
+    "name": "network",
+    "kind": "network",
+    "seed": 18446744073709551615,
+    "eye": [
+      17806.5,
+      -49.38,
+      13759.5
+    ],
+    "direction": [
+      0,
+      0.04,
+      -1
+    ],
+    "width": 3,
+    "headroom": 3,
+    "sight_blocks": 32,
+    "volume": "s03-3.rcv"
+  },
+  {
+    "name": "deep",
+    "kind": "deep",
+    "seed": 31415,
+    "eye": [
+      -336.5,
+      -55.38,
+      -998.5
+    ],
+    "direction": [
+      1,
+      0.04,
+      0
+    ],
+    "width": 4,
+    "headroom": 3,
+    "sight_blocks": 21,
+    "volume": "v02-0.rcv"
+  },
+  {
+    "name": "vertical",
+    "kind": "vertical",
+    "seed": 2026,
+    "eye": [
+      356.5,
+      -47.38,
+      -1799.5
+    ],
+    "direction": [
+      0,
+      0.65,
+      -1
+    ],
+    "width": 7,
+    "headroom": 16,
+    "sight_blocks": 10,
+    "volume": "s02-1.rcv"
+  },
+  {
+    "name": "plains-entrance",
+    "kind": "plains-entrance",
+    "seed": 7,
+    "eye": [
+      7299.5,
+      10.620000000000005,
+      17266.5
+    ],
+    "direction": [
+      -6.0,
+      -1.0,
+      1.0
+    ],
+    "volume": "v00-5.rcv",
+    "portal": [
+      7293,
+      7,
+      17266
+    ],
+    "selection": "supported exterior floor with clear air ray to a portal in a floor component reaching >=24 blocks geological depth"
+  },
+  {
+    "name": "mountain-entrance",
+    "kind": "mountain-entrance",
+    "seed": 7,
+    "eye": [
+      -1599.5,
+      87.62,
+      -26843.5
+    ],
+    "direction": [
+      6.0,
+      -3.0,
+      -3.0
+    ],
+    "volume": "v00-6.rcv",
+    "portal": [
+      -1595,
+      83,
+      -26847
+    ],
+    "selection": "supported exterior floor with clear air ray to a portal in a floor component reaching >=24 blocks geological depth"
+  }
+]
