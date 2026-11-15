@@ -324,7 +324,7 @@ impl Sample {
     }
 }
 pub fn sample(g: &Generator, x: i32, z: i32) -> Option<Sample> {
-    if !matches!(g.config().version, 12 | 13) || !in_bounds(x, z) {
+    if !matches!(g.config().version, 12..=14) || !in_bounds(x, z) {
         return None;
     }
     let c = parameters_with_elevation_for(g.config.version, g.config.seed, x, z, |px, pz| {

@@ -1,3 +1,21 @@
+# Slice39 — Cave Generation v3
+
+- [x] Audit historical cave, terrain, water and vegetation integration before implementation
+- [x] Separate v14 signed density composition and bounded branching carvers
+- [x] Irregular caverns, pillars/shelves, winding routes, narrow links and steep connections
+- [x] Preserve exact historical1–13 geometry, biomes, water and persistence envelopes
+- [x] Protected water beds/foundation/spawn and explicit dry-v14/old-pool contract
+- [x] Bounded multiseed air topology and separate standing-player floor diagnostics
+- [x] Execute pinned Horizon cave stages across seeds, plains and mountains; compare actual geometry
+- [x] Replace value fields/room graph/entrance templates with Horizon-informed noise composition
+- [ ] Full Java26.3 distribution/experience parity: aquifers, entrances, vertical compression and native acceptance remain
+- [x] Complete rendered inspection and matched performance analysis
+- [x] Complete locked local checks; Linux/Windows CI results linked on the PR
+- [ ] Native Gentoo/Void X11/Wayland and Windows/Radeon owner acceptance
+
+[Implementation, Horizon evidence and remaining limits](performance/slice39/horizon/README.md).
+Hydrology v2 remains Slice40. No automatic merge or world migration.
+
 # Slice 38 — Terrain balancing and geography
 
 - [x] Diagnose v12 relief, compare original parameter controls and document reference limits

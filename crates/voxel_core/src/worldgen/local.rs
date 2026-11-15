@@ -48,7 +48,11 @@ pub(super) fn terrain(g: &Generator, p: BlockPos, h: i32) -> Block {
         if water.depth() > 0 {
             return Block::Stone;
         } // tree admission separately rejects wet roots
-        if super::caves::point(g.config.seed, p, h) {
+        if if g.config.version == 14 {
+            super::caves_v3::Versioned::new(g, [p.0[0], p.0[2]], [p.0[0], p.0[2]]).contains(p, h)
+        } else {
+            super::caves::point(g.config.seed, p, h)
+        } {
             return Block::Air;
         }
         return layers(g, p, h, None);
@@ -252,7 +256,7 @@ pub(super) struct Plan {
     materials: Vec<super::biome::Column>,
     trees: Vec<Tree>,
     ecology: Vec<super::biome_v2::Sample>,
-    caves: Option<super::caves::Plan>,
+    caves: Option<super::caves_v3::Versioned>,
     water: Option<super::hydrology::Plan>,
     vegetation: Option<super::vegetation::Plan>,
 }
@@ -342,8 +346,7 @@ impl Plan {
             vegetation: None,
             ecology,
             water,
-            caves: (g.config.version >= 7)
-                .then(|| super::caves::Plan::new(g.config.seed, min, max)),
+            caves: (g.config.version >= 7).then(|| super::caves_v3::Versioned::new(g, min, max)),
         };
         if g.config.version >= 9 {
             let mut vegetation = if g.config.version >= 12 {

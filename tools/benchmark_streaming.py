@@ -256,7 +256,10 @@ def main():
         help="Build optional instrumented GUI executables instead of running headless tests.",
     )
     p.add_argument("--reuse", action="store_true")
+    p.add_argument("--refresh-current", action="store_true", help="Rebuild only current sources; retain SHA-verified frozen baseline")
     p.add_argument("--summarize-only", action="store_true", help="Aggregate existing verified raw runs without running or rebuilding them")
+    p.add_argument("--caves-v3", action="store_true", help="Exact Slice38 v13/current v14 cave sites at radii2-4")
+    p.add_argument("--baseline-generator", type=int, choices=[13,14], default=13, help="Cave comparison only: 14 selects original unmerged v14 baseline")
     p.add_argument("--terrain-balance", action="store_true", help="Exact Slice37 v12/current v13 at matched ecosystem sites/radii2-4")
     p.add_argument("--biome-v2", action="store_true", help="Exact Slice36 v11/current v12 ecosystems at radii2-4")
     p.add_argument("--terrain-v4", action="store_true", help="Matched exact Slice35 v10/current v11; enables terrain scenes")
@@ -272,6 +275,7 @@ def main():
         help="Summarize native S32_TRACE logs without building or running tests.",
     )
     a = p.parse_args()
+    if a.caves_v3: a.biome_v2 = True
     if a.terrain_balance: a.biome_v2 = True
     if a.biome_v2: a.terrain_v3 = True
     if a.terrain_v4: a.terrain_v3 = True
@@ -290,8 +294,22 @@ def main():
     assert names[0].casefold() != names[1].casefold() and all(n.replace("-", "").replace("_", "").isalnum() for n in names)
     sources = {}
     ids = {}
+    frozen = None
+    if a.refresh_current:
+        assert not a.reuse and not a.native and not a.prepare_only
+        previous = json.loads((out / "sources.json").read_text())
+        assert previous["baseline"] == baseline and previous.get("baseline_generator",13) == a.baseline_generator
+        assert set(previous["files"]) == set(names)
+        hashes = json.loads((out / "executables-sha256.json").read_text())
+        assert hashlib.sha256((out / f"{names[0]}-bench").read_bytes()).hexdigest() == hashes[names[0]]
+        for path,value in previous["harness_sha256"].items():
+            if path != "tools/benchmark_streaming.py":
+                assert hashlib.sha256((ROOT/path).read_bytes()).hexdigest() == value
+        sources=previous["files"];ids=previous["runtime_ids"]
+        frozen={"harness_sha256":previous["harness_sha256"],"executable_sha256":hashes[names[0]]}
+    build_names=names[1:] if a.refresh_current else names
     if not a.reuse:
-        for name in names:
+        for name in build_names:
             root = scratch / name
             if root.exists():
                 shutil.rmtree(root)
@@ -339,6 +357,18 @@ def main():
                 s = s.replace('let seed = if matches!(scene,', 'let seed = if scene=="grove" { 2026 } else if matches!(scene,')
                 s = s.replace('"coast" => [6, 6],', '"coast" => [208,-204],')
                 tests.write_text(s)
+            if a.caves_v3:
+                tests = root / "client/src/streaming/tests.rs"
+                s = tests.read_text()
+                s = s.replace('"forest" => [128,-252]', '"forest" => [-13,5]')
+                s = s.replace('"birch" => [-120,-252]', '"birch" => [-12,5]')
+                s = s.replace('"taiga" => [100,-252]', '"taiga" => [-7,12]')
+                s = s.replace('"meadow" => [208,-116]', '"meadow" => [-39,-38]')
+                s = s.replace('"grove" => [220,108]', '"grove" => [5,-12]')
+                s = s.replace('"mountain" => [-249,-197]', '"mountain" => [-45,-36]')
+                s = s.replace('"desert" => [-168,-200]', '"desert" => [-12,-12]')
+                s = s.replace('let seed = if scene=="grove" { 2026 } else if matches!(scene,', 'let seed = if scene=="desert" { u64::MAX } else if scene=="grove" { 2026 } else if matches!(scene,"forest"|"birch"|"meadow"|"mountain") {42} else if matches!(scene,')
+                tests.write_text(s)
             if a.rendering_install:
                 tests = root / "client/src/scene/tests.rs"
                 tests.write_text(tests.read_text() + "\n" + (ROOT / "tools/rendering_bench/install.rs").read_text())
@@ -353,6 +383,9 @@ def main():
                  "terrain_v4": a.terrain_v4,
                  "biome_v2": a.biome_v2,
                  "terrain_balance": a.terrain_balance,
+                 "caves_v3": a.caves_v3,
+                 "baseline_generator": a.baseline_generator,
+                 "frozen_baseline_provenance": frozen,
                  "harness_sha256": {str(f.relative_to(ROOT)): hashlib.sha256(f.read_bytes()).hexdigest()
                     for f in [Path(__file__).resolve(), ROOT / "tools/rendering_bench/install.rs", *sorted((ROOT / "tools/streaming_bench").glob("*.rs"))]}}, indent=2
             )
@@ -413,7 +446,7 @@ def main():
                     out / f"{name}-native{suffix}",
                 )
             return
-        for name in names:
+        for name in build_names:
             root = scratch / name
             for d in ["client", "crates/voxel_core"]:
                 for f in (root / d).rglob("*.rs"):
@@ -476,8 +509,13 @@ def main():
         assert manifest["probes"] == {"distance_expansion": a.distance_expansion, "rendering_install": a.rendering_install}, "Reused probes differ"
     assert manifest.get("terrain_v3", False) == a.terrain_v3, "Reused terrain mode differs"
     assert manifest.get("terrain_v4", False) == a.terrain_v4, "Reused terrain v4 mode differs"
+    assert manifest.get("caves_v3", False) == a.caves_v3, "Reused caves mode differs"
+    assert manifest.get("baseline_generator", 13) == a.baseline_generator, "Reused baseline generator differs"
     assert manifest.get("terrain_balance", False) == a.terrain_balance, "Reused terrain-balance mode differs"
     assert manifest.get("biome_v2", False) == a.biome_v2, "Reused biome mode differs"
+    if not a.summarize_only:
+        for path,expected in manifest["files"][names[1]].items():
+            assert hashlib.sha256((ROOT/path).read_bytes()).hexdigest() == expected, f"Current sources changed: {path}; rebuild first"
     ids = manifest["runtime_ids"]
     assert set(ids) == set(names), "Reused build labels differ"
     executables = json.loads((out / "executables-sha256.json").read_text())
@@ -504,7 +542,7 @@ def main():
                     "S32_EXPECT_CORE": ids[name][0],
                     "S32_EXPECT_CLIENT": ids[name][1],
                     "S34_DISTANCE": str(int(a.distance_expansion)),
-                    "S35_GENERATOR": ("13" if name == names[1] else "12") if a.terrain_balance else ("12" if name == names[1] else "11") if a.biome_v2 else ("11" if name == names[1] else "10") if a.terrain_v4 else ("10" if a.terrain_v3 and name == names[1] else "9"),
+                    "S35_GENERATOR": ("14" if name == names[1] else str(a.baseline_generator)) if a.caves_v3 else ("13" if name == names[1] else "12") if a.terrain_balance else ("12" if name == names[1] else "11") if a.biome_v2 else ("11" if name == names[1] else "10") if a.terrain_v4 else ("10" if a.terrain_v3 and name == names[1] else "9"),
                 },
             )
             subprocess.run(
@@ -525,7 +563,7 @@ def main():
                     "S32_EXPECT_CORE": ids[name][0],
                     "S32_EXPECT_CLIENT": ids[name][1],
                     "S34_DISTANCE": str(int(a.distance_expansion)),
-                    "S35_GENERATOR": ("13" if name == names[1] else "12") if a.terrain_balance else ("12" if name == names[1] else "11") if a.biome_v2 else ("11" if name == names[1] else "10") if a.terrain_v4 else ("10" if a.terrain_v3 and name == names[1] else "9"),
+                    "S35_GENERATOR": ("14" if name == names[1] else str(a.baseline_generator)) if a.caves_v3 else ("13" if name == names[1] else "12") if a.terrain_balance else ("12" if name == names[1] else "11") if a.biome_v2 else ("11" if name == names[1] else "10") if a.terrain_v4 else ("10" if a.terrain_v3 and name == names[1] else "9"),
                 },
             )
             if a.rendering_install:
@@ -643,7 +681,7 @@ def main():
                 "frame_hz": 240,
                 "rendering_install": a.rendering_install,
                 "distance_expansion": a.distance_expansion,
-                "transition_scope": ("Terrain balance compares v12/v13 at matched ecosystem sites and radii2-4; geometry/resources intentionally differ." if a.terrain_balance else "Biome mode compares v11/v12 at matched ecosystem sites and radii2-4; geometry/resource signatures intentionally differ." if a.biome_v2 else "Terrain mode compares v10/v11 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds." if a.terrain_v4 else "Terrain mode compares v9/v10 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds." if a.terrain_v3 else "In distance mode, radius stress visits each build's own maximum (baseline3, candidate4); common final signatures match but these rows are not matched-workload regression evidence."),
+                "transition_scope": (f"Caves compares v{a.baseline_generator}/v14: forest=cavern, birch=intersection, taiga=narrow, meadow=deep, grove=entrance, desert=rich-complex; mountain is upper caves; headless radii2-4. Geometry/resources intentionally differ." if a.caves_v3 else "Terrain balance compares v12/v13 at matched ecosystem sites and radii2-4; geometry/resources intentionally differ." if a.terrain_balance else "Biome mode compares v11/v12 at matched ecosystem sites and radii2-4; geometry/resource signatures intentionally differ." if a.biome_v2 else "Terrain mode compares v10/v11 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds." if a.terrain_v4 else "Terrain mode compares v9/v10 at matched radii1-4; geometry/resource signatures may differ. Radius stress visits4 in both builds." if a.terrain_v3 else "In distance mode, radius stress visits each build's own maximum (baseline3, candidate4); common final signatures match but these rows are not matched-workload regression evidence."),
                 "aggregation_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                 "machine": platform.platform(),
                 "note": "Headless scripted position/velocity, fixed 240Hz deadlines, no rendered frames/GPU. RSS is process-wide; requested heap peak is additional process heap during worker window, excludes stacks/allocator metadata/GPU and may include concurrent main allocations.",

@@ -7,14 +7,14 @@ const Q: i32 = 4096;
 
 /// Versioned geographical input shared by terrain, hydrology and ecology.
 pub fn parameters_for(version: u32, seed: u64, x: i32, z: i32) -> Parameters {
-    if version == 13 {
+    if matches!(version, 13 | 14) {
         parameters(seed, x, z)
     } else {
         terrain_v4::parameters(seed, x, z)
     }
 }
 pub fn height_for(version: u32, seed: u64, x: i32, z: i32) -> i32 {
-    if version == 13 {
+    if matches!(version, 13 | 14) {
         height(seed, x, z)
     } else {
         terrain_v4::height(seed, x, z)

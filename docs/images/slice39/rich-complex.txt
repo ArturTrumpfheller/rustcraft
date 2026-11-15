@@ -1,0 +1,7 @@
+BIOME_SCENE generator=14 seed=18446744073709551615 center=(-181, -180) biome=Forest
+CAVE_LIGHTING_FIXTURE supported_floor_torches=181; procedural geometry unmodified
+DIAGNOSTIC_LIGHT development_only=true
+CAVE_CAMERA seed=18446744073709551615 generator=14 world_eye=Vec3(-181.5, -12.38, -180.5) direction=Vec3(0.5, 0.05, 0.8660254) torch_fixture=true
+TERRAIN_SCENE generator=14 seed=18446744073709551615 x=-181 z=-180 surface_y=23 yaw=0 radius=4 overview=false feet=[-180.5, 24.0, -179.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(10.5, -12.38, 11.5)
+CAPTURE_FRAME_MS samples=90 p50=436.23 p95=944.70 p99=1499.01

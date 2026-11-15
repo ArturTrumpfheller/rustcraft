@@ -1,0 +1,7 @@
+BIOME_SCENE generator=14 seed=2026 center=(-175, -83) biome=Rocky Highlands
+CAVE_LIGHTING_FIXTURE supported_floor_torches=74; procedural geometry unmodified
+DIAGNOSTIC_LIGHT development_only=true
+CAVE_CAMERA seed=2026 generator=14 world_eye=Vec3(-175.5, -12.38, -83.5) direction=Vec3(0.45, 0.65, -0.5) torch_fixture=true
+TERRAIN_SCENE generator=14 seed=2026 x=-175 z=-83 surface_y=51 yaw=0 radius=4 overview=false feet=[-174.5, 52.0, -82.5]
+VERTICAL_FIXTURE tower=false deep=false eye=Vec3(0.5, -12.38, 12.5)
+CAPTURE_FRAME_MS samples=90 p50=530.33 p95=778.96 p99=2385.98

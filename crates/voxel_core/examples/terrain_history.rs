@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Frozen Slice37 column/biome baseline; captured before changing generator code.
+//! Frozen column/biome baseline. Optional VERSION selects one supported generator.
 use voxel_core::{
     ChunkPos, LocalPos,
     worldgen::{GenerationConfig, Generator},
 };
 fn main() {
     println!("version,seed,cx,cz,crc,biome");
-    for version in 1..=12 {
+    let requested = std::env::args()
+        .nth(1)
+        .map(|v| v.parse::<u32>().expect("VERSION"));
+    for version in requested.map_or(1..=13, |v| v..=v) {
         for seed in [0, 42, 2026, u64::MAX] {
             let g = Generator::new(GenerationConfig { seed, version }).unwrap();
-            for c in if version < 3 {
+            let mut sites = if version < 3 {
                 vec![[0, 0], [-1, -1]]
             } else {
                 vec![
@@ -20,7 +23,11 @@ fn main() {
                     [-249, -197],
                     [208, -204],
                 ]
-            } {
+            };
+            if version == 14 {
+                sites.extend([[-12, -12], [-45, -36]]);
+            }
+            for c in sites {
                 let s = g.sampler(c);
                 let mut crc = crc32fast::Hasher::new();
                 for y in g.world_height().chunks() {

@@ -1,0 +1,106 @@
+{
+  "gameplay-captures.json": {
+    "bytes": 2994,
+    "sha256": "4098475202cad543b97c9495dd9af105497cdee2f9347914d9dfe18169e2c8a9"
+  },
+  "gameplay-cave-entrance-r4-f3.png": {
+    "bytes": 880487,
+    "sha256": "55c7b32fb1ae50b2763969fbb8cbabcaf6da482d235eecaf383fc3e1215bcc23"
+  },
+  "gameplay-cave-entrance-r4-torch.png": {
+    "bytes": 591177,
+    "sha256": "743be496c3618c8c2ce7fa6a79486b8702df1ca2ca9e62a5cbcd5d812302b608"
+  },
+  "gameplay-cave-entrance-r4.png": {
+    "bytes": 864529,
+    "sha256": "23f52d99496dbe04f5c6faeb37ffb040857bc01bc1b4d1400e6da6ddd52a130c"
+  },
+  "gameplay-cave-entrance-r4.txt": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "large-cavern-torches.json": {
+    "bytes": 677,
+    "sha256": "299521b379c7e0c93e7ca2e15b6f633b7eb8dcba883181b1b8283c962ebfabdf"
+  },
+  "large-cavern-torches.png": {
+    "bytes": 923471,
+    "sha256": "af0b2105aa396eb615f9e07b9c32a308a78902ddcbf605b6e0e39dac0cc35af4"
+  },
+  "large-cavern-torches.txt": {
+    "bytes": 548,
+    "sha256": "7042e6399169a76111394bdd926c8e856da6db1e86a11a9ebbafccc1a874933b"
+  },
+  "large-cavern.json": {
+    "bytes": 702,
+    "sha256": "e80d1e1d74a5cdb030d599468494f6aed5a3f9dac2878ec9d449e363410b5154"
+  },
+  "large-cavern.png": {
+    "bytes": 799251,
+    "sha256": "be0435917aa2e11232f55462de0b932e9dd5a937a602d21975911f3aa2f8d1a7"
+  },
+  "large-cavern.txt": {
+    "bytes": 547,
+    "sha256": "7933d26ddce7355e759c825db84b9e4f5e92c7e58f36fd49f74aee78235b8413"
+  },
+  "mountain-cave.json": {
+    "bytes": 712,
+    "sha256": "047e96f6dc834e28d3fdaae226dc73465a49db4ae578c4b692fc433a15026461"
+  },
+  "mountain-cave.png": {
+    "bytes": 758958,
+    "sha256": "b75f0db5b586ac23baf0400bebe3137076babf34fb73ff4628ff1f4639e0a56b"
+  },
+  "mountain-cave.txt": {
+    "bytes": 563,
+    "sha256": "56ef1d4b0820fc16b69bc248750da587d3dd3968016609d6769822c597976289"
+  },
+  "narrow-passage.json": {
+    "bytes": 711,
+    "sha256": "a18ce9a5665fb09b4bf8e06bc1ca50d022c158cde24083e33b957b370f127223"
+  },
+  "narrow-passage.png": {
+    "bytes": 600673,
+    "sha256": "2f65560dc65821dc86e21beead87203246086273ee8480628bec8f0b8bef7c64"
+  },
+  "narrow-passage.txt": {
+    "bytes": 551,
+    "sha256": "ec76fd264ccadf3e9ca71e4fb5742a0131ce5fc11f46742cc3edaf6c30657af0"
+  },
+  "surface-entrance.json": {
+    "bytes": 706,
+    "sha256": "69121863cd906b7f11be18899efe4b3cce88af9bf021622aa7cf1f65c6bedede"
+  },
+  "surface-entrance.png": {
+    "bytes": 1092500,
+    "sha256": "0e96a5c3eab5827dab052f7aaf5401119d2b7d052400f134e9f98641193d7be1"
+  },
+  "surface-entrance.txt": {
+    "bytes": 567,
+    "sha256": "0701851c70fd25a6dd0e72049f991cc1863243e5891edcaa01e0e4ad135c82ea"
+  },
+  "survey-entrance.json": {
+    "bytes": 701,
+    "sha256": "a97be71c3877c76c6a0b981bf8eae595e7646c1aae4d43c0279b6218eb6672c9"
+  },
+  "survey-entrance.png": {
+    "bytes": 637385,
+    "sha256": "7e87e8eed91726efb07e62f808664cd751b5bea896e35ca19dc23bd94705ad8e"
+  },
+  "survey-entrance.txt": {
+    "bytes": 556,
+    "sha256": "77d894925df442ce7742ebff087cc4454160f1023aeb87c31f5199c1cb2fb8e6"
+  },
+  "survey-ordinary.json": {
+    "bytes": 707,
+    "sha256": "4e5de9aa73e945d233df05cc4b54cc684d21ed90e8a1306a10544b35ead6e8db"
+  },
+  "survey-ordinary.png": {
+    "bytes": 621555,
+    "sha256": "832a9627ef36c41e7230625ec06806cdcfa2dce7edf6901d44a5a283361adf84"
+  },
+  "survey-ordinary.txt": {
+    "bytes": 557,
+    "sha256": "0e8aae77a93de2ef8a3cf45b3ecbeafa0679a8bb5ef6094200482cf9740d7ceb"
+  }
+}

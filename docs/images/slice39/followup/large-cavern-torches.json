@@ -1,0 +1,32 @@
+{
+  "seed": 42,
+  "generator": 14,
+  "eye": [
+    42.5,
+    -25.38,
+    70.5
+  ],
+  "direction": [
+    0.85,
+    0.1,
+    0.5
+  ],
+  "diagnostic_light": false,
+  "supported_floor_torches": true,
+  "command": [
+    "/workspace/rustcraft/work/followup/final-gallery",
+    "42",
+    "42",
+    "70",
+    "0",
+    "--generator=14",
+    "--capture=/tmp/rustcraft-cave-v3-9q17jith/capture.ppm",
+    "--capture-frames=120",
+    "--radius=4",
+    "--eye=42.5,-25.38,70.5",
+    "--direction=0.85,0.1,0.5",
+    "--cave-torches"
+  ],
+  "executable_sha256": "9eb8f7f1fd21d076ecb9990e6495c53e160239dbd42f6a51eefa5acd47ea9826",
+  "source_commit": "8db1cae471af42cde8931274cd99a2edaf080569"
+}

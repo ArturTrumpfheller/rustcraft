@@ -1,0 +1,7 @@
+{
+  "scope": "Diagnostic-only intermediate builds under competing compilers/tests. Not formal benchmark or successful full-check evidence.",
+  "initial_run": "Interrupted after radius4 lifecycle failure; incomplete test log.",
+  "serial_contended_run": "221 client tests passed,1 radius4 lifecycle timeout,6 ignored; full suite stopped on client failure.",
+  "exploratory_sources": "Intermediate CPU-only optimization states were not preserved as independently rebuildable source revisions; do not infer exact comparative costs from these contended traces.",
+  "final_checks": "Final optimized core and idle full-workspace results are recorded separately; no timeout budget was relaxed."
+}

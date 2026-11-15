@@ -1,0 +1,2758 @@
+{
+  "v13": {
+    "unconditional": {
+      "cavity_percent": {
+        "estimate": 3.5266801191071657,
+        "low": 3.1222647469758718,
+        "high": 3.9770674845875584,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "dry_air_percent": {
+        "estimate": 3.519494767846653,
+        "low": 3.117666224814625,
+        "high": 3.964783624003181,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "near_solid_window_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": true
+      },
+      "passable_portals_per_km2": {
+        "estimate": 3.814697265625,
+        "low": 0.0,
+        "high": 8.58306884765625,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "encountered_portals_per_1000_walked_blocks": {
+        "estimate": 0.04560379423568041,
+        "low": 0.0,
+        "high": 0.14673299096442036,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "blocked_surface_walk_percent": {
+        "estimate": 30.859375,
+        "low": 19.53125,
+        "high": 44.140625,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_largest_geometry_component": {
+        "estimate": 29513.1875,
+        "low": 25427.958984375,
+        "high": 34272.548828125,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_largest_standing_component": {
+        "estimate": 2053.9375,
+        "low": 1857.46875,
+        "high": 2254.224609375,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_geometry_route_lower_bound": {
+        "estimate": 215.0,
+        "low": 201.318359375,
+        "high": 229.9453125,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_standing_route_lower_bound": {
+        "estimate": 158.40625,
+        "low": 150.173828125,
+        "high": 165.900390625,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "total_walked_blocks": 21928,
+      "cavity_window_percentiles": {
+        "min": 0.019387295735123537,
+        "p50": 3.5082420086450297,
+        "p95": 7.491910366217212,
+        "p99": 8.096222512042248,
+        "max": 8.405843566782732
+      },
+      "normalized_geology": [
+        1178472,
+        7490194,
+        8462405,
+        8158890,
+        8145467,
+        8669965,
+        8269018,
+        8167353,
+        8361679,
+        7831943
+      ],
+      "normalized_cavity": [
+        8,
+        14873,
+        87482,
+        118589,
+        257364,
+        589104,
+        698387,
+        520056,
+        298095,
+        51720
+      ],
+      "normalized_depth_percent": [
+        {
+          "estimate": 0.0006788451486331453,
+          "low": 0.0,
+          "high": 0.0016948317727573544,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 0.19856628546603733,
+          "low": 0.0800348729354518,
+          "high": 0.3568341152663857,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 1.0337723141352841,
+          "low": 0.4841277462983586,
+          "high": 1.6820355734973855,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 1.4534942866002605,
+          "low": 0.8850494434588614,
+          "high": 2.1740789645199965,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 3.1595978474898985,
+          "low": 2.357888146804655,
+          "high": 3.9344852625782014,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 6.794767914288005,
+          "low": 5.38944266102181,
+          "high": 8.283867451428284,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 8.445827545665036,
+          "low": 7.063057320442648,
+          "high": 9.937771121113135,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 6.367497523371403,
+          "low": 5.550753471377022,
+          "high": 7.228374317227932,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 3.565013677277016,
+          "low": 3.018469621203913,
+          "high": 4.096136389785782,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 0.6603725282474604,
+          "low": 0.5135490136770227,
+          "high": 0.8169326796063667,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        }
+      ],
+      "width_bins": [
+        15937,
+        121686,
+        872922,
+        842200,
+        512467,
+        270375,
+        91
+      ],
+      "headroom_bins": [
+        5655,
+        59336,
+        679371,
+        1314110,
+        548187,
+        29019,
+        0
+      ],
+      "broad_core_bins": [
+        399,
+        114,
+        91,
+        20,
+        4
+      ],
+      "component_bins": [
+        48,
+        90,
+        168,
+        86,
+        22,
+        0
+      ]
+    },
+    "lowland-conditional": {
+      "cavity_percent": {
+        "estimate": 2.5280671620880737,
+        "low": 2.144686556136371,
+        "high": 3.0595734205118825,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "dry_air_percent": {
+        "estimate": 2.525202051031027,
+        "low": 2.1410403225354067,
+        "high": 3.0585900655356157,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "near_solid_window_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "passable_portals_per_km2": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "encountered_portals_per_1000_walked_blocks": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "blocked_surface_walk_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "mean_largest_geometry_component": {
+        "estimate": 20119.75,
+        "low": 14788.125,
+        "high": 30171.375,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_largest_standing_component": {
+        "estimate": 1485.375,
+        "low": 1364.875,
+        "high": 1603.25,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_geometry_route_lower_bound": {
+        "estimate": 210.875,
+        "low": 164.125,
+        "high": 268.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_standing_route_lower_bound": {
+        "estimate": 120.25,
+        "low": 103.25,
+        "high": 137.25,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "total_walked_blocks": 3950,
+      "cavity_window_percentiles": {
+        "min": 1.2501987689448033,
+        "p50": 2.2490751249487912,
+        "p95": 4.484939350731445,
+        "p99": 5.306978385479833,
+        "max": 5.51248814416693
+      },
+      "normalized_geology": [
+        154310,
+        1121793,
+        1146026,
+        1120575,
+        1114021,
+        1179352,
+        1128978,
+        1115266,
+        1135747,
+        1080217
+      ],
+      "normalized_cavity": [
+        0,
+        366,
+        948,
+        920,
+        6557,
+        48118,
+        101160,
+        54497,
+        40525,
+        7206
+      ],
+      "normalized_depth_percent": [
+        {
+          "estimate": 0.0,
+          "low": 0.0,
+          "high": 0.0,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": true
+        },
+        {
+          "estimate": 0.03262634015366472,
+          "low": 0.0038370040672243114,
+          "high": 0.07461553249594223,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 0.08272063635554516,
+          "low": 0.02229698152382923,
+          "high": 0.13847620985612616,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 0.08210070722620083,
+          "low": 0.035808570306291164,
+          "high": 0.1315349242879679,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 0.5885885454582993,
+          "low": 0.35247406837553097,
+          "high": 0.8113077212911148,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 4.080037172955996,
+          "low": 2.239129748176863,
+          "high": 5.996756545322692,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 8.960316321487221,
+          "low": 8.092052630683076,
+          "high": 10.214273946895302,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 4.886457580523391,
+          "low": 2.8445219035788285,
+          "high": 6.266122454682476,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 3.568136213434858,
+          "low": 2.4335337013115823,
+          "high": 4.631578588266599,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 0.667088186910593,
+          "low": 0.3384926060860031,
+          "high": 1.0125601516181593,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        }
+      ],
+      "width_bins": [
+        2663,
+        17458,
+        101475,
+        89508,
+        38312,
+        10881,
+        0
+      ],
+      "headroom_bins": [
+        506,
+        6256,
+        77981,
+        148967,
+        26587,
+        0,
+        0
+      ],
+      "broad_core_bins": [
+        55,
+        10,
+        15,
+        1,
+        0
+      ],
+      "component_bins": [
+        10,
+        15,
+        24,
+        14,
+        1,
+        0
+      ]
+    },
+    "mountain-conditional": {
+      "cavity_percent": {
+        "estimate": 2.122081207467814,
+        "low": 1.2987113264319916,
+        "high": 2.8843744891674086,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "dry_air_percent": {
+        "estimate": 2.1177494796240866,
+        "low": 1.2987113264319916,
+        "high": 2.8708695457644993,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "near_solid_window_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "passable_portals_per_km2": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "encountered_portals_per_1000_walked_blocks": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "blocked_surface_walk_percent": {
+        "estimate": 93.75,
+        "low": 87.5,
+        "high": 100.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_largest_geometry_component": {
+        "estimate": 38952.625,
+        "low": 19269.375,
+        "high": 56277.5,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_largest_standing_component": {
+        "estimate": 2392.125,
+        "low": 1682.875,
+        "high": 2924.5,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_geometry_route_lower_bound": {
+        "estimate": 211.125,
+        "low": 167.5,
+        "high": 254.875,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_standing_route_lower_bound": {
+        "estimate": 144.875,
+        "low": 131.0,
+        "high": 164.125,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "total_walked_blocks": 288,
+      "cavity_window_percentiles": {
+        "min": 0.5439519007882146,
+        "p50": 2.141022585570129,
+        "p95": 3.4566864048839094,
+        "p99": 3.8038085372057235,
+        "max": 3.8905890702861776
+      },
+      "normalized_geology": [
+        1006697,
+        1988335,
+        2014613,
+        1976538,
+        1975632,
+        2041503,
+        1988882,
+        1976014,
+        2002246,
+        1936545
+      ],
+      "normalized_cavity": [
+        21,
+        0,
+        0,
+        0,
+        183,
+        496,
+        32609,
+        147942,
+        171328,
+        48643
+      ],
+      "normalized_depth_percent": [
+        {
+          "estimate": 0.0020860298580407015,
+          "low": 0.00010683463920873992,
+          "high": 0.005090195435225849,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 0.0,
+          "low": 0.0,
+          "high": 0.0,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": true
+        },
+        {
+          "estimate": 0.0,
+          "low": 0.0,
+          "high": 0.0,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": true
+        },
+        {
+          "estimate": 0.0,
+          "low": 0.0,
+          "high": 0.0,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": true
+        },
+        {
+          "estimate": 0.009262858670035715,
+          "low": 0.0,
+          "high": 0.02847166291625545,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 0.02429582518370044,
+          "low": 0.00397884419428405,
+          "high": 0.05504732646876738,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 1.639564338155808,
+          "low": 0.8430876995542016,
+          "high": 2.496381035477855,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 7.486890275068902,
+          "low": 4.039419782754789,
+          "high": 10.876621075756502,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 8.55679072401693,
+          "low": 5.506208811194286,
+          "high": 11.339965237435365,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 2.511844547893284,
+          "low": 1.904150727467708,
+          "high": 3.1311011672430995,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        }
+      ],
+      "width_bins": [
+        2269,
+        16428,
+        127075,
+        116698,
+        69178,
+        69566,
+        8
+      ],
+      "headroom_bins": [
+        685,
+        7590,
+        94171,
+        196889,
+        101887,
+        0,
+        0
+      ],
+      "broad_core_bins": [
+        58,
+        19,
+        11,
+        3,
+        1
+      ],
+      "component_bins": [
+        10,
+        9,
+        26,
+        7,
+        6,
+        0
+      ]
+    }
+  },
+  "previous-v14": {
+    "unconditional": {
+      "cavity_percent": {
+        "estimate": 7.086641813507951,
+        "low": 5.3356688758367286,
+        "high": 9.086499166913612,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "dry_air_percent": {
+        "estimate": 7.086641813507951,
+        "low": 5.3356688758367286,
+        "high": 9.086499166913612,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "near_solid_window_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": true
+      },
+      "passable_portals_per_km2": {
+        "estimate": 41.00799560546875,
+        "low": 27.65655517578125,
+        "high": 54.35943603515625,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "encountered_portals_per_1000_walked_blocks": {
+        "estimate": 0.09104151493080845,
+        "low": 0.0,
+        "high": 0.23408719526418992,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "blocked_surface_walk_percent": {
+        "estimate": 30.859375,
+        "low": 19.53125,
+        "high": 44.140625,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_largest_geometry_component": {
+        "estimate": 71297.46875,
+        "low": 49903.3125,
+        "high": 96457.296875,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_largest_standing_component": {
+        "estimate": 2822.0,
+        "low": 2264.349609375,
+        "high": 3494.421875,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_geometry_route_lower_bound": {
+        "estimate": 231.5,
+        "low": 206.703125,
+        "high": 256.296875,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_standing_route_lower_bound": {
+        "estimate": 141.640625,
+        "low": 124.412109375,
+        "high": 158.76953125,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "total_walked_blocks": 21968,
+      "cavity_window_percentiles": {
+        "min": 0.1349643883190863,
+        "p50": 3.945382238862777,
+        "p95": 25.223627221263413,
+        "p99": 36.55799575910096,
+        "max": 38.393082033580285
+      },
+      "normalized_geology": [
+        1177586,
+        7488415,
+        8461165,
+        8157538,
+        8144460,
+        8668728,
+        8267702,
+        8165841,
+        8360527,
+        7830666
+      ],
+      "normalized_cavity": [
+        44723,
+        585828,
+        699897,
+        662526,
+        544143,
+        532990,
+        524880,
+        522008,
+        562397,
+        615933
+      ],
+      "normalized_depth_percent": [
+        {
+          "estimate": 3.797854254381421,
+          "low": 2.4278911450380285,
+          "high": 5.552398522156441,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 7.823124119055902,
+          "low": 5.307995712741033,
+          "high": 10.251762157051978,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 8.27187509048695,
+          "low": 5.766403318009377,
+          "high": 10.795053152510494,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 8.121641603140555,
+          "low": 6.000037360922041,
+          "high": 10.207068745149662,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 6.6811427645295085,
+          "low": 4.857210646990524,
+          "high": 8.587696150441952,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 6.14842223680337,
+          "low": 4.0503338353392015,
+          "high": 8.389909492814175,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 6.348559732801206,
+          "low": 4.398702504366076,
+          "high": 8.446774720803347,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 6.392580996862417,
+          "low": 4.297674236159824,
+          "high": 8.764885986108897,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 6.726812795413495,
+          "low": 3.758766320721214,
+          "high": 10.165832762469105,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 7.865652806542892,
+          "low": 4.321302033986861,
+          "high": 12.020900797836136,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        }
+      ],
+      "width_bins": [
+        24478,
+        157916,
+        503154,
+        629253,
+        1402329,
+        2062484,
+        515711
+      ],
+      "headroom_bins": [
+        30846,
+        159560,
+        431018,
+        1009941,
+        1774328,
+        1185370,
+        704262
+      ],
+      "broad_core_bins": [
+        71,
+        39,
+        42,
+        35,
+        26
+      ],
+      "component_bins": [
+        370,
+        86,
+        127,
+        63,
+        32,
+        3
+      ]
+    },
+    "lowland-conditional": {
+      "cavity_percent": {
+        "estimate": 9.320987264534262,
+        "low": 4.079639229927954,
+        "high": 14.43193812663371,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "dry_air_percent": {
+        "estimate": 9.320987264534262,
+        "low": 4.079639229927954,
+        "high": 14.43193812663371,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "near_solid_window_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "passable_portals_per_km2": {
+        "estimate": 144.95849609375,
+        "low": 91.552734375,
+        "high": 228.8818359375,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "encountered_portals_per_1000_walked_blocks": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "blocked_surface_walk_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "mean_largest_geometry_component": {
+        "estimate": 99123.125,
+        "low": 35677.25,
+        "high": 162569.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_largest_standing_component": {
+        "estimate": 3699.75,
+        "low": 1601.25,
+        "high": 5798.25,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_geometry_route_lower_bound": {
+        "estimate": 252.125,
+        "low": 185.75,
+        "high": 333.875,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_standing_route_lower_bound": {
+        "estimate": 130.375,
+        "low": 110.0,
+        "high": 155.375,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "total_walked_blocks": 3954,
+      "cavity_window_percentiles": {
+        "min": 0.8572641670403275,
+        "p50": 6.730854838240296,
+        "p95": 23.944946329682317,
+        "p99": 28.257445856291646,
+        "max": 29.335570737943982
+      },
+      "normalized_geology": [
+        153943,
+        1121650,
+        1145877,
+        1120165,
+        1113775,
+        1179146,
+        1128621,
+        1115031,
+        1135584,
+        1079903
+      ],
+      "normalized_cavity": [
+        3966,
+        46749,
+        86144,
+        85435,
+        68649,
+        77518,
+        99165,
+        121537,
+        169811,
+        200500
+      ],
+      "normalized_depth_percent": [
+        {
+          "estimate": 2.5762782328524194,
+          "low": 1.3673910676228551,
+          "high": 3.874544003647971,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 4.167877680203272,
+          "low": 2.2515170196798393,
+          "high": 5.907124873205216,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 7.517735324122921,
+          "low": 4.204343960106701,
+          "high": 10.985123101564891,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 7.627001379261091,
+          "low": 5.290635406271818,
+          "high": 11.161455826706641,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 6.163632690624229,
+          "low": 2.945352902960087,
+          "high": 9.362495524775309,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 6.574079884933672,
+          "low": 1.8605765259767078,
+          "high": 12.782544332970403,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 8.786386218225605,
+          "low": 2.585834209513253,
+          "high": 17.94028705336342,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 10.899876326308416,
+          "low": 2.52419419049894,
+          "high": 20.350336218746516,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 14.953627384676079,
+          "low": 0.8936214710193346,
+          "high": 28.83788414720589,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 18.566482359989738,
+          "low": 0.2133112233360971,
+          "high": 36.30000928584564,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        }
+      ],
+      "width_bins": [
+        2761,
+        17629,
+        71594,
+        105173,
+        211064,
+        379273,
+        171980
+      ],
+      "headroom_bins": [
+        4256,
+        21453,
+        60458,
+        211094,
+        288424,
+        263507,
+        110282
+      ],
+      "broad_core_bins": [
+        9,
+        2,
+        2,
+        4,
+        6
+      ],
+      "component_bins": [
+        27,
+        8,
+        19,
+        4,
+        6,
+        1
+      ]
+    },
+    "mountain-conditional": {
+      "cavity_percent": {
+        "estimate": 3.9625991395567923,
+        "low": 2.9871532505527907,
+        "high": 4.725338650266149,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "dry_air_percent": {
+        "estimate": 3.9625991395567923,
+        "low": 2.9871532505527907,
+        "high": 4.725338650266149,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "near_solid_window_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "passable_portals_per_km2": {
+        "estimate": 76.2939453125,
+        "low": 30.517578125,
+        "high": 122.0703125,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "encountered_portals_per_1000_walked_blocks": {
+        "estimate": 3.4722222222222223,
+        "low": 0.0,
+        "high": 5.649717514124294,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "blocked_surface_walk_percent": {
+        "estimate": 93.75,
+        "low": 87.5,
+        "high": 100.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_largest_geometry_component": {
+        "estimate": 72308.625,
+        "low": 45661.375,
+        "high": 89225.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_largest_standing_component": {
+        "estimate": 2197.5,
+        "low": 1708.125,
+        "high": 2484.25,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_geometry_route_lower_bound": {
+        "estimate": 348.375,
+        "low": 262.875,
+        "high": 433.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_standing_route_lower_bound": {
+        "estimate": 141.375,
+        "low": 89.625,
+        "high": 187.5,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "total_walked_blocks": 288,
+      "cavity_window_percentiles": {
+        "min": 2.4091279528826046,
+        "p50": 3.735485779602571,
+        "p95": 6.081414385314698,
+        "p99": 6.514514166980806,
+        "max": 6.622789112397333
+      },
+      "normalized_geology": [
+        1006601,
+        1988302,
+        2014542,
+        1976465,
+        1975555,
+        2041424,
+        1988820,
+        1975952,
+        2002182,
+        1936460
+      ],
+      "normalized_cavity": [
+        40670,
+        68821,
+        63667,
+        67700,
+        57700,
+        64231,
+        96747,
+        98288,
+        105623,
+        85734
+      ],
+      "normalized_depth_percent": [
+        {
+          "estimate": 4.040329783101745,
+          "low": 2.3279828945450194,
+          "high": 6.097785623446641,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 3.4612951151283857,
+          "low": 1.7745747789414135,
+          "high": 5.3409207137344605,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 3.1603709428743607,
+          "low": 1.996454113415271,
+          "high": 5.00999202811005,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 3.4253073036962456,
+          "low": 1.7168901589505075,
+          "high": 5.164228658237773,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 2.9206982341671073,
+          "low": 1.1102638777846516,
+          "high": 5.421742039857757,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 3.146382133256002,
+          "low": 1.2771311235430498,
+          "high": 5.525209348222348,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 4.864542794219688,
+          "low": 2.1142112728827174,
+          "high": 7.562544760204829,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 4.974209899835624,
+          "low": 2.8895964121317634,
+          "high": 6.4801926470632445,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 5.275394544551894,
+          "low": 2.6750664648985265,
+          "high": 7.004261370699472,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 4.427357136217634,
+          "low": 2.3444049403069585,
+          "high": 5.97599005360455,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        }
+      ],
+      "width_bins": [
+        8872,
+        51844,
+        153193,
+        187591,
+        217024,
+        130655,
+        2
+      ],
+      "headroom_bins": [
+        8010,
+        41398,
+        97633,
+        169923,
+        157205,
+        120147,
+        154865
+      ],
+      "broad_core_bins": [
+        32,
+        4,
+        9,
+        5,
+        3
+      ],
+      "component_bins": [
+        123,
+        15,
+        35,
+        11,
+        6,
+        0
+      ]
+    }
+  },
+  "Horizon": {
+    "unconditional": {
+      "cavity_percent": {
+        "estimate": 10.94713965021462,
+        "low": 9.636915004931957,
+        "high": 12.243215161720507,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "dry_air_percent": {
+        "estimate": 8.568691827122425,
+        "low": 7.444795648269313,
+        "high": 9.771654068679876,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "near_solid_window_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": true
+      },
+      "passable_portals_per_km2": {
+        "estimate": 188.8275146484375,
+        "low": 97.2747802734375,
+        "high": 294.68536376953125,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "encountered_portals_per_1000_walked_blocks": {
+        "estimate": 1.115103456820716,
+        "low": 0.0,
+        "high": 2.407540764733099,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "blocked_surface_walk_percent": {
+        "estimate": 75.0,
+        "low": 66.796875,
+        "high": 82.421875,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_largest_geometry_component": {
+        "estimate": 147488.15625,
+        "low": 124568.833984375,
+        "high": 169869.583984375,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_largest_standing_component": {
+        "estimate": 4519.734375,
+        "low": 3903.333984375,
+        "high": 5280.39453125,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_geometry_route_lower_bound": {
+        "estimate": 447.171875,
+        "low": 413.484375,
+        "high": 482.87890625,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_standing_route_lower_bound": {
+        "estimate": 231.71875,
+        "low": 212.052734375,
+        "high": 252.369140625,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "total_walked_blocks": 8071,
+      "cavity_window_percentiles": {
+        "min": 3.7094345652726797,
+        "p50": 8.89515456655326,
+        "p95": 21.595857509632456,
+        "p99": 29.243811992476378,
+        "max": 32.28150279530336
+      },
+      "normalized_geology": [
+        4643779,
+        12582591,
+        12775927,
+        12432768,
+        12413602,
+        12968515,
+        12543370,
+        12468198,
+        12669923,
+        12093606
+      ],
+      "normalized_cavity": [
+        170638,
+        892439,
+        1482198,
+        1623513,
+        1697831,
+        2022530,
+        1601822,
+        1570856,
+        1363252,
+        447912
+      ],
+      "normalized_depth_percent": [
+        {
+          "estimate": 3.6745504038844228,
+          "low": 3.225235743329532,
+          "high": 4.1343878459236,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 7.092648882889065,
+          "low": 6.042141315150497,
+          "high": 8.251350914532075,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 11.601490835068171,
+          "low": 9.67697755902496,
+          "high": 13.505906399422376,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 13.058339060135282,
+          "low": 11.17210916084295,
+          "high": 14.99323297569458,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 13.677182497070552,
+          "low": 11.469060700745533,
+          "high": 15.91991642049556,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 15.59569464969582,
+          "low": 13.036517421379962,
+          "high": 18.36123600073115,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 12.770268277185478,
+          "low": 10.196099366115117,
+          "high": 15.576121886332086,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 12.598901621549482,
+          "low": 10.554389270395049,
+          "high": 14.650021797531684,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 10.759749684350883,
+          "low": 8.669255834858047,
+          "high": 12.842280909090515,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 3.703709216258575,
+          "low": 2.711697696490567,
+          "high": 4.695040772691948,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        }
+      ],
+      "width_bins": [
+        226507,
+        1194992,
+        2689209,
+        3233774,
+        2922645,
+        2108768,
+        497096
+      ],
+      "headroom_bins": [
+        160432,
+        1120783,
+        2431238,
+        3411975,
+        3328078,
+        2218992,
+        201493
+      ],
+      "broad_core_bins": [
+        1825,
+        450,
+        222,
+        102,
+        31
+      ],
+      "component_bins": [
+        6993,
+        1713,
+        739,
+        148,
+        64,
+        8
+      ]
+    },
+    "lowland-conditional": {
+      "cavity_percent": {
+        "estimate": 11.1217974682696,
+        "low": 9.136783974400467,
+        "high": 13.428873111441135,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "dry_air_percent": {
+        "estimate": 10.75556717158965,
+        "low": 8.914556443503068,
+        "high": 13.100427232092418,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "near_solid_window_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "passable_portals_per_km2": {
+        "estimate": 1197.81494140625,
+        "low": 732.421875,
+        "high": 1663.2080078125,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "encountered_portals_per_1000_walked_blocks": {
+        "estimate": 3.864734299516908,
+        "low": 1.1887779362815025,
+        "high": 6.801007556675063,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "blocked_surface_walk_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "mean_largest_geometry_component": {
+        "estimate": 245672.875,
+        "low": 206593.75,
+        "high": 303726.25,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_largest_standing_component": {
+        "estimate": 4986.875,
+        "low": 3473.375,
+        "high": 5861.25,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_geometry_route_lower_bound": {
+        "estimate": 501.125,
+        "low": 407.75,
+        "high": 597.375,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_standing_route_lower_bound": {
+        "estimate": 302.375,
+        "low": 233.25,
+        "high": 378.75,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "total_walked_blocks": 4140,
+      "cavity_window_percentiles": {
+        "min": 4.392895233734398,
+        "p50": 8.807248364171956,
+        "p95": 22.535555803091828,
+        "p99": 24.408465804127296,
+        "max": 24.876693304386166
+      },
+      "normalized_geology": [
+        1144456,
+        2126100,
+        2155355,
+        2114138,
+        2113212,
+        2182974,
+        2128069,
+        2113814,
+        2139779,
+        2075891
+      ],
+      "normalized_cavity": [
+        51974,
+        242881,
+        223575,
+        274097,
+        231182,
+        256690,
+        286095,
+        331168,
+        267996,
+        91376
+      ],
+      "normalized_depth_percent": [
+        {
+          "estimate": 4.541371621102078,
+          "low": 3.8346869893561526,
+          "high": 5.2647958552154615,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 11.423780631202671,
+          "low": 6.31535896663959,
+          "high": 16.46756738061988,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 10.373001199338391,
+          "low": 8.726359643321057,
+          "high": 12.251259900540989,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 12.96495309199305,
+          "low": 10.62671826937144,
+          "high": 16.66566611187085,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 10.939839448195448,
+          "low": 7.419390382409502,
+          "high": 14.870774103018292,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 11.758729146567939,
+          "low": 10.080519466314717,
+          "high": 13.259321314222104,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 13.443877994557507,
+          "low": 10.75471733754961,
+          "high": 16.106479381660222,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 15.666846751890185,
+          "low": 10.676295547481873,
+          "high": 20.61621466786521,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 12.524470985087712,
+          "low": 9.243494080931546,
+          "high": 16.345443878327245,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 4.40177254008038,
+          "low": 3.8093269038397906,
+          "high": 5.38776617097734,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        }
+      ],
+      "width_bins": [
+        40614,
+        223965,
+        549376,
+        617154,
+        479012,
+        319380,
+        27533
+      ],
+      "headroom_bins": [
+        21981,
+        178013,
+        414260,
+        508476,
+        589089,
+        495748,
+        49467
+      ],
+      "broad_core_bins": [
+        322,
+        104,
+        50,
+        16,
+        4
+      ],
+      "component_bins": [
+        757,
+        193,
+        87,
+        10,
+        4,
+        4
+      ]
+    },
+    "mountain-conditional": {
+      "cavity_percent": {
+        "estimate": 7.442205157676297,
+        "low": 4.731503671933152,
+        "high": 11.542719991056769,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "dry_air_percent": {
+        "estimate": 7.3555304277070235,
+        "low": 4.660559992586945,
+        "high": 11.47399809594814,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "near_solid_window_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "passable_portals_per_km2": {
+        "estimate": 1243.59130859375,
+        "low": 785.82763671875,
+        "high": 1632.6904296875,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "encountered_portals_per_1000_walked_blocks": {
+        "estimate": 5.05050505050505,
+        "low": 1.8738288569643973,
+        "high": 6.866416978776529,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "blocked_surface_walk_percent": {
+        "estimate": 31.25,
+        "low": 18.75,
+        "high": 46.875,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_largest_geometry_component": {
+        "estimate": 195743.75,
+        "low": 78422.875,
+        "high": 362834.875,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_largest_standing_component": {
+        "estimate": 4581.5,
+        "low": 3438.25,
+        "high": 6242.375,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_geometry_route_lower_bound": {
+        "estimate": 555.75,
+        "low": 413.75,
+        "high": 660.75,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_standing_route_lower_bound": {
+        "estimate": 309.125,
+        "low": 239.5,
+        "high": 416.875,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "total_walked_blocks": 3366,
+      "cavity_window_percentiles": {
+        "min": 3.7127444871189232,
+        "p50": 5.723023038361309,
+        "p95": 14.76572506230318,
+        "p99": 17.113270051316373,
+        "max": 17.700156298569674
+      },
+      "normalized_geology": [
+        2029978,
+        3015004,
+        3040858,
+        3000531,
+        3000161,
+        3068034,
+        3013733,
+        3001180,
+        3028278,
+        2960684
+      ],
+      "normalized_cavity": [
+        68522,
+        104902,
+        124903,
+        147130,
+        218699,
+        258928,
+        290430,
+        375960,
+        349603,
+        230954
+      ],
+      "normalized_depth_percent": [
+        {
+          "estimate": 3.375504562118407,
+          "low": 2.881927152591408,
+          "high": 3.829855264963805,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 3.479332034053686,
+          "low": 2.83842109803696,
+          "high": 4.139729333678131,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 4.107492030209895,
+          "low": 2.851208813839884,
+          "high": 5.55783769989169,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 4.903465419954001,
+          "low": 3.581036106016739,
+          "high": 6.735281162228783,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 7.289575459450343,
+          "low": 2.610372379710927,
+          "high": 13.677217780573423,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 8.439541413165564,
+          "low": 4.169793810529919,
+          "high": 14.752598340694266,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 9.636885550246156,
+          "low": 5.414035277074297,
+          "high": 14.905576872295363,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 12.527072684744,
+          "low": 7.997945399114186,
+          "high": 20.725008750945587,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 11.544613803620408,
+          "low": 6.859380296572262,
+          "high": 16.545706591627507,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 7.800697406410141,
+          "low": 4.2328451716841,
+          "high": 12.087307629998845,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        }
+      ],
+      "width_bins": [
+        46048,
+        287807,
+        572356,
+        533172,
+        448940,
+        273111,
+        8597
+      ],
+      "headroom_bins": [
+        29079,
+        248102,
+        494403,
+        562760,
+        486070,
+        339142,
+        10475
+      ],
+      "broad_core_bins": [
+        258,
+        53,
+        29,
+        14,
+        4
+      ],
+      "component_bins": [
+        985,
+        234,
+        125,
+        35,
+        6,
+        3
+      ]
+    }
+  },
+  "revised-v14": {
+    "unconditional": {
+      "cavity_percent": {
+        "estimate": 10.4838293424316,
+        "low": 9.181043338886354,
+        "high": 11.880572575977274,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "dry_air_percent": {
+        "estimate": 10.4838293424316,
+        "low": 9.181043338886354,
+        "high": 11.880572575977274,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "near_solid_window_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": true
+      },
+      "passable_portals_per_km2": {
+        "estimate": 442.5048828125,
+        "low": 296.59271240234375,
+        "high": 591.278076171875,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "encountered_portals_per_1000_walked_blocks": {
+        "estimate": 1.613721241182166,
+        "low": 0.7768350170985874,
+        "high": 2.61699378791044,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "blocked_surface_walk_percent": {
+        "estimate": 32.421875,
+        "low": 20.3125,
+        "high": 46.09375,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_largest_geometry_component": {
+        "estimate": 94532.59375,
+        "low": 76823.916015625,
+        "high": 114629.333984375,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_largest_standing_component": {
+        "estimate": 5761.125,
+        "low": 4788.51171875,
+        "high": 6877.07421875,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_geometry_route_lower_bound": {
+        "estimate": 403.375,
+        "low": 377.07421875,
+        "high": 429.5703125,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "mean_standing_route_lower_bound": {
+        "estimate": 253.125,
+        "low": 234.32421875,
+        "high": 273.84765625,
+        "seed_clusters": 16,
+        "windows": 64,
+        "zero_observations": false
+      },
+      "total_walked_blocks": 21689,
+      "cavity_window_percentiles": {
+        "min": 3.907049173242149,
+        "p50": 8.737666325014843,
+        "p95": 19.91450438607051,
+        "p99": 29.29664525285985,
+        "max": 32.03731761212432
+      },
+      "normalized_geology": [
+        1146733,
+        7402629,
+        8396146,
+        8098344,
+        8091583,
+        8605867,
+        8205386,
+        8103873,
+        8303936,
+        7770689
+      ],
+      "normalized_cavity": [
+        24378,
+        270896,
+        631607,
+        877137,
+        1038059,
+        1189231,
+        1174949,
+        1052437,
+        1026697,
+        485767
+      ],
+      "normalized_depth_percent": [
+        {
+          "estimate": 2.12586539325196,
+          "low": 1.7229394596337049,
+          "high": 2.6341913106808823,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 3.6594566605999033,
+          "low": 3.1809710991620643,
+          "high": 4.291430130322339,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 7.52258238482275,
+          "low": 6.446070726003479,
+          "high": 8.663953854727477,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 10.831066203164498,
+          "low": 8.978573842822826,
+          "high": 12.802469464457968,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 12.828874152313583,
+          "low": 10.745677458624927,
+          "high": 14.94858897835963,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 13.81884010059649,
+          "low": 11.169668555468407,
+          "high": 16.958629311059877,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 14.319241044845421,
+          "low": 12.235139291074521,
+          "high": 16.79577363955418,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 12.986839749339605,
+          "low": 10.89981554929867,
+          "high": 15.124946516260916,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 12.363980165550409,
+          "low": 10.00195455946038,
+          "high": 14.818923317676147,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        },
+        {
+          "estimate": 6.251273213996854,
+          "low": 4.723886616508429,
+          "high": 7.934444212750623,
+          "seed_clusters": 16,
+          "windows": 64,
+          "zero_observations": false
+        }
+      ],
+      "width_bins": [
+        99138,
+        570240,
+        1775515,
+        1682065,
+        1780351,
+        1539272,
+        324577
+      ],
+      "headroom_bins": [
+        222032,
+        1299647,
+        1787988,
+        2213110,
+        1928087,
+        319227,
+        1067
+      ],
+      "broad_core_bins": [
+        1036,
+        275,
+        157,
+        56,
+        25
+      ],
+      "component_bins": [
+        2749,
+        842,
+        434,
+        86,
+        53,
+        3
+      ]
+    },
+    "lowland-conditional": {
+      "cavity_percent": {
+        "estimate": 12.182112504900498,
+        "low": 8.497657181851219,
+        "high": 16.63346163694983,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "dry_air_percent": {
+        "estimate": 12.182112504900498,
+        "low": 8.497657181851219,
+        "high": 16.63346163694983,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "near_solid_window_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "passable_portals_per_km2": {
+        "estimate": 205.99365234375,
+        "low": 129.69970703125,
+        "high": 259.3994140625,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "encountered_portals_per_1000_walked_blocks": {
+        "estimate": 0.5050505050505051,
+        "low": 0.0,
+        "high": 1.0050251256281406,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "blocked_surface_walk_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "mean_largest_geometry_component": {
+        "estimate": 129060.5,
+        "low": 84959.75,
+        "high": 180205.25,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_largest_standing_component": {
+        "estimate": 5442.875,
+        "low": 3934.0,
+        "high": 7176.5,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_geometry_route_lower_bound": {
+        "estimate": 423.25,
+        "low": 316.25,
+        "high": 536.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_standing_route_lower_bound": {
+        "estimate": 252.625,
+        "low": 188.125,
+        "high": 339.25,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "total_walked_blocks": 3960,
+      "cavity_window_percentiles": {
+        "min": 4.630654440834632,
+        "p50": 11.899951481122592,
+        "p95": 21.901322746265606,
+        "p99": 24.99174880346942,
+        "max": 25.764355317770377
+      },
+      "normalized_geology": [
+        149273,
+        1114581,
+        1139892,
+        1112863,
+        1108754,
+        1174176,
+        1121985,
+        1107177,
+        1129780,
+        1075171
+      ],
+      "normalized_cavity": [
+        1969,
+        28342,
+        96307,
+        114694,
+        129686,
+        154372,
+        193103,
+        216660,
+        209413,
+        102129
+      ],
+      "normalized_depth_percent": [
+        {
+          "estimate": 1.3190597093915175,
+          "low": 0.7548845470692718,
+          "high": 2.3646914847420155,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 2.5428389681862513,
+          "low": 1.3155485289824986,
+          "high": 3.9330990796378837,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 8.448782867148818,
+          "low": 3.4046290784388824,
+          "high": 14.358834356211363,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 10.306210198380214,
+          "low": 3.6320269827732643,
+          "high": 17.340061125957863,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 11.696553067677772,
+          "low": 4.951388157663824,
+          "high": 18.828279529589896,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 13.147262420625188,
+          "low": 9.601646889799394,
+          "high": 16.869762569832403,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 17.210836151998468,
+          "low": 12.117135681793451,
+          "high": 20.656657407373697,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 19.568686849528124,
+          "low": 14.955127236473471,
+          "high": 24.666016267456115,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 18.53573262051019,
+          "low": 12.4523624655407,
+          "high": 26.5625930510293,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 9.498861111395303,
+          "low": 4.138980167500291,
+          "high": 16.302510644380973,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        }
+      ],
+      "width_bins": [
+        13453,
+        71078,
+        215808,
+        266621,
+        336216,
+        321019,
+        22480
+      ],
+      "headroom_bins": [
+        29488,
+        162834,
+        256826,
+        384078,
+        320094,
+        93355,
+        0
+      ],
+      "broad_core_bins": [
+        167,
+        41,
+        32,
+        11,
+        4
+      ],
+      "component_bins": [
+        327,
+        95,
+        45,
+        11,
+        7,
+        1
+      ]
+    },
+    "mountain-conditional": {
+      "cavity_percent": {
+        "estimate": 11.724016491392923,
+        "low": 8.011164511059658,
+        "high": 15.358260941733663,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "dry_air_percent": {
+        "estimate": 11.724016491392923,
+        "low": 8.011164511059658,
+        "high": 15.358260941733663,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "near_solid_window_percent": {
+        "estimate": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": true
+      },
+      "passable_portals_per_km2": {
+        "estimate": 1480.1025390625,
+        "low": 999.45068359375,
+        "high": 2166.748046875,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "encountered_portals_per_1000_walked_blocks": {
+        "estimate": 3.3003300330033003,
+        "low": 0.0,
+        "high": 8.333333333333334,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "blocked_surface_walk_percent": {
+        "estimate": 84.375,
+        "low": 75.0,
+        "high": 93.75,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_largest_geometry_component": {
+        "estimate": 194709.625,
+        "low": 118241.25,
+        "high": 271178.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_largest_standing_component": {
+        "estimate": 6971.125,
+        "low": 5168.25,
+        "high": 8136.125,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_geometry_route_lower_bound": {
+        "estimate": 486.0,
+        "low": 380.75,
+        "high": 615.125,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "mean_standing_route_lower_bound": {
+        "estimate": 258.75,
+        "low": 234.5,
+        "high": 283.0,
+        "seed_clusters": 4,
+        "windows": 8,
+        "zero_observations": false
+      },
+      "total_walked_blocks": 909,
+      "cavity_window_percentiles": {
+        "min": 5.064289719621904,
+        "p50": 7.86694802969428,
+        "p95": 23.881549643510013,
+        "p99": 24.30925013117271,
+        "max": 24.416175253088387
+      },
+      "normalized_geology": [
+        990312,
+        1971174,
+        1998525,
+        1959283,
+        1959765,
+        2024828,
+        1971696,
+        1959493,
+        1985621,
+        1919988
+      ],
+      "normalized_cavity": [
+        33708,
+        189380,
+        228820,
+        277688,
+        268512,
+        268314,
+        273013,
+        307732,
+        209819,
+        140175
+      ],
+      "normalized_depth_percent": [
+        {
+          "estimate": 3.4037757797542594,
+          "low": 2.951379590222358,
+          "high": 3.83874916316417,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 9.607472501159208,
+          "low": 7.527543294038507,
+          "high": 11.64398553387511,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 11.449443964924132,
+          "low": 8.019170717850583,
+          "high": 15.037284411367358,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 14.172939794812693,
+          "low": 7.596745901698513,
+          "high": 20.617410707067442,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 13.701234586799949,
+          "low": 7.1659021099291325,
+          "high": 20.554793410320983,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 13.251199608065475,
+          "low": 8.253770715156733,
+          "high": 20.634810539835307,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 13.846607184880428,
+          "low": 9.126404797625401,
+          "high": 17.686608482066458,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 15.704674627569478,
+          "low": 9.357441956474728,
+          "high": 25.75299695997074,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 10.566920877649864,
+          "low": 5.2325106213136285,
+          "high": 17.75201660887491,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        },
+        {
+          "estimate": 7.300826880168001,
+          "low": 4.551957183223917,
+          "high": 9.43279468974707,
+          "seed_clusters": 4,
+          "windows": 8,
+          "zero_observations": false
+        }
+      ],
+      "width_bins": [
+        24853,
+        120951,
+        348005,
+        447105,
+        479508,
+        558932,
+        217807
+      ],
+      "headroom_bins": [
+        34968,
+        196311,
+        324305,
+        465711,
+        697398,
+        446517,
+        31951
+      ],
+      "broad_core_bins": [
+        199,
+        45,
+        31,
+        18,
+        5
+      ],
+      "component_bins": [
+        770,
+        144,
+        70,
+        19,
+        10,
+        2
+      ]
+    }
+  }
+}

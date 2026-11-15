@@ -1,0 +1,31 @@
+{
+  "seed": 2026,
+  "generator": 14,
+  "eye": [
+    94.5,
+    47,
+    -180.5
+  ],
+  "direction": [
+    -1,
+    -0.35,
+    0.35
+  ],
+  "diagnostic_light": true,
+  "supported_floor_torches": true,
+  "command": [
+    "/workspace/rustcraft/target/release/examples/terrain_gallery",
+    "2026",
+    "94",
+    "-180",
+    "0",
+    "--generator=14",
+    "--capture=/tmp/rustcraft-cave-v3-dh3lybe8/capture.ppm",
+    "--capture-frames=120",
+    "--radius=4",
+    "--eye=94.5,47,-180.5",
+    "--direction=-1,-0.35,0.35",
+    "--cave-torches",
+    "--diagnostic-light"
+  ]
+}

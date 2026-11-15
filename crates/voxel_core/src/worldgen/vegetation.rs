@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! V9 vegetation only. Fixed candidate neighborhood; no loaded-world dependency.
-use super::{Biome, Climate, Generator, biome, caves, hash, hydrology, noise};
+use super::{Biome, Climate, Generator, biome, hash, hydrology, noise};
 use crate::{Block, BlockPos, Chunk, ChunkPos};
 use std::collections::BTreeMap;
 
@@ -100,7 +100,7 @@ struct Roots<'a> {
     ecology: Option<([i32; 2], &'a [super::biome_v2::Sample])>,
     elevation_cache: BTreeMap<[i32; 2], i32>,
     geography: hydrology::Geography,
-    caves: caves::Plan,
+    caves: super::caves_v3::Versioned,
     water: BTreeMap<[i32; 2], hydrology::Surface>,
 }
 impl Roots<'_> {
@@ -110,7 +110,7 @@ impl Roots<'_> {
             ecology: None,
             elevation_cache: BTreeMap::new(),
             geography: hydrology::Geography::for_generator(g, min, max),
-            caves: caves::Plan::new(g.config.seed, min, max),
+            caves: super::caves_v3::Versioned::new(g, min, max),
             water: BTreeMap::new(),
         }
     }

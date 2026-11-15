@@ -32,7 +32,7 @@ impl RegionIdentity {
     }
     pub fn validate_generator(self) -> Result<(), crate::worldgen::UnsupportedGenerator> {
         match self.generator {
-            3..=13 => Ok(()),
+            3..=14 => Ok(()),
             v => Err(crate::worldgen::UnsupportedGenerator(v)),
         }
     }

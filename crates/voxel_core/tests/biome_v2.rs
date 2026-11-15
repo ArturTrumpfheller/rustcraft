@@ -215,8 +215,8 @@ fn append_only_biome_ids_and_v12_fail_closed_identity() {
         assert_eq!(b as usize, i);
         assert!(!b.name().is_empty());
     }
-    assert_eq!(voxel_core::worldgen::CURRENT_LOCAL_GENERATOR, 13);
-    for version in [0, 14, u32::MAX] {
+    assert_eq!(voxel_core::worldgen::CURRENT_LOCAL_GENERATOR, 14);
+    for version in [0, 15, u32::MAX] {
         assert!(Generator::new(GenerationConfig { seed: 0, version }).is_err());
     }
     assert!(biome_v2::sample(&generator(42, 11), 0, 0).is_none());

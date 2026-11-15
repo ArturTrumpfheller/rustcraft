@@ -197,8 +197,8 @@ fn setup(
     }
     if scene.cave_torches {
         assert!(
-            scene.version == 7 || scene.version == 8,
-            "procedural cave torch fixture requires v7/v8"
+            (7..=14).contains(&scene.version),
+            "procedural cave torch fixture requires v7–v14"
         );
         use voxel_core::{Block, BlockPos};
         let mut count = 0;
@@ -220,6 +220,10 @@ fn setup(
             "CAVE_LIGHTING_FIXTURE supported_floor_torches={count}; procedural geometry unmodified"
         );
     }
+    println!(
+        "DIAGNOSTIC_LIGHT development_only={}",
+        std::env::args().any(|a| a == "--diagnostic-light")
+    );
     // Gallery-only larger context: each solve still respects the production
     // seven-column target bound. Fifteen-cell halos make independent fields
     // agree exactly at the batch edges.
@@ -296,6 +300,18 @@ fn setup(
         (p.0[0] - center[0]).abs() <= radius && (p.0[2] - center[1]).abs() <= radius
     }) {
         let mut m = mesh_chunk_lit(&world, p, &lights[&batch_key(p)]);
+        if std::env::args().any(|a| a == "--diagnostic-light") {
+            // Development-only visibility floor through the original shader.
+            // Preserve face orientation and each vertex's existing AO ratio.
+            for (color, normal) in m.colors.iter_mut().zip(&m.normals) {
+                let n = normal.map(|v| v as i32);
+                let sky = (color[2] * 15.).round() as u8;
+                let unoccluded = voxel_core::lighting::face_color(sky, n)[0];
+                let ao = color[0] / unoccluded.max(0.001);
+                color[1] = color[1].max(voxel_core::lighting::face_color(10, n)[0] * ao);
+            }
+        }
+
         if !m.plants.indices.is_empty() {
             let v = std::mem::take(&mut m.plants);
             let mesh = Mesh::new(
@@ -414,6 +430,18 @@ fn setup(
         eye + Vec3::new(origin[0] as f32, 0., origin[1] as f32),
         scene.cave_torches
     );
+    if scene.eye.is_some() && scene.version == 14 {
+        let wp = eye + Vec3::new(origin[0] as f32, 0., origin[1] as f32);
+        let p = voxel_core::BlockPos([
+            wp.x.floor() as i32,
+            wp.y.floor() as i32,
+            wp.z.floor() as i32,
+        ]);
+        assert!(
+            !world.block(p).is_solid(),
+            "development camera must be in actual air: {p:?}"
+        );
+    }
     commands.spawn((
         Camera3d::default(),
         Projection::Perspective(PerspectiveProjection {

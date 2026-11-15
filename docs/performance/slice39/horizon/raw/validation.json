@@ -1,0 +1,38 @@
+{
+  "local": {
+    "workspace-idle-tests": {
+      "totals": {
+        "passed": 596,
+        "failed": 0,
+        "ignored": 7
+      },
+      "sha256": "c4d9ea4c2aca01d52cd29d5f7c0fc70dc84f2cf3149da1752e93b99c7e635ead"
+    },
+    "optimized-final-tests": {
+      "totals": {
+        "passed": 374,
+        "failed": 0,
+        "ignored": 1
+      },
+      "sha256": "5a71168afdddad9eca34850b857cf8883e6bb0840d9b3f2cc222dc1ceb6d5157"
+    }
+  },
+  "format": true,
+  "clippy_locked_all_targets": true,
+  "release_workspace_locked": true,
+  "independent_noise_samples": 720,
+  "analysis_unit_tests": 6,
+  "historical_fixtures_changed": false,
+  "source_ci": "source-ci.json",
+  "geometry_verification_windows": 80,
+  "notes": "Contended failed/interrupted attempts are separate diagnostics; final idle suite passed without changing test budgets.",
+  "bounded_site_helper_candidates": 130,
+  "final_release_client_sha256": "20e75015ab2ddcb6cabbb63e1ec87e34a32267f6a5ae69357fe6279999b8b4d7",
+  "final_release_client_scripted_flow": {
+    "metadata": "docs/images/slice39/horizon/gameplay-captures.json",
+    "exit_code": 0,
+    "torch_count_before": 32,
+    "torch_count_after": 31
+  },
+  "final_ci_checks": "https://github.com/ArturTrumpfheller/rustcraft/pull/57/checks"
+}

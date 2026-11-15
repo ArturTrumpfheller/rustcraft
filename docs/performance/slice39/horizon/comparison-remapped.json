@@ -1,0 +1,35 @@
+{
+  "metrics": {
+    "width_bins": {
+      "previous": 0.31956128745979,
+      "revised": 0.060564700461073886,
+      "error_reduction": {
+        "estimate": 0.25899658699871614,
+        "low": 0.1624566114750048,
+        "high": 0.383917485209738
+      }
+    },
+    "headroom_bins": {
+      "previous": 0.4624461774643934,
+      "revised": 0.07807609597120856,
+      "error_reduction": {
+        "estimate": 0.38437008149318486,
+        "low": 0.28369466109431996,
+        "high": 0.4694973146703974
+      }
+    },
+    "normalized_depth_mean_absolute_error_percentage_points": {
+      "previous": 4.440656647300559,
+      "revised": 1.3114393072963093,
+      "error_reduction": {
+        "estimate": 3.1292173400042493,
+        "low": 1.6618523706155464,
+        "high": 4.596053231590787
+      }
+    }
+  },
+  "windows": 64,
+  "seed_clusters": 16,
+  "method": "4096 paired seed-cluster resamples; RNG392027; histogram total variation; depth-bin equal-weight MAE",
+  "limits": "Descriptive evaluation cohort, not held-out proof of Minecraft parity. Vertical domains differ; remapped sensitivity is separate."
+}
