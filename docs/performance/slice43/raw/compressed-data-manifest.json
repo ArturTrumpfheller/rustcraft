@@ -1,0 +1,432 @@
+{
+  "captures/broad-plains-panorama-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/broad-plains-panorama-v16.log",
+    "uncompressed_bytes": 497,
+    "uncompressed_sha256": "02c277a93f3e10f8042d5776fc7e3c530d0bb351ca79bb9d1ab677d4388aa3e3"
+  },
+  "captures/broad-plains-panorama-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/broad-plains-panorama-v17.log",
+    "uncompressed_bytes": 487,
+    "uncompressed_sha256": "5ad80fcd3487d20a9334be1522e09a5674e193487aeff79299da68f6bfa95de5"
+  },
+  "captures/broad-plains-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/broad-plains-v16.log",
+    "uncompressed_bytes": 508,
+    "uncompressed_sha256": "61c908a106dba517379cbb73037b5a24d8ba25e3579bad5b7b10cd1c86e8c8cf"
+  },
+  "captures/broad-plains-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/broad-plains-v17.log",
+    "uncompressed_bytes": 497,
+    "uncompressed_sha256": "b1255108c1c3c2c53e250531034cd941499f167f1037b784de98334977bda414"
+  },
+  "captures/coastal-lowlands-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/coastal-lowlands-v16.log",
+    "uncompressed_bytes": 491,
+    "uncompressed_sha256": "0843a9736ade6126f6efde1409eaabcf934958649dc5fd5d0883fdc7cf039c86"
+  },
+  "captures/coastal-lowlands-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/coastal-lowlands-v17.log",
+    "uncompressed_bytes": 480,
+    "uncompressed_sha256": "f4b0480656b89981d6d99c5b5864655c0b3f1b53562b77789e6552ec3d53adf0"
+  },
+  "captures/connected-range-panorama-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/connected-range-panorama-v16.log",
+    "uncompressed_bytes": 489,
+    "uncompressed_sha256": "5a988644c07f9863139e95abaf3c15d5d29d6f89a1a1abc117eae788cb67c620"
+  },
+  "captures/connected-range-panorama-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/connected-range-panorama-v17.log",
+    "uncompressed_bytes": 498,
+    "uncompressed_sha256": "fc4968497e2ce362ddbdeefe15f7470c30c79da6e8fae2d846c5e9c42bf7870d"
+  },
+  "captures/connected-range-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/connected-range-v16.log",
+    "uncompressed_bytes": 499,
+    "uncompressed_sha256": "4e435a571876de05425029b2833f4b4d9f3ee62c3f8a6420f74d639685e4f6c3"
+  },
+  "captures/connected-range-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/connected-range-v17.log",
+    "uncompressed_bytes": 505,
+    "uncompressed_sha256": "8b2cf753be58ec8da227017a19092d8ad5e9a64bd97c9c0be04e0ab2f78f5b7a"
+  },
+  "captures/foothills-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/foothills-v16.log",
+    "uncompressed_bytes": 506,
+    "uncompressed_sha256": "8da2325fada01a75af30dd57c7165c942a80fc84fa3dde5360b8038385e19ad1"
+  },
+  "captures/foothills-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/foothills-v17.log",
+    "uncompressed_bytes": 515,
+    "uncompressed_sha256": "f3ed1641b4f57bf77b5523320fc9303a3152159babc5ec31bba3115208914a70"
+  },
+  "captures/forested-lowlands-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/forested-lowlands-v16.log",
+    "uncompressed_bytes": 496,
+    "uncompressed_sha256": "3ce1e0c2f4061496e4338328a799bbcaf487782d310f7a8256cf0b370cdf66fb"
+  },
+  "captures/forested-lowlands-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/forested-lowlands-v17.log",
+    "uncompressed_bytes": 493,
+    "uncompressed_sha256": "e29d272b3aba3d987911caece7e734947116871c4f034f0b39e95af61972ff01"
+  },
+  "captures/mountain-valley-panorama-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/mountain-valley-panorama-v16.log",
+    "uncompressed_bytes": 488,
+    "uncompressed_sha256": "2ebac9eddea1178da085177d89c45e37cf109f02cdb0fae7bc2a247b5489525c"
+  },
+  "captures/mountain-valley-panorama-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/mountain-valley-panorama-v17.log",
+    "uncompressed_bytes": 487,
+    "uncompressed_sha256": "e076fe6e3783954f876fa887c6c5dda8a300b4ebb33c1f0be6d919cbec7653b2"
+  },
+  "captures/mountain-valley-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/mountain-valley-v16.log",
+    "uncompressed_bytes": 497,
+    "uncompressed_sha256": "916578b81dd09b143071ca9c624be10721d52b337a552704458f0fce17985d3b"
+  },
+  "captures/mountain-valley-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/mountain-valley-v17.log",
+    "uncompressed_bytes": 497,
+    "uncompressed_sha256": "9e149a8c751e6dc4f9d1067c5ae7b9e22f83bd745d54a6919f144265fca98136"
+  },
+  "captures/rocky-cliff-panorama-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/rocky-cliff-panorama-v16.log",
+    "uncompressed_bytes": 496,
+    "uncompressed_sha256": "bd43059943bd2a06be3dec068dbe68026ab394b9fbff8f957b593d4576a52290"
+  },
+  "captures/rocky-cliff-panorama-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/rocky-cliff-panorama-v17.log",
+    "uncompressed_bytes": 502,
+    "uncompressed_sha256": "9d7b5430b728baaac4dde3c2e78c2b3fb58bf0d95e4583d5af4c0033667c21b4"
+  },
+  "captures/rocky-cliff-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/rocky-cliff-v16.log",
+    "uncompressed_bytes": 506,
+    "uncompressed_sha256": "5d2dfb62dc492b9baaa0390cb5dba4a4a1f43475834f25ffd2596c0deaeaf9d6"
+  },
+  "captures/rocky-cliff-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/rocky-cliff-v17.log",
+    "uncompressed_bytes": 511,
+    "uncompressed_sha256": "860753eaebe3766e50e3e7dae5119930e65e273c70d4697c07fc6ecd0333dcdc"
+  },
+  "captures/rolling-hills-panorama-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/rolling-hills-panorama-v16.log",
+    "uncompressed_bytes": 488,
+    "uncompressed_sha256": "358fc4d56686c62affc1dfba07fa9e4a4e311555599047ce1349db5cc716c173"
+  },
+  "captures/rolling-hills-panorama-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/rolling-hills-panorama-v17.log",
+    "uncompressed_bytes": 488,
+    "uncompressed_sha256": "ef3645bac1ff06f94ad87fab27bfcf01191ab88a8f0bd12f9bcd4e36cd6331f6"
+  },
+  "captures/rolling-hills-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/rolling-hills-v16.log",
+    "uncompressed_bytes": 500,
+    "uncompressed_sha256": "c558c11a7bd2bc7bc38df318341c5f551bdbeb7d08967267b7a704d395ad0f24"
+  },
+  "captures/rolling-hills-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/rolling-hills-v17.log",
+    "uncompressed_bytes": 500,
+    "uncompressed_sha256": "dc7d16ae3aba893039dc65fdcb6dc1e8ae9e1892125c53480751ff2f16193cb5"
+  },
+  "captures/shared-lowland-control-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/shared-lowland-control-v16.log",
+    "uncompressed_bytes": 493,
+    "uncompressed_sha256": "24fa3075bd60f51720fbc7ae881fdf972c149e95acebb888b43b987f1b14d6e8"
+  },
+  "captures/shared-lowland-control-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/shared-lowland-control-v17.log",
+    "uncompressed_bytes": 492,
+    "uncompressed_sha256": "b645ac0588d20e10ff93b6eceefafe2b161e860547f9c95f4fda8e2d8dc7a351"
+  },
+  "captures/snowy-peaks-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/snowy-peaks-v16.log",
+    "uncompressed_bytes": 499,
+    "uncompressed_sha256": "357d61c15a253495545f29fb6a8e0b1c5803e38aa52ce2422529510a693d0401"
+  },
+  "captures/snowy-peaks-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/snowy-peaks-v17.log",
+    "uncompressed_bytes": 510,
+    "uncompressed_sha256": "bba06727429a7e5ddacc31056bb3ef7ae5440b7646f299233c8649bffb821c5c"
+  },
+  "captures/terrain-transition-panorama-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/terrain-transition-panorama-v16.log",
+    "uncompressed_bytes": 496,
+    "uncompressed_sha256": "7f7c872be0a068344c7afeacdb3c67bbbf3e062f0cc3bf47d4f16918abee84ad"
+  },
+  "captures/terrain-transition-panorama-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/terrain-transition-panorama-v17.log",
+    "uncompressed_bytes": 496,
+    "uncompressed_sha256": "77b532f4f997b78cf7a3a825d867127d3ce1e729d6c92cab73ef881d5708ba5b"
+  },
+  "captures/terrain-transition-v16.log.gz": {
+    "source": "docs/performance/slice43/captures/terrain-transition-v16.log",
+    "uncompressed_bytes": 506,
+    "uncompressed_sha256": "bb9262e4a24c0541e23d9f0ae4f5ecfaf2bef31ad61b01309ebdee7555b57957"
+  },
+  "captures/terrain-transition-v17.log.gz": {
+    "source": "docs/performance/slice43/captures/terrain-transition-v17.log",
+    "uncompressed_bytes": 506,
+    "uncompressed_sha256": "26f6ea6d69b08837b1287ae101eb423c9faef9ffd26e798db92a185e829841d4"
+  },
+  "cave-integration.jsonl.gz": {
+    "source": "work/slice43/cave-integration.jsonl",
+    "uncompressed_bytes": 10137,
+    "uncompressed_sha256": "98cb4e3103857a9af2c504bff17464ae965b8c86a12c41ef247207e397861318"
+  },
+  "ecology-v16.csv.gz": {
+    "source": "work/slice43/v16-ecology.csv",
+    "uncompressed_bytes": 3795453,
+    "uncompressed_sha256": "3bee8225d791c391392301ae57efd0c066af07e201c4cc1d47849d5aee50a972"
+  },
+  "ecology-v17.csv.gz": {
+    "source": "work/slice43/v17-ecology.csv",
+    "uncompressed_bytes": 3786106,
+    "uncompressed_sha256": "9d9ead46e913410b002aebe984ad311b2b46b935f49996b73545d295a19dd6a3"
+  },
+  "exposure-v16-baseline.jsonl.gz": {
+    "source": "work/slice43/exposure-v16-baseline.jsonl",
+    "uncompressed_bytes": 3156511,
+    "uncompressed_sha256": "d7c1b92fda899bf2ad91f6497fadb89607594ba69864bc4880af68fc8ac8a4f1"
+  },
+  "exposure-v16-fresh-checks.jsonl.gz": {
+    "source": "work/slice43/exposure-v16.jsonl",
+    "uncompressed_bytes": 647053,
+    "uncompressed_sha256": "dfef15f376494d4cb8e4ad64151874ecd9aee2123316a2cf188315a0171115ed"
+  },
+  "exposure-v17.jsonl.gz": {
+    "source": "work/slice43/exposure-v17.jsonl",
+    "uncompressed_bytes": 1518778,
+    "uncompressed_sha256": "66fcc375a865d76e15350ab438336bed57567f56cbb39cbef8d65bb3d8922e5c"
+  },
+  "horizon-final-density16.csv.gz": {
+    "source": "work/slice43/horizon-final16.csv",
+    "uncompressed_bytes": 46575122,
+    "uncompressed_sha256": "9e75c9c0355ef0410c32c08ebfd02b99414a8066c149f6d392e4abf66f0882e8"
+  },
+  "horizon-final-volume32.csv.gz": {
+    "source": "work/slice43/horizon-bulk-final.csv",
+    "uncompressed_bytes": 11640725,
+    "uncompressed_sha256": "a27f9e2f6c9284466f145cd63c708e58e3cb1172b4e30e045ff4b44634cd3155"
+  },
+  "horizon-scalar-verified-prefix.csv.gz": {
+    "source": "work/slice43/horizon-scalar-verified-prefix.csv",
+    "uncompressed_bytes": 4178436,
+    "uncompressed_sha256": "f9bf18fed420a14dd933078d758218c4507f54265b1e886edf4f135b8bd82404"
+  },
+  "horizon-surface-proxy32.csv.gz": {
+    "source": "work/slice43/horizon-surface.csv",
+    "uncompressed_bytes": 11786906,
+    "uncompressed_sha256": "ab5fdd98703e2a9a93ea78322d57c62ea7ec079a57c78d702edc7bd41d23bb57"
+  },
+  "horizon-terrain-control16.csv.gz": {
+    "source": "work/slice43/horizon-uncaved16.csv",
+    "uncompressed_bytes": 46549786,
+    "uncompressed_sha256": "9dee4940db6c23c3e180b763841ef8e72fe32ae3fae873bde98cad67461b30b2"
+  },
+  "horizon-validation32.csv.gz": {
+    "source": "work/slice43/horizon-validation.csv",
+    "uncompressed_bytes": 10815798,
+    "uncompressed_sha256": "cab14d22a0018e71c8fdc94d2a509b76a1d197c00aaab61cb045299f595a3f5a"
+  },
+  "performance/core-performance/build.log.gz": {
+    "source": "work/slice43/core-performance/build.log",
+    "uncompressed_bytes": 220,
+    "uncompressed_sha256": "4c08d42c38d8911e9da097d2ad7d9ab8c9d7de1be62a761a5f0ad928c8523788"
+  },
+  "performance/core-performance/forward-v16.csv.gz": {
+    "source": "work/slice43/core-performance/forward-v16.csv",
+    "uncompressed_bytes": 136909,
+    "uncompressed_sha256": "4c98644c0dc2362f7305ce7fd8e03ba917585419516af6727e531d57d5b36d4d"
+  },
+  "performance/core-performance/forward-v17.csv.gz": {
+    "source": "work/slice43/core-performance/forward-v17.csv",
+    "uncompressed_bytes": 136043,
+    "uncompressed_sha256": "5620adfd47bebf1e3bc1d5efe17823c9a1baafad75a470f0be6789e540b03e5e"
+  },
+  "performance/core-performance/percentiles.csv.gz": {
+    "source": "work/slice43/core-performance/percentiles.csv",
+    "uncompressed_bytes": 115800,
+    "uncompressed_sha256": "8a8d2439f3a5516e5fee177e73e40cce7f0d5d67f51ad9ac0092c5a220d7f050"
+  },
+  "performance/core-performance/reverse-v16.csv.gz": {
+    "source": "work/slice43/core-performance/reverse-v16.csv",
+    "uncompressed_bytes": 136783,
+    "uncompressed_sha256": "e784bdf38ec07ce0f89e0f67c7952f4418b5b980c9c68b4d41d24d15bdee763a"
+  },
+  "performance/core-performance/reverse-v17.csv.gz": {
+    "source": "work/slice43/core-performance/reverse-v17.csv",
+    "uncompressed_bytes": 136109,
+    "uncompressed_sha256": "fa28b2058ba70d1f20343b6293b2fff5b67efb9f17a73c456091e8c5957b1c84"
+  },
+  "performance/stream-forward/comparison.csv.gz": {
+    "source": "work/slice43/stream-forward/comparison.csv",
+    "uncompressed_bytes": 181830,
+    "uncompressed_sha256": "5cfbcd6c0861108daccf93db6d46392e083c0995f9e5e13aeaf85ab6a9ae98fc"
+  },
+  "performance/stream-forward/percentiles.csv.gz": {
+    "source": "work/slice43/stream-forward/percentiles.csv",
+    "uncompressed_bytes": 333182,
+    "uncompressed_sha256": "c51821d49ade8cee220a9d52ca0d3783911e5c87d036dfc073e037eaea6bdd78"
+  },
+  "performance/stream-forward/samples.csv.gz": {
+    "source": "work/slice43/stream-forward/samples.csv",
+    "uncompressed_bytes": 15883285,
+    "uncompressed_sha256": "7c36e4b249de888aa39b0e36c1516c4d925b744db4bf312fc6108de9d7245f68"
+  },
+  "performance/stream-forward/v16-build.log.gz": {
+    "source": "work/slice43/stream-forward/v16-build.log",
+    "uncompressed_bytes": 398,
+    "uncompressed_sha256": "64f162dc1eb9d27214111231a2a06f803e4a3483c9d699c1e12fd80d534707cf"
+  },
+  "performance/stream-forward/v16.txt.gz": {
+    "source": "work/slice43/stream-forward/v16.txt",
+    "uncompressed_bytes": 9130901,
+    "uncompressed_sha256": "74c3ca3265d909847d494bd9574e53eb0880c9145b4b1d16c92caf33f6d86e12"
+  },
+  "performance/stream-forward/v17-build.log.gz": {
+    "source": "work/slice43/stream-forward/v17-build.log",
+    "uncompressed_bytes": 291,
+    "uncompressed_sha256": "4e0b6cce0d04436644e6bc62dcb4140453dfd4fb464edfa2d7a430113091f104"
+  },
+  "performance/stream-forward/v17.txt.gz": {
+    "source": "work/slice43/stream-forward/v17.txt",
+    "uncompressed_bytes": 8932645,
+    "uncompressed_sha256": "555e097dee7efb980a7ea04048e8b6c166db22dcdff48639fa66f6080f7d6818"
+  },
+  "performance/stream-reverse/comparison.csv.gz": {
+    "source": "work/slice43/stream-reverse/comparison.csv",
+    "uncompressed_bytes": 182012,
+    "uncompressed_sha256": "91558ffb8200de300ccd1b268765aa54662587a095aea26fa2266139de3a17cb"
+  },
+  "performance/stream-reverse/percentiles.csv.gz": {
+    "source": "work/slice43/stream-reverse/percentiles.csv",
+    "uncompressed_bytes": 333366,
+    "uncompressed_sha256": "e5e06356763c064e1ead1e0ff4c1992f84ed323ccc40978e76fa148fc0e04551"
+  },
+  "performance/stream-reverse/samples.csv.gz": {
+    "source": "work/slice43/stream-reverse/samples.csv",
+    "uncompressed_bytes": 15869827,
+    "uncompressed_sha256": "52a1ea284bf26ac6a51c42599af13b2c0bc1975cd9a9543f8142ccb67b5e8a1a"
+  },
+  "performance/stream-reverse/v16-build.log.gz": {
+    "source": "work/slice43/stream-reverse/v16-build.log",
+    "uncompressed_bytes": 398,
+    "uncompressed_sha256": "64f162dc1eb9d27214111231a2a06f803e4a3483c9d699c1e12fd80d534707cf"
+  },
+  "performance/stream-reverse/v16.txt.gz": {
+    "source": "work/slice43/stream-reverse/v16.txt",
+    "uncompressed_bytes": 9088348,
+    "uncompressed_sha256": "67cd3b06a4a5fd2997a8666f7556513f4960d59c47c8425e3554d9614740b48f"
+  },
+  "performance/stream-reverse/v17-build.log.gz": {
+    "source": "work/slice43/stream-reverse/v17-build.log",
+    "uncompressed_bytes": 291,
+    "uncompressed_sha256": "4e0b6cce0d04436644e6bc62dcb4140453dfd4fb464edfa2d7a430113091f104"
+  },
+  "performance/stream-reverse/v17.txt.gz": {
+    "source": "work/slice43/stream-reverse/v17.txt",
+    "uncompressed_bytes": 8959557,
+    "uncompressed_sha256": "fc6b9acb917577146b7dcf8b04ebcde87fbdd4cf89ebf4fde16c1f4bfdb6d12f"
+  },
+  "terrain-v16.csv.gz": {
+    "source": "work/slice43/v16-final16.csv",
+    "uncompressed_bytes": 62812701,
+    "uncompressed_sha256": "25f42c50c87feed7e2dbb01f85f8a829ed83e3a1ee6a59afad3e4a4e13970194"
+  },
+  "terrain-v17.csv.gz": {
+    "source": "work/slice43/v17-final.csv",
+    "uncompressed_bytes": 62645057,
+    "uncompressed_sha256": "80e793beb4d986e7558bd1a6be177c7489c8ef5db9b9e84d74f69280346122d5"
+  },
+  "terrain-validation-v16.csv.gz": {
+    "source": "work/slice43/v16-validation.csv",
+    "uncompressed_bytes": 14868724,
+    "uncompressed_sha256": "7fc995be31b6b00ebe9683f9de59fab8059f21365ea0d13a0e62b3af2ad57f70"
+  },
+  "terrain-validation-v17.csv.gz": {
+    "source": "work/slice43/v17-validation-final.csv",
+    "uncompressed_bytes": 14843793,
+    "uncompressed_sha256": "c10391591505bec9fc8893e7dea45259d83a5f586bcc8303669db39776b93655"
+  },
+  "validation/cache-fix-regression.log.gz": {
+    "source": "work/slice43/cache-fix-regression.log",
+    "uncompressed_bytes": 3247,
+    "uncompressed_sha256": "b7babffb9543e34ee863801fd0f6a0005abe46a77814eac269375f0a0ba60931"
+  },
+  "validation/clippy.log.gz": {
+    "source": "work/slice43/validation/clippy.log",
+    "uncompressed_bytes": 144,
+    "uncompressed_sha256": "b0577b6d558a5d2a0cd3d67123ab08777f936dea77a6e7fdb522d7320add67b9"
+  },
+  "validation/fmt.log.gz": {
+    "source": "work/slice43/validation/fmt.log",
+    "uncompressed_bytes": 0,
+    "uncompressed_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "validation/horizon-density-tests.log.gz": {
+    "source": "work/slice43/horizon-density-tests.log",
+    "uncompressed_bytes": 6671,
+    "uncompressed_sha256": "3dd7d5bc9ee04b67a347db845f09c381690ece7ed53c69c7b73498414130befa"
+  },
+  "validation/oracles-final.log.gz": {
+    "source": "work/slice43/oracles-final.log",
+    "uncompressed_bytes": 313,
+    "uncompressed_sha256": "ab6506d7096463486f8afa8a790f5eaa8b939a01b5e84a561377e157e6e934b4"
+  },
+  "validation/plant-save-regression.log.gz": {
+    "source": "work/slice43/plant-save-regression.log",
+    "uncompressed_bytes": 2213,
+    "uncompressed_sha256": "5e611214f11576256730fe8b8613f23ffc25dfa9726669d478a486eb10ad287a"
+  },
+  "validation/python-tests-final.log.gz": {
+    "source": "work/slice43/python-tests-final.log",
+    "uncompressed_bytes": 113,
+    "uncompressed_sha256": "5d0d962eb916fefb4d239adae2382ae532b67f7555f2557e4fa5fd3cf0dea107"
+  },
+  "validation/reference-cave-verification.log.gz": {
+    "source": "work/slice43/reference-cave-verification.log",
+    "uncompressed_bytes": 408,
+    "uncompressed_sha256": "478709b52c6686d65c7e82ba786f5f2b79459230d026c4ea45a3fce74f4eeef8"
+  },
+  "validation/reference-final-build.log.gz": {
+    "source": "work/slice43/reference-final-build.log",
+    "uncompressed_bytes": 175,
+    "uncompressed_sha256": "9c5438d355f887692c5f6cc2a78f2148b48daf02847dd8911fac912769cb95d7"
+  },
+  "validation/release-build.log.gz": {
+    "source": "work/slice43/validation/release-build.log",
+    "uncompressed_bytes": 62,
+    "uncompressed_sha256": "a2f9f7889e88ba38ddcfecdb5afc8516742ad9186965960a94adbbe4ac21b5ad"
+  },
+  "validation/release-core.log.gz": {
+    "source": "work/slice43/validation/release-core.log",
+    "uncompressed_bytes": 40352,
+    "uncompressed_sha256": "04a0e234283471d92d2c1e2bf74e67ed3771e17ee0050bed304103152b341b55"
+  },
+  "validation/required-checks-verified.log.gz": {
+    "source": "work/slice43/required-checks-verified.log",
+    "uncompressed_bytes": 64,
+    "uncompressed_sha256": "a389400d010ff21ad0acc5dd96dd40a1b04f61f707c1c978dd3e827546df013b"
+  },
+  "validation/session-regression-quiet.log.gz": {
+    "source": "work/slice43/session-regression-quiet.log",
+    "uncompressed_bytes": 517,
+    "uncompressed_sha256": "d7cf04114c21784b4fde3bd4f5bdb9bed8abf0146294aac6d95553fa5ffa7713"
+  },
+  "validation/textures-final.log.gz": {
+    "source": "work/slice43/textures-final.log",
+    "uncompressed_bytes": 32,
+    "uncompressed_sha256": "120c8276562070eb9680083cb33d901eca82bcccb3ea99d63b6c13d6a63593d9"
+  },
+  "validation/tree-save-regression.log.gz": {
+    "source": "work/slice43/tree-save-regression.log",
+    "uncompressed_bytes": 456,
+    "uncompressed_sha256": "a9e83d56c31293a4032a5603de9e7b118db29f7dc9925067a41de3c4a24fe760"
+  },
+  "validation/workspace-tests.log.gz": {
+    "source": "work/slice43/validation/workspace-tests.log",
+    "uncompressed_bytes": 63779,
+    "uncompressed_sha256": "e5bdee891ccb6a51368f6d03e4c0da31fde94dedae4bc1f2bb71b9699a56b3d3"
+  }
+}

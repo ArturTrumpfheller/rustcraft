@@ -1,0 +1,16 @@
+{
+  "samples": 32,
+  "warmups": 4,
+  "orders": [
+    [
+      16,
+      17
+    ],
+    [
+      17,
+      16
+    ]
+  ],
+  "percentile": "floor((n-1)*p/100)",
+  "limits": "Requested heap excludes bookkeeping, stacks and GPU. Both versions execute one verified binary. Scene names refer to historical locations; geometry changes. No physical GPU claim."
+}

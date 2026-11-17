@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! V16-only coherent surface exposure. V15 density and deep carvers are frozen.
+//! V16 surface exposure, reused with versioned terrain inputs in v17.
+//! V15 density and deep carver arithmetic remain frozen.
 use super::{Heights, STEP};
 use crate::worldgen::terrain_v4::gradient2;
 const Q: i32 = 1024;
@@ -36,7 +37,10 @@ impl Column {
 }
 impl Heights {
     pub(super) fn exposed(seed: u64, min: [i32; 2], max: [i32; 2]) -> Self {
-        let mut result = Self::refined(seed, min, max);
+        Self::exposed_for(16, seed, min, max)
+    }
+    pub(super) fn exposed_for(version: u32, seed: u64, min: [i32; 2], max: [i32; 2]) -> Self {
+        let mut result = Self::refined_for(version, seed, min, max);
         let start = min.map(|v| v.div_euclid(STEP));
         let size: [usize; 2] =
             std::array::from_fn(|i| (max[i].div_euclid(STEP) + 2 - start[i]) as usize);

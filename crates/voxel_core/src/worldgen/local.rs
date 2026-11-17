@@ -48,7 +48,7 @@ pub(super) fn terrain(g: &Generator, p: BlockPos, h: i32) -> Block {
         if water.depth() > 0 {
             return Block::Stone;
         } // tree admission separately rejects wet roots
-        if if matches!(g.config.version, 14..=16) {
+        if if matches!(g.config.version, 14..=17) {
             super::caves_v3::Versioned::new(g, [p.0[0], p.0[2]], [p.0[0], p.0[2]]).contains(p, h)
         } else {
             super::caves::point(g.config.seed, p, h)

@@ -1,3 +1,19 @@
+# Slice43 — Horizon-Informed Terrain Generation Rework
+
+- [x] Audit v16 terrain and execute pinned Horizon router, splines and final density
+- [x] Separate generator17 default with nested geographic responses, connected relief and bounded local density
+- [x] Preserve historical1–16 fixtures, saved identities/edits, bounds, sea level and formats
+- [x] Integrate unchanged v16 cave families with consistent versioned terrain heights/slopes
+- [x] Retain all fifteen biomes, supported vegetation and Hydrology v1 water containment
+- [x] Multi-seed geography, independent validation seeds, maps/slopes/cross-sections and 34 actual paired Bevy images
+- [x] Slice42 exposure regression, geological controls and independent deep-cave integration measurements
+- [x] Both-order CPU/full-column and radius2–4 streaming/resource measurements, including regressions
+- [x] All required locked local checks, independent fixtures, Python and executed-reference validation
+- [ ] Native Gentoo/Void X11/Wayland, Windows GUI and physical Radeon owner acceptance
+
+[Implementation, reproducible evidence and limits](performance/slice43/README.md).
+No automatic merge, world migration, Hydrology v2 or underground cave redesign.
+
 # Slice42 follow-up — Reduce Cave Entrance Frequency
 
 - [x] Separate v16 new-world default; historical1–15 and saved identities preserved

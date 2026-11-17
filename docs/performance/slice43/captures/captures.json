@@ -1,0 +1,1392 @@
+[
+  {
+    "file": "broad-plains-v16.png",
+    "sha256": "f4fdf1ec00082d49ee463c88bd1363e457e58a2792b270214c40e083d088595f",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "broad-plains",
+      "seed": 0,
+      "x": -2624,
+      "z": -3584,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 13,
+      "biome_v17": 0,
+      "relief128": 8,
+      "one_block_slope": 0
+    },
+    "generator": 16,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "-2624",
+      "-3584",
+      "45",
+      "--generator=16",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=0 center=(-2624, -3584) biome=Rocky Highlands",
+      "CAVE_CAMERA seed=0 generator=16 world_eye=Vec3(-2623.5, 48.62, -3583.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=0 x=-2624 z=-3584 surface_y=46 yaw=45 radius=4 overview=false feet=[-2623.5, 47.0, -3583.5]"
+    ]
+  },
+  {
+    "file": "broad-plains-v17.png",
+    "sha256": "80f58b70d0797001e04c853960ec6fbd36bfd87a679d59e2f08108d47dee91ff",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "broad-plains",
+      "seed": 0,
+      "x": -2624,
+      "z": -3584,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 13,
+      "biome_v17": 0,
+      "relief128": 8,
+      "one_block_slope": 0
+    },
+    "generator": 17,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "-2624",
+      "-3584",
+      "45",
+      "--generator=17",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=0 center=(-2624, -3584) biome=Plains",
+      "CAVE_CAMERA seed=0 generator=17 world_eye=Vec3(-2623.5, 15.62, -3583.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=0 x=-2624 z=-3584 surface_y=13 yaw=45 radius=4 overview=false feet=[-2623.5, 14.0, -3583.5]"
+    ]
+  },
+  {
+    "file": "rolling-hills-v16.png",
+    "sha256": "dd85ccf088efb22350686fd51dd6dbbbc50f9dc1569ea2829b8ec6eda08da6a5",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "rolling-hills",
+      "seed": 42,
+      "x": -2496,
+      "z": -3264,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 26,
+      "biome_v17": 0,
+      "relief128": 24,
+      "one_block_slope": 1
+    },
+    "generator": 16,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "42",
+      "-2496",
+      "-3264",
+      "45",
+      "--generator=16",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=42 center=(-2496, -3264) biome=Plains",
+      "CAVE_CAMERA seed=42 generator=16 world_eye=Vec3(-2495.5, 12.62, -3263.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=42 x=-2496 z=-3264 surface_y=10 yaw=45 radius=4 overview=false feet=[-2495.5, 11.0, -3263.5]"
+    ]
+  },
+  {
+    "file": "rolling-hills-v17.png",
+    "sha256": "a10dca576caf9b9c825780ec6ba0ed914454025c2d7330185b6580925b6fb530",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "rolling-hills",
+      "seed": 42,
+      "x": -2496,
+      "z": -3264,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 26,
+      "biome_v17": 0,
+      "relief128": 24,
+      "one_block_slope": 1
+    },
+    "generator": 17,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "42",
+      "-2496",
+      "-3264",
+      "45",
+      "--generator=17",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=42 center=(-2496, -3264) biome=Plains",
+      "CAVE_CAMERA seed=42 generator=17 world_eye=Vec3(-2495.5, 28.62, -3263.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=42 x=-2496 z=-3264 surface_y=26 yaw=45 radius=4 overview=false feet=[-2495.5, 27.0, -3263.5]"
+    ]
+  },
+  {
+    "file": "forested-lowlands-v16.png",
+    "sha256": "39f674616a8995ce339e5865ecf239b74d689e94b5ac79cde33dde55ceea9998",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "forested-lowlands",
+      "seed": 0,
+      "x": 1664,
+      "z": -3584,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 15,
+      "biome_v17": 1,
+      "relief128": 9,
+      "one_block_slope": 0
+    },
+    "generator": 16,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "1664",
+      "-3584",
+      "45",
+      "--generator=16",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=0 center=(1664, -3584) biome=Ocean",
+      "CAVE_CAMERA seed=0 generator=16 world_eye=Vec3(1664.5, -15.38, -3583.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=0 x=1664 z=-3584 surface_y=-18 yaw=45 radius=4 overview=false feet=[1664.5, -17.0, -3583.5]"
+    ]
+  },
+  {
+    "file": "forested-lowlands-v17.png",
+    "sha256": "bc0ab2cf85ff74b1328502e67e97760773075befd2590b86502c2455a529fe7a",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "forested-lowlands",
+      "seed": 0,
+      "x": 1664,
+      "z": -3584,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 15,
+      "biome_v17": 1,
+      "relief128": 9,
+      "one_block_slope": 0
+    },
+    "generator": 17,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "1664",
+      "-3584",
+      "45",
+      "--generator=17",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=0 center=(1664, -3584) biome=Forest",
+      "CAVE_CAMERA seed=0 generator=17 world_eye=Vec3(1664.5, 17.62, -3583.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=0 x=1664 z=-3584 surface_y=15 yaw=45 radius=4 overview=false feet=[1664.5, 16.0, -3583.5]"
+    ]
+  },
+  {
+    "file": "foothills-v16.png",
+    "sha256": "47fad26456837d6b673172c938698035a03332f48901f308093f0ad4060f32fd",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "foothills",
+      "seed": 2026,
+      "x": -1920,
+      "z": -3520,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 38,
+      "biome_v17": 4,
+      "relief128": 31,
+      "one_block_slope": 0
+    },
+    "generator": 16,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "2026",
+      "-1920",
+      "-3520",
+      "45",
+      "--generator=16",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=2026 center=(-1920, -3520) biome=Plains",
+      "CAVE_CAMERA seed=2026 generator=16 world_eye=Vec3(-1919.5, 23.62, -3519.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=2026 x=-1920 z=-3520 surface_y=21 yaw=45 radius=4 overview=false feet=[-1919.5, 22.0, -3519.5]"
+    ]
+  },
+  {
+    "file": "foothills-v17.png",
+    "sha256": "23fd7e8ca349bd659b19f0f25c54dae9e4ca2d9e01add7cb66eaf2724c8a024d",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "foothills",
+      "seed": 2026,
+      "x": -1920,
+      "z": -3520,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 38,
+      "biome_v17": 4,
+      "relief128": 31,
+      "one_block_slope": 0
+    },
+    "generator": 17,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "2026",
+      "-1920",
+      "-3520",
+      "45",
+      "--generator=17",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=2026 center=(-1920, -3520) biome=Rocky Highlands",
+      "CAVE_CAMERA seed=2026 generator=17 world_eye=Vec3(-1919.5, 40.62, -3519.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=2026 x=-1920 z=-3520 surface_y=38 yaw=45 radius=4 overview=false feet=[-1919.5, 39.0, -3519.5]"
+    ]
+  },
+  {
+    "file": "connected-range-v16.png",
+    "sha256": "f94086a73584dae90955ba02e1e5ea9e2327070fa1b7ce962c5b20d54e236ac7",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "connected-range",
+      "seed": 42,
+      "x": -1984,
+      "z": -2944,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 92,
+      "biome_v17": 9,
+      "relief128": 85,
+      "one_block_slope": 0
+    },
+    "generator": 16,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "42",
+      "-1984",
+      "-2944",
+      "45",
+      "--generator=16",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=42 center=(-1984, -2944) biome=Taiga",
+      "CAVE_CAMERA seed=42 generator=16 world_eye=Vec3(-1983.5, 34.62, -2943.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=42 x=-1984 z=-2944 surface_y=32 yaw=45 radius=4 overview=false feet=[-1983.5, 33.0, -2943.5]"
+    ]
+  },
+  {
+    "file": "connected-range-v17.png",
+    "sha256": "3609c996c8171d616a45de1b77d4a3270814bfffb0f9e06ae6b813a0bfbdd586",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "connected-range",
+      "seed": 42,
+      "x": -1984,
+      "z": -2944,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 92,
+      "biome_v17": 9,
+      "relief128": 85,
+      "one_block_slope": 0
+    },
+    "generator": 17,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "42",
+      "-1984",
+      "-2944",
+      "45",
+      "--generator=17",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=42 center=(-1984, -2944) biome=Snowy Slopes",
+      "CAVE_CAMERA seed=42 generator=17 world_eye=Vec3(-1983.5, 94.62, -2943.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=42 x=-1984 z=-2944 surface_y=92 yaw=45 radius=4 overview=false feet=[-1983.5, 93.0, -2943.5]"
+    ]
+  },
+  {
+    "file": "mountain-valley-v16.png",
+    "sha256": "7e389425f5fb4a9f60aafa3eba499bf9a922999d09d49ed3e9595c7f59fe78d9",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "mountain-valley",
+      "seed": 0,
+      "x": -1024,
+      "z": -3008,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 29,
+      "biome_v17": 0,
+      "relief128": 63,
+      "one_block_slope": 1
+    },
+    "generator": 16,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "-1024",
+      "-3008",
+      "45",
+      "--generator=16",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=0 center=(-1024, -3008) biome=Plains",
+      "CAVE_CAMERA seed=0 generator=16 world_eye=Vec3(-1023.5, 28.62, -3007.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=0 x=-1024 z=-3008 surface_y=26 yaw=45 radius=4 overview=false feet=[-1023.5, 27.0, -3007.5]"
+    ]
+  },
+  {
+    "file": "mountain-valley-v17.png",
+    "sha256": "cfb123864ce7e215a6ad6e08dd1c26484917d56c670a801f1d52c1240457ac1f",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "mountain-valley",
+      "seed": 0,
+      "x": -1024,
+      "z": -3008,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 29,
+      "biome_v17": 0,
+      "relief128": 63,
+      "one_block_slope": 1
+    },
+    "generator": 17,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "-1024",
+      "-3008",
+      "45",
+      "--generator=17",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=0 center=(-1024, -3008) biome=Plains",
+      "CAVE_CAMERA seed=0 generator=17 world_eye=Vec3(-1023.5, 31.62, -3007.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=0 x=-1024 z=-3008 surface_y=29 yaw=45 radius=4 overview=false feet=[-1023.5, 30.0, -3007.5]"
+    ]
+  },
+  {
+    "file": "rocky-cliff-v16.png",
+    "sha256": "22dd3f3e210b12cbe146b7b14eb3ee16addff1a6d14a9f7037376bf17becb89f",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "rocky-cliff",
+      "seed": 2026,
+      "x": -2368,
+      "z": -3584,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 86,
+      "biome_v17": 9,
+      "relief128": 104,
+      "one_block_slope": 3
+    },
+    "generator": 16,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "2026",
+      "-2368",
+      "-3584",
+      "45",
+      "--generator=16",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=2026 center=(-2368, -3584) biome=Plains",
+      "CAVE_CAMERA seed=2026 generator=16 world_eye=Vec3(-2367.5, 36.62, -3583.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=2026 x=-2368 z=-3584 surface_y=34 yaw=45 radius=4 overview=false feet=[-2367.5, 35.0, -3583.5]"
+    ]
+  },
+  {
+    "file": "rocky-cliff-v17.png",
+    "sha256": "5acb2734e7029c941221fbb2ae5655cd98f7bf381344661a4f77ea8676e51ab0",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "rocky-cliff",
+      "seed": 2026,
+      "x": -2368,
+      "z": -3584,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 86,
+      "biome_v17": 9,
+      "relief128": 104,
+      "one_block_slope": 3
+    },
+    "generator": 17,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "2026",
+      "-2368",
+      "-3584",
+      "45",
+      "--generator=17",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=2026 center=(-2368, -3584) biome=Snowy Slopes",
+      "CAVE_CAMERA seed=2026 generator=17 world_eye=Vec3(-2367.5, 88.62, -3583.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=2026 x=-2368 z=-3584 surface_y=86 yaw=45 radius=4 overview=false feet=[-2367.5, 87.0, -3583.5]"
+    ]
+  },
+  {
+    "file": "snowy-peaks-v16.png",
+    "sha256": "47239a34353fcf1245645753a739073b3fc26ecefe1b38157c467cdc2b7b8a65",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "snowy-peaks",
+      "seed": 42,
+      "x": -1920,
+      "z": -2880,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 113,
+      "biome_v17": 9,
+      "relief128": 65,
+      "one_block_slope": 1
+    },
+    "generator": 16,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "42",
+      "-1920",
+      "-2880",
+      "45",
+      "--generator=16",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=42 center=(-1920, -2880) biome=Taiga",
+      "CAVE_CAMERA seed=42 generator=16 world_eye=Vec3(-1919.5, 30.62, -2879.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=42 x=-1920 z=-2880 surface_y=28 yaw=45 radius=4 overview=false feet=[-1919.5, 29.0, -2879.5]"
+    ]
+  },
+  {
+    "file": "snowy-peaks-v17.png",
+    "sha256": "f90062abeda580e5fa6a5a658f68cda9d7b4922b836a173c2d91157aeee7f5ec",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "snowy-peaks",
+      "seed": 42,
+      "x": -1920,
+      "z": -2880,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 113,
+      "biome_v17": 9,
+      "relief128": 65,
+      "one_block_slope": 1
+    },
+    "generator": 17,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "42",
+      "-1920",
+      "-2880",
+      "45",
+      "--generator=17",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=42 center=(-1920, -2880) biome=Snowy Slopes",
+      "CAVE_CAMERA seed=42 generator=17 world_eye=Vec3(-1919.5, 115.62, -2879.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=42 x=-1920 z=-2880 surface_y=113 yaw=45 radius=4 overview=false feet=[-1919.5, 114.0, -2879.5]"
+    ]
+  },
+  {
+    "file": "coastal-lowlands-v16.png",
+    "sha256": "b435ee8c4a39609ccd56ad2b566a1045f56a40ff53f2a71ff4264f6bce5b49de",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "coastal-lowlands",
+      "seed": 0,
+      "x": 64,
+      "z": -3456,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 4,
+      "biome_v17": 11,
+      "relief128": 18,
+      "one_block_slope": 0
+    },
+    "generator": 16,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "64",
+      "-3456",
+      "45",
+      "--generator=16",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=0 center=(64, -3456) biome=Snowy Plains",
+      "CAVE_CAMERA seed=0 generator=16 world_eye=Vec3(64.5, 18.62, -3455.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=0 x=64 z=-3456 surface_y=16 yaw=45 radius=4 overview=false feet=[64.5, 17.0, -3455.5]"
+    ]
+  },
+  {
+    "file": "coastal-lowlands-v17.png",
+    "sha256": "b3fe83cbdb63b0a9f45551fe88419af7b21563822ece62e81843ddf826c0eaa8",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "coastal-lowlands",
+      "seed": 0,
+      "x": 64,
+      "z": -3456,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 4,
+      "biome_v17": 11,
+      "relief128": 18,
+      "one_block_slope": 0
+    },
+    "generator": 17,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "64",
+      "-3456",
+      "45",
+      "--generator=17",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=0 center=(64, -3456) biome=Beach",
+      "CAVE_CAMERA seed=0 generator=17 world_eye=Vec3(64.5, 6.62, -3455.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=0 x=64 z=-3456 surface_y=4 yaw=45 radius=4 overview=false feet=[64.5, 5.0, -3455.5]"
+    ]
+  },
+  {
+    "file": "terrain-transition-v16.png",
+    "sha256": "17e98f238b3e6af257643ff898b4258c77143a1179fe8adb1af939e56840d8e1",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "terrain-transition",
+      "seed": 2026,
+      "x": -2112,
+      "z": -3456,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 41,
+      "biome_v17": 5,
+      "relief128": 124,
+      "one_block_slope": 1
+    },
+    "generator": 16,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "2026",
+      "-2112",
+      "-3456",
+      "45",
+      "--generator=16",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=2026 center=(-2112, -3456) biome=Plains",
+      "CAVE_CAMERA seed=2026 generator=16 world_eye=Vec3(-2111.5, 19.62, -3455.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=2026 x=-2112 z=-3456 surface_y=17 yaw=45 radius=4 overview=false feet=[-2111.5, 18.0, -3455.5]"
+    ]
+  },
+  {
+    "file": "terrain-transition-v17.png",
+    "sha256": "e3d20f2df5e88af944fc436f515f286528b9705b54a7eb9cfb01fcaa906c4a8f",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "terrain-transition",
+      "seed": 2026,
+      "x": -2112,
+      "z": -3456,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 41,
+      "biome_v17": 5,
+      "relief128": 124,
+      "one_block_slope": 1
+    },
+    "generator": 17,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "2026",
+      "-2112",
+      "-3456",
+      "45",
+      "--generator=17",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=2026 center=(-2112, -3456) biome=Meadow",
+      "CAVE_CAMERA seed=2026 generator=17 world_eye=Vec3(-2111.5, 43.62, -3455.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=2026 x=-2112 z=-3456 surface_y=41 yaw=45 radius=4 overview=false feet=[-2111.5, 42.0, -3455.5]"
+    ]
+  },
+  {
+    "file": "broad-plains-panorama-v16.png",
+    "sha256": "d1a5e6c81234cca7f175e8463898a7c6145277f0522a1b5da7aeb016b92fb71c",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "broad-plains-panorama",
+      "seed": 0,
+      "x": -2624,
+      "z": -3584,
+      "radius": 10,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 13,
+      "biome_v17": 0,
+      "relief128": 8,
+      "one_block_slope": 0,
+      "eye": [
+        -2720,
+        80,
+        -3472
+      ],
+      "direction": [
+        0.7,
+        -0.4,
+        -0.7
+      ],
+      "camera_ground_v16_v17": [
+        32,
+        24
+      ]
+    },
+    "generator": 16,
+    "development_panorama": true,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "-2624",
+      "-3584",
+      "45",
+      "--generator=16",
+      "--radius=10",
+      "--capture-frames=60",
+      "--wide-survey-fog",
+      "--eye=-2720,80,-3472",
+      "--direction=0.7,-0.4,-0.7"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=0 center=(-2624, -3584) biome=Rocky Highlands",
+      "CAVE_CAMERA seed=0 generator=16 world_eye=Vec3(-2720.0, 80.0, -3472.0) direction=Vec3(0.7, -0.4, -0.7) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=0 x=-2624 z=-3584 surface_y=46 yaw=45 radius=10 overview=false feet=[-2623.5, 47.0, -3583.5]"
+    ]
+  },
+  {
+    "file": "broad-plains-panorama-v17.png",
+    "sha256": "81ee536d0a6e21dd2d34ae973b9833163a079ba765b6816beef3b50519a3e9cb",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "broad-plains-panorama",
+      "seed": 0,
+      "x": -2624,
+      "z": -3584,
+      "radius": 10,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 13,
+      "biome_v17": 0,
+      "relief128": 8,
+      "one_block_slope": 0,
+      "eye": [
+        -2720,
+        80,
+        -3472
+      ],
+      "direction": [
+        0.7,
+        -0.4,
+        -0.7
+      ],
+      "camera_ground_v16_v17": [
+        32,
+        24
+      ]
+    },
+    "generator": 17,
+    "development_panorama": true,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "-2624",
+      "-3584",
+      "45",
+      "--generator=17",
+      "--radius=10",
+      "--capture-frames=60",
+      "--wide-survey-fog",
+      "--eye=-2720,80,-3472",
+      "--direction=0.7,-0.4,-0.7"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=0 center=(-2624, -3584) biome=Plains",
+      "CAVE_CAMERA seed=0 generator=17 world_eye=Vec3(-2720.0, 80.0, -3472.0) direction=Vec3(0.7, -0.4, -0.7) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=0 x=-2624 z=-3584 surface_y=13 yaw=45 radius=10 overview=false feet=[-2623.5, 14.0, -3583.5]"
+    ]
+  },
+  {
+    "file": "rolling-hills-panorama-v16.png",
+    "sha256": "82b7563e127cb2ee5afacb76bfba353d11c8a3facd4bf52f12850489a6b13336",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "rolling-hills-panorama",
+      "seed": 42,
+      "x": -2496,
+      "z": -3264,
+      "radius": 10,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 26,
+      "biome_v17": 0,
+      "relief128": 24,
+      "one_block_slope": 1,
+      "eye": [
+        -2592,
+        80,
+        -3152
+      ],
+      "direction": [
+        0.7,
+        -0.4,
+        -0.7
+      ],
+      "camera_ground_v16_v17": [
+        19,
+        19
+      ]
+    },
+    "generator": 16,
+    "development_panorama": true,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "42",
+      "-2496",
+      "-3264",
+      "45",
+      "--generator=16",
+      "--radius=10",
+      "--capture-frames=60",
+      "--wide-survey-fog",
+      "--eye=-2592,80,-3152",
+      "--direction=0.7,-0.4,-0.7"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=42 center=(-2496, -3264) biome=Plains",
+      "CAVE_CAMERA seed=42 generator=16 world_eye=Vec3(-2592.0, 80.0, -3152.0) direction=Vec3(0.7, -0.4, -0.7) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=42 x=-2496 z=-3264 surface_y=10 yaw=45 radius=10 overview=false feet=[-2495.5, 11.0, -3263.5]"
+    ]
+  },
+  {
+    "file": "rolling-hills-panorama-v17.png",
+    "sha256": "7af4f3451e4b3044890781ce6fd4323dd8f4f7c33b0e82914df99be56bce88d5",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "rolling-hills-panorama",
+      "seed": 42,
+      "x": -2496,
+      "z": -3264,
+      "radius": 10,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 26,
+      "biome_v17": 0,
+      "relief128": 24,
+      "one_block_slope": 1,
+      "eye": [
+        -2592,
+        80,
+        -3152
+      ],
+      "direction": [
+        0.7,
+        -0.4,
+        -0.7
+      ],
+      "camera_ground_v16_v17": [
+        19,
+        19
+      ]
+    },
+    "generator": 17,
+    "development_panorama": true,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "42",
+      "-2496",
+      "-3264",
+      "45",
+      "--generator=17",
+      "--radius=10",
+      "--capture-frames=60",
+      "--wide-survey-fog",
+      "--eye=-2592,80,-3152",
+      "--direction=0.7,-0.4,-0.7"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=42 center=(-2496, -3264) biome=Plains",
+      "CAVE_CAMERA seed=42 generator=17 world_eye=Vec3(-2592.0, 80.0, -3152.0) direction=Vec3(0.7, -0.4, -0.7) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=42 x=-2496 z=-3264 surface_y=26 yaw=45 radius=10 overview=false feet=[-2495.5, 27.0, -3263.5]"
+    ]
+  },
+  {
+    "file": "connected-range-panorama-v16.png",
+    "sha256": "2007f15ecf9f3af5c548fad22a498229be406605b4052bca9fcff407c1d18b2e",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "connected-range-panorama",
+      "seed": 42,
+      "x": -1984,
+      "z": -2944,
+      "radius": 10,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 92,
+      "biome_v17": 9,
+      "relief128": 85,
+      "one_block_slope": 0,
+      "eye": [
+        -2080,
+        142,
+        -2832
+      ],
+      "direction": [
+        0.7,
+        -0.4,
+        -0.7
+      ],
+      "camera_ground_v16_v17": [
+        24,
+        31
+      ]
+    },
+    "generator": 16,
+    "development_panorama": true,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "42",
+      "-1984",
+      "-2944",
+      "45",
+      "--generator=16",
+      "--radius=10",
+      "--capture-frames=60",
+      "--wide-survey-fog",
+      "--eye=-2080,142,-2832",
+      "--direction=0.7,-0.4,-0.7"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=42 center=(-1984, -2944) biome=Taiga",
+      "CAVE_CAMERA seed=42 generator=16 world_eye=Vec3(-2080.0, 142.0, -2832.0) direction=Vec3(0.7, -0.4, -0.7) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=42 x=-1984 z=-2944 surface_y=32 yaw=45 radius=10 overview=false feet=[-1983.5, 33.0, -2943.5]"
+    ]
+  },
+  {
+    "file": "connected-range-panorama-v17.png",
+    "sha256": "01706d2afdf67fbb59b73c6d418be9dd889d0f7f0600aa320d81b68cb5cc6f1c",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "connected-range-panorama",
+      "seed": 42,
+      "x": -1984,
+      "z": -2944,
+      "radius": 10,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 92,
+      "biome_v17": 9,
+      "relief128": 85,
+      "one_block_slope": 0,
+      "eye": [
+        -2080,
+        142,
+        -2832
+      ],
+      "direction": [
+        0.7,
+        -0.4,
+        -0.7
+      ],
+      "camera_ground_v16_v17": [
+        24,
+        31
+      ]
+    },
+    "generator": 17,
+    "development_panorama": true,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "42",
+      "-1984",
+      "-2944",
+      "45",
+      "--generator=17",
+      "--radius=10",
+      "--capture-frames=60",
+      "--wide-survey-fog",
+      "--eye=-2080,142,-2832",
+      "--direction=0.7,-0.4,-0.7"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=42 center=(-1984, -2944) biome=Snowy Slopes",
+      "CAVE_CAMERA seed=42 generator=17 world_eye=Vec3(-2080.0, 142.0, -2832.0) direction=Vec3(0.7, -0.4, -0.7) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=42 x=-1984 z=-2944 surface_y=92 yaw=45 radius=10 overview=false feet=[-1983.5, 93.0, -2943.5]"
+    ]
+  },
+  {
+    "file": "mountain-valley-panorama-v16.png",
+    "sha256": "b3d15e1cbe12bbebba495c54378ba2f1175c39b9a1adc8b380ab59b261d3d3b8",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "mountain-valley-panorama",
+      "seed": 0,
+      "x": -1024,
+      "z": -3008,
+      "radius": 10,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 29,
+      "biome_v17": 0,
+      "relief128": 63,
+      "one_block_slope": 1,
+      "eye": [
+        -1120,
+        121,
+        -2896
+      ],
+      "direction": [
+        0.7,
+        -0.4,
+        -0.7
+      ],
+      "camera_ground_v16_v17": [
+        11,
+        97
+      ]
+    },
+    "generator": 16,
+    "development_panorama": true,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "-1024",
+      "-3008",
+      "45",
+      "--generator=16",
+      "--radius=10",
+      "--capture-frames=60",
+      "--wide-survey-fog",
+      "--eye=-1120,121,-2896",
+      "--direction=0.7,-0.4,-0.7"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=0 center=(-1024, -3008) biome=Plains",
+      "CAVE_CAMERA seed=0 generator=16 world_eye=Vec3(-1120.0, 121.0, -2896.0) direction=Vec3(0.7, -0.4, -0.7) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=0 x=-1024 z=-3008 surface_y=26 yaw=45 radius=10 overview=false feet=[-1023.5, 27.0, -3007.5]"
+    ]
+  },
+  {
+    "file": "mountain-valley-panorama-v17.png",
+    "sha256": "8674aaf6757ee81ad5f3453e8a90c5f16a4264ee27be98e7fdf6816a8f90216a",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "mountain-valley-panorama",
+      "seed": 0,
+      "x": -1024,
+      "z": -3008,
+      "radius": 10,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 29,
+      "biome_v17": 0,
+      "relief128": 63,
+      "one_block_slope": 1,
+      "eye": [
+        -1120,
+        121,
+        -2896
+      ],
+      "direction": [
+        0.7,
+        -0.4,
+        -0.7
+      ],
+      "camera_ground_v16_v17": [
+        11,
+        97
+      ]
+    },
+    "generator": 17,
+    "development_panorama": true,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "-1024",
+      "-3008",
+      "45",
+      "--generator=17",
+      "--radius=10",
+      "--capture-frames=60",
+      "--wide-survey-fog",
+      "--eye=-1120,121,-2896",
+      "--direction=0.7,-0.4,-0.7"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=0 center=(-1024, -3008) biome=Plains",
+      "CAVE_CAMERA seed=0 generator=17 world_eye=Vec3(-1120.0, 121.0, -2896.0) direction=Vec3(0.7, -0.4, -0.7) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=0 x=-1024 z=-3008 surface_y=29 yaw=45 radius=10 overview=false feet=[-1023.5, 30.0, -3007.5]"
+    ]
+  },
+  {
+    "file": "rocky-cliff-panorama-v16.png",
+    "sha256": "b63bd2ea0059fbcf84ed11a0996432694cd4c5988598b5a6a3d564bdfb7cc085",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "rocky-cliff-panorama",
+      "seed": 2026,
+      "x": -2368,
+      "z": -3584,
+      "radius": 10,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 86,
+      "biome_v17": 9,
+      "relief128": 104,
+      "one_block_slope": 3,
+      "eye": [
+        -2464,
+        136,
+        -3472
+      ],
+      "direction": [
+        0.7,
+        -0.4,
+        -0.7
+      ],
+      "camera_ground_v16_v17": [
+        36,
+        30
+      ]
+    },
+    "generator": 16,
+    "development_panorama": true,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "2026",
+      "-2368",
+      "-3584",
+      "45",
+      "--generator=16",
+      "--radius=10",
+      "--capture-frames=60",
+      "--wide-survey-fog",
+      "--eye=-2464,136,-3472",
+      "--direction=0.7,-0.4,-0.7"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=2026 center=(-2368, -3584) biome=Plains",
+      "CAVE_CAMERA seed=2026 generator=16 world_eye=Vec3(-2464.0, 136.0, -3472.0) direction=Vec3(0.7, -0.4, -0.7) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=2026 x=-2368 z=-3584 surface_y=34 yaw=45 radius=10 overview=false feet=[-2367.5, 35.0, -3583.5]"
+    ]
+  },
+  {
+    "file": "rocky-cliff-panorama-v17.png",
+    "sha256": "76fb579f91e9043c4031da707bb8b031d592daa3abcf0530045707ade1216352",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "rocky-cliff-panorama",
+      "seed": 2026,
+      "x": -2368,
+      "z": -3584,
+      "radius": 10,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 86,
+      "biome_v17": 9,
+      "relief128": 104,
+      "one_block_slope": 3,
+      "eye": [
+        -2464,
+        136,
+        -3472
+      ],
+      "direction": [
+        0.7,
+        -0.4,
+        -0.7
+      ],
+      "camera_ground_v16_v17": [
+        36,
+        30
+      ]
+    },
+    "generator": 17,
+    "development_panorama": true,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "2026",
+      "-2368",
+      "-3584",
+      "45",
+      "--generator=17",
+      "--radius=10",
+      "--capture-frames=60",
+      "--wide-survey-fog",
+      "--eye=-2464,136,-3472",
+      "--direction=0.7,-0.4,-0.7"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=2026 center=(-2368, -3584) biome=Snowy Slopes",
+      "CAVE_CAMERA seed=2026 generator=17 world_eye=Vec3(-2464.0, 136.0, -3472.0) direction=Vec3(0.7, -0.4, -0.7) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=2026 x=-2368 z=-3584 surface_y=86 yaw=45 radius=10 overview=false feet=[-2367.5, 87.0, -3583.5]"
+    ]
+  },
+  {
+    "file": "terrain-transition-panorama-v16.png",
+    "sha256": "7f2e31fe7a0650886503f46f362fbd3796e360f803c3de081b72c1bb68f2417c",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "terrain-transition-panorama",
+      "seed": 2026,
+      "x": -2112,
+      "z": -3456,
+      "radius": 10,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 41,
+      "biome_v17": 5,
+      "relief128": 124,
+      "one_block_slope": 1,
+      "eye": [
+        -2208,
+        116,
+        -3344
+      ],
+      "direction": [
+        0.7,
+        -0.4,
+        -0.7
+      ],
+      "camera_ground_v16_v17": [
+        9,
+        92
+      ]
+    },
+    "generator": 16,
+    "development_panorama": true,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "2026",
+      "-2112",
+      "-3456",
+      "45",
+      "--generator=16",
+      "--radius=10",
+      "--capture-frames=60",
+      "--wide-survey-fog",
+      "--eye=-2208,116,-3344",
+      "--direction=0.7,-0.4,-0.7"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=2026 center=(-2112, -3456) biome=Plains",
+      "CAVE_CAMERA seed=2026 generator=16 world_eye=Vec3(-2208.0, 116.0, -3344.0) direction=Vec3(0.7, -0.4, -0.7) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=2026 x=-2112 z=-3456 surface_y=17 yaw=45 radius=10 overview=false feet=[-2111.5, 18.0, -3455.5]"
+    ]
+  },
+  {
+    "file": "terrain-transition-panorama-v17.png",
+    "sha256": "559c3be75a858e8a0868422d1923517c0f40d4b5de1ef33ede6f89c3aba0bf5b",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "terrain-transition-panorama",
+      "seed": 2026,
+      "x": -2112,
+      "z": -3456,
+      "radius": 10,
+      "yaw": 45,
+      "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+      "height_v17": 41,
+      "biome_v17": 5,
+      "relief128": 124,
+      "one_block_slope": 1,
+      "eye": [
+        -2208,
+        116,
+        -3344
+      ],
+      "direction": [
+        0.7,
+        -0.4,
+        -0.7
+      ],
+      "camera_ground_v16_v17": [
+        9,
+        92
+      ]
+    },
+    "generator": 17,
+    "development_panorama": true,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "2026",
+      "-2112",
+      "-3456",
+      "45",
+      "--generator=17",
+      "--radius=10",
+      "--capture-frames=60",
+      "--wide-survey-fog",
+      "--eye=-2208,116,-3344",
+      "--direction=0.7,-0.4,-0.7"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=2026 center=(-2112, -3456) biome=Meadow",
+      "CAVE_CAMERA seed=2026 generator=17 world_eye=Vec3(-2208.0, 116.0, -3344.0) direction=Vec3(0.7, -0.4, -0.7) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=2026 x=-2112 z=-3456 surface_y=41 yaw=45 radius=10 overview=false feet=[-2111.5, 42.0, -3455.5]"
+    ]
+  },
+  {
+    "file": "shared-lowland-control-v16.png",
+    "sha256": "83678c3fa024336f795c4cba7fd829cea0d632aac689d5e380ead8373b5be29e",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "shared-lowland-control",
+      "seed": 0,
+      "x": 2944,
+      "z": -3584,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first interior64-grid point with Plains and128-span relief<=12 in both versions",
+      "height_v16": 26,
+      "height_v17": 19
+    },
+    "generator": 16,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "2944",
+      "-3584",
+      "45",
+      "--generator=16",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=16 seed=0 center=(2944, -3584) biome=Plains",
+      "CAVE_CAMERA seed=0 generator=16 world_eye=Vec3(2944.5, 28.62, -3583.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=16 seed=0 x=2944 z=-3584 surface_y=26 yaw=45 radius=4 overview=false feet=[2944.5, 27.0, -3583.5]"
+    ]
+  },
+  {
+    "file": "shared-lowland-control-v17.png",
+    "sha256": "f3493cfb59b3842f316f3680bab5f526b67be9daa009b3a89ba233980750ced4",
+    "executable_sha256": "6af52619578a63638a3bd16e8e9f98be59b3d23636f72a3653d9d2ff98384a71",
+    "scene": {
+      "name": "shared-lowland-control",
+      "seed": 0,
+      "x": 2944,
+      "z": -3584,
+      "radius": 4,
+      "yaw": 45,
+      "selection": "first interior64-grid point with Plains and128-span relief<=12 in both versions",
+      "height_v16": 26,
+      "height_v17": 19
+    },
+    "generator": 17,
+    "development_panorama": false,
+    "command": [
+      "/workspace/rustcraft/work/slice43/terrain_gallery-final",
+      "0",
+      "2944",
+      "-3584",
+      "45",
+      "--generator=17",
+      "--radius=4",
+      "--capture-frames=60"
+    ],
+    "camera_log": [
+      "BIOME_SCENE generator=17 seed=0 center=(2944, -3584) biome=Plains",
+      "CAVE_CAMERA seed=0 generator=17 world_eye=Vec3(2944.5, 21.62, -3583.5) direction=Vec3(0.70710677, -0.08, -0.70710677) torch_fixture=false",
+      "TERRAIN_SCENE generator=17 seed=0 x=2944 z=-3584 surface_y=19 yaw=45 radius=4 overview=false feet=[2944.5, 20.0, -3583.5]"
+    ]
+  }
+]

@@ -1,3 +1,18 @@
+# Slice43 provenance
+
+The terrain router, Q12 nested curves, factor integration, reference adapters,
+regressions, analysis/capture/benchmark tools and documentation are original
+RustCraft work, MIT OR Apache-2.0. Terrain curves are independently authored;
+no Minecraft registry spline tables or proprietary implementations are copied.
+The existing attributed MIT Horizon scalar noise subset remains unchanged.
+The reference runner executes Horizon `0de893227f0dc4ad7bbbedee37744e007df04151`
+from an isolated scratch checkout with its original notices; external functional
+registry inputs remain at`538b2b167248c648b2198f2c0d56eced10dfc0cf` and are
+not bundled/relicensed. New screenshots show original RustCraft assets through
+production Bevy shaders. Diagnostic maps visualize numeric geometry and are
+clearly distinguished. No runtime dependency, assets, lockfile or renderer
+feature changes; Python scientific libraries remain optional analysis tools.
+
 # Slice42 generator16 follow-up provenance
 
 The exposure control, regressions, geometric/visibility analysis, scratch-only

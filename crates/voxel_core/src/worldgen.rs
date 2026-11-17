@@ -14,11 +14,12 @@ mod terrain;
 pub mod terrain_v3;
 pub mod terrain_v4;
 pub mod terrain_v5;
+pub mod terrain_v6;
 pub use local::Sampler;
 
 pub const GENERATOR_VERSION: u32 = 1;
 /// Default for newly created regional worlds; historical defaults remain frozen.
-pub const CURRENT_LOCAL_GENERATOR: u32 = 16;
+pub const CURRENT_LOCAL_GENERATOR: u32 = 17;
 pub const DEFAULT_SEED: u64 = 2026;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GenerationConfig {
@@ -106,6 +107,7 @@ impl Generator {
             14,
             15,
             16,
+            17,
         ]
         .contains(&config.version)
         {

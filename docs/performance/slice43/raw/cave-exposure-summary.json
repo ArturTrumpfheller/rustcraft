@@ -1,0 +1,74 @@
+{
+  "v16": {
+    "primary": {
+      "entrance_openings": 268,
+      "visible_entrance_openings": 239,
+      "navigable_entrance_openings": 13,
+      "large_entrance_openings": 13,
+      "deep_entrances": 27,
+      "visible_deep_entrances": 23,
+      "terrain_entrances": {
+        "plain": 22,
+        "hill": 17,
+        "mountain": 20,
+        "valley": 1,
+        "cliff": 207,
+        "coast": 1
+      },
+      "unconditional_visible_rate_km2": 118.3334661989796
+    },
+    "independent": {
+      "entrance_openings": 186,
+      "visible_entrance_openings": 165,
+      "navigable_entrance_openings": 11,
+      "large_entrance_openings": 10,
+      "deep_entrances": 27,
+      "visible_deep_entrances": 18,
+      "terrain_entrances": {
+        "plain": 6,
+        "hill": 20,
+        "mountain": 5,
+        "valley": 1,
+        "cliff": 153,
+        "coast": 1
+      },
+      "unconditional_visible_rate_km2": 124.56154336734694
+    }
+  },
+  "v17": {
+    "primary": {
+      "entrance_openings": 72,
+      "visible_entrance_openings": 67,
+      "navigable_entrance_openings": 11,
+      "large_entrance_openings": 12,
+      "deep_entrances": 27,
+      "visible_deep_entrances": 24,
+      "terrain_entrances": {
+        "plain": 28,
+        "hill": 11,
+        "mountain": 3,
+        "valley": 0,
+        "cliff": 16,
+        "coast": 14
+      },
+      "unconditional_visible_rate_km2": 77.2281568877551
+    },
+    "independent": {
+      "entrance_openings": 44,
+      "visible_entrance_openings": 44,
+      "navigable_entrance_openings": 9,
+      "large_entrance_openings": 11,
+      "deep_entrances": 21,
+      "visible_deep_entrances": 21,
+      "terrain_entrances": {
+        "plain": 15,
+        "hill": 9,
+        "mountain": 2,
+        "valley": 0,
+        "cliff": 8,
+        "coast": 10
+      },
+      "unconditional_visible_rate_km2": 94.66677295918367
+    }
+  }
+}

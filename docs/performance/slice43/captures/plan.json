@@ -1,0 +1,305 @@
+[
+  {
+    "name": "broad-plains",
+    "seed": 0,
+    "x": -2624,
+    "z": -3584,
+    "radius": 4,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 13,
+    "biome_v17": 0,
+    "relief128": 8,
+    "one_block_slope": 0
+  },
+  {
+    "name": "rolling-hills",
+    "seed": 42,
+    "x": -2496,
+    "z": -3264,
+    "radius": 4,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 26,
+    "biome_v17": 0,
+    "relief128": 24,
+    "one_block_slope": 1
+  },
+  {
+    "name": "forested-lowlands",
+    "seed": 0,
+    "x": 1664,
+    "z": -3584,
+    "radius": 4,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 15,
+    "biome_v17": 1,
+    "relief128": 9,
+    "one_block_slope": 0
+  },
+  {
+    "name": "foothills",
+    "seed": 2026,
+    "x": -1920,
+    "z": -3520,
+    "radius": 4,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 38,
+    "biome_v17": 4,
+    "relief128": 31,
+    "one_block_slope": 0
+  },
+  {
+    "name": "connected-range",
+    "seed": 42,
+    "x": -1984,
+    "z": -2944,
+    "radius": 4,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 92,
+    "biome_v17": 9,
+    "relief128": 85,
+    "one_block_slope": 0
+  },
+  {
+    "name": "mountain-valley",
+    "seed": 0,
+    "x": -1024,
+    "z": -3008,
+    "radius": 4,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 29,
+    "biome_v17": 0,
+    "relief128": 63,
+    "one_block_slope": 1
+  },
+  {
+    "name": "rocky-cliff",
+    "seed": 2026,
+    "x": -2368,
+    "z": -3584,
+    "radius": 4,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 86,
+    "biome_v17": 9,
+    "relief128": 104,
+    "one_block_slope": 3
+  },
+  {
+    "name": "snowy-peaks",
+    "seed": 42,
+    "x": -1920,
+    "z": -2880,
+    "radius": 4,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 113,
+    "biome_v17": 9,
+    "relief128": 65,
+    "one_block_slope": 1
+  },
+  {
+    "name": "coastal-lowlands",
+    "seed": 0,
+    "x": 64,
+    "z": -3456,
+    "radius": 4,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 4,
+    "biome_v17": 11,
+    "relief128": 18,
+    "one_block_slope": 0
+  },
+  {
+    "name": "terrain-transition",
+    "seed": 2026,
+    "x": -2112,
+    "z": -3456,
+    "radius": 4,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 41,
+    "biome_v17": 5,
+    "relief128": 124,
+    "one_block_slope": 1
+  },
+  {
+    "name": "shared-lowland-control",
+    "seed": 0,
+    "x": 2944,
+    "z": -3584,
+    "radius": 4,
+    "yaw": 45,
+    "selection": "first interior64-grid point with Plains and128-span relief<=12 in both versions",
+    "height_v16": 26,
+    "height_v17": 19
+  },
+  {
+    "name": "broad-plains-panorama",
+    "seed": 0,
+    "x": -2624,
+    "z": -3584,
+    "radius": 10,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 13,
+    "biome_v17": 0,
+    "relief128": 8,
+    "one_block_slope": 0,
+    "eye": [
+      -2720,
+      80,
+      -3472
+    ],
+    "direction": [
+      0.7,
+      -0.4,
+      -0.7
+    ],
+    "camera_ground_v16_v17": [
+      32,
+      24
+    ]
+  },
+  {
+    "name": "rolling-hills-panorama",
+    "seed": 42,
+    "x": -2496,
+    "z": -3264,
+    "radius": 10,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 26,
+    "biome_v17": 0,
+    "relief128": 24,
+    "one_block_slope": 1,
+    "eye": [
+      -2592,
+      80,
+      -3152
+    ],
+    "direction": [
+      0.7,
+      -0.4,
+      -0.7
+    ],
+    "camera_ground_v16_v17": [
+      19,
+      19
+    ]
+  },
+  {
+    "name": "connected-range-panorama",
+    "seed": 42,
+    "x": -1984,
+    "z": -2944,
+    "radius": 10,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 92,
+    "biome_v17": 9,
+    "relief128": 85,
+    "one_block_slope": 0,
+    "eye": [
+      -2080,
+      142,
+      -2832
+    ],
+    "direction": [
+      0.7,
+      -0.4,
+      -0.7
+    ],
+    "camera_ground_v16_v17": [
+      24,
+      31
+    ]
+  },
+  {
+    "name": "mountain-valley-panorama",
+    "seed": 0,
+    "x": -1024,
+    "z": -3008,
+    "radius": 10,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 29,
+    "biome_v17": 0,
+    "relief128": 63,
+    "one_block_slope": 1,
+    "eye": [
+      -1120,
+      121,
+      -2896
+    ],
+    "direction": [
+      0.7,
+      -0.4,
+      -0.7
+    ],
+    "camera_ground_v16_v17": [
+      11,
+      97
+    ]
+  },
+  {
+    "name": "rocky-cliff-panorama",
+    "seed": 2026,
+    "x": -2368,
+    "z": -3584,
+    "radius": 10,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 86,
+    "biome_v17": 9,
+    "relief128": 104,
+    "one_block_slope": 3,
+    "eye": [
+      -2464,
+      136,
+      -3472
+    ],
+    "direction": [
+      0.7,
+      -0.4,
+      -0.7
+    ],
+    "camera_ground_v16_v17": [
+      36,
+      30
+    ]
+  },
+  {
+    "name": "terrain-transition-panorama",
+    "seed": 2026,
+    "x": -2112,
+    "z": -3456,
+    "radius": 10,
+    "yaw": 45,
+    "selection": "first qualifying interior64-grid ecology sample, terrain/biome only",
+    "height_v17": 41,
+    "biome_v17": 5,
+    "relief128": 124,
+    "one_block_slope": 1,
+    "eye": [
+      -2208,
+      116,
+      -3344
+    ],
+    "direction": [
+      0.7,
+      -0.4,
+      -0.7
+    ],
+    "camera_ground_v16_v17": [
+      9,
+      92
+    ]
+  }
+]

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! V14–V16: signed multi-octave cave density and bounded branching random walks.
+//! V14–V17: signed multi-octave cave density and bounded branching random walks.
 //! Historical v1–13 are dispatched unchanged. All classifications use global
 //! coordinates; lattice samples are quantized before integer interpolation.
 use super::{Generator, caves, hash};
@@ -17,7 +17,7 @@ pub(super) enum Versioned {
 }
 impl Versioned {
     pub(super) fn new(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Self {
-        if matches!(g.config.version, 14..=16) {
+        if matches!(g.config.version, 14..=17) {
             Self::Density(Plan::new(g, min, max))
         } else {
             Self::Historical(caves::Plan::new(g.config.seed, min, max))
@@ -134,7 +134,7 @@ impl Plan {
 /// Read-only candidate centers of traditional carver ellipsoids. These are
 /// proposed geometry, not guaranteed final air or a player-clearance assertion.
 pub fn landmarks(g: &Generator, min: [i32; 2], max: [i32; 2]) -> Vec<(&'static str, [i32; 3])> {
-    if !matches!(g.config.version, 14..=16)
+    if !matches!(g.config.version, 14..=17)
         || min
             .iter()
             .chain(max.iter())
