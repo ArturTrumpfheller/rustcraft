@@ -1,3 +1,14 @@
+# Terrain geography (Slice 43)
+
+New worlds use generator17: broader rolling lowlands, connected hills and more
+selective ranges shaped by nested continentalness/erosion/peaks-valleys curves.
+The terrain rework uses executed pinned Horizon density as a technical reference;
+it retains v16 caves, the fifteen existing biomes and Hydrology v1. Existing v1–v16
+worlds retain their generators and edits, with unchanged bounds, formats and
+supported render distances. [Audit, actual renders, measurements and validation](docs/performance/slice43/README.md).
+
+The sections below describe previous slices and their historical defaults.
+
 # Slice 42: Cave Generation Final Refinement (generator16)
 
 New worlds select generator16. Historical generators1–15 and saved identities

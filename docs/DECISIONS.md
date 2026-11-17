@@ -1,3 +1,21 @@
+## Slice43 terrain decisions
+
+- Isolate new terrain in `terrain_v6.rs`, generator17; preserve all old arithmetic
+  and fixtures rather than reinterpreting saves or migrating blocks.
+- Execute pinned Horizon roots in an external MIT workspace with external
+  functional registry inputs. Distinguish surface-search proxies, final density,
+  upstream parity claims and adapted terrain. Do not vendor registry JSON.
+- Use independently authored shifted integer fields, nested C/E/PV Hermite
+  responses and a positive density factor, sized for the existing190-block
+  above-sea span. Retain bounded shared surface density rather than evaluating
+  a full graph at every voxel.
+- Pass the selected terrain through ecology, hydrology and cave height/slope
+  caches. Preserve v16 cave composition/exposure, climate/ecology and water rules.
+- Keep Hydrology v2, new biomes, worker expansion, render-distance changes and
+  automatic world migration outside this slice.
+- Freeze macro parameters before held-out seeds; preserve unfavorable regional
+  results and separate software-renderer evidence from native Radeon acceptance.
+
 # RustCraft — project decisions
 
 This document summarizes choices already made by the project owner and is intended to survive across Codex sessions.

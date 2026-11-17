@@ -1,3 +1,33 @@
+# Slice43: nested terrain geography (generator17)
+
+New worlds select17. Recorded generators1–16 and authoritative saved edits keep
+their original behavior; no migration, format/ID change or larger world/render
+radius is introduced. Unknown18+ is rejected by generator, bounds and manifest
+validation. Bounds remain Y[-64,192), sea2, one terrain worker, gameplay radii1–4.
+
+`worldgen::terrain_v6` independently implements a Horizon-informed shifted C/E/W
+router, folded peaks/valleys and nested value-valued Q12 Hermite curves. Erosion
+selects separate plain/hill/mountain responses to peaks/valleys; continentalness
+blends coastal shoulders into inland terrain. Broad384/160/72 structural octaves
+replace the old short anisotropic ridge stacks. Rolling detail remains separate.
+A positive density factor grades upper-slope deformation; its bounded equivalent
+`offset-y + amplitude*noise` reuses the absolute4³ profile lattice/memo, with a
+maximum12-block displacement and soft summit cap. No biome ID controls height.
+
+The versioned terrain facade supplies identical profiles/fields to ecology,
+water candidate admission, coast queries and low-pass elevation. Climate rules,
+fifteen biome IDs, vegetation species/support and Hydrology v1 remain. The cave
+height/slope lattice now selects the recorded terrain version explicitly. V17
+reuses v16 refined density, named noises, carvers and cover/exposure control;
+underground families are not retuned. New cover naturally changes intersections.
+
+The isolated Horizon runner executes the pinned surface-search and final-density
+roots, including graph interpolation/caches. Its384-high native geometry and sea63
+are measured separately and normalized explicitly; this is not a Minecraft parity
+claim. [Audit, reference execution, maps, real renders, validation and costs](performance/slice43/README.md).
+
+The following sections document preserved historical implementations.
+
 # Slice42 follow-up: generator16 surface exposure
 
 Only new worlds default to16; recorded generators1–15 retain their identities and

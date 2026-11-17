@@ -447,7 +447,7 @@ fn setup(
         eye + Vec3::new(origin[0] as f32, 0., origin[1] as f32),
         scene.cave_torches
     );
-    if scene.eye.is_some() && matches!(scene.version, 14..=16) {
+    if scene.eye.is_some() && matches!(scene.version, 14..=17) {
         let wp = eye + Vec3::new(origin[0] as f32, 0., origin[1] as f32);
         let p = voxel_core::BlockPos([
             wp.x.floor() as i32,

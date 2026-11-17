@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Horizon-informed signed cave composition on a globally aligned Q20 lattice.
-//! Negative density is cavity. Terrain remains v13: only its local depth enters
-//! the sloped-cheese adapter. The reference's sea/foundation span is mapped to
+//! Negative density is cavity. V14–v16 use frozen v13 terrain; v17 supplies its
+//! versioned heights/slopes to the unchanged cave composition. The reference's sea/foundation span is mapped to
 //! RustCraft's shorter underground; horizontal scale is unchanged.
 use super::{Generator, MIN_Y, Plan, STEP, horizon::Noise, mix};
 use crate::{Block, BlockPos, Chunk, ChunkPos, LocalPos};
@@ -140,12 +140,16 @@ struct Heights {
 }
 impl Heights {
     fn new(seed: u64, min: [i32; 2], max: [i32; 2]) -> Self {
+        Self::for_terrain(16, seed, min, max)
+    }
+    fn for_terrain(version: u32, seed: u64, min: [i32; 2], max: [i32; 2]) -> Self {
         let min = min.map(|v| v.div_euclid(STEP));
         let size: [usize; 2] =
             std::array::from_fn(|i| (max[i].div_euclid(STEP) + 2 - min[i]) as usize);
         let values = (0..size[0] * size[1])
             .map(|i| {
-                super::super::terrain_v5::height(
+                super::super::terrain_v5::height_for(
+                    version,
                     seed,
                     (min[0] + (i % size[0]) as i32) * STEP,
                     (min[1] + (i / size[0]) as i32) * STEP,
@@ -185,21 +189,23 @@ impl Network {
                 let fields = self.fields.get_or_init(|| Fields::new(self.seed));
                 Lattice::build(
                     fields,
-                    self.heights.get_or_init(|| {
-                        if self.version == 16 {
-                            Heights::exposed(self.seed, self.min, self.max)
-                        } else if self.version == 15 {
-                            Heights::refined(self.seed, self.min, self.max)
-                        } else {
-                            Heights::new(self.seed, self.min, self.max)
-                        }
-                    }),
+                    self.terrain_heights(),
                     self.min,
                     self.max,
                     band as i32 * 16 - 64,
                     band as i32 * 16 - 48,
                 )
             })
+    }
+    // Both carver point queries and bulk density evaluation can be first. They
+    // must initialize the same versioned cache, independent of access order.
+    fn terrain_heights(&self) -> &Heights {
+        self.heights.get_or_init(|| match self.version {
+            17 => Heights::exposed_for(17, self.seed, self.min, self.max),
+            16 => Heights::exposed(self.seed, self.min, self.max),
+            15 => Heights::refined(self.seed, self.min, self.max),
+            _ => Heights::new(self.seed, self.min, self.max),
+        })
     }
     pub(super) fn contains(&self, p: [i32; 3]) -> bool {
         self.lattice(p[1]).contains(p)
@@ -380,12 +386,10 @@ impl Lattice {
 
 impl Network {
     pub(super) fn surface_column(&self, x: i32, z: i32, h: i32) -> Option<exposure::Column> {
-        if self.version != 16 {
+        if !matches!(self.version, 16 | 17) {
             return None;
         }
-        let heights = self
-            .heights
-            .get_or_init(|| Heights::exposed(self.seed, self.min, self.max));
+        let heights = self.terrain_heights();
         let min = self.min.map(|v| v.div_euclid(STEP));
         let stride = (self.max[0].div_euclid(STEP) + 2 - min[0]) as usize;
         let xx = (x.div_euclid(STEP) - min[0]) as usize;
@@ -413,6 +417,36 @@ impl Network {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn v17_point_carver_and_bulk_density_initialize_identical_terrain_inputs() {
+        let g = Generator::new(crate::worldgen::GenerationConfig {
+            seed: 42,
+            version: 17,
+        })
+        .unwrap();
+        let a = Network::new(&g, [-129, -129], [-112, -112]);
+        let b = Network::new(&g, [-129, -129], [-112, -112]);
+        // Reproduces the discovered order dependence at the signed chunk seam.
+        a.surface_column(
+            -128,
+            -128,
+            crate::worldgen::terrain_v6::height(42, -128, -128),
+        )
+        .unwrap();
+        b.lattice(16);
+        assert_eq!(a.terrain_heights().values, b.terrain_heights().values);
+        assert_eq!(a.terrain_heights().slopes, b.terrain_heights().slopes);
+        for y in [-48, 0, 16, 80] {
+            for z in -129..=-112 {
+                for x in -129..=-112 {
+                    assert_eq!(
+                        a.lattice(y).sample([x, y, z]),
+                        b.lattice(y).sample([x, y, z])
+                    );
+                }
+            }
+        }
+    }
     #[test]
     fn adapted_noise_matches_executed_horizon_reference() {
         let mut previous = None;

@@ -11,10 +11,15 @@ fn main() {
     };
     let version = arg("--generator=", "12").parse().unwrap();
     let step: usize = arg("--step=", "16").parse().unwrap();
-    assert!(matches!(step, 16 | 32 | 64) && matches!(version, 12 | 13));
+    assert!(matches!(step, 16 | 32 | 64) && matches!(version, 12 | 13 | 16 | 17));
     let final_surface = args.iter().any(|v| v == "--final");
     println!("seed,region,x,z,height,slope,c,e,w,offset,amplitude,biome");
-    for seed in [0, 42, 2026, u64::MAX] {
+    let seeds = if args.iter().any(|s| s == "--validation") {
+        [123, 777, 4099, 900001]
+    } else {
+        [0, 42, 2026, u64::MAX]
+    };
+    for seed in seeds {
         let g = Generator::new(GenerationConfig { seed, version }).unwrap();
         for (region, (ox, oz, size)) in [
             (-4096, -4096, 8192),

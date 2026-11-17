@@ -1,5 +1,39 @@
 # Executable Horizon cave-stage reference
 
+## Slice43 terrain router and geography
+
+Preparation also installs `rustcraft_geography_reference`, an original analysis
+adapter around unmodified Horizon. Build it with
+`cargo build --release --locked -p horizon-world --example rustcraft_geography_reference`.
+Use the metadata worldgen directory as its first argument:
+
+```sh
+rustcraft_geography_reference DATA --router > router.csv
+rustcraft_geography_reference DATA --step=32 > surface-search.csv
+rustcraft_geography_reference DATA --density --step=16 > final-density.csv
+rustcraft_geography_reference DATA --density --uncaved --step=16 > terrain-control.csv
+rustcraft_geography_reference DATA --density --step=32 --validation > held-out.csv
+```
+
+The surface-search root is a quantized preliminary proxy, not final block height.
+Density mode executes the final graph over all384 native Y cells at each sampled
+X/Z using the upstream volume API, with normal caching/interpolation. It reports
+the highest positive-density cell. It excludes later carvers, aquifers, materials,
+bedrock and features; do not call it a complete playable Horizon/Minecraft world.
+`--density --scalar` independently scans integer Y using scalar queries instead;
+this is slower and is used to verify the reported volume-path surface heights.
+`--uncaved` is the declared cave-graph ablation already used by the cave exporter,
+retaining terrain slides/interpolation/squeeze. Label it an analysis control.
+Unused climate/offset columns in this shared CSV schema are zero placeholders;
+actual native router values are exported separately by `--router`.
+CSV heights subtract61 (reference sea63→RustCraft sea2); geometry itself is sampled
+at native Y. The router dump retains native values/coordinates. Independent seeds
+are123/777/4099/900001; development seeds0/42/2026/u64::MAX. Three identical signed
+windows support normalized multi-scale comparisons with RustCraft. See
+[Slice43 methodology and results](../../docs/performance/slice43/README.md).
+
+## Cave exporter
+
 `python tools/horizon_reference/prepare.py /absolute/new/scratch-directory`
 checks out immutable Horizon and public functional registry revisions. It copies
 only the three necessary original MIT crates into a minimal temporary workspace.

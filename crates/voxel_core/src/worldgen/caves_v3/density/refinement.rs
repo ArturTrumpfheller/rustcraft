@@ -6,9 +6,12 @@ use super::{Fields, Heights, Q, STEP};
 
 impl Heights {
     pub(super) fn refined(seed: u64, min: [i32; 2], max: [i32; 2]) -> Self {
+        Self::refined_for(16, seed, min, max)
+    }
+    pub(super) fn refined_for(version: u32, seed: u64, min: [i32; 2], max: [i32; 2]) -> Self {
         // One extra lattice ring gives central differences even for point plans.
         // Every coordinate has identical terrain inputs independent of plan size.
-        let padded = Self::new(seed, min.map(|v| v - STEP), max.map(|v| v + STEP));
+        let padded = Self::for_terrain(version, seed, min.map(|v| v - STEP), max.map(|v| v + STEP));
         let size: [usize; 2] = std::array::from_fn(|i| {
             (max[i].div_euclid(STEP) + 2 - min[i].div_euclid(STEP)) as usize
         });

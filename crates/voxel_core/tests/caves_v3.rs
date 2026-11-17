@@ -31,7 +31,7 @@ fn exact_merged_slice38_history_including_all_v13_geometry_and_water() {
 fn all_paths_halos_foundation_supported_ecology_quiet_water_and_signed_bounds() {
     for (seed, version) in SEEDS
         .into_iter()
-        .flat_map(|seed| [14, 15, 16].map(move |v| (seed, v)))
+        .flat_map(|seed| [14, 15, 16, 17].map(move |v| (seed, v)))
     {
         for c in [
             [-1, -1],
@@ -97,8 +97,8 @@ fn v14_safe_spawn_and_default_fail_closed() {
         regions::RegionIdentity,
         streaming,
     };
-    assert_eq!(voxel_core::worldgen::CURRENT_LOCAL_GENERATOR, 16);
-    for v in [0, 17, u32::MAX] {
+    assert_eq!(voxel_core::worldgen::CURRENT_LOCAL_GENERATOR, 17);
+    for v in [0, 18, u32::MAX] {
         assert!(
             Generator::new(GenerationConfig {
                 seed: 0,
@@ -109,7 +109,7 @@ fn v14_safe_spawn_and_default_fail_closed() {
     }
     for (seed, version) in SEEDS
         .into_iter()
-        .flat_map(|seed| [14, 15, 16].map(move |v| (seed, v)))
+        .flat_map(|seed| [14, 15, 16, 17].map(move |v| (seed, v)))
     {
         let mut w = World::regional(RegionIdentity {
             seed,
@@ -434,6 +434,15 @@ fn v16_real_underground_edits_keep_saved_generator_identity() {
 #[test]
 fn real_v16_cave_collision_mining_placing_and_torch_light_across_chunk_seams() {
     assert_cave_gameplay(16);
+}
+
+#[test]
+fn v17_real_cave_collision_mining_placing_and_torch_light_across_chunk_seams() {
+    assert_cave_gameplay(17);
+}
+#[test]
+fn v17_saved_underground_edits_remain_authoritative_after_evict_and_reopen() {
+    assert_saved_cave_edits(17);
 }
 #[test]
 fn v16_post_design_columns_pin_output_without_replacing_historical_fixtures() {

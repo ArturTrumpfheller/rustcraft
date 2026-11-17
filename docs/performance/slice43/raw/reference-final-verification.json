@@ -1,0 +1,43 @@
+{
+  "reference-final-normal128.csv": {
+    "checked": 18432,
+    "identical": true,
+    "sha256": "3206ab07c77d606ac00e79699f8ee8f97a54f681f06c2d4836b6f9d6d2e98c41"
+  },
+  "reference-final-control128.csv": {
+    "checked": 18432,
+    "identical": true,
+    "sha256": "b17f68080672bf44c7f708d46e9e16b2b5e55966c221d963b746a294ca48c8f5"
+  },
+  "reference-final-validation128.csv": {
+    "checked": 18432,
+    "identical": true,
+    "sha256": "49c0a3a4cb43df3bf96b674f5e08fd58f1f4f924c1db0b138022596f6f35698b"
+  },
+  "cave_stage": {
+    "checked": 8,
+    "all_byte_identical": true
+  },
+  "router": {
+    "rows": 216,
+    "columns": [
+      "seed",
+      "x",
+      "y",
+      "z",
+      "continents",
+      "erosion",
+      "ridges",
+      "ridges_folded",
+      "offset",
+      "factor",
+      "jaggedness",
+      "depth",
+      "sloped_cheese",
+      "base_3d_noise",
+      "final_density"
+    ]
+  },
+  "binary_sha256": "9521fb9d223ebd2e9cb939a04e7ecd36fae59ad6c85b5b4c32b5e24167da727f",
+  "adapter_sha256": "97221b51eeca2a917255e521c1a997a1895f321aa981469167b6bbdf076f2f11"
+}
